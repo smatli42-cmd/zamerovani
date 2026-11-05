@@ -27,9 +27,22 @@ export function setWallLength(floor: Floor, wallId: Id, length: number, target: 
   const nB = floor.nodes[wall.b];
   if (!nA || !nB) return false;
 
-  wall.measured = Math.round(length);
   const current = dist(nA, nB);
   const delta = length - current;
+
+  // Posun bodu napojení po rovné stěně (stěna rozdělená příčkou)
+  if (target !== 'both' && Math.abs(delta) >= 0.05) {
+    const moving = target.nodeId === nA.id ? nA : nB;
+    const fixed = moving === nA ? nB : nA;
+    const junction = shiftJunction(floor, wallId, moving, fixed, delta);
+    if (junction === 'invalid') return false;
+    if (junction === 'done') {
+      wall.measured = Math.round(length);
+      return true;
+    }
+  }
+
+  wall.measured = Math.round(length);
   if (Math.abs(delta) < 0.05) return true;
 
   if (target === 'both') {
@@ -106,3 +119,43 @@ export function moveNodeWithRubberBand(floor: Floor, moving: Node, fixed: Node, 
 }
 
 const round1 = (v: number): number => Math.round(v * 10) / 10;
+
+/**
+ * Pokud posouvaný roh leží uprostřed rovné stěny (za ním pokračuje stěna stejným směrem),
+ * jde o bod napojení příčky: posune se jen tento bod a příčka s ním, celková délka zůstane.
+ * Navazující část se zkrátí/prodlouží (a pokud byla změřená, její míra se přepočítá).
+ */
+function shiftJunction(floor: Floor, wallId: Id, moving: Node, fixed: Node, delta: number): 'done' | 'none' | 'invalid' {
+  const u = unit(fixed, moving);
+  const continuation = wallsAtNode(floor, moving.id).filter(w => {
+    if (w.id === wallId) return false;
+    const other = floor.nodes[otherEnd(w, moving.id)];
+    return other !== undefined && dot(u, unit(moving, other)) > 0.9995;
+  });
+  if (continuation.length !== 1) return 'none';
+  const cont = continuation[0]!;
+  const contEnd = floor.nodes[otherEnd(cont, moving.id)]!;
+  const newContLen = dist(moving, contEnd) - delta;
+  if (newContLen < 10) return 'invalid';
+
+  const dx = u.x * delta;
+  const dy = u.y * delta;
+  moving.x = round1(moving.x + dx);
+  moving.y = round1(moving.y + dy);
+  // Napojené příčky se posunou rovnoběžně (jejich druhý konec o stejný vektor)
+  for (const w of wallsAtNode(floor, moving.id)) {
+    if (w.id === wallId || w.id === cont.id) continue;
+    const far = floor.nodes[otherEnd(w, moving.id)];
+    if (!far || far.id === fixed.id || far.id === contEnd.id) continue;
+    far.x = round1(far.x + dx);
+    far.y = round1(far.y + dy);
+    // Druhý konec příčky sedí na protější stěně → přepočítat míry jejích částí (celek se nemění)
+    for (const ow of wallsAtNode(floor, far.id)) {
+      if (ow.id === w.id || ow.measured === null) continue;
+      const o = floor.nodes[otherEnd(ow, far.id)];
+      if (o && Math.abs(dot(u, unit(far, o))) > 0.9995) ow.measured = Math.round(dist(far, o));
+    }
+  }
+  if (cont.measured !== null) cont.measured = Math.round(newContLen);
+  return 'done';
+}

@@ -7,6 +7,7 @@ import type { Floor, Id, Opening, OpeningKind, Pt, Room, WallLabel } from '../mo
 import { dist } from '../core/geometry';
 import { openingStartFromA, openingsOnWall, wallLength, wallsAtNode } from '../core/floorQueries';
 import { setWallLength, type MoveTarget } from '../core/solver';
+import { splitWallsAtNode } from '../core/topology';
 import { store, type NumPadTarget } from './store';
 
 const MERGE_TOL = 1; // mm – rohy blíž než toto jsou jeden roh
@@ -47,6 +48,9 @@ export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: I
     const wall = createWall(a, b);
     floor.walls[wall.id] = wall;
     createdId = wall.id;
+    // Konec na jiné stěně → rozdělit ji v místě napojení
+    splitWallsAtNode(floor, a);
+    splitWallsAtNode(floor, b);
   });
   if (createdId) store.set({ selection: { kind: 'wall', id: createdId } });
   return createdId;
@@ -91,7 +95,11 @@ export function mergeNodeIfCoincident(nodeId: Id): void {
     const moved = floor.nodes[nodeId];
     if (!moved) return;
     const other = Object.values(floor.nodes).find(n => n.id !== nodeId && dist(n, moved) < MERGE_TOL);
-    if (!other) return;
+    if (!other) {
+      // Roh přetažený na stěnu ji rozdělí
+      splitWallsAtNode(floor, nodeId);
+      return;
+    }
     for (const w of Object.values(floor.walls)) {
       if (w.a === nodeId) w.a = other.id;
       if (w.b === nodeId) w.b = other.id;

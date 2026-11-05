@@ -9,7 +9,6 @@ import { toScreen } from './view';
 
 export const COLORS = {
   wall: '#0f172a',
-  wallSketch: '#c2410c',
   selected: '#2563eb',
   hover: '#93c5fd',
   opening: '#0f172a',
@@ -38,14 +37,13 @@ export function drawWalls(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
       ctx.stroke();
     }
 
-    ctx.strokeStyle = selected ? COLORS.selected : wall.measured === null ? COLORS.wallSketch : COLORS.wall;
+    // Stěna je vždy plná černá – nezměřený rozměr se pozná jen podle barvy kóty
+    ctx.strokeStyle = selected ? COLORS.selected : COLORS.wall;
     ctx.lineWidth = 3;
-    ctx.setLineDash(wall.measured === null ? [10, 5] : []);
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
     ctx.stroke();
-    ctx.setLineDash([]);
   }
   ctx.restore();
 }
@@ -102,6 +100,17 @@ function drawOpeningSymbol(ctx: CanvasRenderingContext2D, p1: Pt, p2: Pt, op: Op
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
   ctx.lineWidth = 2;
+  /** Čerchovaná čára v rovině stěny = konstrukce nad rovinou řezu (nadpraží). */
+  const lintel = () => {
+    ctx.save();
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([10, 3, 2, 3]);
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
+    ctx.restore();
+  };
   const jamb = (p: Pt) => {
     const t = scale(normal(u), 7);
     ctx.beginPath();
@@ -138,8 +147,8 @@ function drawOpeningSymbol(ctx: CanvasRenderingContext2D, p1: Pt, p2: Pt, op: Op
       ctx.moveTo(hingePt.x, hingePt.y);
       ctx.lineTo(leafEnd.x, leafEnd.y);
       ctx.stroke();
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 3]);
+      lintel();
+      ctx.lineWidth = 1.2;
       const a0 = Math.atan2(leafEnd.y - hingePt.y, leafEnd.x - hingePt.x);
       const a1 = Math.atan2(freePt.y - hingePt.y, freePt.x - hingePt.x);
       let diff = a1 - a0;
@@ -148,22 +157,16 @@ function drawOpeningSymbol(ctx: CanvasRenderingContext2D, p1: Pt, p2: Pt, op: Op
       ctx.beginPath();
       ctx.arc(hingePt.x, hingePt.y, w, a0, a1, diff < 0);
       ctx.stroke();
-      ctx.setLineDash([]);
       break;
     }
     case 'opening': {
       jamb(p1);
       jamb(p2);
-      ctx.lineWidth = 1;
-      ctx.setLineDash([6, 4]);
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(p2.x, p2.y);
-      ctx.stroke();
-      ctx.setLineDash([]);
+      lintel();
       break;
     }
     case 'niche': {
+      lintel();
       const d = scale(nrm, Math.max(6, op.depth * cam.zoom));
       ctx.lineWidth = 2;
       ctx.beginPath();

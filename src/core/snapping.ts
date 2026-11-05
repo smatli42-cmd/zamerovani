@@ -82,8 +82,29 @@ export function snapEnd(floor: Floor, start: Pt, raw: Pt, o: SnapOptions): SnapR
     }
   }
 
-  // 4) Konec na hraně jiné stěny (napojení příčky).
-  const wallHit = o.snap ? findWallNear(floor, pt, o.nodeTol * 0.5) : null;
+  // 4) Konec na hraně jiné stěny (napojení příčky) – dotáhnout přesně na stěnu ve směru kreslení.
+  const wallHit = o.snap ? findWallNear(floor, pt, o.nodeTol * 0.6) : null;
+  if (wallHit) {
+    const wa = floor.nodes[wallHit.wall.a];
+    const wb = floor.nodes[wallHit.wall.b];
+    const hit = wa && wb ? intersectLines(start, pt, wa, wb) : null;
+    pt = hit && dist(hit, pt) <= o.nodeTol ? hit : wallHit.point;
+    guides.length = 0;
+  }
 
-  return { pt: { x: Math.round(pt.x), y: Math.round(pt.y) }, node: null, wallHit, guides: guides.filter(g => dist(g.from, g.to) > 1) };
+  // Na stěně nezaokrouhlovat (bod musí ležet přesně na ní, jinak by ji nerozdělil)
+  const out = wallHit ? pt : { x: Math.round(pt.x), y: Math.round(pt.y) };
+  return { pt: out, node: null, wallHit, guides: guides.filter(g => dist(g.from, g.to) > 1) };
+}
+
+/** Průsečík přímky p1–p2 s přímkou q1–q2 (null pro rovnoběžky). */
+function intersectLines(p1: Pt, p2: Pt, q1: Pt, q2: Pt): Pt | null {
+  const d1x = p2.x - p1.x;
+  const d1y = p2.y - p1.y;
+  const d2x = q2.x - q1.x;
+  const d2y = q2.y - q1.y;
+  const den = d1x * d2y - d1y * d2x;
+  if (Math.abs(den) < 1e-9) return null;
+  const t = ((q1.x - p1.x) * d2y - (q1.y - p1.y) * d2x) / den;
+  return { x: p1.x + d1x * t, y: p1.y + d1y * t };
 }
