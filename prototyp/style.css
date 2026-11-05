@@ -1,0 +1,741 @@
+/**
+ * Stylopis aplikace Zaměřování (Optimalizováno pro Samsung Galaxy Tab S9 FE + PC)
+ */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #0f172a;
+    color: #1e293b;
+}
+
+.app-layout {
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+}
+
+/* Horní nástrojová lišta */
+.top-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 14px;
+    background: #1e293b;
+    color: #f8fafc;
+    border-bottom: 1px solid #334155;
+    flex-wrap: wrap;
+    z-index: 10;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 15px;
+    color: #f8fafc;
+    padding-right: 8px;
+}
+
+.brand-badge {
+    background: #2563eb;
+    color: #fff;
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.tool-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #0f172a;
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #cbd5e1;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    min-height: 38px;
+}
+
+.btn:hover:not(:disabled) {
+    background: #334155;
+    color: #ffffff;
+}
+
+.btn:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.btn.active {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #3b82f6;
+    box-shadow: 0 1px 4px rgba(37, 99, 235, 0.4);
+}
+
+.btn.toggle-btn.active {
+    background: #059669;
+    border-color: #10b981;
+    color: #ffffff;
+}
+
+.btn.danger:hover:not(:disabled) {
+    background: #dc2626;
+    color: #ffffff;
+}
+
+.btn:disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+}
+
+/* Hlavní oblast s plátnem */
+.canvas-container {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    overflow: hidden;
+    background: #f8fafc;
+}
+
+#cad-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    /* Klíčové pro tablet a stylus: zakáže výchozí posouvání a zoomování stránky prohlížečem */
+    touch-action: none;
+    cursor: crosshair;
+}
+
+/* Plovoucí nápověda v pravém horním rohu plátna */
+.quick-help {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(4px);
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #334155;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+    max-width: 310px;
+    pointer-events: none;
+}
+
+.quick-help h4 {
+    font-size: 12px;
+    color: #0f172a;
+    margin-bottom: 4px;
+}
+
+.quick-help ul {
+    padding-left: 16px;
+    line-height: 1.45;
+}
+
+/* Spodní stavový a diagnostický řádek */
+.status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 14px;
+    background: #0f172a;
+    color: #94a3b8;
+    font-size: 12px;
+    border-top: 1px solid #1e293b;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.status-left, .status-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.status-badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    background: #1e293b;
+    color: #e2e8f0;
+}
+
+.status-badge.pointer-pen {
+    background: #1d4ed8;
+    color: #ffffff;
+}
+
+.status-badge.pointer-touch {
+    background: #047857;
+    color: #ffffff;
+}
+
+.status-divider {
+    color: #334155;
+}
+
+/* Plovoucí numerická klávesnice (NumPad) pro Krok 2 */
+.numpad-panel {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 300px;
+    background: #1e293b;
+    color: #f8fafc;
+    border: 1px solid #475569;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.45);
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.numpad-panel.hidden {
+    display: none;
+}
+
+.numpad-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.numpad-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #e2e8f0;
+}
+
+.numpad-close-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.numpad-close-btn:hover {
+    background: #334155;
+    color: #ffffff;
+}
+
+/* Displej kalkulačky */
+.numpad-display {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 8px 12px;
+    text-align: right;
+}
+
+.numpad-expr {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-bottom: 2px;
+}
+
+.numpad-value-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.numpad-value {
+    font-size: 26px;
+    font-weight: 800;
+    color: #ffffff;
+    font-variant-numeric: tabular-nums;
+}
+
+.numpad-value.replace-mode {
+    background: rgba(37, 99, 235, 0.35);
+    padding: 0 6px;
+    border-radius: 4px;
+}
+
+.numpad-unit {
+    font-size: 13px;
+    font-weight: 600;
+    color: #60a5fa;
+}
+
+/* Přepínač směru posunu rohu (A -> B) */
+.numpad-dir-group {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    background: #0f172a;
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+}
+
+.dir-btn {
+    padding: 6px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #cbd5e1;
+    background: transparent;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.dir-btn:hover {
+    background: #334155;
+}
+
+.dir-btn.active {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+/* Mřížka čísel 0-9 */
+.numpad-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+}
+
+.np-key {
+    height: 46px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #f8fafc;
+    background: #334155;
+    border: 1px solid #475569;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.np-key:hover {
+    background: #475569;
+}
+
+.np-key:active {
+    transform: translateY(1px);
+    background: #2563eb;
+}
+
+.np-key.op-key {
+    background: #1e293b;
+    color: #60a5fa;
+    font-size: 16px;
+}
+
+.np-key.op-key:hover {
+    background: #334155;
+}
+
+/* Spodní potvrzovací tlačítka NumPadu */
+.numpad-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.numpad-actions-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.np-action-btn {
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.np-action-btn.primary {
+    background: #16a34a;
+    color: #ffffff;
+}
+
+.np-action-btn.primary:hover {
+    background: #15803d;
+}
+
+.np-action-btn.secondary {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.np-action-btn.secondary:hover {
+    background: #1d4ed8;
+}
+
+.np-action-btn.unlock {
+    background: transparent;
+    border: 1px solid #475569;
+    color: #cbd5e1;
+    font-size: 12px;
+    padding: 7px;
+}
+
+.np-action-btn.unlock:hover {
+    background: #dc2626;
+    border-color: #dc2626;
+    color: #ffffff;
+}
+
+/* Plovoucí panel pro úpravu oken a dveří (Krok 4) */
+.opening-panel {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 320px;
+    background: #1e293b;
+    color: #f8fafc;
+    border: 1px solid #475569;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.45);
+    z-index: 32;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.opening-panel.hidden {
+    display: none;
+}
+
+.op-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.op-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #cbd5e1;
+}
+
+.op-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.op-input {
+    width: 110px;
+    padding: 6px 8px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
+    background: #0f172a;
+    border: 1px solid #475569;
+    border-radius: 6px;
+    text-align: right;
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+.op-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.op-presets {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.op-preset-btn {
+    flex: 1;
+    padding: 5px 4px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #cbd5e1;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.op-preset-btn:hover {
+    background: #334155;
+    color: #ffffff;
+}
+
+.op-ref-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.op-ref-btn {
+    padding: 7px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #cbd5e1;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.op-ref-btn.active {
+    background: #059669;
+    border-color: #10b981;
+    color: #ffffff;
+}
+
+.op-note-section {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.op-text-input {
+    width: 100%;
+    padding: 7px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+    background: #0f172a;
+    border: 1px solid #475569;
+    border-radius: 6px;
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+.op-text-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.op-text-input::placeholder {
+    color: #64748b;
+    font-weight: 400;
+}
+
+/* Plovoucí horní lišta pro nastavení čáry / překladu / oblouku / kružnice */
+.line-style-bar {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.94);
+    border: 1px solid #475569;
+    border-radius: 12px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    z-index: 28;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.35);
+}
+
+.line-style-bar.hidden {
+    display: none;
+}
+
+.lsb-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.lsb-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #94a3b8;
+    margin-right: 2px;
+}
+
+.lsb-btn {
+    padding: 5px 9px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #e2e8f0;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.lsb-btn:hover {
+    background: #334155;
+}
+
+.lsb-btn.active {
+    background: #2563eb;
+    border-color: #60a5fa;
+    color: #ffffff;
+}
+
+.lsb-input {
+    width: 68px;
+    padding: 4px 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #ffffff;
+    background: #0f172a;
+    border: 1px solid #475569;
+    border-radius: 6px;
+    text-align: right;
+}
+
+#numpad-move-both.active {
+    background: #059669;
+    border-color: #10b981;
+    color: #ffffff;
+}
+
+/* Kruhové vzorníky barev (pro kreslení od ruky i detail) */
+.color-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.1s ease, border-color 0.1s ease;
+}
+
+.color-dot:hover {
+    transform: scale(1.15);
+}
+
+.color-dot.active {
+    border-color: #ffffff;
+    box-shadow: 0 0 0 2px #3b82f6;
+    transform: scale(1.18);
+}
+
+/* Modální okno pro konstrukční detail */
+.detail-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.detail-modal-backdrop.hidden {
+    display: none;
+}
+
+.detail-modal {
+    width: 720px;
+    max-width: 95vw;
+    background: #1e293b;
+    border: 1px solid #475569;
+    border-radius: 14px;
+    padding: 18px;
+    color: #f8fafc;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.det-canvas-wrap {
+    width: 100%;
+    background: #ffffff;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#det-canvas {
+    display: block;
+    cursor: crosshair;
+    background: #ffffff;
+    touch-action: none;
+}
+
+.det-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #0f172a;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    flex-wrap: wrap;
+}
+
+
+
+
+
+
+/* Panel místnosti – řádky výšek */
+.room-heights {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.room-height-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.room-height-row .op-text-input {
+    flex: 1;
+    min-width: 0;
+}

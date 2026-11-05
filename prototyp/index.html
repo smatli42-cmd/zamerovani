@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zaměřování stavby – Krok 1 (Plátno & Stylus)</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Horní lišta s nástroji -->
+        <header class="top-toolbar">
+            <div class="brand">
+                <span>📐 Zaměřování</span>
+                <span class="brand-badge">Krok 4: Okna &amp; Dveře</span>
+            </div>
+
+            <!-- Hlavní nástroje -->
+            <div class="tool-group" aria-label="Hlavní nástroje">
+                <button class="btn active" data-tool="draw" title="Kreslit stěny tažením (Stylus / Levé tl. myši)">
+                    ✏️ Kreslit stěny
+                </button>
+                <button class="btn" data-tool="line" title="Kreslit překlady (čerchované čáry), čárkované čáry, oblouky a kružnice">
+                    ➖ Čára / Překlad / Tvar
+                </button>
+                <button class="btn" data-tool="stairs" title="Kreslit přímé schodiště tažením délky se stupni a výstupní čárou">
+                    🪜 Schodiště
+                </button>
+                <button class="btn" data-tool="freehand" title="Kreslení od ruky (poznámky, náčrty) v samostatné vrstvě">
+                    ✍️ Od ruky
+                </button>
+                <button class="btn" data-tool="room" title="Kliknutím do místnosti vložit štítek s názvem a výškou (lze více výšek s poznámkou)">
+                    🏷️ Místnost
+                </button>
+                <button class="btn" data-tool="detail" title="Kliknutím na výkres umístit značku konstrukčního detailu (např. D1)">
+                    🔍 Detail
+                </button>
+                <button class="btn" data-tool="diagonal" title="Natáhnout měřenou úhlopříčku mezi dvěma rohy místnosti (pro šikmé stěny)">
+                    ⟋ Úhlopříčka
+                </button>
+                <button class="btn" data-tool="door" title="Kliknutím na stěnu vložit dveře">
+                    🚪 Dveře
+                </button>
+                <button class="btn" data-tool="window" title="Kliknutím na stěnu vložit okno">
+                    🪟 Okno
+                </button>
+                <button class="btn" data-tool="opening" title="Kliknutím na stěnu vložit volný stavební otvor (průchod bez dveří)">
+                    ⬜ Otvor
+                </button>
+                <button class="btn" data-tool="niche" title="Kliknutím na stěnu vložit niku (výklenek do hloubky zdi)">
+                    凹 Nika
+                </button>
+                <button class="btn" data-tool="select" title="Kliknutím na stěnu/otvor zadat rozměr nebo tažením posunout roh">
+                    👆 Vybrat / Kótovat
+                </button>
+                <button class="btn" data-tool="pan" title="Posouvat výkres (nebo 1 prst / pravé tl. myši)">
+                    ✋ Posun plátna
+                </button>
+            </div>
+
+            <!-- Přepínače chování (Ortho, Snap, Kóty, Palm Rejection) -->
+            <div class="tool-group" aria-label="Nastavení kreslení">
+                <button id="btn-ortho" class="btn toggle-btn active" title="Automaticky rovnat stěny do 90°">
+                    📐 Pravé úhly (90°)
+                </button>
+                <button id="btn-snap" class="btn toggle-btn active" title="Magnetické přichytávání na existující rohy a vodítka">
+                    🧲 Přichytávat rohy
+                </button>
+                <button id="btn-dims" class="btn toggle-btn active" title="Zobrazit/skrýt stavební kóty">
+                    📏 Kóty
+                </button>
+                <button id="btn-font-dec" class="btn" title="Zmenšit písmo kót a přiblížit kótovací čáry">
+                    🔤−
+                </button>
+                <span id="dim-scale-label" class="status-badge" title="Aktuální velikost písma a rozestupů kót" style="align-self: center; font-weight: 700;">115%</span>
+                <button id="btn-font-inc" class="btn" title="Zvětšit písmo kót a automaticky zvětšit rozestupy kótovacích čar">
+                    🔤+
+                </button>
+                <button id="btn-finger-pan" class="btn toggle-btn active" title="Zapnuto: Stylus kreslí, prst jen posouvá plátno (ochrana proti dlani). Vypnuto: I prst kreslí.">
+                    🖐️ Prst = jen posun
+                </button>
+                <button id="btn-grid" class="btn toggle-btn active" title="Zobrazit/skrýt mřížku">
+                    # Mřížka
+                </button>
+                <button id="btn-freehand-layer" class="btn toggle-btn active" title="Zobrazit nebo skrýt vrstvu kreslení od ruky">
+                    👁️ Od ruky
+                </button>
+            </div>
+
+            <!-- Úpravy a pohled -->
+            <div class="tool-group" aria-label="Historie a akce">
+                <button id="btn-undo" class="btn" title="Zpět (Ctrl+Z)" disabled>↩️ Zpět</button>
+                <button id="btn-redo" class="btn" title="Vpřed (Ctrl+Y)" disabled>↪️ Vpřed</button>
+                <button id="btn-delete" class="btn danger" title="Smazat vybranou stěnu nebo roh (Delete)" disabled>🗑️ Smazat</button>
+                <button id="btn-center" class="btn" title="Vycentrovat pohled na výkres">🎯 Vycentrovat</button>
+                <button id="btn-demo" class="btn" title="Vložit ukázkovou místnost pro testování">🏠 Ukázková místnost</button>
+                <button id="btn-clear" class="btn danger" title="Vymazat celé plátno">✖ Vyčistit</button>
+            </div>
+        </header>
+
+        <!-- Kreslící plátno -->
+        <main class="canvas-container">
+            <canvas id="cad-canvas"></canvas>
+
+            <!-- Plovoucí horní lišta pro výběr tvaru, stylu čáry a tloušťky (zobrazí se v režimu "➖ Čára / Překlad / Tvar") -->
+            <div id="line-style-bar" class="line-style-bar hidden" aria-label="Styl kreslené čáry a tvaru">
+                <div class="lsb-group">
+                    <span class="lsb-label">Tvar:</span>
+                    <button type="button" class="lsb-btn active" data-line-submode="single" title="Jednoduchá čára (např. 1 hrana překladu, podhledu nebo schodu)">╱ Čára</button>
+                    <button type="button" class="lsb-btn" data-line-submode="double" title="Dvojitá rovnoběžná čára – jedním tahem nakreslí celý překlad/průvlak přes místnost!">═ Dvojitá (Překlad)</button>
+                    <button type="button" class="lsb-btn" data-line-submode="arc" title="Oblouková čára / klenba (s klikací kótou vzepětí ⌒)">⌒ Oblouk</button>
+                    <button type="button" class="lsb-btn" data-line-submode="circle" title="Kružnice / kruhový sloup (tažením od středu)">◯ Kružnice</button>
+                    <button type="button" class="lsb-btn" data-line-submode="rect" title="▭ Obdélník / Čtverec (tažením úhlopříčky jedním tahem)">▭ Obdélník</button>
+                </div>
+
+                <div id="line-rect-wrap" class="lsb-group" style="display: none;">
+                    <label class="lsb-label" style="cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                        <input id="line-rect-walls" type="checkbox"> Jako nosné zdi (jinak pomocný tvar / sloup)
+                    </label>
+                </div>
+
+                <div id="line-double-wrap" class="lsb-group" style="display: none;">
+                    <span class="lsb-label">Šířka překladu:</span>
+                    <input id="line-double-spacing" type="number" class="lsb-input" step="10" min="50" value="250">
+                    <span class="lsb-label">mm</span>
+                </div>
+
+                <div class="lsb-group">
+                    <span class="lsb-label">Čára:</span>
+                    <button type="button" class="lsb-btn active" data-line-style="dashdot" title="Čerchovaná čára (nad rovinou řezu: překlad, průvlak, trám, podhled)">─ · ─ Čerchovaná</button>
+                    <button type="button" class="lsb-btn" data-line-style="dashed" title="Čárkovaná čára (zakryté hrany)">─ ─ ─ Čárkovaná</button>
+                    <button type="button" class="lsb-btn" data-line-style="solid" title="Plná čára (hrana podlahy, schod, sokl)">───── Plná</button>
+                </div>
+
+                <div class="lsb-group">
+                    <span class="lsb-label">Tloušťka:</span>
+                    <button type="button" class="lsb-btn" data-line-thick="1.5">Tenká</button>
+                    <button type="button" class="lsb-btn active" data-line-thick="2.5">Střední</button>
+                    <button type="button" class="lsb-btn" data-line-thick="4">Tlustá</button>
+                </div>
+            </div>
+
+            <!-- Stručný přehled ovládání (PC i Tablet) -->
+            <aside class="quick-help">
+                <h4>Volba posouvaného rohu (3 způsoby):</h4>
+                <ul>
+                    <li><strong>1. Klik na roh &rarr; Klik na kótu:</strong> Klikni na roh (rozsvítí se oranžově <strong>🎯</strong> i přilehlé kóty) a pak klikni na kótu.</li>
+                    <li><strong>2. Přepnutí rohu:</strong> Při otevřené kalkulačce klikni na plátně na roh <strong>🔒</strong> a přehodí se na <strong>🎯 posun</strong>.</li>
+                    <li><strong>3. Kliknutí na stěnu:</strong> V režimu <em>Vybrat</em> klikni na stěnu blíže k tomu rohu, který chceš posunout.</li>
+                </ul>
+            </aside>
+
+            <!-- Plovoucí numerická klávesnice (NumPad) pro rychlé zadávání v mm -->
+            <section id="numpad-panel" class="numpad-panel hidden" aria-label="Zadání délky stěny">
+                <div class="numpad-header">
+                    <span id="numpad-title" class="numpad-title">📏 Celková délka stěny</span>
+                    <button id="numpad-close" class="numpad-close-btn" title="Zavřít (Esc)">✖</button>
+                </div>
+
+                <div class="numpad-display">
+                    <div id="numpad-expr" class="numpad-expr">Zadej délku stěny (v mm):</div>
+                    <div class="numpad-value-row">
+                        <span id="numpad-value" class="numpad-value">0</span>
+                        <span class="numpad-unit">mm</span>
+                    </div>
+                </div>
+
+                <!-- Volba směru: Který roh stěny (A nebo B) se má posunout -->
+                <div id="numpad-dir-group" class="numpad-dir-group" title="Který roh stěny se má při změně délky posunout">
+                    <button class="dir-btn active" data-numpad-dir="auto">Auto</button>
+                    <button class="dir-btn" data-numpad-dir="end">A ➔ B</button>
+                    <button class="dir-btn" data-numpad-dir="start">A ⬅ B</button>
+                    <button class="dir-btn" data-numpad-dir="both">⬅ Střed ➔</button>
+                </div>
+
+                <!-- Číselná tlačítka -->
+                <div class="numpad-grid">
+                    <button class="np-key" data-numpad-key="7">7</button>
+                    <button class="np-key" data-numpad-key="8">8</button>
+                    <button class="np-key" data-numpad-key="9">9</button>
+                    <button class="np-key op-key" data-numpad-key="BACKSPACE" title="Smazat poslední číslici">⌫</button>
+
+                    <button class="np-key" data-numpad-key="4">4</button>
+                    <button class="np-key" data-numpad-key="5">5</button>
+                    <button class="np-key" data-numpad-key="6">6</button>
+                    <button class="np-key op-key" data-numpad-key="CLEAR" title="Vynulovat">C</button>
+
+                    <button class="np-key" data-numpad-key="1">1</button>
+                    <button class="np-key" data-numpad-key="2">2</button>
+                    <button class="np-key" data-numpad-key="3">3</button>
+                    <button class="np-key op-key" data-numpad-key="+" title="Přičíst rozměr (např. 1200+800)">+</button>
+
+                    <button class="np-key" data-numpad-key="0">0</button>
+                    <button class="np-key" data-numpad-key="00">00</button>
+                    <button class="np-key op-key" data-numpad-key="-" title="Odečíst rozměr">−</button>
+                    <button id="numpad-next" class="np-key op-key" title="Potvrdit a přejít na další stěnu (Tab)">⏭️Tab</button>
+                </div>
+
+                <!-- Potvrzovací tlačítka -->
+                <div class="numpad-actions">
+                    <div class="numpad-actions-row">
+                        <button id="numpad-apply" class="np-action-btn primary" title="Potvrdit rozměr (Enter)">
+                            ✔ Potvrdit (Enter)
+                        </button>
+                        <button class="np-action-btn secondary" onclick="window.App.NumPad.applyAndNextWall()" title="Uložit a přejít na další kótu (Tab)">
+                            Další kóta ➔
+                        </button>
+                    </div>
+                    <button id="numpad-move-both" type="button" class="np-action-btn unlock" style="display: none;" title="Přepnout, zda se posune celá čára překladu (oba konce) nebo jen tento bod na stěně">
+                        🔗 Posun: Celá čára (oba konce)
+                    </button>
+                    <button id="numpad-open-props" class="np-action-btn unlock" style="display: none;" title="Otevřít nastavení stylu čáry, oblouku, výšky nebo parapetu">
+                        ⚙️ Upravit parametry / styl / oblouk
+                    </button>
+                    <button id="numpad-unlock" class="np-action-btn unlock" title="Zrušit pevnou kótu a vrátit stěnu do stavu náčrtu">
+                        🔓 Odemknout kótu (vrátit na ~náčrt)
+                    </button>
+                </div>
+            </section>
+
+            <!-- Plovoucí panel pro úpravu ČÁRY, PŘEKLADU, OBLOUKU nebo KRUŽNICE -->
+            <section id="shape-panel" class="opening-panel hidden" aria-label="Nastavení čáry, oblouku nebo kružnice">
+                <div class="numpad-header">
+                    <span id="sh-title" class="numpad-title">➖ Nastavení čáry / překladu</span>
+                    <button id="sh-close" class="numpad-close-btn" title="Zavřít (Esc)">✖</button>
+                </div>
+
+                <!-- Akce pro dílčí úsek rozdělené stěny (mezi připojenými čarami / překlady / oblouky) -->
+                <div id="sh-segment-actions" class="op-note-section" style="display: none; gap: 6px;">
+                    <div class="op-label">Úsek rozdělené stěny:</div>
+                    <button id="sh-cut-segment" type="button" class="np-action-btn unlock" title="Vyříznout (skrýt) nebo obnovit pouze tento dílčí úsek stěny bez smazání celé stěny a jejích kót">
+                        ✂️ Vyříznout (smazat) jen tento úsek stěny
+                    </button>
+                    <button id="sh-open-numpad" type="button" class="np-action-btn secondary" title="Otevřít kalkulačku pro zadání celkové délky celé stěny">
+                        📏 Kótovat celkovou délku stěny (NumPad)
+                    </button>
+                </div>
+
+                <!-- Přepínač Stěna vs. Pomocná čára (Překlad) -->
+                <div id="sh-wall-only" class="op-note-section">
+                    <div class="op-label">Druh čáry:</div>
+                    <div class="op-ref-group">
+                        <button id="sh-kind-aux" type="button" class="op-ref-btn active">➖ Pomocná čára / Překlad</button>
+                        <button id="sh-kind-wall" type="button" class="op-ref-btn">🧱 Nosná stěna / Příčka</button>
+                    </div>
+                </div>
+
+                <!-- Styl čáry -->
+                <div class="op-note-section">
+                    <div class="op-label">Styl čáry:</div>
+                    <div class="op-presets">
+                        <button type="button" class="op-preset-btn" data-sh-style="dashdot">─ · ─ Čerchovaná</button>
+                        <button type="button" class="op-preset-btn" data-sh-style="dashed">─ ─ ─ Čárkovaná</button>
+                        <button type="button" class="op-preset-btn" data-sh-style="solid">───── Plná</button>
+                    </div>
+                </div>
+
+                <!-- Tloušťka čáry -->
+                <div class="op-note-section">
+                    <div class="op-label">Tloušťka čáry:</div>
+                    <div class="op-presets">
+                        <button type="button" class="op-preset-btn" data-sh-thick="1.5">Tenká (1.5)</button>
+                        <button type="button" class="op-preset-btn" data-sh-thick="2.5">Střední (2.5)</button>
+                        <button type="button" class="op-preset-btn" data-sh-thick="4">Tlustá (4.0)</button>
+                    </div>
+                </div>
+
+                <!-- Prohnutí do oblouku (pouze pro čáry a stěny) -->
+                <div id="sh-arc-section" class="op-note-section">
+                    <div class="op-row">
+                        <label for="sh-arc" class="op-label">⌒ Výška oblouku (vzepětí):</label>
+                        <div class="op-input-wrap">
+                            <input id="sh-arc" type="number" class="op-input" step="10" min="0" value="0">
+                            <span class="numpad-unit">mm</span>
+                        </div>
+                    </div>
+                    <div class="numpad-actions-row">
+                        <button id="sh-arc-flip" type="button" class="np-action-btn secondary" title="Prohnout oblouk na opačnou stranu">
+                            🔄 Opačná strana ⌒
+                        </button>
+                        <button id="sh-arc-zero" type="button" class="np-action-btn unlock" title="Narovnat oblouk zpět na přímku">
+                            📏 Narovnat (0 mm)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Průměr kružnice (pouze pro kružnici) -->
+                <div id="sh-circle-only" class="op-row" style="display: none;">
+                    <label for="sh-diameter" class="op-label">◯ Průměr kružnice (⌀):</label>
+                    <div class="op-input-wrap">
+                        <input id="sh-diameter" type="number" class="op-input" step="10" min="50" value="500">
+                        <span class="numpad-unit">mm</span>
+                    </div>
+                </div>
+
+                <!-- Viditelnost vlastní délkové kóty čáry -->
+                <div id="sh-dim-row" class="op-row">
+                    <label for="sh-show-dim" class="op-label">📏 Zobrazovat vlastní délku čáry:</label>
+                    <input id="sh-show-dim" type="checkbox" style="width: 18px; height: 18px; cursor: pointer;">
+                </div>
+
+                <!-- Poznámka / popisek -->
+                <div class="op-note-section">
+                    <label for="sh-note" class="op-label">Popisek / poznámka:</label>
+                    <input id="sh-note" type="text" class="op-text-input" placeholder="např. překlad sv.v. 2100, trám, sloup...">
+                    <div class="op-presets">
+                        <button type="button" class="op-preset-btn" data-sh-tag="překlad">překlad</button>
+                        <button type="button" class="op-preset-btn" data-sh-tag="průvlak">průvlak</button>
+                        <button type="button" class="op-preset-btn" data-sh-tag="trám">trám</button>
+                        <button type="button" class="op-preset-btn" data-sh-tag="podhled">podhled</button>
+                        <button type="button" class="op-preset-btn" data-sh-tag="schod">schod</button>
+                        <button type="button" class="op-preset-btn" data-sh-tag="sloup">sloup</button>
+                    </div>
+                </div>
+
+                <div class="numpad-actions-row">
+                    <button id="sh-apply" type="button" class="np-action-btn primary">✔ Hotovo</button>
+                    <button id="sh-delete" type="button" class="np-action-btn unlock">🗑️ Smazat</button>
+                </div>
+            </section>
+
+            <!-- Plovoucí panel pro vkládání a úpravu DVEŘÍ a OKEN (Krok 4) -->
+            <section id="opening-panel" class="opening-panel hidden" aria-label="Nastavení otvoru">
+                <div class="numpad-header">
+                    <span id="op-title" class="numpad-title">🚪 Nastavení dveří</span>
+                    <button id="op-close" class="numpad-close-btn" title="Zavřít (Esc)">✖</button>
+                </div>
+
+                <!-- Volba rohu, od kterého se měří odstup (ostění) -->
+                <div class="op-label">Měřit odstup (ostění) od rohu:</div>
+                <div class="op-ref-group">
+                    <button id="op-from-a" class="op-ref-btn active" title="Měřit vzdálenost otvoru od rohu A (lze přepnout i kliknutím na roh A na plátně)">
+                        📏 Od rohu A
+                    </button>
+                    <button id="op-from-b" class="op-ref-btn" title="Měřit vzdálenost otvoru od rohu B (lze přepnout i kliknutím na roh B na plátně)">
+                        📏 Od rohu B
+                    </button>
+                </div>
+
+                <!-- Odstup od zvoleného rohu -->
+                <div class="op-row">
+                    <label for="op-offset" class="op-label">Odstup od rohu:</label>
+                    <div class="op-input-wrap">
+                        <input id="op-offset" type="number" class="op-input" step="10" min="0" value="300">
+                        <span class="numpad-unit">mm</span>
+                    </div>
+                </div>
+
+                <!-- Šířka otvoru + rychlé předvolby -->
+                <div class="op-row">
+                    <label for="op-width" class="op-label">Šířka otvoru:</label>
+                    <div class="op-input-wrap">
+                        <input id="op-width" type="number" class="op-input" step="10" min="100" value="800">
+                        <span class="numpad-unit">mm</span>
+                    </div>
+                </div>
+                <div class="op-presets">
+                    <button class="op-preset-btn" data-op-preset="600">600</button>
+                    <button class="op-preset-btn" data-op-preset="700">700</button>
+                    <button class="op-preset-btn" data-op-preset="800">800</button>
+                    <button class="op-preset-btn" data-op-preset="900">900</button>
+                    <button class="op-preset-btn" data-op-preset="1200">1200</button>
+                    <button class="op-preset-btn" data-op-preset="1500">1500</button>
+                    <button class="op-preset-btn" data-op-preset="1800">1800</button>
+                </div>
+
+                <!-- Hloubka niky (pouze pro niky) -->
+                <div id="op-depth-row" class="op-row" style="display: none;">
+                    <label for="op-depth" class="op-label">Hloubka niky:</label>
+                    <div class="op-input-wrap">
+                        <input id="op-depth" type="number" class="op-input" step="10" min="20" value="200">
+                        <span class="numpad-unit">mm</span>
+                    </div>
+                </div>
+
+                <!-- Výška otvoru -->
+                <div class="op-row">
+                    <label for="op-height" class="op-label">Výška otvoru:</label>
+                    <div class="op-input-wrap">
+                        <input id="op-height" type="number" class="op-input" step="10" min="100" value="1970">
+                        <span class="numpad-unit">mm</span>
+                    </div>
+                </div>
+
+                <!-- Parapet (pro okna, otvory a niky) -->
+                <div id="op-sill-row" class="op-row" style="display: none;">
+                    <label for="op-sill" class="op-label">Výška parapetu:</label>
+                    <div class="op-input-wrap">
+                        <input id="op-sill" type="number" class="op-input" step="10" min="0" value="900">
+                        <span class="numpad-unit">mm</span>
+                    </div>
+                </div>
+
+                <!-- Vlastní popisek / poznámka + rychlé štítky -->
+                <div class="op-note-section">
+                    <label for="op-note" class="op-label">Popisek / poznámka:</label>
+                    <input id="op-note" type="text" class="op-text-input" placeholder="např. 3-dílné, francouzské, SDK...">
+                    <div class="op-presets">
+                        <button type="button" class="op-preset-btn" data-op-tag="1-dílné">1-dílné</button>
+                        <button type="button" class="op-preset-btn" data-op-tag="2-dílné">2-dílné</button>
+                        <button type="button" class="op-preset-btn" data-op-tag="3-dílné">3-dílné</button>
+                        <button type="button" class="op-preset-btn" data-op-tag="francouzské">franc. okno</button>
+                        <button type="button" class="op-preset-btn" data-op-tag="2-křídlé">2-křídlé</button>
+                        <button type="button" class="op-preset-btn" data-op-tag="posuvné">posuvné</button>
+                    </div>
+                </div>
+
+                <!-- Rychlé připojení sousedního okna / francouzského okna (0 mm odstup) -->
+                <button id="op-attach-next" type="button" class="np-action-btn secondary" title="Vložit hned vedle další okno nebo francouzské okno s odstupem 0 mm">
+                    ➕ Připojit vedle (sestava 0 mm)
+                </button>
+
+                <!-- Směr otevírání (pouze pro dveře) -->
+                <div id="op-door-controls" class="numpad-actions-row">
+                    <button id="op-flip-hinge" class="np-action-btn secondary" title="Přehodit panty (levé / pravé dveře)">
+                        🔄 Panty L/P
+                    </button>
+                    <button id="op-flip-side" class="np-action-btn secondary" title="Přehodit směr otevírání (dovnitř / ven)">
+                        🔄 Dovnitř / Ven
+                    </button>
+                </div>
+
+                <!-- Potvrzení / Smazání -->
+                <div class="numpad-actions-row">
+                    <button id="op-apply" class="np-action-btn primary">✔ Hotovo</button>
+                    <button id="op-delete" class="np-action-btn unlock">🗑️ Smazat otvor</button>
+                </div>
+            </section>
+
+
+            <!-- Plovoucí panel štítku MÍSTNOSTI (název + výšky s poznámkou) -->
+            <section id="room-panel" class="opening-panel hidden" aria-label="Nastavení místnosti">
+                <div class="numpad-header">
+                    <span class="numpad-title">🏷️ Místnost</span>
+                    <button id="room-close" class="numpad-close-btn" title="Zavřít (Esc)">✖</button>
+                </div>
+                <div class="op-note-section">
+                    <label for="room-name" class="op-label">Název místnosti:</label>
+                    <input id="room-name" type="text" class="op-text-input" placeholder="např. Obývací pokoj">
+                    <div class="op-presets">
+                        <button type="button" class="op-preset-btn" data-room-tag="Obývák">Obývák</button>
+                        <button type="button" class="op-preset-btn" data-room-tag="Kuchyň">Kuchyň</button>
+                        <button type="button" class="op-preset-btn" data-room-tag="Ložnice">Ložnice</button>
+                        <button type="button" class="op-preset-btn" data-room-tag="Koupelna">Koupelna</button>
+                        <button type="button" class="op-preset-btn" data-room-tag="WC">WC</button>
+                        <button type="button" class="op-preset-btn" data-room-tag="Chodba">Chodba</button>
+                    </div>
+                </div>
+                <div class="op-label">Světlé výšky místnosti (mm):</div>
+                <div id="room-heights" class="room-heights"></div>
+                <button id="room-add-height" type="button" class="np-action-btn secondary">➕ Přidat další výšku</button>
+                <div class="numpad-actions-row">
+                    <button id="room-apply" type="button" class="np-action-btn primary">✔ Hotovo</button>
+                    <button id="room-delete" type="button" class="np-action-btn unlock">🗑️ Smazat místnost</button>
+                </div>
+            </section>
+            <!-- Plovoucí lišta pro kreslení od ruky -->
+            <div id="freehand-bar" class="line-style-bar hidden" aria-label="Nástroje kreslení od ruky">
+                <div class="lsb-group">
+                    <span class="lsb-label">Režim:</span>
+                    <button type="button" class="lsb-btn active" data-fh-mode="pen">🖊️ Pero</button>
+                    <button type="button" class="lsb-btn" data-fh-mode="eraser">🧹 Guma</button>
+                </div>
+                <div class="lsb-group">
+                    <span class="lsb-label">Barva:</span>
+                    <button type="button" class="color-dot active" data-fh-color="#e11d48" style="background: #e11d48;" title="Červená"></button>
+                    <button type="button" class="color-dot" data-fh-color="#2563eb" style="background: #2563eb;" title="Modrá"></button>
+                    <button type="button" class="color-dot" data-fh-color="#059669" style="background: #059669;" title="Zelená"></button>
+                    <button type="button" class="color-dot" data-fh-color="#d97706" style="background: #d97706;" title="Oranžová"></button>
+                    <button type="button" class="color-dot" data-fh-color="#0f172a" style="background: #0f172a;" title="Tmavá"></button>
+                </div>
+                <div class="lsb-group">
+                    <span class="lsb-label">Tloušťka:</span>
+                    <button type="button" class="lsb-btn" data-fh-width="2">Tenká</button>
+                    <button type="button" class="lsb-btn active" data-fh-width="4">Střední</button>
+                    <button type="button" class="lsb-btn" data-fh-width="7">Tlustá</button>
+                </div>
+                <div class="lsb-group">
+                    <button id="fh-clear-all" type="button" class="lsb-btn danger" title="Vymazat všechny kresby od ruky">✖ Vymazat skici</button>
+                </div>
+            </div>
+
+            <!-- Plovoucí panel pro nastavení SCHODIŠTĚ -->
+            <section id="stair-panel" class="opening-panel hidden" aria-label="Nastavení schodiště">
+                <div class="numpad-header">
+                    <span id="stair-title" class="numpad-title">🪜 Nastavení schodiště</span>
+                    <button id="st-close" class="numpad-close-btn" title="Zavřít (Esc)">✖</button>
+                </div>
+
+                <div class="op-row">
+                    <label for="st-length" class="op-label">Délka schodiště (půdorysná):</label>
+                    <div class="op-input-wrap">
+                        <input id="st-length" type="number" class="op-input" step="50" min="500" value="2800">
+                        <span class="numpad-unit">mm</span>
+                    </div>
+                </div>
+
+                <div class="op-row">
+                    <label for="st-width" class="op-label">Šířka ramene:</label>
+                    <div class="op-input-wrap">
+                        <input id="st-width" type="number" class="op-input" step="50" min="400" value="1000">
+                        <span class="numpad-unit">mm</span>
+                    </div>
+                </div>
+                <div class="op-presets">
+                    <button type="button" class="op-preset-btn" data-st-preset="800">800</button>
+                    <button type="button" class="op-preset-btn" data-st-preset="900">900</button>
+                    <button type="button" class="op-preset-btn" data-st-preset="1000">1000</button>
+                    <button type="button" class="op-preset-btn" data-st-preset="1100">1100</button>
+                    <button type="button" class="op-preset-btn" data-st-preset="1200">1200</button>
+                </div>
+
+                <div class="op-row">
+                    <label class="op-label">Počet stupňů:</label>
+                    <div class="op-input-wrap" style="gap: 6px;">
+                        <button id="st-step-dec" type="button" class="lsb-btn" style="padding: 4px 10px; font-weight: 800;">−</button>
+                        <input id="st-steps" type="number" class="op-input" style="width: 60px;" min="2" max="40" value="10">
+                        <button id="st-step-inc" type="button" class="lsb-btn" style="padding: 4px 10px; font-weight: 800;">+</button>
+                    </div>
+                </div>
+
+                <div class="op-row" style="background: #0f172a; padding: 6px 10px; border-radius: 6px;">
+                    <span class="op-label" style="color: #94a3b8;">Hloubka stupně:</span>
+                    <span id="st-depth-info" style="font-weight: 700; color: #60a5fa;">280 mm</span>
+                </div>
+
+                <div class="op-row">
+                    <label for="st-riser" class="op-label">Výška stupně (orientační):</label>
+                    <div class="op-input-wrap">
+                        <input id="st-riser" type="number" class="op-input" step="5" min="120" max="240" value="175">
+                        <span class="numpad-unit">mm</span>
+                    </div>
+                </div>
+
+                <div class="numpad-actions-row">
+                    <button id="st-flip-dir" type="button" class="np-action-btn secondary" title="Otočit směr výstupu o 180°">
+                        🔄 Otočit směr (○➔)
+                    </button>
+                    <button id="st-flip-side" type="button" class="np-action-btn secondary" title="Zrcadlit šířku ramene (vlevo / vpravo / na střed)">
+                        ↔ Přehodit stranu
+                    </button>
+                </div>
+
+                <div class="op-note-section">
+                    <label for="st-note" class="op-label">Popisek schodiště:</label>
+                    <input id="st-note" type="text" class="op-text-input" placeholder="např. 16× 175 / 280, železobetonové...">
+                </div>
+
+                <div class="numpad-actions-row">
+                    <button id="st-apply" type="button" class="np-action-btn primary">✔ Hotovo</button>
+                    <button id="st-delete" type="button" class="np-action-btn unlock">🗑️ Smazat</button>
+                </div>
+            </section>
+
+            <!-- Modální okno pro KONSTRUKČNÍ DETAIL -->
+            <div id="detail-modal" class="detail-modal-backdrop hidden" aria-label="Konstrukční detail">
+                <div class="detail-modal">
+                    <div class="numpad-header">
+                        <div style="display: flex; align-items: baseline; gap: 8px;">
+                            <span id="det-code" style="font-size: 16px; font-weight: 800; color: #38bdf8;">D1</span>
+                            <input id="det-title" type="text" class="op-text-input" style="width: 260px; font-size: 15px;" placeholder="Název detailu (např. Sokl u terasy)">
+                        </div>
+                        <button id="det-close" class="numpad-close-btn" title="Zavřít (Esc)">✖</button>
+                    </div>
+
+                    <div class="op-presets" style="margin-top: -4px;">
+                        <button type="button" class="op-preset-btn" data-det-tag="Ostění okna">Ostění okna</button>
+                        <button type="button" class="op-preset-btn" data-det-tag="Nadpraží / Překlad">Nadpraží</button>
+                        <button type="button" class="op-preset-btn" data-det-tag="Parapet">Parapet</button>
+                        <button type="button" class="op-preset-btn" data-det-tag="Sokl / Práh">Sokl / Práh</button>
+                        <button type="button" class="op-preset-btn" data-det-tag="Styk příčky">Styk příčky</button>
+                        <button type="button" class="op-preset-btn" data-det-tag="Stropní trám">Stropní trám</button>
+                    </div>
+
+                    <!-- Plátno pro skicování detailu -->
+                    <div class="det-canvas-wrap">
+                        <canvas id="det-canvas" width="680" height="380"></canvas>
+                    </div>
+
+                    <!-- Nástroje kreslení v detailu -->
+                    <div class="det-toolbar">
+                        <div class="lsb-group">
+                            <button type="button" class="lsb-btn active" data-det-tool="pen">🖊️ Pero</button>
+                            <button type="button" class="lsb-btn" data-det-tool="line">📏 Přímka</button>
+                            <button type="button" class="lsb-btn" data-det-tool="text" title="Klikni a napiš text / popisek (klik na existující text ho upraví)">🏷️ Text</button>
+                            <button type="button" class="lsb-btn" data-det-tool="dim" title="Natáhni samostatnou oranžovou kótu a napiš k ní libovolné číslo nebo text">📐 Kóta</button>
+                            <button type="button" class="lsb-btn" data-det-tool="eraser">🧹 Guma</button>
+                            <button type="button" class="lsb-btn" data-det-tool="pan" title="Posun skici (též prostřední/pravé tlačítko myši nebo mezerník)">✋ Posun</button>
+                            <button id="det-zoom-out" type="button" class="lsb-btn" title="Oddálit (kolečko myši)">−</button>
+                            <button id="det-zoom-reset" type="button" class="lsb-btn" title="Zpět na 100 %" style="min-width: 58px;">100 %</button>
+                            <button id="det-zoom-in" type="button" class="lsb-btn" title="Přiblížit (kolečko myši)">+</button>
+                        
+                        </div>
+                        <div class="lsb-group">
+                            <button type="button" class="color-dot active" data-det-color="#0f172a" style="background: #0f172a;"></button>
+                            <button type="button" class="color-dot" data-det-color="#dc2626" style="background: #dc2626;"></button>
+                            <button type="button" class="color-dot" data-det-color="#2563eb" style="background: #2563eb;"></button>
+                            <button type="button" class="color-dot" data-det-color="#059669" style="background: #059669;"></button>
+                        </div>
+                        <div class="lsb-group" style="margin-left: auto;">
+                            <button id="det-undo" type="button" class="lsb-btn">↩ Zpět tah</button>
+                            <button id="det-clear" type="button" class="lsb-btn danger">✖ Smazat skicu</button>
+                        </div>
+                    </div>
+
+                    <div class="op-note-section">
+                        <label for="det-notes" class="op-label">Poznámky k detailu (materiály, skladba, rozměry):</label>
+                        <textarea id="det-notes" class="op-text-input" style="height: 60px; resize: vertical; font-family: inherit;" placeholder="např. EPS tl. 160 mm, hydroizolační pás vytažen 150 mm nad terén..."></textarea>
+                    </div>
+
+                    <div class="numpad-actions-row">
+                        <button id="det-save" type="button" class="np-action-btn primary">✔ Uložit a zavřít</button>
+                        <button id="det-delete" type="button" class="np-action-btn unlock">🗑️ Smazat detail z půdorysu</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Spodní diagnostický řádek -->
+        <footer class="status-bar">
+            <div class="status-left">
+                <span id="status-pointer" class="status-badge">⏳ Čekám na vstup</span>
+                <span class="status-divider">|</span>
+                <span id="status-coords">X: 0 mm, Y: 0 mm</span>
+            </div>
+            <div class="status-right">
+                <span id="status-stats">Stěny: 0 | Rohy: 0</span>
+                <span class="status-divider">|</span>
+                <span id="status-zoom">Zoom: 100%</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modulární skripty (rozdělené podle zodpovědnosti, fungují i přímo dvojklikem na index.html) -->
+    <script src="src/core/geometry.js"></script>
+    <script src="src/core/state.js"></script>
+    <script src="src/core/solver.js"></script>
+    <script src="src/canvas/drawWalls.js"></script>
+    <script src="src/canvas/drawOpenings.js"></script>
+    <script src="src/canvas/drawDims.js"></script>
+    <script src="src/canvas/renderer.js"></script>
+    <script src="src/input/numpad.js"></script>
+    <script src="src/input/openingsUI.js"></script>
+    <script src="src/input/shapesUI.js"></script>
+    <script src="src/input/detailsUI.js"></script>
+    <script src="src/input/roomsUI.js"></script>
+    <script src="src/input/pointer.js"></script>
+    <script src="src/main.js"></script>
+</body>
+</html>

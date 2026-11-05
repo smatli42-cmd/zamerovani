@@ -1,0 +1,640 @@
+/* ------------------------------------------------------------------ Základ */
+:root {
+  --bg: #f8fafc;
+  --dark: #0f172a;
+  --dark-2: #1e293b;
+  --dark-3: #334155;
+  --line: #e2e8f0;
+  --muted: #64748b;
+  --primary: #2563eb;
+  --primary-soft: #dbeafe;
+  --danger: #dc2626;
+  --sketch: #c2410c;
+  --radius: 10px;
+  --touch: 44px;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--dark);
+  background: var(--bg);
+  -webkit-tap-highlight-color: transparent;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  touch-action: manipulation;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  font-size: 16px; /* zabrání automatickému zoomu na iPadu */
+}
+
+.muted {
+  color: var(--muted);
+}
+.small {
+  font-size: 12px;
+}
+.spacer {
+  flex: 1;
+}
+
+/* ------------------------------------------------------------------ Tlačítka */
+.btn {
+  min-height: var(--touch);
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--dark);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.btn:not(:disabled):active {
+  transform: scale(0.97);
+}
+.btn-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}
+.btn-danger {
+  background: #fff;
+  border-color: #fecaca;
+  color: var(--danger);
+}
+.btn-danger-ghost {
+  border-color: transparent;
+  background: transparent;
+}
+.btn-dark {
+  background: var(--dark-2);
+  border-color: var(--dark-3);
+  color: #e2e8f0;
+}
+.btn-dark.active {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+.btn-sm {
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: 14px;
+}
+.btn-lg {
+  min-height: 52px;
+  font-size: 17px;
+  padding: 0 22px;
+}
+.btn-icon {
+  padding: 0 10px;
+}
+.btn-row {
+  display: flex;
+  gap: 8px;
+}
+.btn-row .btn {
+  flex: 1;
+}
+.icon-close {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: inherit;
+}
+
+/* ------------------------------------------------------------------ Seznam projektů */
+.projects-screen {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.projects-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: var(--dark);
+  color: #fff;
+}
+.projects-header h1 {
+  font-size: 20px;
+  margin: 0;
+}
+.projects-grid {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  align-content: start;
+}
+.project-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.project-open {
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 16px;
+  cursor: pointer;
+  flex: 1;
+}
+.project-open h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+.project-open p {
+  margin: 2px 0;
+}
+.project-actions {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--line);
+  background: #f8fafc;
+}
+.empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+}
+.banner {
+  padding: 10px 20px;
+  cursor: pointer;
+}
+.banner-error {
+  background: #fef2f2;
+  color: var(--danger);
+}
+
+/* ------------------------------------------------------------------ Dialog a formuláře */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+.dialog {
+  background: #fff;
+  border-radius: 16px;
+  width: min(520px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  padding: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+.dialog h2 {
+  margin: 0 0 14px;
+  font-size: 19px;
+}
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.field input,
+.field textarea,
+.field select {
+  min-height: var(--touch);
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: var(--dark);
+  background: #fff;
+  width: 100%;
+}
+.field-row {
+  display: flex;
+  gap: 10px;
+}
+.field-row .field {
+  flex: 1;
+}
+.field-inline {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+.input-unit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.input-unit input {
+  width: 110px;
+  text-align: right;
+}
+.field-button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  min-height: var(--touch);
+  margin-bottom: 8px;
+  padding: 0 12px;
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  background: #eff6ff;
+  cursor: pointer;
+  font-size: 14px;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 10px;
+}
+.chip {
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 17px;
+  border: 1px solid var(--line);
+  background: #f1f5f9;
+  font-size: 13px;
+  cursor: pointer;
+}
+.chip.active {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+}
+.seg {
+  display: flex;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.seg button {
+  flex: 1;
+  min-height: 40px;
+  border: none;
+  border-right: 1px solid #cbd5e1;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 6px;
+}
+.seg button:last-child {
+  border-right: none;
+}
+.seg button.active {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ Editor */
+.editor {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  padding-top: max(6px, env(safe-area-inset-top));
+  background: var(--dark);
+  color: #fff;
+  position: relative;
+  z-index: 20;
+}
+.project-title {
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  padding: 0 6px;
+}
+.floor-switch {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.floor-switch select {
+  min-height: var(--touch);
+  border-radius: var(--radius);
+  background: var(--dark-2);
+  color: #fff;
+  border: 1px solid var(--dark-3);
+  padding: 0 10px;
+  font-weight: 600;
+}
+.save-status {
+  font-size: 12px;
+  min-width: 90px;
+  text-align: right;
+}
+.save-saved {
+  color: #86efac;
+}
+.save-saving,
+.save-dirty {
+  color: #fcd34d;
+}
+.save-error {
+  color: #fca5a5;
+  font-weight: 700;
+}
+.popover {
+  position: absolute;
+  top: 100%;
+  right: 10px;
+  margin-top: 4px;
+  background: #fff;
+  color: var(--dark);
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+  padding: 10px;
+  min-width: 260px;
+}
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--touch);
+  padding: 0 6px;
+  cursor: pointer;
+}
+.toggle-row input {
+  width: 22px;
+  height: 22px;
+}
+.toggle-row b {
+  min-width: 48px;
+  text-align: center;
+}
+
+.editor-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+.toolbar {
+  width: 76px;
+  background: #fff;
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  overflow-y: auto;
+}
+.tool-btn {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  min-height: 62px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+}
+.tool-btn.active {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+}
+.tool-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+.tool-label {
+  font-size: 11px;
+  font-weight: 600;
+}
+.canvas-wrap {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+.plan-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  display: block;
+}
+
+/* ------------------------------------------------------------------ Panely vpravo */
+.side-panel,
+.numpad {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 320px;
+  max-height: calc(100% - 20px);
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+  z-index: 10;
+}
+.panel-head,
+.numpad-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 6px 6px 14px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  background: #fff;
+}
+.panel-body {
+  padding: 12px 14px;
+}
+.panel-body h4 {
+  margin: 14px 0 8px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.panel-body > .btn-danger {
+  width: 100%;
+  margin-top: 10px;
+}
+.big-value {
+  width: 100%;
+  border: 1px solid #93c5fd;
+  background: #eff6ff;
+  border-radius: 12px;
+  padding: 10px;
+  font-size: 30px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+}
+.big-value small {
+  font-size: 14px;
+  color: var(--muted);
+}
+.big-value .sketch {
+  color: var(--sketch);
+}
+.big-value .hint {
+  flex-basis: 100%;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  text-align: center;
+}
+.height-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.height-row input {
+  min-height: 40px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0 8px;
+  min-width: 0;
+}
+.height-row input[type='number'] {
+  width: 90px;
+}
+.height-row input[type='text'] {
+  flex: 1;
+}
+
+/* ------------------------------------------------------------------ NumPad */
+.numpad {
+  width: 300px;
+}
+.numpad-display {
+  margin: 10px 12px;
+  padding: 8px 12px;
+  background: var(--dark);
+  color: #fff;
+  border-radius: 10px;
+  text-align: right;
+}
+.numpad-display.fresh .numpad-value {
+  color: #93c5fd;
+}
+.numpad-expr {
+  font-size: 13px;
+  color: #94a3b8;
+}
+.numpad-value {
+  font-size: 32px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.numpad-value small {
+  font-size: 14px;
+  color: #94a3b8;
+}
+.numpad-move {
+  padding: 0 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.numpad-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  padding: 0 12px;
+}
+.np-key {
+  min-height: 54px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #f8fafc;
+  font-size: 22px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.np-key:active {
+  background: var(--primary-soft);
+}
+.np-key.op {
+  background: #e2e8f0;
+  font-size: 18px;
+}
+.np-key.next {
+  font-size: 14px;
+  background: #fef3c7;
+}
+.numpad-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px 12px;
+}
+
+@media (max-width: 700px) {
+  .side-panel,
+  .numpad {
+    width: calc(100% - 20px);
+  }
+  .project-title {
+    max-width: 120px;
+  }
+}
