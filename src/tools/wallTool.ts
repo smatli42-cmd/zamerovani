@@ -9,11 +9,14 @@ import { snapEnd, snapPoint, type SnapResult } from '../core/snapping';
 import type { Pt } from '../model/types';
 import { addWall } from '../store/actions';
 import { store, type Camera } from '../store/store';
+import { pickAny } from './pick';
 import { HIT_PX, type PointerInput, type Tool } from './types';
 
 interface Drawing {
   start: SnapResult;
   end: SnapResult;
+  /** Skutečné místo dotyku (bez přichycení) – pro výběr prvku ťuknutím. */
+  downAt: Pt;
 }
 
 let drawing: Drawing | null = null;
@@ -35,7 +38,7 @@ export const wallTool: Tool = {
     const floor = store.floor();
     if (!floor) return;
     const start = snapPoint(floor, p.world, options());
-    drawing = { start, end: start };
+    drawing = { start, end: start, downAt: p.world };
     hoverSnap = null;
     store.set({ selection: null, numpad: null });
     requestRender();
@@ -53,10 +56,12 @@ export const wallTool: Tool = {
     drawing = null;
     if (!d) return;
     if (dist(d.start.pt, d.end.pt) >= 50) {
-      addWall(d.start.pt, d.start.node?.id ?? null, d.end.pt, d.end.node?.id ?? null);
-    } else if (d.start.node) {
-      // Ťuknutí na roh bez tažení = výběr rohu
-      store.set({ selection: { kind: 'node', id: d.start.node.id } });
+      // Při kreslení se panel vlastností neotevírá (nepřekáží v kreslení)
+      addWall(d.start.pt, d.start.node?.id ?? null, d.end.pt, d.end.node?.id ?? null, false);
+    } else {
+      // Ťuknutí bez tažení = výběr prvku pod perem (otevře jeho vlastnosti)
+      const floor = store.floor();
+      if (floor) store.set({ selection: pickAny(floor, d.downAt, store.get().camera) });
     }
     requestRender();
   },

@@ -1,13 +1,12 @@
 /**
- * Nástroj „Vybrat“: ťuknutí vybere prvek, tažením se posouvá roh / otvor / štítek místnosti.
- * Ťuknutí na stěnu otevře rovnou NumPad pro zadání délky (posune se bližší roh).
+ * Nástroj „Vybrat“: ťuknutí na prvek otevře jeho vlastnosti (panel vpravo, včetně Smazat),
+ * ťuknutí na kótu otevře zadání rozměru. Tažením se posouvá roh / otvor / štítek místnosti.
  */
 import { requestRender } from '../canvas/invalidate';
 import { findNodeNear, findWallNear, wallLength, wallNodes } from '../core/floorQueries';
 import { dist, projectToSegment, roundTo } from '../core/geometry';
 import type { Id, Pt } from '../model/types';
 import { mergeNodeIfCoincident, moveNode, moveOpeningTo, moveRoom } from '../store/actions';
-import { openTarget } from '../store/numpadController';
 import { store } from '../store/store';
 import { pickAny } from './pick';
 import { HIT_PX, type PointerInput, type Tool } from './types';
@@ -17,18 +16,6 @@ type DragKind = { kind: 'node'; id: Id } | { kind: 'opening'; id: Id; grabOffset
 let drag: DragKind | null = null;
 let downScreen: Pt | null = null;
 let dragging = false;
-
-export function openWallNumpad(wallId: Id, tapPoint?: Pt): void {
-  const floor = store.floor();
-  const wall = floor?.walls[wallId];
-  if (!floor || !wall) return;
-  const n = wallNodes(floor, wall);
-  let moveId = wall.b;
-  if (n && tapPoint) {
-    moveId = projectToSegment(tapPoint, n[0], n[1]).t < 0.5 ? wall.a : wall.b;
-  }
-  openTarget({ kind: 'wall-length', wallId, move: { nodeId: moveId } });
-}
 
 export const selectTool: Tool = {
   down(p: PointerInput) {
@@ -42,10 +29,6 @@ export const selectTool: Tool = {
 
     if (!hit) {
       store.set({ selection: null, numpad: null });
-      return;
-    }
-    if (hit.kind === 'wall') {
-      openWallNumpad(hit.id, p.world);
       return;
     }
     store.set({ selection: hit, numpad: null });

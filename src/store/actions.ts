@@ -34,7 +34,7 @@ function cleanup(floor: Floor): void {
 
 // ---------------------------------------------------------------- Stěny
 
-export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null): Id | null {
+export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, select = true): Id | null {
   let createdId: Id | null = null;
   store.edit(floor => {
     const a = getOrCreateNode(floor, start, startNodeId);
@@ -52,7 +52,7 @@ export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: I
     splitWallsAtNode(floor, a);
     splitWallsAtNode(floor, b);
   });
-  if (createdId) store.set({ selection: { kind: 'wall', id: createdId } });
+  if (createdId && select) store.set({ selection: { kind: 'wall', id: createdId } });
   return createdId;
 }
 

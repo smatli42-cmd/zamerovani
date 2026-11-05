@@ -17,10 +17,7 @@ export function SidePanel() {
   const numpadOpen = useStore(s => s.numpad !== null);
   const project = useStore(s => s.project);
   const floorId = useStore(s => s.floorId);
-  const tool = useStore(s => s.tool);
   if (!selection || numpadOpen || !project) return null;
-  // Při kreslení stěn panel nepřekáží – vlastnosti stěny se upravují v nástroji Vybrat
-  if (tool === 'wall' && selection.kind === 'wall') return null;
   const floor = project.floors.find(f => f.id === floorId);
   if (!floor) return null;
 
