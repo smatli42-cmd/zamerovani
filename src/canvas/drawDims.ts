@@ -93,6 +93,12 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
     const placed = openingsOnWall(floor, wall);
     const rowGap = 30 * s;
     let offset = 26 * s;
+    // Nika vystupuje do strany (swing); pokud míří ke kótám, kóty se posunou za ni
+    const nicheSide = normal(u);
+    for (const po of placed) {
+      if (po.op.kind !== 'niche') continue;
+      if (dot(scale(nicheSide, po.op.swing), out) > 0) offset = Math.max(offset, Math.max(6, po.op.depth * cam.zoom) + 22 * s);
+    }
 
     // 1. řada: řetězová kóta otvorů
     if (placed.length > 0) {

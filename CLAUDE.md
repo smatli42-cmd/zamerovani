@@ -3,6 +3,9 @@
 Offline PWA pro zaměřování skutečného stavu budov na tabletu (primárně Galaxy Tab S9 FE + S-Pen).
 Požadavky a plán po fázích: `POZADAVKY.md`. Starý první prototyp (jen pro inspiraci): `prototyp/`.
 
+## Předávání mezi počítači
+Uživatel střídá dva počítače (projekt je na OneDrive). **Na začátku sezení přečti `POSTUP.md`** a na konci práce / po větším kroku ho aktualizuj (poslední stav, rozpracované, další kroky) a změny commitni.
+
 ## Příkazy
 - `npm run dev` – vývojový server (http://localhost:5173, `--host` = dostupné i z tabletu ve stejné Wi-Fi)
 - `npm test` – testy (vitest), `npm run typecheck`, `npm run build` – produkční sestavení do `dist/`
