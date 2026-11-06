@@ -4,7 +4,25 @@ Projekt je na OneDrive a uživatel střídá dva počítače (nikdy ne současn�
 **Na začátku sezení tento soubor přečti. Na konci práce (nebo po větším kroku) ho aktualizuj.**
 Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do „Historie“.
 
-## Poslední stav (2026-11-06)
+## Poslední stav (2026-11-06, krátké sezení na druhém počítači – jen plánování, bez programování)
+
+**Test na tabletu:** Galaxy Tab S9 FE – vše funguje bez problémů (pero, dlaň, zoom). Ovládání považujeme za ověřené.
+
+**Rozhodnutí o dalším postupu (uživatel):**
+- Výstupy (fáze 2) odložit až **ke konci projektu** – aplikace ještě nemá všechny prvky a export by se musel předělávat.
+- **Plochy a obvody místností NEDĚLAT** (program není na výpočty, zjednodušené otvory by dávaly špatné hodnoty, názory na výpočet se liší).
+- **Tabulky místností/otvorů zatím ne.**
+- **Číslování místností ne** – stačí název (je to jen zaměření).
+- **PDF ano** (až na konci) – formát **podle velikosti výkresu**, s razítkem.
+- **DXF ano, ale později** (až budou schodiště, zařizovací předměty atd.). Názvy hladin zatím neurčené – udělat je snadno změnitelné (nastavení/konstanta).
+
+**Navržené pořadí další práce (čeká na potvrzení uživatele):**
+1. Schodiště (přímé, pak lomené/točité).
+2. Zařizovací předměty a symboly (WC, umyvadlo, vana, linka, radiátor, komín, šachta…).
+3. Volný text a poznámkový „špendlík“.
+4. Pomocné čáry, kreslení od ruky.
+5. Fotky se značkou směru pohledu.
+6. Nakonec výstupy: PDF (podle velikosti výkresu) + DXF s hladinami, případně JSON pro BIMCraft.
 
 **Hotovo a funguje:**
 - Fáze 1: kreslení stěn perem, NumPad pro rozměry, otvory (dveře/okna/průchody/niky), místnosti, popisky stěn, patra, automatické ukládání (IndexedDB), záloha do souboru.
@@ -15,13 +33,9 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - Vývojový server na konci sezení zastaven; na dalším počítači spustit `npm run dev`.
 
 **Rozpracované / neověřené:**
-- Chování pera, odmítání dlaně a dvouprstý zoom na skutečném tabletu (Galaxy Tab S9 FE) – uživatel právě začíná testovat, čekáme na zpětnou vazbu.
 - Obrázek příčky dělící místnost, který uživatel chtěl poslat (zatím nedorazil / už mohl být vyřešen).
 
-**Další kroky (návrh):**
-1. Zpětná vazba z tabletu → ladění ovládání (velikost cílů, NumPad, pero).
-2. Fáze 2: plochy a obvody místností, export DXF (vrstvy), PDF s razítkem, tabulky místností a otvorů.
-3. Později: fotky (3), detaily/schodiště/symboly/poznámky (4), pohledy na stěny, chytřejší řešič, JSON/IFC export pro BIMCraft (5).
+**Později:** pohledy na stěny, chytřejší řešič, JSON/IFC export pro BIMCraft.
 
 **Otevřené drobnosti:**
 - Kóty se mohou překrývat s obloukem dveří (odloženo, uživateli nevadí).
@@ -34,6 +48,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - Data projektů (zaměření) jsou v prohlížeči daného zařízení; přenos mezi zařízeními jen přes zálohu `*.zamer.json`.
 
 ## Historie
+- 2026-11-06 (2. sezení): jen plánování – tablet OK, výstupy odloženy na konec, plochy/tabulky/číslování vypuštěny, další na řadě prvky výkresu (fáze 4).
 - 2026-11-06: opraveno nasazení (adresa musí končit `/`), kóty za nikou.
 - 2026-11-05: GitHub Pages workflow, repo založeno a pushnuto.
 - Dříve: nová architektura (model/core/store/persistence/canvas/tools/input/ui), testy (14), příčky dělí stěny, Revit logika výběru, plné stěny + čerchované nadpraží.
