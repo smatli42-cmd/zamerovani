@@ -10,7 +10,9 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - Fáze 1: kreslení stěn perem, NumPad pro rozměry, otvory (dveře/okna/průchody/niky), místnosti, popisky stěn, patra, automatické ukládání (IndexedDB), záloha do souboru.
 - Stěny plnou černou čarou, čerchované nadpraží v otvorech, příčka dělí napojenou stěnu, Revit logika (ťuknutí na prvek = vlastnosti, ťuknutí na kótu = rozměr, Smazat v panelu).
 - Nasazení na GitHub Pages (https://smatli42-cmd.github.io/zamerovani/ – lomítko na konci je nutné), po prvním načtení funguje offline. Repo: https://github.com/smatli42-cmd/zamerovani, větev main.
-- Kóty se u niky odsunou za ni (`src/canvas/drawDims.ts`) – uživatel potvrdil, že funguje. **Zatím necommitnuto.**
+- Kóty se u niky odsunou za ni (`src/canvas/drawDims.ts`) – uživatel potvrdil, že funguje. Commitnuto a pushnuto.
+- Přidán `PREPNUTI-POCITACE.md` (přesný postup přepnutí mezi počítači pro uživatele).
+- Vývojový server na konci sezení zastaven; na dalším počítači spustit `npm run dev`.
 
 **Rozpracované / neověřené:**
 - Chování pera, odmítání dlaně a dvouprstý zoom na skutečném tabletu (Galaxy Tab S9 FE) – uživatel právě začíná testovat, čekáme na zpětnou vazbu.
