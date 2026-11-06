@@ -16,13 +16,16 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **PDF ano** (až na konci) – formát **podle velikosti výkresu**, s razítkem.
 - **DXF ano, ale později** (až budou schodiště, zařizovací předměty atd.). Názvy hladin zatím neurčené – udělat je snadno změnitelné (nastavení/konstanta).
 
-**Navržené pořadí další práce (čeká na potvrzení uživatele):**
-1. Schodiště (přímé, pak lomené/točité).
-2. Zařizovací předměty a symboly (WC, umyvadlo, vana, linka, radiátor, komín, šachta…).
-3. Volný text a poznámkový „špendlík“.
-4. Pomocné čáry, kreslení od ruky.
-5. Fotky se značkou směru pohledu.
-6. Nakonec výstupy: PDF (podle velikosti výkresu) + DXF s hladinami, případně JSON pro BIMCraft.
+**SCHVÁLENÝ plán další práce – ZAČÍT TÍMTO (kreslení tvarů):**
+Nové tvary jsou plnohodnotné prvky v modelu (vlastní ID, výběr, vlastnosti, NumPad, později DXF entity LINE/CIRCLE/ARC). Představují sloup, překlad, komín apod.
+1. **Společný základ:** nový typ prvku (tvar), **styl čáry** (plná / čárkovaná / čerchovaná – vlastnost prvku v panelu vlastností, výchozí podle typu, např. překlad čárkovaně), **popisek** (název + poznámka jako u stěn), výběr a panel vlastností. Při změně dat zvýšit `SCHEMA_VERSION` + migrace.
+2. **Obdélník** (dva rohy nebo střed + rozměry, lze natočit) a **kruh** (střed + poloměr/průměr).
+3. **Dvojitá čára** – jen RÁVNÁ, dvě rovnoběžné čáry se zadanou vzdáleností (NumPad). **Oblouk** – dva koncové body + vzepětí (sagita), případně tři body.
+4. **Samostatný text** na výkresu (přetáhnout, otočit). Rukopis: nepsat vlastní rozpoznávání – použít běžné textové pole, Samsung S-Pen ho převede sám (OVĚŘIT na tabletu). Přepínač „psát klávesnicí / perem“; ruční písmo, které má zůstat, patří do volného kreslení.
+5. **Přichytávání** k bodům nových tvarů (středy, rohy, kvadranty kruhu) – uživatel výslovně chce. Dále kopírování/duplikace, otočení zadáním úhlu, šipka s textem (odkazová čára); volitelně výplň/šrafování a zámek rozměru.
+- Tloušťky a barvy čar řešit až u volného kreslení; u tvarů stačí styl čáry.
+
+**Pak (původní návrh):** schodiště → zařizovací předměty a symboly → poznámkový „špendlík“ → pomocné čáry a kreslení od ruky (tloušťky, barvy) → fotky se značkou směru → nakonec výstupy (PDF podle velikosti výkresu + DXF s hladinami, případně JSON pro BIMCraft).
 
 **Hotovo a funguje:**
 - Fáze 1: kreslení stěn perem, NumPad pro rozměry, otvory (dveře/okna/průchody/niky), místnosti, popisky stěn, patra, automatické ukládání (IndexedDB), záloha do souboru.
@@ -48,7 +51,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - Data projektů (zaměření) jsou v prohlížeči daného zařízení; přenos mezi zařízeními jen přes zálohu `*.zamer.json`.
 
 ## Historie
-- 2026-11-06 (2. sezení): jen plánování – tablet OK, výstupy odloženy na konec, plochy/tabulky/číslování vypuštěny, další na řadě prvky výkresu (fáze 4).
+- 2026-11-06 (2. sezení): jen plánování – tablet OK, výstupy odloženy na konec, plochy/tabulky/číslování vypuštěny, schválen plán: nejdřív kreslení tvarů (obdélník, kruh, oblouk, dvojitá čára, styl čáry, text, přichytávání).
 - 2026-11-06: opraveno nasazení (adresa musí končit `/`), kóty za nikou.
 - 2026-11-05: GitHub Pages workflow, repo založeno a pushnuto.
 - Dříve: nová architektura (model/core/store/persistence/canvas/tools/input/ui), testy (14), příčky dělí stěny, Revit logika výběru, plné stěny + čerchované nadpraží.
