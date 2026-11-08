@@ -12,6 +12,12 @@ describe('migrace', () => {
     expect('shapes' in p.floors[0]!).toBe(false);
   });
 
+  it('starší podlaží dostane prázdný seznam textů, existující texty zůstanou', () => {
+    const p = migrateProject({ schema: 4, id: 'p', floors: [floor(), { ...floor(), texts: { t: { id: 't', x: 0, y: 0, text: 'a', size: 200, angle: 0 } } }] });
+    expect(p.floors[0]!.texts).toEqual({});
+    expect(Object.keys(p.floors[1]!.texts)).toEqual(['t']);
+  });
+
   it('obdélník, kruh a oblouk z verze 2 se převedou na stěny', () => {
     const p = migrateProject({
       schema: 2,

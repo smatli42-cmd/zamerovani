@@ -9,6 +9,7 @@ import {
   type OpeningKind,
   type Project,
   type Room,
+  type TextNote,
   type Wall,
   type WallLabel
 } from './types';
@@ -30,7 +31,7 @@ export function todayIso(): string {
 }
 
 export function createFloor(name: string): Floor {
-  return { id: newId('fl'), name, nodes: {}, walls: {}, openings: {}, rooms: {} };
+  return { id: newId('fl'), name, nodes: {}, walls: {}, openings: {}, rooms: {}, texts: {} };
 }
 
 export function createProject(fields: Partial<Pick<Project, 'name' | 'address' | 'surveyor' | 'surveyDate' | 'note'>> = {}): Project {
@@ -114,4 +115,9 @@ export function createRoom(floor: Floor, x: number, y: number): Room {
     heights: [{ value: 2700, note: '' }],
     note: ''
   };
+}
+
+/** Nový text na výkresu (výška písma 200 mm = vejde se do běžného půdorysu 1:50 jako čitelný popis). */
+export function createText(x: number, y: number): TextNote {
+  return { id: newId('tx'), x: Math.round(x), y: Math.round(y), text: 'Text', size: 200, angle: 0 };
 }

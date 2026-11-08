@@ -2,8 +2,8 @@
  * Všechny změny výkresu na jednom místě. Rozhraní i nástroje volají tyto funkce,
  * nikdy nemění data přímo.
  */
-import { createCircleWall, createFloor, createOpening, createRoom, createWall, newId } from '../model/factory';
-import type { Floor, Id, LineStyle, Opening, OpeningKind, Pt, Room, Wall, WallLabel } from '../model/types';
+import { createCircleWall, createFloor, createOpening, createRoom, createText, createWall, newId } from '../model/factory';
+import type { Floor, Id, LineStyle, Opening, OpeningKind, Pt, Room, TextNote, Wall, WallLabel } from '../model/types';
 import { dist } from '../core/geometry';
 import { openingStartFromA, openingsOnWall, wallLength, wallsAtNode } from '../core/floorQueries';
 import { setWallLength, type MoveTarget } from '../core/solver';
@@ -245,6 +245,9 @@ export function deleteSelection(): void {
         case 'room':
           delete floor.rooms[sel.id];
           break;
+        case 'text':
+          delete floor.texts[sel.id];
+          break;
       }
       cleanup(floor);
     },
@@ -363,6 +366,36 @@ export function moveRoom(id: Id, p: Pt): void {
     if (r) {
       r.x = Math.round(p.x / 10) * 10;
       r.y = Math.round(p.y / 10) * 10;
+    }
+  });
+}
+
+// ---------------------------------------------------------------- Texty
+
+export function addText(p: Pt): Id {
+  let id = '';
+  store.edit(floor => {
+    const t = createText(p.x, p.y);
+    floor.texts[t.id] = t;
+    id = t.id;
+  });
+  store.set({ selection: { kind: 'text', id } });
+  return id;
+}
+
+export function updateText(id: Id, patch: Partial<TextNote>): void {
+  store.edit(floor => {
+    const t = floor.texts[id];
+    if (t) Object.assign(t, patch);
+  });
+}
+
+export function moveText(id: Id, p: Pt): void {
+  store.edit(floor => {
+    const t = floor.texts[id];
+    if (t) {
+      t.x = Math.round(p.x / 10) * 10;
+      t.y = Math.round(p.y / 10) * 10;
     }
   });
 }

@@ -3,8 +3,8 @@
  */
 import { wallLength, wallsAtNode } from '../../core/floorQueries';
 import { OPENING_DEFAULTS } from '../../model/factory';
-import type { Floor, LineStyle, Opening, Room, Wall, WallType } from '../../model/types';
-import { applyNumpadValue, deleteSelection, setOpeningRef, updateOpening, updateRoom, updateWall, updateWallLabel } from '../../store/actions';
+import type { Floor, LineStyle, Opening, Room, TextNote, Wall, WallType } from '../../model/types';
+import { applyNumpadValue, deleteSelection, setOpeningRef, updateOpening, updateRoom, updateText, updateWall, updateWallLabel } from '../../store/actions';
 import { openTarget } from '../../store/numpadController';
 import { store } from '../../store/store';
 import { useStore } from '../../store/useStore';
@@ -33,6 +33,10 @@ export function SidePanel() {
     case 'room': {
       const r = floor.rooms[selection.id];
       return r ? <RoomPanel room={r} /> : null;
+    }
+    case 'text': {
+      const t = floor.texts[selection.id];
+      return t ? <TextPanel note={t} /> : null;
     }
     case 'node':
       return (
@@ -190,6 +194,49 @@ function OpeningPanel({ op }: { op: Opening }) {
       <TextField label="Popis" value={op.note} presets={NOTE_PRESETS[op.kind]} appendPreset onCommit={v => set({ note: v })} />
       <button class="btn btn-danger" onClick={deleteSelection}>
         🗑️ Smazat {info.label.toLowerCase()}
+      </button>
+    </Panel>
+  );
+}
+
+const TEXT_SIZES = [
+  { v: 100, label: 'Malé' },
+  { v: 200, label: 'Střední' },
+  { v: 400, label: 'Velké' }
+];
+
+function TextPanel({ note }: { note: TextNote }) {
+  const set = (patch: Partial<TextNote>) => updateText(note.id, patch);
+  return (
+    <Panel title="Text" onClose={close}>
+      <label class="field">
+        <span>Text (víc řádků = Enter)</span>
+        <textarea
+          rows={3}
+          value={note.text}
+          key={note.text}
+          onFocus={e => (e.target as HTMLTextAreaElement).select()}
+          onChange={e => set({ text: (e.target as HTMLTextAreaElement).value })}
+        />
+      </label>
+      <h4>Velikost písma</h4>
+      <Seg options={TEXT_SIZES} value={note.size} onChange={v => set({ size: v })} />
+      <NumField label="Výška písma" value={note.size} min={20} onCommit={v => v !== null && set({ size: v })} />
+      <h4>Natočení</h4>
+      <Seg
+        options={[
+          { v: 0, label: '0°' },
+          { v: 90, label: '90°' },
+          { v: 180, label: '180°' },
+          { v: 270, label: '270°' }
+        ]}
+        value={note.angle}
+        onChange={v => set({ angle: v })}
+      />
+      <NumField label="Úhel" value={note.angle} unit="°" onCommit={v => v !== null && set({ angle: ((v % 360) + 360) % 360 })} />
+      <p class="muted small">Tažením se text přesune.</p>
+      <button class="btn btn-danger" onClick={deleteSelection}>
+        🗑️ Smazat text
       </button>
     </Panel>
   );

@@ -14,7 +14,11 @@ export function migrateProject(raw: unknown): Project {
     throw new Error('Projekt byl uložen novější verzí aplikace. Aktualizujte aplikaci.');
   }
   // 2 → 3: tvary (obdélník, kruh, oblouk) se staly běžnými stěnami; 3 → 4: kruh je jedna stěna
-  const floors = p.floors.map(f => joinSemicircles(convertShapesToWalls(f)));
+  // 4 → 5: přibyly samostatné texty (floor.texts)
+  const floors = p.floors.map(f => {
+    const j = joinSemicircles(convertShapesToWalls(f));
+    return { ...j, texts: j.texts ?? {} };
+  });
   return { ...p, floors, schema: SCHEMA_VERSION };
 }
 

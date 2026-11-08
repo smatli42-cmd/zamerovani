@@ -8,12 +8,13 @@ import { arcGeometry } from '../core/arc';
 import { findNodeNear, findWallNear, wallLength, wallNodes } from '../core/floorQueries';
 import { dist, projectToSegment, roundTo } from '../core/geometry';
 import type { Id, Pt } from '../model/types';
-import { mergeNodeIfCoincident, moveNode, moveOpeningTo, moveRoom, setCircleRadius, setWallSagitta } from '../store/actions';
+import { mergeNodeIfCoincident, moveNode, moveOpeningTo, moveRoom, moveText, setCircleRadius, setWallSagitta } from '../store/actions';
 import { store } from '../store/store';
 import { pickAny } from './pick';
 import { HIT_PX, type PointerInput, type Tool } from './types';
 
 type DragKind = { kind: 'node'; id: Id } | { kind: 'opening'; id: Id; grabOffset: number } | { kind: 'room'; id: Id; dx: number; dy: number }
+  | { kind: 'text'; id: Id; dx: number; dy: number }
   | { kind: 'handle'; id: Id };
 
 let drag: DragKind | null = null;
@@ -71,6 +72,10 @@ export const selectTool: Tool = {
       const r = floor.rooms[hit.id]!;
       drag = { kind: 'room', id: hit.id, dx: p.world.x - r.x, dy: p.world.y - r.y };
     }
+    if (hit.kind === 'text') {
+      const t = floor.texts[hit.id]!;
+      drag = { kind: 'text', id: hit.id, dx: p.world.x - t.x, dy: p.world.y - t.y };
+    }
     if (hit.kind === 'opening') {
       const op = floor.openings[hit.id]!;
       const wall = floor.walls[op.wallId];
@@ -116,6 +121,8 @@ export const selectTool: Tool = {
       }
     } else if (drag.kind === 'room') {
       moveRoom(drag.id, { x: p.world.x - drag.dx, y: p.world.y - drag.dy });
+    } else if (drag.kind === 'text') {
+      moveText(drag.id, { x: p.world.x - drag.dx, y: p.world.y - drag.dy });
     } else if (drag.kind === 'handle') {
       const wall = floor.walls[drag.id];
       const n = wall && wallNodes(floor, wall);

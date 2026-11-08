@@ -8,7 +8,7 @@
  * - Při změně struktury zvýšit SCHEMA_VERSION a doplnit migraci v persistence/migrate.ts.
  */
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export type Id = string;
 
@@ -92,6 +92,20 @@ export interface Room {
 /** Styl čáry stěny (výchozí plná; čárkovaná / čerchovaná např. pro překlad nebo konstrukci nad řezem). */
 export type LineStyle = 'solid' | 'dashed' | 'dashdot';
 
+/** Samostatný text na výkresu (poznámka, popis). Poloha = střed textu, velikost = výška písma v mm. */
+export interface TextNote {
+  id: Id;
+  x: number;
+  y: number;
+  /** Text, může mít víc řádků (oddělené 
+). */
+  text: string;
+  /** Výška písma v mm výkresu. */
+  size: number;
+  /** Natočení ve stupních (po směru hodinových ručiček, Y míří dolů). */
+  angle: number;
+}
+
 /** Podlaží = jeden půdorys. */
 export interface Floor {
   id: Id;
@@ -100,6 +114,7 @@ export interface Floor {
   walls: Record<Id, Wall>;
   openings: Record<Id, Opening>;
   rooms: Record<Id, Room>;
+  texts: Record<Id, TextNote>;
 }
 
 /** Projekt = jedna zakázka (budova). */

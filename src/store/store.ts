@@ -13,13 +13,14 @@ import type { MoveTarget } from '../core/solver';
 import type { LineStyle } from '../model/types';
 import type { Side } from '../core/components';
 
-export type ToolId = 'select' | 'wall' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'dline' | 'arc' | 'pan';
+export type ToolId = 'select' | 'wall' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'dline' | 'arc' | 'text' | 'pan';
 
 export type Selection =
   | { kind: 'wall'; id: Id }
   | { kind: 'node'; id: Id }
   | { kind: 'opening'; id: Id }
   | { kind: 'room'; id: Id }
+  | { kind: 'text'; id: Id }
   | null;
 
 /** Co právě zadáváme na číselné klávesnici. */

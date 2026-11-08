@@ -17,6 +17,7 @@ const TOOLS: { id: ToolId; icon: string; label: string; title: string }[] = [
   { id: 'circle', icon: '◯', label: 'Kruh', title: 'Tažením od středu nakreslit kruh' },
   { id: 'dline', icon: '═', label: 'Dvojčára', title: 'Příčka dvěma čarami: táhni od stěny ke stěně, napojením se stěny rozdělí (tloušťka nad plátnem)' },
   { id: 'arc', icon: '◠', label: 'Oblouk', title: 'Tažením mezi krajními body nakreslit oblouk, vzepětí se upřesní kótou' },
+  { id: 'text', icon: '🅰️', label: 'Text', title: 'Ťuknutím vložit text; ťuknutím na text ho upravit, tažením přesunout' },
   { id: 'pan', icon: '✋', label: 'Posun', title: 'Posouvat výkres' }
 ];
 

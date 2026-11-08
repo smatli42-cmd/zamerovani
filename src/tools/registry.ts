@@ -5,6 +5,7 @@ import type { ToolId } from '../store/store';
 import { doorTool, nicheTool, openingTool, roomTool, windowTool } from './placeTools';
 import { partitionTool } from './partitionTool';
 import { arcTool, circleTool, rectTool } from './shapeTools';
+import { textTool } from './textTool';
 import { selectTool } from './selectTool';
 import type { Tool } from './types';
 import { wallTool } from './wallTool';
@@ -21,5 +22,6 @@ export const tools: Record<ToolId, Tool> = {
   circle: circleTool,
   dline: partitionTool,
   arc: arcTool,
+  text: textTool,
   pan: {}
 };

@@ -7,6 +7,7 @@ import { drawDims } from './drawDims';
 import { drawGrid, drawScaleBar } from './drawGrid';
 import { drawArcHandle, drawNodes, drawOpenings, drawWalls } from './drawPlan';
 import { drawRooms } from './drawRooms';
+import { drawTexts } from './drawTexts';
 import { drawComponentDims } from './drawComponentDims';
 import { resetHitBoxes } from './hitTargets';
 import { setRenderHandler } from './invalidate';
@@ -79,6 +80,7 @@ function render(): void {
     drawOpenings(ctx, floor, cam, state.selection, state.hover);
     drawNodes(ctx, floor, cam, state.selection, state.hover);
     drawRooms(ctx, floor, cam, state.selection);
+    drawTexts(ctx, floor, cam, state.selection);
     if (state.settings.showDims) drawDims(ctx, floor, cam, state.settings.dimScale, state.selection);
     if (state.settings.showDims) drawComponentDims(ctx, floor, cam, state.settings.dimScale, state.selection);
     drawArcHandle(ctx, floor, cam, state.selection);
