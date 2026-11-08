@@ -201,9 +201,9 @@ function OpeningPanel({ op }: { op: Opening }) {
 }
 
 const TEXT_SIZES = [
-  { v: 100, label: 'Malé' },
-  { v: 200, label: 'Střední' },
-  { v: 400, label: 'Velké' }
+  { v: 50, label: 'Malé' },
+  { v: 100, label: 'Střední' },
+  { v: 200, label: 'Velké' }
 ];
 
 function TextPanel({ note }: { note: TextNote }) {

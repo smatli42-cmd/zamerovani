@@ -117,7 +117,7 @@ export function createRoom(floor: Floor, x: number, y: number): Room {
   };
 }
 
-/** Nový text na výkresu (výška písma 200 mm = vejde se do běžného půdorysu 1:50 jako čitelný popis). */
+/** Nový text na výkresu, výchozí výška písma 100 mm (= velikost „Střední“). */
 export function createText(x: number, y: number): TextNote {
-  return { id: newId('tx'), x: Math.round(x), y: Math.round(y), text: 'Text', size: 200, angle: 0 };
+  return { id: newId('tx'), x: Math.round(x), y: Math.round(y), text: 'Text', size: 100, angle: 0 };
 }
