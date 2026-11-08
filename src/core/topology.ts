@@ -6,8 +6,9 @@
  */
 import { newId } from '../model/factory';
 import type { Floor, Id, Wall } from '../model/types';
-import { dist, projectToSegment } from './geometry';
-import { openingStartFromA, wallLength, wallNodes } from './floorQueries';
+import { nearestOnArc, splitArcSagittas } from './arc';
+import { dist } from './geometry';
+import { openingStartFromA, wallNodes } from './floorQueries';
 
 /** Jak blízko (mm) musí roh ležet u stěny, aby ji rozdělil. */
 const ON_WALL_TOL = 1;
@@ -21,31 +22,38 @@ const MIN_PART = 5;
 export function splitWallAt(floor: Floor, wallId: Id, nodeId: Id): [Id, Id] | null {
   const wall = floor.walls[wallId];
   const node = floor.nodes[nodeId];
-  if (!wall || !node || wall.a === nodeId || wall.b === nodeId) return null;
+  if (!wall || !node || wall.a === nodeId || wall.b === nodeId || wall.radius !== undefined) return null;
   const n = wallNodes(floor, wall);
   if (!n) return null;
   const [nA, nB] = n;
   const len = dist(nA, nB);
-  const pr = projectToSegment(node, nA, nB);
-  const at = pr.t * len;
-  if (pr.distance > ON_WALL_TOL || at < MIN_PART || at > len - MIN_PART) return null;
+  const sag = wall.sagitta ?? 0;
+  const pr = nearestOnArc(node, nA, nB, sag);
+  // u oblouku se míry částí berou jako tětivy
+  const lenA = dist(nA, pr.point);
+  const lenB = dist(pr.point, nB);
+  const at = sag ? lenA : pr.t * len;
+  if (pr.distance > ON_WALL_TOL || lenA < MIN_PART || lenB < MIN_PART) return null;
 
-  // Přesně na přímku stěny (bez zaokrouhlovací odchylky)
+  // Přesně na stěnu (bez zaokrouhlovací odchylky)
   node.x = pr.point.x;
   node.y = pr.point.y;
-
-  const lenA = dist(nA, node);
-  const lenB = dist(node, nB);
-  const part = (a: Id, b: Id, partLen: number): Wall => ({
-    id: newId('w'),
-    a,
-    b,
-    // Změřená stěna → obě části jsou dané změřením (celek + poloha napojení)
-    measured: wall.measured === null ? null : Math.round(partLen),
-    label: { ...wall.label }
-  });
-  const wA = part(wall.a, nodeId, lenA);
-  const wB = part(nodeId, wall.b, lenB);
+  const sagParts = sag ? splitArcSagittas(nA, nB, sag, pr.point) : null;
+  const part = (a: Id, b: Id, partLen: number, partSag: number | null): Wall => {
+    const w: Wall = {
+      id: newId('w'),
+      a,
+      b,
+      // Změřená stěna → obě části jsou dané změřením (celek + poloha napojení)
+      measured: wall.measured === null ? null : Math.round(partLen),
+      label: { ...wall.label }
+    };
+    if (partSag) w.sagitta = partSag;
+    if (wall.style) w.style = wall.style;
+    return w;
+  };
+  const wA = part(wall.a, nodeId, lenA, sagParts ? sagParts[0] : null);
+  const wB = part(nodeId, wall.b, lenB, sagParts ? sagParts[1] : null);
   delete floor.walls[wallId];
   floor.walls[wA.id] = wA;
   floor.walls[wB.id] = wB;
@@ -70,14 +78,10 @@ export function splitWallsAtNode(floor: Floor, nodeId: Id): void {
   const node = floor.nodes[nodeId];
   if (!node) return;
   for (const w of Object.values(floor.walls)) {
-    if (w.a === nodeId || w.b === nodeId) continue;
+    if (w.a === nodeId || w.b === nodeId || w.radius !== undefined) continue;
     const n = wallNodes(floor, w);
     if (!n) continue;
-    const pr = projectToSegment(node, n[0], n[1]);
-    if (pr.distance <= ON_WALL_TOL) {
-      const len = wallLength(floor, w);
-      const at = pr.t * len;
-      if (at >= MIN_PART && at <= len - MIN_PART) splitWallAt(floor, w.id, nodeId);
-    }
+    const pr = nearestOnArc(node, n[0], n[1], w.sagitta ?? 0);
+    if (pr.distance <= ON_WALL_TOL) splitWallAt(floor, w.id, nodeId);
   }
 }

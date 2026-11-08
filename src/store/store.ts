@@ -10,8 +10,10 @@
 import { produce, freeze } from 'immer';
 import type { Floor, Id, Project } from '../model/types';
 import type { MoveTarget } from '../core/solver';
+import type { LineStyle } from '../model/types';
+import type { Side } from '../core/components';
 
-export type ToolId = 'select' | 'wall' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'pan';
+export type ToolId = 'select' | 'wall' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'dline' | 'arc' | 'pan';
 
 export type Selection =
   | { kind: 'wall'; id: Id }
@@ -25,7 +27,13 @@ export type NumPadTarget =
   | { kind: 'wall-length'; wallId: Id; move: MoveTarget }
   | { kind: 'opening-offset'; openingId: Id; ref: 'a' | 'b' }
   | { kind: 'opening-width'; openingId: Id }
-  | { kind: 'opening-gap'; firstId: Id; secondId: Id };
+  | { kind: 'opening-gap'; firstId: Id; secondId: Id }
+  /** Vzepětí obloukové stěny. */
+  | { kind: 'wall-sagitta'; wallId: Id }
+  /** Průměr kruhové stěny. */
+  | { kind: 'circle-diameter'; wallId: Id }
+  /** Odstup skupiny stěn (např. sloupu) od nejbližší stěny mimo skupinu; zadáním se skupina posune. */
+  | { kind: 'comp-gap'; wallId: Id; side: Side };
 
 export interface NumPadState {
   target: NumPadTarget;
@@ -51,6 +59,12 @@ export interface Settings {
   fingerPan: boolean;
   /** Velikost písma kót (1 = výchozí). */
   dimScale: number;
+  /** Dvojčára (příčka): tloušťka mezi dvěma čarami (mm). */
+  partThickness: number;
+  /** Dvojčára: na kterou stranu od směru kreslení leží druhá čára (1 = vlevo, -1 = vpravo). */
+  partSide: 1 | -1;
+  /** Styl čáry nově kreslených tvarů (obdélník, kruh, oblouk). */
+  shapeStyle: LineStyle;
 }
 
 export type SaveStatus = 'saved' | 'saving' | 'dirty' | 'error';
@@ -73,7 +87,7 @@ export interface AppState {
 const SETTINGS_KEY = 'zamerovani.settings';
 
 function loadSettings(): Settings {
-  const defaults: Settings = { ortho: true, snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1 };
+  const defaults: Settings = { ortho: true, snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, partThickness: 100, partSide: 1, shapeStyle: 'solid' };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     return raw ? { ...defaults, ...JSON.parse(raw) } : defaults;

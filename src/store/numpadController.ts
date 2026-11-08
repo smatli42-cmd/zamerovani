@@ -3,6 +3,7 @@
  */
 import { evaluateExpression } from '../core/geometry';
 import { nextWallInChain, openingsOnWall } from '../core/floorQueries';
+import { componentGap } from '../core/components';
 import type { Id } from '../model/types';
 import { applyNumpadValue, numpadInitialValue, unlockWall } from './actions';
 import { store, type NumPadTarget } from './store';
@@ -17,9 +18,11 @@ export function numpadValue(): number | null {
 export function openTarget(target: NumPadTarget): void {
   const floor = store.floor();
   if (!floor) return;
+  // U kruhu se místo délky stěny zadává průměr
+  if (target.kind === 'wall-length' && floor.walls[target.wallId]?.radius !== undefined) target = { kind: 'circle-diameter', wallId: target.wallId };
   const v = numpadInitialValue(floor, target);
   const selection =
-    target.kind === 'wall-length'
+    target.kind === 'wall-length' || target.kind === 'wall-sagitta' || target.kind === 'circle-diameter' || target.kind === 'comp-gap'
       ? ({ kind: 'wall', id: target.wallId } as const)
       : ({ kind: 'opening', id: target.kind === 'opening-gap' ? target.secondId : target.openingId } as const);
   store.set({ numpad: { target, buffer: v === null ? '' : String(v), fresh: true }, selection });
@@ -113,6 +116,15 @@ function commitAndNext(): void {
   const floor = store.floor();
   if (!floor) return;
   const t = np.target;
+
+  if (t.kind === 'wall-sagitta' || t.kind === 'circle-diameter') return store.set({ numpad: null });
+
+  // Odstupy skupiny stěn od okolí: vlevo → vpravo → nahoře → dole, pak konec
+  if (t.kind === 'comp-gap') {
+    const sides = (['left', 'right', 'top', 'bottom'] as const).filter(side => componentGap(floor, t.wallId, side));
+    const next = sides[sides.indexOf(t.side) + 1];
+    return next ? openTarget({ kind: 'comp-gap', wallId: t.wallId, side: next }) : store.set({ numpad: null });
+  }
 
   if (t.kind === 'wall-length') {
     const wall = floor.walls[t.wallId];

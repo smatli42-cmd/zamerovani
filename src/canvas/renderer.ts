@@ -5,8 +5,9 @@ import { store } from '../store/store';
 import { tools } from '../tools/registry';
 import { drawDims } from './drawDims';
 import { drawGrid, drawScaleBar } from './drawGrid';
-import { drawNodes, drawOpenings, drawWalls } from './drawPlan';
+import { drawArcHandle, drawNodes, drawOpenings, drawWalls } from './drawPlan';
 import { drawRooms } from './drawRooms';
+import { drawComponentDims } from './drawComponentDims';
 import { resetHitBoxes } from './hitTargets';
 import { setRenderHandler } from './invalidate';
 
@@ -79,6 +80,8 @@ function render(): void {
     drawNodes(ctx, floor, cam, state.selection, state.hover);
     drawRooms(ctx, floor, cam, state.selection);
     if (state.settings.showDims) drawDims(ctx, floor, cam, state.settings.dimScale, state.selection);
+    if (state.settings.showDims) drawComponentDims(ctx, floor, cam, state.settings.dimScale, state.selection);
+    drawArcHandle(ctx, floor, cam, state.selection);
     drawMoveMarker(ctx);
   }
   tools[state.tool].drawOverlay?.(ctx, cam);

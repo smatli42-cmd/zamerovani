@@ -2,11 +2,13 @@
  * Všechny změny výkresu na jednom místě. Rozhraní i nástroje volají tyto funkce,
  * nikdy nemění data přímo.
  */
-import { createFloor, createOpening, createRoom, createWall, newId } from '../model/factory';
-import type { Floor, Id, Opening, OpeningKind, Pt, Room, WallLabel } from '../model/types';
+import { createCircleWall, createFloor, createOpening, createRoom, createWall, newId } from '../model/factory';
+import type { Floor, Id, LineStyle, Opening, OpeningKind, Pt, Room, Wall, WallLabel } from '../model/types';
 import { dist } from '../core/geometry';
 import { openingStartFromA, openingsOnWall, wallLength, wallsAtNode } from '../core/floorQueries';
 import { setWallLength, type MoveTarget } from '../core/solver';
+import { componentGap, setComponentGap } from '../core/components';
+import { partitionPoints } from '../core/partition';
 import { splitWallsAtNode } from '../core/topology';
 import { store, type NumPadTarget } from './store';
 
@@ -34,19 +36,35 @@ function cleanup(floor: Floor): void {
 
 // ---------------------------------------------------------------- Stěny
 
-export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, select = true): Id | null {
+/** Je tu už stejná stěna (stejné rohy a stejný tvar)? Dvě půlkružnice mezi týmiž rohy jsou různé stěny. */
+function findSameWall(floor: Floor, a: Id, b: Id, sagitta: number): Wall | undefined {
+  return Object.values(floor.walls).find(w => {
+    if (w.a === a && w.b === b) return Math.abs((w.sagitta ?? 0) - sagitta) < 0.5;
+    if (w.a === b && w.b === a) return Math.abs((w.sagitta ?? 0) + sagitta) < 0.5;
+    return false;
+  });
+}
+
+/** Vloží stěnu mezi dva rohy (pokud tam taková ještě není) a vrátí ji. */
+function linkWall(floor: Floor, a: Id, b: Id, sagitta = 0, style?: LineStyle): Wall | null {
+  if (a === b) return null;
+  const same = findSameWall(floor, a, b, sagitta);
+  if (same) return same;
+  const wall = createWall(a, b, sagitta);
+  if (style && style !== 'solid') wall.style = style;
+  floor.walls[wall.id] = wall;
+  return wall;
+}
+
+/** Nová stěna; `sagitta` ≠ 0 = oblouková stěna. Konce na jiných stěnách je rozdělí. */
+export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, select = true, opts: { sagitta?: number; style?: LineStyle } = {}): Id | null {
   let createdId: Id | null = null;
   store.edit(floor => {
     const a = getOrCreateNode(floor, start, startNodeId);
     const b = getOrCreateNode(floor, end, endNodeId);
     if (a === b) return;
-    const exists = Object.values(floor.walls).find(w => (w.a === a && w.b === b) || (w.a === b && w.b === a));
-    if (exists) {
-      createdId = exists.id;
-      return;
-    }
-    const wall = createWall(a, b);
-    floor.walls[wall.id] = wall;
+    const wall = linkWall(floor, a, b, opts.sagitta ?? 0, opts.style);
+    if (!wall) return;
     createdId = wall.id;
     // Konec na jiné stěně → rozdělit ji v místě napojení
     splitWallsAtNode(floor, a);
@@ -54,6 +72,95 @@ export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: I
   });
   if (createdId && select) store.set({ selection: { kind: 'wall', id: createdId } });
   return createdId;
+}
+
+/**
+ * Příčka dvěma čarami: dvě rovnoběžné stěny ve vzdálenosti `thickness`.
+ * Konce na jiných stěnách je rozdělí v místě napojení (vzniknou samostatné úseky s kótami),
+ * volný konec se uzavře krátkou stěnou o délce tloušťky.
+ */
+export function addPartition(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, thickness: number, side: 1 | -1): void {
+  store.edit(floor => applyPartition(floor, start, startNodeId, end, endNodeId, thickness, side));
+}
+
+/** Vlastní vytvoření příčky nad podlažím (bez store – testovatelné). */
+export function applyPartition(floor: Floor, start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, thickness: number, side: 1 | -1): void {
+  const second = partitionPoints(floor, start, end, thickness, side);
+  const a = getOrCreateNode(floor, start, startNodeId);
+  const b = getOrCreateNode(floor, end, endNodeId);
+  const a2 = getOrCreateNode(floor, second.a2, null);
+  const b2 = getOrCreateNode(floor, second.b2, null);
+  if (new Set([a, b, a2, b2]).size < 4) return;
+  const link = (x: Id, y: Id) => void linkWall(floor, x, y);
+  link(a, b);
+  link(a2, b2);
+  for (const id of [a, b, a2, b2]) splitWallsAtNode(floor, id);
+  // Konec opřený o stěnu už uzavírá úsek rozdělené stěny, volný konec dostane krátkou stěnu
+  link(a, a2);
+  link(b, b2);
+}
+
+/** Obdélník ze čtyř stěn (např. sloup, komín); rohy na jiných stěnách je rozdělí. */
+export function addRectWalls(p: Pt, q: Pt, style: LineStyle): void {
+  store.edit(floor => {
+    const ids = [
+      { x: p.x, y: p.y },
+      { x: q.x, y: p.y },
+      { x: q.x, y: q.y },
+      { x: p.x, y: q.y }
+    ].map(c => getOrCreateNode(floor, c, null));
+    if (new Set(ids).size < 4) return;
+    for (let i = 0; i < 4; i++) linkWall(floor, ids[i]!, ids[(i + 1) % 4]!, 0, style);
+    for (const id of ids) splitWallsAtNode(floor, id);
+  });
+}
+
+/** Kruh: jedna stěna se středovým rohem a poloměrem. */
+export function addCircleWalls(center: Pt, radius: number, style: LineStyle): void {
+  let id: Id | null = null;
+  store.edit(floor => {
+    const c = getOrCreateNode(floor, center, null);
+    const wall = createCircleWall(c, Math.round(radius));
+    if (style !== 'solid') wall.style = style;
+    floor.walls[wall.id] = wall;
+    id = wall.id;
+  });
+  // Vybraný kruh má na obvodu úchyt pro změnu poloměru
+  if (id) store.set({ selection: { kind: 'wall', id } });
+}
+
+/** Změní poloměr kruhové stěny (tažení bodu na obvodu, kóta průměru). */
+export function setCircleRadius(wallId: Id, radius: number): void {
+  store.edit(floor => {
+    const w = floor.walls[wallId];
+    if (w && w.radius !== undefined && radius >= 5) w.radius = Math.round(radius);
+  });
+}
+
+/** Změní vzepětí obloukové stěny (tažení středového bodu); 0 = rovná stěna. */
+export function setWallSagitta(wallId: Id, sagitta: number): void {
+  store.edit(floor => {
+    const w = floor.walls[wallId];
+    if (!w) return;
+    if (Math.abs(sagitta) < 0.5) delete w.sagitta;
+    else w.sagitta = Math.round(sagitta);
+  });
+}
+
+/** Změna vlastností stěny mimo popisek (styl čáry, vzepětí). */
+export function updateWall(wallId: Id, patch: { style?: LineStyle | undefined; sagitta?: number | undefined }): void {
+  store.edit(floor => {
+    const w = floor.walls[wallId];
+    if (!w) return;
+    if ('style' in patch) {
+      if (!patch.style || patch.style === 'solid') delete w.style;
+      else w.style = patch.style;
+    }
+    if ('sagitta' in patch) {
+      if (!patch.sagitta || Math.abs(patch.sagitta) < 0.5) delete w.sagitta;
+      else w.sagitta = Math.round(patch.sagitta);
+    }
+  });
 }
 
 export function applyWallLength(wallId: Id, length: number, move: MoveTarget): boolean {
@@ -103,12 +210,14 @@ export function mergeNodeIfCoincident(nodeId: Id): void {
     for (const w of Object.values(floor.walls)) {
       if (w.a === nodeId) w.a = other.id;
       if (w.b === nodeId) w.b = other.id;
-      if (w.a === w.b) delete floor.walls[w.id];
+      if (w.a === w.b && w.radius === undefined) delete floor.walls[w.id];
     }
     // Odstranění zdvojených stěn mezi stejnými rohy
     const seen = new Set<string>();
     for (const w of Object.values(floor.walls)) {
-      const key = [w.a, w.b].sort().join('|');
+      // klíč zahrnuje i vzepětí (vztažené k pořadí rohů), aby se dvě půlkružnice nepovažovaly za duplicitu
+      const flip = w.a < w.b ? 1 : -1;
+      const key = `${[w.a, w.b].sort().join('|')}|${Math.round((w.sagitta ?? 0) * flip)}`;
       if (seen.has(key)) delete floor.walls[w.id];
       else seen.add(key);
     }
@@ -303,6 +412,18 @@ export function numpadInitialValue(floor: Floor, t: NumPadTarget): number | null
     }
     case 'opening-width':
       return floor.openings[t.openingId]?.width ?? null;
+    case 'wall-sagitta': {
+      const w = floor.walls[t.wallId];
+      return w ? Math.round(Math.abs(w.sagitta ?? 0)) : null;
+    }
+    case 'circle-diameter': {
+      const w = floor.walls[t.wallId];
+      return w?.radius !== undefined ? w.radius * 2 : null;
+    }
+    case 'comp-gap': {
+      const g = componentGap(floor, t.wallId, t.side);
+      return g ? Math.round(g.value) : null;
+    }
     case 'opening-gap': {
       const a = floor.openings[t.firstId];
       const b = floor.openings[t.secondId];
@@ -337,6 +458,18 @@ export function applyNumpadValue(t: NumPadTarget, value: number): boolean {
     } else if (t.kind === 'opening-gap') {
       setGap(floor, t.firstId, t.secondId, value);
       ok = true;
+    } else if (t.kind === 'wall-sagitta') {
+      const w = floor.walls[t.wallId];
+      if (!w || value < 1) return;
+      w.sagitta = (Math.sign(w.sagitta ?? 0) || 1) * value;
+      ok = true;
+    } else if (t.kind === 'circle-diameter') {
+      const w = floor.walls[t.wallId];
+      if (!w || w.radius === undefined || value < 10) return;
+      w.radius = Math.round(value / 2);
+      ok = true;
+    } else if (t.kind === 'comp-gap') {
+      ok = setComponentGap(floor, t.wallId, t.side, value);
     }
   });
   return ok;

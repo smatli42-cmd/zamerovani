@@ -10,6 +10,7 @@ import type { Pt } from '../model/types';
 import { addWall } from '../store/actions';
 import { store, type Camera } from '../store/store';
 import { pickAny } from './pick';
+import { grabArcHandle, selectTool } from './selectTool';
 import { HIT_PX, type PointerInput, type Tool } from './types';
 
 interface Drawing {
@@ -22,7 +23,7 @@ interface Drawing {
 let drawing: Drawing | null = null;
 let hoverSnap: SnapResult | null = null;
 
-function options(startNodeId?: string) {
+export function snapOptions(startNodeId?: string) {
   const { settings, camera } = store.get();
   return {
     ortho: settings.ortho,
@@ -33,11 +34,16 @@ function options(startNodeId?: string) {
   };
 }
 
+let handleDrag = false;
+
 export const wallTool: Tool = {
   down(p: PointerInput) {
     const floor = store.floor();
     if (!floor) return;
-    const start = snapPoint(floor, p.world, options());
+    // Středový bod vybraného oblouku se dá táhnout i při kreslení stěn
+    handleDrag = grabArcHandle(p);
+    if (handleDrag) return;
+    const start = snapPoint(floor, p.world, snapOptions());
     drawing = { start, end: start, downAt: p.world };
     hoverSnap = null;
     store.set({ selection: null, numpad: null });
@@ -45,13 +51,19 @@ export const wallTool: Tool = {
   },
 
   drag(p: PointerInput) {
+    if (handleDrag) return selectTool.drag?.(p);
     const floor = store.floor();
     if (!floor || !drawing) return;
-    drawing.end = snapEnd(floor, drawing.start.pt, p.world, options(drawing.start.node?.id));
+    drawing.end = snapEnd(floor, drawing.start.pt, p.world, snapOptions(drawing.start.node?.id));
     requestRender();
   },
 
-  up() {
+  up(p) {
+    if (handleDrag) {
+      selectTool.up?.(p);
+      handleDrag = false;
+      return;
+    }
     const d = drawing;
     drawing = null;
     if (!d) return;
@@ -69,12 +81,14 @@ export const wallTool: Tool = {
   hover(p: PointerInput) {
     const floor = store.floor();
     if (!floor) return;
-    const s = snapPoint(floor, p.world, options());
+    const s = snapPoint(floor, p.world, snapOptions());
     hoverSnap = s.node || s.wallHit ? s : null;
     requestRender();
   },
 
   cancel() {
+    if (handleDrag) selectTool.cancel?.();
+    handleDrag = false;
     drawing = null;
     hoverSnap = null;
     requestRender();
@@ -118,7 +132,7 @@ export const wallTool: Tool = {
   }
 };
 
-function drawSnapMarker(ctx: CanvasRenderingContext2D, cam: Camera, s: SnapResult): void {
+export function drawSnapMarker(ctx: CanvasRenderingContext2D, cam: Camera, s: SnapResult): void {
   if (!s.node && !s.wallHit) return;
   const p = toScreen(s.pt, cam);
   ctx.save();
@@ -131,7 +145,7 @@ function drawSnapMarker(ctx: CanvasRenderingContext2D, cam: Camera, s: SnapResul
   ctx.restore();
 }
 
-function drawLengthBadge(ctx: CanvasRenderingContext2D, a: Pt, b: Pt, mm: number): void {
+export function drawLengthBadge(ctx: CanvasRenderingContext2D, a: Pt, b: Pt, mm: number): void {
   const text = `${mm} mm`;
   ctx.save();
   ctx.font = '600 14px system-ui, sans-serif';

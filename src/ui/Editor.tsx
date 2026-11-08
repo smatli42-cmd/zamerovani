@@ -6,6 +6,7 @@ import { attachRenderer, detachRenderer } from '../canvas/renderer';
 import { attachKeyboard } from '../input/keyboard';
 import { attachPointer } from '../input/pointer';
 import { NumPad } from './NumPad';
+import { ToolOptions } from './ToolOptions';
 import { SidePanel } from './panels/SidePanel';
 import { Toolbar } from './Toolbar';
 import { TopBar } from './TopBar';
@@ -35,6 +36,7 @@ export function Editor() {
         <Toolbar />
         <div class="canvas-wrap">
           <canvas ref={canvasRef} class="plan-canvas" />
+          <ToolOptions />
           <SidePanel />
           <NumPad />
         </div>

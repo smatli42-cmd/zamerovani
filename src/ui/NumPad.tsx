@@ -10,6 +10,12 @@ import { useStore } from '../store/useStore';
 
 function title(floor: Floor | null, t: NumPadTarget): string {
   if (t.kind === 'wall-length') return 'Délka stěny';
+  if (t.kind === 'wall-sagitta') return 'Vzepětí oblouku';
+  if (t.kind === 'circle-diameter') return 'Průměr kruhu';
+  if (t.kind === 'comp-gap') {
+    const side = { left: 'vlevo', right: 'vpravo', top: 'nahoře', bottom: 'dole' }[t.side];
+    return `Odstup od stěny ${side}`;
+  }
   const op = floor?.openings[t.kind === 'opening-gap' ? t.secondId : t.openingId];
   const name = op ? `${OPENING_DEFAULTS[op.kind].label} ${op.number}` : 'Otvor';
   switch (t.kind) {

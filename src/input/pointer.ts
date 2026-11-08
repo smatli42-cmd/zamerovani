@@ -14,6 +14,7 @@ import type { Pt } from '../model/types';
 import { openTarget, setMoveTarget } from '../store/numpadController';
 import { store } from '../store/store';
 import { tools } from '../tools/registry';
+import { arcUnderPen } from '../tools/selectTool';
 import { HIT_PX, type PointerInput } from '../tools/types';
 
 interface Active {
@@ -72,6 +73,9 @@ function handleOverlayTap(p: PointerInput): boolean {
       return true;
     }
   }
+
+  // Středový bod vybraného oblouku má přednost před kótami, které ho mohou překrývat
+  if (arcUnderPen(p)) return false;
 
   const box = hitTest(p.screen, p.device === 'touch' ? 8 : 4);
   if (box?.action.type === 'numpad') {

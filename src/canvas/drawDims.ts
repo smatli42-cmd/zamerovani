@@ -3,6 +3,7 @@
  * Každé číslo je klikací (otevře NumPad). Kóty se vynáší ven z místnosti.
  * Uvnitř podél stěny se zobrazuje popisek stěny (tloušťka, materiál…).
  */
+import { arcGeometry } from '../core/arc';
 import { openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
 import { centroid, dist, dot, lerp, normal, scale, sub, unit } from '../core/geometry';
 import { OPENING_DEFAULTS } from '../model/factory';
@@ -59,7 +60,7 @@ function componentCentroids(floor: Floor): Map<Id, Pt> {
   return result;
 }
 
-interface DimStyle {
+export interface DimStyle {
   color: string;
   bg: string;
   bold: boolean;
@@ -73,6 +74,18 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
   for (const wall of Object.values(floor.walls)) {
     const n = wallNodes(floor, wall);
     if (!n) continue;
+    if (wall.radius !== undefined) {
+      // Kruh: kóta průměru přes střed (klikací), popisek stěny se u kruhu nekreslí
+      const c = toScreen(n[0], cam);
+      const r = wall.radius * cam.zoom;
+      const selectedCircle = selection?.kind === 'wall' && selection.id === wall.id;
+      drawDimLine(ctx, { x: c.x - r, y: c.y }, { x: c.x + r, y: c.y }, { x: 0, y: -1 }, 0, `Ø${Math.round(wall.radius * 2)}`, undefined, { color: '#0f172a', bg: selectedCircle ? '#dbeafe' : '#ffffff', bold: true }, s, {
+        type: 'numpad',
+        target: { kind: 'circle-diameter', wallId: wall.id },
+        wallId: wall.id
+      });
+      continue;
+    }
     const a = toScreen(n[0], cam);
     const b = toScreen(n[1], cam);
     const screenLen = dist(a, b);
@@ -95,6 +108,9 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
     let offset = 26 * s;
     // Nika vystupuje do strany (swing); pokud míří ke kótám, kóty se posunou za ni
     const nicheSide = normal(u);
+    // Oblouková stěna: kóta tětivy se odsune za vyklenutí, pokud míří ke kótám
+    const sag = wall.sagitta ?? 0;
+    if (Math.abs(sag) >= 0.5 && dot(scale(nicheSide, Math.sign(sag)), out) > 0) offset = Math.max(offset, Math.abs(sag) * cam.zoom + 22 * s);
     for (const po of placed) {
       if (po.op.kind !== 'niche') continue;
       if (dot(scale(nicheSide, po.op.swing), out) > 0) offset = Math.max(offset, Math.max(6, po.op.depth * cam.zoom) + 22 * s);
@@ -149,6 +165,17 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
       wallId: wall.id
     });
 
+    // Vzepětí oblouku: od středu tětivy k vrcholu (klikací)
+    const g = arcGeometry(n[0], n[1], sag);
+    // u půlkruhu (kruh) se vzepětí nekótuje – je to poloměr
+    if (g && Math.abs(Math.abs(sag) - len / 2) > 1) {
+      drawDimLine(ctx, lerp(a, b, 0.5), toScreen(g.apex, cam), u, 0, String(Math.round(Math.abs(sag))), 'vzepětí', { color: '#334155', bg: '#ffffff', bold: false }, s, {
+        type: 'numpad',
+        target: { kind: 'wall-sagitta', wallId: wall.id },
+        wallId: wall.id
+      });
+    }
+
     // Popisek stěny (uvnitř místnosti podél stěny)
     const label = wallLabelText(wall);
     if (label && screenLen > 60) {
@@ -182,7 +209,7 @@ function drawRotatedText(ctx: CanvasRenderingContext2D, pos: Pt, u: Pt, text: st
   ctx.restore();
 }
 
-function drawDimLine(
+export function drawDimLine(
   ctx: CanvasRenderingContext2D,
   p1: Pt,
   p2: Pt,

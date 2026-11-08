@@ -8,7 +8,7 @@
  * - Při změně struktury zvýšit SCHEMA_VERSION a doplnit migraci v persistence/migrate.ts.
  */
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 4;
 
 export type Id = string;
 
@@ -40,6 +40,12 @@ export interface Wall {
   /** Změřená délka v mm, null = jen načrtnuto. */
   measured: number | null;
   label: WallLabel;
+  /** Vzepětí oblouku v mm (znaménko = strana vyklenutí od směru a→b); chybí / 0 = rovná stěna. */
+  sagitta?: number;
+  /** Styl čáry; chybí = plná. */
+  style?: LineStyle;
+  /** Kruh: poloměr v mm. Kruhová stěna má a === b = střed kruhu. */
+  radius?: number;
 }
 
 export type OpeningKind = 'door' | 'window' | 'opening' | 'niche';
@@ -82,6 +88,9 @@ export interface Room {
   heights: RoomHeight[];
   note: string;
 }
+
+/** Styl čáry stěny (výchozí plná; čárkovaná / čerchovaná např. pro překlad nebo konstrukci nad řezem). */
+export type LineStyle = 'solid' | 'dashed' | 'dashdot';
 
 /** Podlaží = jeden půdorys. */
 export interface Floor {

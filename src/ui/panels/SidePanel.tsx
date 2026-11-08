@@ -3,8 +3,8 @@
  */
 import { wallLength, wallsAtNode } from '../../core/floorQueries';
 import { OPENING_DEFAULTS } from '../../model/factory';
-import type { Floor, Opening, Room, Wall, WallType } from '../../model/types';
-import { applyNumpadValue, deleteSelection, setOpeningRef, updateOpening, updateRoom, updateWallLabel } from '../../store/actions';
+import type { Floor, LineStyle, Opening, Room, Wall, WallType } from '../../model/types';
+import { applyNumpadValue, deleteSelection, setOpeningRef, updateOpening, updateRoom, updateWall, updateWallLabel } from '../../store/actions';
 import { openTarget } from '../../store/numpadController';
 import { store } from '../../store/store';
 import { useStore } from '../../store/useStore';
@@ -58,12 +58,51 @@ const WALL_TYPES: { v: WallType; label: string }[] = [
 function WallPanel({ floor, wall }: { floor: Floor; wall: Wall }) {
   const len = Math.round(wallLength(floor, wall));
   const l = wall.label;
+  const circle = wall.radius !== undefined;
   return (
-    <Panel title="Stěna" onClose={close}>
+    <Panel title={circle ? 'Kruh' : 'Stěna'} onClose={close}>
+      {circle && (
+        <button class="big-value" onClick={() => openTarget({ kind: 'circle-diameter', wallId: wall.id })}>
+          <span>Ø{wall.radius! * 2}</span> <small>mm</small>
+          <span class="hint">ťukni a zadej průměr (nebo táhni modrý bod na obvodu)</span>
+        </button>
+      )}
+      {!circle && (
       <button class="big-value" onClick={() => openTarget({ kind: 'wall-length', wallId: wall.id, move: { nodeId: wall.b } })}>
         {wall.measured === null ? <span class="sketch">~{len}</span> : <span>{wall.measured}</span>} <small>mm</small>
         <span class="hint">{wall.measured === null ? 'náčrt – ťukni a zadej změřenou délku' : 'změřeno – ťukni pro změnu'}</span>
       </button>
+      )}
+
+      {!circle && (
+      <div class="field">
+        <span>Tvar</span>
+        <Seg
+          options={[
+            { v: 'straight', label: 'Rovná' },
+            { v: 'arc', label: 'Oblouk' }
+          ]}
+          value={wall.sagitta ? 'arc' : 'straight'}
+          onChange={v => updateWall(wall.id, { sagitta: v === 'arc' ? (wall.sagitta || Math.max(10, Math.round(len / 4 / 10) * 10)) : 0 })}
+        />
+      </div>
+      )}
+      {wall.sagitta ? (
+        <>
+          <button class="field-button" onClick={() => openTarget({ kind: 'wall-sagitta', wallId: wall.id })}>
+            <span>Vzepětí oblouku</span>
+            <b>{Math.abs(wall.sagitta)} mm</b>
+          </button>
+          <p class="muted small">Vzepětí jde změnit i tažením modrého bodu uprostřed oblouku.</p>
+          <button class="btn" onClick={() => updateWall(wall.id, { sagitta: -(wall.sagitta ?? 0) })}>
+            🔄 Vyklenout na opačnou stranu
+          </button>
+        </>
+      ) : null}
+      <div class="field">
+        <span>Styl čáry</span>
+        <Seg options={LINE_STYLES} value={wall.style ?? 'solid'} onChange={v => updateWall(wall.id, { style: v })} />
+      </div>
 
       <h4>Popisek stěny</h4>
       <NumField label="Tloušťka" value={l.thickness} allowEmpty onCommit={v => updateWallLabel(wall.id, { thickness: v })} />
@@ -201,3 +240,9 @@ function RoomPanel({ room }: { room: Room }) {
     </Panel>
   );
 }
+
+export const LINE_STYLES: { v: LineStyle; label: string }[] = [
+  { v: 'solid', label: 'Plná' },
+  { v: 'dashed', label: 'Čárkovaná' },
+  { v: 'dashdot', label: 'Čerchovaná' }
+];

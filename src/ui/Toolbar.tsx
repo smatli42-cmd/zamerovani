@@ -13,6 +13,10 @@ const TOOLS: { id: ToolId; icon: string; label: string; title: string }[] = [
   { id: 'opening', icon: '⬜', label: 'Otvor', title: 'Ťuknutím na stěnu vložit průchod bez dveří' },
   { id: 'niche', icon: '◫', label: 'Nika', title: 'Ťuknutím na stěnu vložit niku' },
   { id: 'room', icon: '🏷️', label: 'Místnost', title: 'Ťuknutím vložit štítek místnosti' },
+  { id: 'rect', icon: '▭', label: 'Obdélník', title: 'Tažením nakreslit obdélník (sloup, komín, překlad…)' },
+  { id: 'circle', icon: '◯', label: 'Kruh', title: 'Tažením od středu nakreslit kruh' },
+  { id: 'dline', icon: '═', label: 'Dvojčára', title: 'Příčka dvěma čarami: táhni od stěny ke stěně, napojením se stěny rozdělí (tloušťka nad plátnem)' },
+  { id: 'arc', icon: '◠', label: 'Oblouk', title: 'Tažením mezi krajními body nakreslit oblouk, vzepětí se upřesní kótou' },
   { id: 'pan', icon: '✋', label: 'Posun', title: 'Posouvat výkres' }
 ];
 

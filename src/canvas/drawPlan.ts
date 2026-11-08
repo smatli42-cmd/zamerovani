@@ -1,9 +1,10 @@
 /**
  * Kreslení stěn, rohů a otvorů.
  */
+import { arcGeometry } from '../core/arc';
 import { openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
 import { add, dist, lerp, normal, scale, unit } from '../core/geometry';
-import type { Floor, Opening, Pt } from '../model/types';
+import type { Floor, LineStyle, Opening, Pt, Wall } from '../model/types';
 import type { Camera, Selection } from '../store/store';
 import { toScreen } from './view';
 
@@ -16,6 +17,31 @@ export const COLORS = {
 };
 
 const isSel = (s: Selection, kind: string, id: string) => s?.kind === kind && s.id === id;
+
+/** Vzory čar pro stěnu tloušťky 3 px (s kulatými konci by se mezery slily, proto se čárkované kreslí s ostrými konci). */
+export const LINE_DASH: Record<LineStyle, number[]> = {
+  solid: [],
+  dashed: [14, 8],
+  dashdot: [18, 7, 4, 7]
+};
+
+/** Cesta stěny (úsečka nebo oblouk) v souřadnicích obrazovky. */
+function pathWall(ctx: CanvasRenderingContext2D, wall: Wall, a: Pt, b: Pt, nodes: [Pt, Pt], cam: Camera): void {
+  ctx.beginPath();
+  if (wall.radius !== undefined) {
+    const c = toScreen(nodes[0], cam);
+    ctx.arc(c.x, c.y, wall.radius * cam.zoom, 0, Math.PI * 2);
+    return;
+  }
+  const g = arcGeometry(nodes[0], nodes[1], wall.sagitta ?? 0);
+  if (g) {
+    const c = toScreen(g.center, cam);
+    ctx.arc(c.x, c.y, g.r * cam.zoom, g.start, g.end, g.anticlockwise);
+  } else {
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+  }
+}
 
 export function drawWalls(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camera, selection: Selection, hover: Selection): void {
   ctx.save();
@@ -31,20 +57,43 @@ export function drawWalls(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
     if (selected || hovered) {
       ctx.strokeStyle = selected ? 'rgba(37,99,235,0.25)' : 'rgba(147,197,253,0.35)';
       ctx.lineWidth = 14;
-      ctx.beginPath();
-      ctx.moveTo(a.x, a.y);
-      ctx.lineTo(b.x, b.y);
+      pathWall(ctx, wall, a, b, n, cam);
       ctx.stroke();
     }
 
-    // Stěna je vždy plná černá – nezměřený rozměr se pozná jen podle barvy kóty
+    // Stěna je černá (styl čáry podle vlastnosti) – nezměřený rozměr se pozná jen podle barvy kóty
     ctx.strokeStyle = selected ? COLORS.selected : COLORS.wall;
     ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
+    const dash = LINE_DASH[wall.style ?? 'solid'];
+    ctx.setLineDash(dash);
+    ctx.lineCap = dash.length ? 'butt' : 'round';
+    pathWall(ctx, wall, a, b, n, cam);
     ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.lineCap = 'round';
   }
+  ctx.restore();
+}
+
+/** Středový bod vybrané obloukové stěny – jeho tažením se mění vzepětí. */
+export function drawArcHandle(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camera, selection: Selection): void {
+  if (selection?.kind !== 'wall') return;
+  const wall = floor.walls[selection.id];
+  const n = wall && wallNodes(floor, wall);
+  if (!wall || !n) return;
+  // kruh: bod na obvodu vpravo od středu (tažením se mění poloměr); oblouk: jeho vrchol
+  const g = wall.radius === undefined ? arcGeometry(n[0], n[1], wall.sagitta ?? 0) : null;
+  const at = wall.radius !== undefined ? { x: n[0].x + wall.radius, y: n[0].y } : g?.apex;
+  if (!at) return;
+  const p = toScreen(at, cam);
+  ctx.save();
+  ctx.fillStyle = COLORS.selected;
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fill();
   ctx.restore();
 }
 

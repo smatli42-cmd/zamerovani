@@ -53,8 +53,15 @@ export function emptyWallLabel(): WallLabel {
   return { thickness: null, type: null, material: '', note: '' };
 }
 
-export function createWall(a: Id, b: Id): Wall {
-  return { id: newId('w'), a, b, measured: null, label: emptyWallLabel() };
+export function createWall(a: Id, b: Id, sagitta = 0): Wall {
+  const wall: Wall = { id: newId('w'), a, b, measured: null, label: emptyWallLabel() };
+  if (sagitta) wall.sagitta = sagitta;
+  return wall;
+}
+
+/** Kruhová stěna: jeden roh (střed) a poloměr. */
+export function createCircleWall(center: Id, radius: number): Wall {
+  return { id: newId('w'), a: center, b: center, measured: null, label: emptyWallLabel(), radius };
 }
 
 export const OPENING_DEFAULTS: Record<OpeningKind, { width: number; height: number; sill: number; depth: number; prefix: string; label: string }> = {

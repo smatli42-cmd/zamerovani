@@ -2,7 +2,7 @@
  * Nástroje pro vkládání: otvory (dveře, okno, průchod, nika) a štítek místnosti.
  * Ťuknutí na existující prvek ho vybere (a jde posouvat jako v nástroji Vybrat).
  */
-import { findWallNear } from '../core/floorQueries';
+import { findWallNear, isCurved } from '../core/floorQueries';
 import type { OpeningKind } from '../model/types';
 import { addOpening, addRoom } from '../store/actions';
 import { store } from '../store/store';
@@ -24,7 +24,7 @@ function makeOpeningTool(kind: OpeningKind): Tool {
       }
       delegating = false;
       const hit = findWallNear(floor, p.world, (HIT_PX.wall * 1.5) / cam.zoom);
-      if (hit) addOpening(hit.wall.id, kind, hit.t);
+      if (hit && !isCurved(hit.wall)) addOpening(hit.wall.id, kind, hit.t);
     },
     drag(p) {
       if (delegating) selectTool.drag?.(p);

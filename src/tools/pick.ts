@@ -1,7 +1,7 @@
 /**
  * Hledání prvku pod perem/prstem (společné pro více nástrojů).
  */
-import { findNodeNear, findWallNear, openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
+import { findNodeNear, findWallNear, isCurved, openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
 import { projectToSegment } from '../core/geometry';
 import type { Floor, Pt } from '../model/types';
 import type { Camera, Selection } from '../store/store';
@@ -14,7 +14,7 @@ export function pickOpening(floor: Floor, p: Pt, cam: Camera): string | null {
   const tol = HIT_PX.wall / cam.zoom;
   for (const wall of Object.values(floor.walls)) {
     const n = wallNodes(floor, wall);
-    if (!n) continue;
+    if (!n || isCurved(wall)) continue;
     const pr = projectToSegment(p, n[0], n[1]);
     if (pr.distance > tol * 1.5) continue;
     const along = pr.t * wallLength(floor, wall);

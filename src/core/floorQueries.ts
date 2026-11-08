@@ -2,13 +2,25 @@
  * Dotazy nad půdorysem (podlažím) – čtení bez změn.
  */
 import type { Floor, Id, Node, Opening, Wall } from '../model/types';
-import { dist, projectToSegment, unit } from './geometry';
+import { nearestOnArc, nearestOnCircle } from './arc';
+import { dist, unit } from './geometry';
 import type { Pt } from '../model/types';
 
 export function wallNodes(floor: Floor, wall: Wall): [Node, Node] | null {
   const a = floor.nodes[wall.a];
   const b = floor.nodes[wall.b];
   return a && b ? [a, b] : null;
+}
+
+/** Je stěna kruh? */
+export const isCircle = (wall: Wall): boolean => wall.radius !== undefined;
+
+/** Je stěna zakřivená (oblouk nebo kruh)? Na zakřivené stěny zatím nejdou dveře a okna. */
+export const isCurved = (wall: Wall): boolean => isCircle(wall) || Math.abs(wall.sagitta ?? 0) >= 0.5;
+
+/** Nejbližší bod na stěně (úsečka, oblouk i kruh). */
+export function nearestOnWall(wall: Wall, n: [Node, Node], p: Pt) {
+  return wall.radius !== undefined ? nearestOnCircle(p, n[0], wall.radius) : nearestOnArc(p, n[0], n[1], wall.sagitta ?? 0);
 }
 
 export function wallLength(floor: Floor, wall: Wall): number {
@@ -60,7 +72,7 @@ export function findWallNear(floor: Floor, p: Pt, maxDist: number, excludeWallId
     if (w.id === excludeWallId) continue;
     const n = wallNodes(floor, w);
     if (!n) continue;
-    const pr = projectToSegment(p, n[0], n[1]);
+    const pr = nearestOnWall(w, n, p);
     if (pr.distance <= maxDist && (!best || pr.distance < best.distance)) {
       best = { wall: w, t: pr.t, point: pr.point, distance: pr.distance };
     }

@@ -3,7 +3,7 @@
  */
 import type { Floor, Node, Pt } from '../model/types';
 import { dist, roundTo } from './geometry';
-import { findNodeNear, findWallNear, type WallHit } from './floorQueries';
+import { findNodeNear, findWallNear, isCurved, type WallHit } from './floorQueries';
 
 export interface SnapOptions {
   ortho: boolean;
@@ -87,7 +87,8 @@ export function snapEnd(floor: Floor, start: Pt, raw: Pt, o: SnapOptions): SnapR
   if (wallHit) {
     const wa = floor.nodes[wallHit.wall.a];
     const wb = floor.nodes[wallHit.wall.b];
-    const hit = wa && wb ? intersectLines(start, pt, wa, wb) : null;
+    // u obloukové stěny se bere nejbližší bod oblouku (průsečík s tětivou by nesedělo)
+    const hit = wa && wb && !isCurved(wallHit.wall) ? intersectLines(start, pt, wa, wb) : null;
     pt = hit && dist(hit, pt) <= o.nodeTol ? hit : wallHit.point;
     guides.length = 0;
   }
