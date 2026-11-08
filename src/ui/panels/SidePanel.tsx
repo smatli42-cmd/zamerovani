@@ -1,10 +1,11 @@
 /**
  * Panel vlastností vybraného prvku (stěna, otvor, místnost, roh).
  */
+import { useEffect, useRef } from 'preact/hooks';
 import { wallLength, wallsAtNode } from '../../core/floorQueries';
 import { OPENING_DEFAULTS } from '../../model/factory';
 import type { Floor, LineStyle, Opening, Room, TextNote, Wall, WallType } from '../../model/types';
-import { applyNumpadValue, deleteSelection, setOpeningRef, updateOpening, updateRoom, updateText, updateWall, updateWallLabel } from '../../store/actions';
+import { applyNumpadValue, deleteSelection, setOpeningRef, updateOpening, takeFreshTextId, updateRoom, updateText, updateWall, updateWallLabel } from '../../store/actions';
 import { openTarget } from '../../store/numpadController';
 import { store } from '../../store/store';
 import { useStore } from '../../store/useStore';
@@ -207,11 +208,17 @@ const TEXT_SIZES = [
 
 function TextPanel({ note }: { note: TextNote }) {
   const set = (patch: Partial<TextNote>) => updateText(note.id, patch);
+  const area = useRef<HTMLTextAreaElement>(null);
+  // nově vložený text: pole se rovnou aktivuje a výchozí „Text“ se označí, takže stačí psát
+  useEffect(() => {
+    if (takeFreshTextId() === note.id) area.current?.focus();
+  }, [note.id]);
   return (
     <Panel title="Text" onClose={close}>
       <label class="field">
         <span>Text (víc řádků = Enter)</span>
         <textarea
+          ref={area}
           rows={3}
           value={note.text}
           key={note.text}
@@ -235,6 +242,9 @@ function TextPanel({ note }: { note: TextNote }) {
       />
       <NumField label="Úhel" value={note.angle} unit="°" onCommit={v => v !== null && set({ angle: ((v % 360) + 360) % 360 })} />
       <p class="muted small">Tažením se text přesune.</p>
+      <button class="btn btn-primary btn-lg" onClick={close}>
+        ✔ Hotovo
+      </button>
       <button class="btn btn-danger" onClick={deleteSelection}>
         🗑️ Smazat text
       </button>

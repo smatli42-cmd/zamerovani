@@ -372,6 +372,15 @@ export function moveRoom(id: Id, p: Pt): void {
 
 // ---------------------------------------------------------------- Texty
 
+/** ID právě vloženého textu – panel mu hned aktivuje pole, aby se dalo rovnou psát. */
+let freshTextId: Id | null = null;
+
+export function takeFreshTextId(): Id | null {
+  const id = freshTextId;
+  freshTextId = null;
+  return id;
+}
+
 export function addText(p: Pt): Id {
   let id = '';
   store.edit(floor => {
@@ -379,6 +388,7 @@ export function addText(p: Pt): Id {
     floor.texts[t.id] = t;
     id = t.id;
   });
+  freshTextId = id;
   store.set({ selection: { kind: 'text', id } });
   return id;
 }
