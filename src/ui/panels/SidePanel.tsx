@@ -226,6 +226,9 @@ function TextPanel({ note }: { note: TextNote }) {
           onChange={e => set({ text: (e.target as HTMLTextAreaElement).value })}
         />
       </label>
+      <button class="btn btn-primary btn-lg" style="width:100%" onClick={close}>
+        ✔ Hotovo
+      </button>
       <h4>Velikost písma</h4>
       <Seg options={TEXT_SIZES} value={note.size} onChange={v => set({ size: v })} />
       <NumField label="Výška písma" value={note.size} min={20} onCommit={v => v !== null && set({ size: v })} />
@@ -242,9 +245,6 @@ function TextPanel({ note }: { note: TextNote }) {
       />
       <NumField label="Úhel" value={note.angle} unit="°" onCommit={v => v !== null && set({ angle: ((v % 360) + 360) % 360 })} />
       <p class="muted small">Tažením se text přesune.</p>
-      <button class="btn btn-primary btn-lg" onClick={close}>
-        ✔ Hotovo
-      </button>
       <button class="btn btn-danger" onClick={deleteSelection}>
         🗑️ Smazat text
       </button>
