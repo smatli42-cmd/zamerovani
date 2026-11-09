@@ -2,7 +2,7 @@
  * Všechny změny výkresu na jednom místě. Rozhraní i nástroje volají tyto funkce,
  * nikdy nemění data přímo.
  */
-import { createCircleWall, createFloor, createOpening, createRoom, createText, createWall, newId } from '../model/factory';
+import { createCircleWall, createFloor, createOpening, createRoom, createText, createWall, newId, nextOpeningNumber } from '../model/factory';
 import type { Floor, Id, LineStyle, Opening, OpeningKind, Pt, Room, TextNote, Wall, WallLabel } from '../model/types';
 import { arcChain, setChainSagitta } from '../core/arcChain';
 import { dist } from '../core/geometry';
@@ -274,6 +274,72 @@ export function mergeNodeIfCoincident(nodeId: Id): void {
     }
     cleanup(floor);
   });
+}
+
+// ---------------------------------------------------------------- Kopírování
+
+/** Odsazení kopie od originálu (mm), aby byla vidět a šla uchopit. */
+const COPY_OFFSET = 300;
+
+/**
+ * Zkopíruje vybrané prvky (stěny s otvory, místnosti, texty) s odsazením a kopii vybere,
+ * takže ji jde hned táhnout na místo.
+ */
+export function duplicateSelection(): void {
+  const sel = store.get().selection;
+  if (!sel) return;
+  const items = sel.kind === 'multi' ? sel.items : [sel];
+  const created: { kind: 'wall' | 'opening' | 'room' | 'text'; id: Id }[] = [];
+  store.edit(floor => {
+    const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+    const nodeMap = new Map<Id, Id>();
+    const nodeCopy = (id: Id): Id | null => {
+      const old = floor.nodes[id];
+      if (!old) return null;
+      let nid = nodeMap.get(id);
+      if (!nid) {
+        nid = newId('n');
+        nodeMap.set(id, nid);
+        floor.nodes[nid] = { id: nid, x: old.x + COPY_OFFSET, y: old.y + COPY_OFFSET };
+      }
+      return nid;
+    };
+    const wallMap = new Map<Id, Id>();
+    for (const it of items) {
+      if (it.kind !== 'wall') continue;
+      const w = floor.walls[it.id];
+      const a = w && nodeCopy(w.a);
+      const b = w && nodeCopy(w.b);
+      if (!w || !a || !b) continue;
+      const nw: Wall = { ...clone(w), id: newId('w'), a, b };
+      floor.walls[nw.id] = nw;
+      wallMap.set(w.id, nw.id);
+      created.push({ kind: 'wall', id: nw.id });
+    }
+    // otvory se kopírují se svou stěnou (nebo samostatně vybrané otvory se stěnou, která se kopíruje)
+    for (const op of Object.values(floor.openings)) {
+      const target = wallMap.get(op.wallId);
+      if (!target) continue;
+      const no = { ...clone(op), id: newId('op'), wallId: target, number: nextOpeningNumber(floor, op.kind) };
+      floor.openings[no.id] = no;
+    }
+    for (const it of items) {
+      if (it.kind === 'room' && floor.rooms[it.id]) {
+        const r = { ...clone(floor.rooms[it.id]!), id: newId('rm') };
+        r.x += COPY_OFFSET;
+        r.y += COPY_OFFSET;
+        floor.rooms[r.id] = r;
+        created.push({ kind: 'room', id: r.id });
+      } else if (it.kind === 'text' && floor.texts[it.id]) {
+        const t = { ...clone(floor.texts[it.id]!), id: newId('tx') };
+        t.x += COPY_OFFSET;
+        t.y += COPY_OFFSET;
+        floor.texts[t.id] = t;
+        created.push({ kind: 'text', id: t.id });
+      }
+    }
+  });
+  if (created.length) store.set({ selection: created.length === 1 ? created[0]! : { kind: 'multi', items: created }, numpad: null });
 }
 
 // ---------------------------------------------------------------- Mazání

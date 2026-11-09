@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'preact/hooks';
 import { wallLength, wallsAtNode } from '../../core/floorQueries';
 import { OPENING_DEFAULTS } from '../../model/factory';
 import type { Floor, LineStyle, Opening, Room, TextNote, Wall, WallType } from '../../model/types';
-import { applyNumpadValue, deleteSelection, setOpeningRef, updateOpening, takeFreshTextId, updateRoom, updateText, updateWall, updateWallLabel } from '../../store/actions';
+import { applyNumpadValue, deleteSelection, duplicateSelection, setOpeningRef, updateOpening, takeFreshTextId, updateRoom, updateText, updateWall, updateWallLabel } from '../../store/actions';
 import { openTarget } from '../../store/numpadController';
 import { store } from '../../store/store';
 import { arcChain } from '../../core/arcChain';
@@ -52,6 +52,9 @@ export function SidePanel() {
         <Panel title={`Vybráno ${selection.items.length} prvků`} onClose={close}>
           <p class="small">{parts.map(([n, label]) => `${n} ${label}`).join(', ')}</p>
           <p class="muted small">Tažením za kterýkoli vybraný prvek posunete celý výběr. Ťuknutím do prázdného místa výběr zrušíte.</p>
+          <button class="btn" onClick={duplicateSelection}>
+            📄 Kopírovat
+          </button>
           <button class="btn btn-danger" onClick={deleteSelection}>
             🗑️ Smazat vybrané
           </button>
@@ -143,6 +146,7 @@ function WallPanel({ floor, wall }: { floor: Floor; wall: Wall }) {
       />
       <TextField label="Poznámka" value={l.note} placeholder="např. vlhkost u paty" onCommit={v => updateWallLabel(wall.id, { note: v })} />
 
+      <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
       <button class="btn btn-danger" onClick={deleteSelection}>
         🗑️ Smazat stěnu
       </button>
@@ -264,6 +268,7 @@ function TextPanel({ note }: { note: TextNote }) {
       />
       <NumField label="Úhel" value={note.angle} unit="°" onCommit={v => v !== null && set({ angle: ((v % 360) + 360) % 360 })} />
       <p class="muted small">Tažením se text přesune.</p>
+      <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
       <button class="btn btn-danger" onClick={deleteSelection}>
         🗑️ Smazat text
       </button>
@@ -310,6 +315,7 @@ function RoomPanel({ room }: { room: Room }) {
         ＋ Další výška
       </button>
       <TextField label="Poznámka" value={room.note} onCommit={v => set({ note: v })} />
+      <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
       <button class="btn btn-danger" onClick={deleteSelection}>
         🗑️ Smazat místnost
       </button>
