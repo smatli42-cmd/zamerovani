@@ -40,6 +40,24 @@ export function SidePanel() {
       const t = floor.texts[selection.id];
       return t ? <TextPanel note={t} /> : null;
     }
+    case 'multi': {
+      const count = (k: string) => selection.items.filter(i => i.kind === k).length;
+      const parts = [
+        [count('wall'), 'stěn'],
+        [count('opening'), 'otvorů'],
+        [count('room'), 'místností'],
+        [count('text'), 'textů']
+      ].filter(([n]) => n);
+      return (
+        <Panel title={`Vybráno ${selection.items.length} prvků`} onClose={close}>
+          <p class="small">{parts.map(([n, label]) => `${n} ${label}`).join(', ')}</p>
+          <p class="muted small">Tažením za kterýkoli vybraný prvek posunete celý výběr. Ťuknutím do prázdného místa výběr zrušíte.</p>
+          <button class="btn btn-danger" onClick={deleteSelection}>
+            🗑️ Smazat vybrané
+          </button>
+        </Panel>
+      );
+    }
     case 'node':
       return (
         <Panel title="Roh" onClose={close}>

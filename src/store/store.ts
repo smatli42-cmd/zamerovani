@@ -15,13 +15,22 @@ import type { Side } from '../core/components';
 
 export type ToolId = 'select' | 'wall' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'dline' | 'arc' | 'text' | 'pan';
 
-export type Selection =
+export type SingleSelection =
   | { kind: 'wall'; id: Id }
   | { kind: 'node'; id: Id }
   | { kind: 'opening'; id: Id }
   | { kind: 'room'; id: Id }
-  | { kind: 'text'; id: Id }
-  | null;
+  | { kind: 'text'; id: Id };
+
+/** Výběr: jeden prvek, skupina prvků (výběr obdélníkem) nebo nic. */
+export type Selection = SingleSelection | { kind: 'multi'; items: SingleSelection[] } | null;
+
+/** Je prvek vybraný (samostatně nebo jako člen skupiny)? */
+export function isSelected(s: Selection, kind: SingleSelection['kind'], id: Id): boolean {
+  if (!s) return false;
+  if (s.kind === 'multi') return s.items.some(i => i.kind === kind && i.id === id);
+  return s.kind === kind && s.id === id;
+}
 
 /** Co právě zadáváme na číselné klávesnici. */
 export type NumPadTarget =

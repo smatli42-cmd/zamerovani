@@ -204,6 +204,39 @@ export function updateWallLabel(wallId: Id, patch: Partial<WallLabel>): void {
 }
 
 /** Posun rohu (volá se během tažení uvnitř gesta). */
+/** Výchozí polohy skupiny pro společný posun (výběr obdélníkem). */
+export interface GroupOrigin {
+  nodes: Record<Id, Pt>;
+  rooms: Record<Id, Pt>;
+  texts: Record<Id, Pt>;
+}
+
+export function groupOrigin(floor: Floor, items: readonly { kind: string; id: Id }[]): GroupOrigin {
+  const o: GroupOrigin = { nodes: {}, rooms: {}, texts: {} };
+  for (const it of items) {
+    if (it.kind === 'wall') {
+      const w = floor.walls[it.id];
+      for (const id of w ? [w.a, w.b] : []) {
+        const n = floor.nodes[id];
+        if (n) o.nodes[id] = { x: n.x, y: n.y };
+      }
+    } else if (it.kind === 'room' && floor.rooms[it.id]) o.rooms[it.id] = { x: floor.rooms[it.id]!.x, y: floor.rooms[it.id]!.y };
+    else if (it.kind === 'text' && floor.texts[it.id]) o.texts[it.id] = { x: floor.texts[it.id]!.x, y: floor.texts[it.id]!.y };
+  }
+  return o;
+}
+
+/** Posune skupinu o (dx, dy) od výchozích poloh (po 10 mm). */
+export function moveGroup(origin: GroupOrigin, dx: number, dy: number): void {
+  const mx = Math.round(dx / 10) * 10;
+  const my = Math.round(dy / 10) * 10;
+  store.edit(floor => {
+    for (const [id, p] of Object.entries(origin.nodes)) if (floor.nodes[id]) Object.assign(floor.nodes[id]!, { x: p.x + mx, y: p.y + my });
+    for (const [id, p] of Object.entries(origin.rooms)) if (floor.rooms[id]) Object.assign(floor.rooms[id]!, { x: p.x + mx, y: p.y + my });
+    for (const [id, p] of Object.entries(origin.texts)) if (floor.texts[id]) Object.assign(floor.texts[id]!, { x: p.x + mx, y: p.y + my });
+  });
+}
+
 export function moveNode(nodeId: Id, p: Pt): void {
   store.edit(floor => {
     const n = floor.nodes[nodeId];
@@ -248,9 +281,10 @@ export function mergeNodeIfCoincident(nodeId: Id): void {
 export function deleteSelection(): void {
   const sel = store.get().selection;
   if (!sel) return;
+  const items = sel.kind === 'multi' ? sel.items : [sel];
   store.edit(
     floor => {
-      switch (sel.kind) {
+      for (const sel of items) switch (sel.kind) {
         case 'wall':
           delete floor.walls[sel.id];
           break;

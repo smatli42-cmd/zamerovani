@@ -6,7 +6,7 @@ import { arcChain } from '../core/arcChain';
 import { openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
 import { add, dist, lerp, normal, scale, unit } from '../core/geometry';
 import type { Floor, LineStyle, Opening, Pt, Wall } from '../model/types';
-import type { Camera, Selection } from '../store/store';
+import { isSelected, type Camera, type Selection, type SingleSelection } from '../store/store';
 import { toScreen } from './view';
 
 export const COLORS = {
@@ -17,7 +17,7 @@ export const COLORS = {
   node: '#475569'
 };
 
-const isSel = (s: Selection, kind: string, id: string) => s?.kind === kind && s.id === id;
+const isSel = (s: Selection, kind: SingleSelection['kind'], id: string) => isSelected(s, kind, id);
 
 /** Vzory čar pro stěnu tloušťky 3 px (s kulatými konci by se mezery slily, proto se čárkované kreslí s ostrými konci). */
 export const LINE_DASH: Record<LineStyle, number[]> = {

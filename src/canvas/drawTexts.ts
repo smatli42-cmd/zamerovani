@@ -2,7 +2,7 @@
  * Samostatné texty na výkresu.
  */
 import type { Floor } from '../model/types';
-import type { Camera, Selection } from '../store/store';
+import { isSelected, type Camera, type Selection } from '../store/store';
 import { LINE_HEIGHT, textBoxPx, textLines } from './textBox';
 import { toScreen } from './view';
 
@@ -11,7 +11,7 @@ export function drawTexts(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
   for (const t of Object.values(floor.texts)) {
     const p = toScreen(t, cam);
     const { w, h, font } = textBoxPx(t, cam);
-    const selected = selection?.kind === 'text' && selection.id === t.id;
+    const selected = isSelected(selection, 'text', t.id);
     ctx.save();
     ctx.translate(p.x, p.y);
     ctx.rotate((t.angle * Math.PI) / 180);

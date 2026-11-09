@@ -8,14 +8,19 @@ import { arcChain } from '../core/arcChain';
 import { findNodeNear, findWallNear, wallLength, wallNodes } from '../core/floorQueries';
 import { dist, projectToSegment, roundTo } from '../core/geometry';
 import type { Id, Pt } from '../model/types';
-import { mergeNodeIfCoincident, moveNode, moveOpeningTo, moveRoom, moveText, setCircleRadius, setWallSagitta } from '../store/actions';
+import { selectInRect, normRect } from '../core/rectSelect';
+import { groupOrigin, type GroupOrigin, mergeNodeIfCoincident, moveGroup, moveNode, moveOpeningTo, moveRoom, moveText, setCircleRadius, setWallSagitta } from '../store/actions';
 import { store } from '../store/store';
 import { pickAny } from './pick';
 import { HIT_PX, type PointerInput, type Tool } from './types';
 
 type DragKind = { kind: 'node'; id: Id } | { kind: 'opening'; id: Id; grabOffset: number } | { kind: 'room'; id: Id; dx: number; dy: number }
   | { kind: 'text'; id: Id; dx: number; dy: number }
-  | { kind: 'handle'; id: Id };
+  | { kind: 'handle'; id: Id }
+  | { kind: 'group'; origin: GroupOrigin; start: Pt };
+
+/** Rámeček výběru: zleva doprava okno (modře), zprava doleva křížení (zeleně, čárkovaně). */
+let band: { start: Pt; end: Pt; startScreen: Pt; endScreen: Pt } | null = null;
 
 let drag: DragKind | null = null;
 let downScreen: Pt | null = null;
@@ -62,8 +67,18 @@ export const selectTool: Tool = {
     drag = null;
 
     if (!hit) {
+      // Tažení z prázdného místa = výběr obdélníkem, ťuknutí = zrušení výběru
       store.set({ selection: null, numpad: null });
+      band = { start: p.world, end: p.world, startScreen: p.screen, endScreen: p.screen };
       return;
+    }
+    const cur = store.get().selection;
+    if (cur?.kind === 'multi') {
+      const member = cur.items.some(i => (i.kind === hit.kind && i.id === (hit as { id: Id }).id) || (hit.kind === 'node' && i.kind === 'wall' && (floor.walls[i.id]?.a === (hit as { id: Id }).id || floor.walls[i.id]?.b === (hit as { id: Id }).id)));
+      if (member) {
+        drag = { kind: 'group', origin: groupOrigin(floor, cur.items), start: p.world };
+        return;
+      }
     }
     store.set({ selection: hit, numpad: null });
     if (hit.kind === 'node') drag = { kind: 'node', id: hit.id };
@@ -89,6 +104,12 @@ export const selectTool: Tool = {
   },
 
   drag(p: PointerInput) {
+    if (band) {
+      band.end = p.world;
+      band.endScreen = p.screen;
+      requestRender();
+      return;
+    }
     if (!drag || !downScreen) return;
     if (!dragging) {
       if (dist(downScreen, p.screen) < 6) return; // ochrana proti nechtěnému posunu při ťuknutí
@@ -99,7 +120,9 @@ export const selectTool: Tool = {
     if (!floor) return;
     const cam = store.get().camera;
 
-    if (drag.kind === 'node') {
+    if (drag.kind === 'group') {
+      moveGroup(drag.origin, p.world.x - drag.start.x, p.world.y - drag.start.y);
+    } else if (drag.kind === 'node') {
       const tol = HIT_PX.snapNode / cam.zoom;
       const other = findNodeNear(floor, p.world, tol, drag.id);
       let target: Pt;
@@ -146,6 +169,17 @@ export const selectTool: Tool = {
   },
 
   up() {
+    if (band) {
+      const b = band;
+      band = null;
+      const floor = store.floor();
+      if (floor && Math.hypot(b.endScreen.x - b.startScreen.x, b.endScreen.y - b.startScreen.y) >= 8) {
+        const items = selectInRect(floor, normRect(b.start, b.end), b.end.x < b.start.x);
+        store.set({ selection: items.length === 0 ? null : items.length === 1 ? items[0]! : { kind: 'multi', items } });
+      }
+      requestRender();
+      return;
+    }
     if (drag && dragging) {
       if (drag.kind === 'node') mergeNodeIfCoincident(drag.id);
       store.endGesture();
@@ -160,13 +194,31 @@ export const selectTool: Tool = {
     if (!floor) return;
     const hit = pickAny(floor, p.world, store.get().camera);
     const cur = store.get().hover;
-    if (hit?.kind !== cur?.kind || hit?.id !== cur?.id) {
+    if (hit?.kind !== cur?.kind || (hit as { id?: Id } | null)?.id !== (cur as { id?: Id } | null)?.id) {
       store.set({ hover: hit });
       requestRender();
     }
   },
 
+  drawOverlay(ctx) {
+    if (!band) return;
+    const x = Math.min(band.startScreen.x, band.endScreen.x);
+    const y = Math.min(band.startScreen.y, band.endScreen.y);
+    const w = Math.abs(band.endScreen.x - band.startScreen.x);
+    const h = Math.abs(band.endScreen.y - band.startScreen.y);
+    const crossing = band.end.x < band.start.x;
+    ctx.save();
+    ctx.fillStyle = crossing ? 'rgba(22,163,74,0.12)' : 'rgba(37,99,235,0.12)';
+    ctx.strokeStyle = crossing ? '#16a34a' : '#2563eb';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash(crossing ? [6, 4] : []);
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeRect(x, y, w, h);
+    ctx.restore();
+  },
+
   cancel() {
+    band = null;
     if (dragging) store.endGesture();
     drag = null;
     dragging = false;

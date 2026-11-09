@@ -2,7 +2,7 @@
  * Štítky místností: číslo, název, světlé výšky.
  */
 import type { Floor } from '../model/types';
-import type { Camera, Selection } from '../store/store';
+import { isSelected, type Camera, type Selection } from '../store/store';
 import { ROOM_LABEL } from '../tools/pick';
 import { toScreen } from './view';
 
@@ -10,7 +10,7 @@ export function drawRooms(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
   ctx.save();
   for (const room of Object.values(floor.rooms)) {
     const p = toScreen(room, cam);
-    const selected = selection?.kind === 'room' && selection.id === room.id;
+    const selected = isSelected(selection, 'room', room.id);
     const title = [room.number, room.name || 'Místnost'].filter(Boolean).join(' ');
     const heights = room.heights.map(h => `sv.v. ${h.value}${h.note ? ` (${h.note})` : ''}`);
 
