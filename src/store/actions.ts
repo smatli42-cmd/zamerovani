@@ -276,6 +276,35 @@ export function mergeNodeIfCoincident(nodeId: Id): void {
   });
 }
 
+// ---------------------------------------------------------------- Otočení
+
+/** Otočí vybrané prvky o úhel ve stupních (kladný = po směru hodin) kolem středu výběru. */
+export function rotateSelection(deg: number): void {
+  const sel = store.get().selection;
+  if (!sel || !deg) return;
+  const items = sel.kind === 'multi' ? sel.items : [sel];
+  store.edit(floor => {
+    const o = groupOrigin(floor, items);
+    const pts = [...Object.values(o.nodes), ...Object.values(o.rooms), ...Object.values(o.texts)];
+    if (!pts.length) return;
+    const xs = pts.map(p => p.x);
+    const ys = pts.map(p => p.y);
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+    const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+    const rad = (deg * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+    const rot = (p: Pt): Pt => ({ x: Math.round(cx + (p.x - cx) * cos - (p.y - cy) * sin), y: Math.round(cy + (p.x - cx) * sin + (p.y - cy) * cos) });
+    for (const [id, p] of Object.entries(o.nodes)) Object.assign(floor.nodes[id]!, rot(p));
+    for (const [id, p] of Object.entries(o.rooms)) Object.assign(floor.rooms[id]!, rot(p));
+    for (const [id, p] of Object.entries(o.texts)) {
+      const t = floor.texts[id]!;
+      Object.assign(t, rot(p));
+      t.angle = (((t.angle + deg) % 360) + 360) % 360;
+    }
+  });
+}
+
 // ---------------------------------------------------------------- Kopírování
 
 /** Odsazení kopie od originálu (mm), aby byla vidět a šla uchopit. */

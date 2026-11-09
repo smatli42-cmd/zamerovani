@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'preact/hooks';
 import { wallLength, wallsAtNode } from '../../core/floorQueries';
 import { OPENING_DEFAULTS } from '../../model/factory';
 import type { Floor, LineStyle, Opening, Room, TextNote, Wall, WallType } from '../../model/types';
-import { applyNumpadValue, deleteSelection, duplicateSelection, setOpeningRef, updateOpening, takeFreshTextId, updateRoom, updateText, updateWall, updateWallLabel } from '../../store/actions';
+import { applyNumpadValue, deleteSelection, rotateSelection, duplicateSelection, setOpeningRef, updateOpening, takeFreshTextId, updateRoom, updateText, updateWall, updateWallLabel } from '../../store/actions';
 import { openTarget } from '../../store/numpadController';
 import { store } from '../../store/store';
 import { arcChain } from '../../core/arcChain';
@@ -51,7 +51,17 @@ export function SidePanel() {
       return (
         <Panel title={`Vybráno ${selection.items.length} prvků`} onClose={close}>
           <p class="small">{parts.map(([n, label]) => `${n} ${label}`).join(', ')}</p>
-          <p class="muted small">Tažením za kterýkoli vybraný prvek posunete celý výběr. Ťuknutím do prázdného místa výběr zrušíte.</p>
+          <p class="muted small">Tažením za vybraný prvek posunete celý výběr.</p>
+          <div class="field-grid">
+            <div class="field">
+              <span>Otočit o 90°</span>
+              <div class="btn-row">
+                <button class="btn btn-sm" onClick={() => rotateSelection(-90)}>⟲ doleva</button>
+                <button class="btn btn-sm" onClick={() => rotateSelection(90)}>⟳ doprava</button>
+              </div>
+            </div>
+            <NumField label="Otočit o úhel" value={null} min={-360} unit="°" onCommit={v => v !== null && rotateSelection(v)} />
+          </div>
           <div class="panel-actions">
             <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
             <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
