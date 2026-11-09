@@ -82,7 +82,7 @@ export const wallTool: Tool = {
     const floor = store.floor();
     if (!floor) return;
     const s = snapPoint(floor, p.world, snapOptions());
-    hoverSnap = s.node || s.wallHit ? s : null;
+    hoverSnap = s.node || s.wallHit || s.special ? s : null;
     requestRender();
   },
 
@@ -133,14 +133,20 @@ export const wallTool: Tool = {
 };
 
 export function drawSnapMarker(ctx: CanvasRenderingContext2D, cam: Camera, s: SnapResult): void {
-  if (!s.node && !s.wallHit) return;
+  if (!s.node && !s.wallHit && !s.special) return;
   const p = toScreen(s.pt, cam);
   ctx.save();
-  ctx.strokeStyle = s.node ? '#16a34a' : '#f59e0b';
+  ctx.strokeStyle = s.node ? '#16a34a' : s.special ? '#7c3aed' : '#f59e0b';
   ctx.lineWidth = 2;
   ctx.beginPath();
   if (s.node) ctx.arc(p.x, p.y, 9, 0, Math.PI * 2);
-  else ctx.rect(p.x - 6, p.y - 6, 12, 12);
+  else if (s.special) {
+    ctx.moveTo(p.x, p.y - 9);
+    ctx.lineTo(p.x + 9, p.y);
+    ctx.lineTo(p.x, p.y + 9);
+    ctx.lineTo(p.x - 9, p.y);
+    ctx.closePath();
+  } else ctx.rect(p.x - 6, p.y - 6, 12, 12);
   ctx.stroke();
   ctx.restore();
 }

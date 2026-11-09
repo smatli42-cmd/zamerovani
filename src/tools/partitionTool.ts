@@ -61,7 +61,7 @@ export const partitionTool: Tool = {
     const floor = store.floor();
     if (!floor) return;
     const s = snapPoint(floor, p.world, snapOptions());
-    hoverSnap = s.node || s.wallHit ? s : null;
+    hoverSnap = s.node || s.wallHit || s.special ? s : null;
     requestRender();
   },
 

@@ -3,6 +3,7 @@
  */
 import type { Floor, Node, Pt } from '../model/types';
 import { dist, roundTo } from './geometry';
+import { findSpecialNear } from './specialPoints';
 import { findNodeNear, findWallNear, isCurved, type WallHit } from './floorQueries';
 
 export interface SnapOptions {
@@ -26,6 +27,17 @@ export interface SnapResult {
   node: Node | null;
   wallHit: WallHit | null;
   guides: Guide[];
+  /** Přichyceno na zvláštní bod tvaru (střed, vrchol, kvadrant). */
+  special?: boolean;
+}
+
+/** Přichycení na zvláštní bod tvaru; u bodu na stěně se vrátí i zásah stěny (aby se rozdělila). */
+function snapSpecial(floor: Floor, raw: Pt, tol: number): SnapResult | null {
+  const sp = findSpecialNear(floor, raw, tol);
+  if (!sp) return null;
+  const pt = { x: Math.round(sp.x), y: Math.round(sp.y) };
+  const hit = sp.onWall ? findWallNear(floor, sp, 1.5) : null;
+  return { pt: hit ? { x: sp.x, y: sp.y } : pt, node: null, wallHit: hit ? { ...hit, point: { x: sp.x, y: sp.y } } : null, guides: [], special: true };
 }
 
 /** Přichycení samostatného bodu (začátek stěny). */
@@ -33,6 +45,8 @@ export function snapPoint(floor: Floor, raw: Pt, o: SnapOptions): SnapResult {
   if (o.snap) {
     const node = findNodeNear(floor, raw, o.nodeTol, o.startNodeId);
     if (node) return { pt: { x: node.x, y: node.y }, node, wallHit: null, guides: [] };
+    const special = snapSpecial(floor, raw, o.nodeTol);
+    if (special) return special;
     const wallHit = findWallNear(floor, raw, o.nodeTol * 0.8);
     if (wallHit) return { pt: { x: Math.round(wallHit.point.x), y: Math.round(wallHit.point.y) }, node: null, wallHit, guides: [] };
   }
@@ -45,6 +59,8 @@ export function snapEnd(floor: Floor, start: Pt, raw: Pt, o: SnapOptions): SnapR
   if (o.snap) {
     const node = findNodeNear(floor, raw, o.nodeTol, o.startNodeId);
     if (node) return { pt: { x: node.x, y: node.y }, node, wallHit: null, guides: [] };
+    const special = snapSpecial(floor, raw, o.nodeTol);
+    if (special) return special;
   }
 
   // 2) Směr: v režimu 90° vodorovně/svisle, jinak volně (s přichycením blízko os).
