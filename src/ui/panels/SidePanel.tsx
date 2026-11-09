@@ -216,6 +216,9 @@ function OpeningPanel({ op }: { op: Opening }) {
       )}
       <TextField label="Číslo" value={op.number} onCommit={v => set({ number: v.trim() || op.number })} />
       <TextField label="Popis" value={op.note} presets={NOTE_PRESETS[op.kind]} appendPreset onCommit={v => set({ note: v })} />
+      <button class="btn" onClick={duplicateSelection} title="Zkopíruje otvor; pak ťukni na stěnu, kam se vloží">
+        📄 Kopírovat a vložit na jinou stěnu
+      </button>
       <button class="btn btn-danger" onClick={deleteSelection}>
         🗑️ Smazat {info.label.toLowerCase()}
       </button>

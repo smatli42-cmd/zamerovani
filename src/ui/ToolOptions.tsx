@@ -1,6 +1,7 @@
 /**
  * Lišta s volbami aktivního nástroje nad plátnem (Dvojčára: tloušťka a strana; tvary: styl čáry).
  */
+import { endPaste } from '../store/actions';
 import { store } from '../store/store';
 import { useStore } from '../store/useStore';
 import { NumField, Seg } from './panels/fields';
@@ -9,11 +10,22 @@ import { LINE_STYLES } from './panels/SidePanel';
 export function ToolOptions() {
   const tool = useStore(s => s.tool);
   const settings = useStore(s => s.settings);
+  const clipboard = useStore(s => s.clipboard);
   if (tool === 'rect' || tool === 'circle' || tool === 'arc') {
     return (
       <div class="tool-options">
         <span class="muted small">Styl čáry nových stěn</span>
         <Seg options={LINE_STYLES} value={settings.shapeStyle} onChange={v => store.updateSettings({ shapeStyle: v })} />
+      </div>
+    );
+  }
+  if (tool === 'paste') {
+    return (
+      <div class="tool-options">
+        <span class="small">📋 Ťukni na stěnu, kam se mají zkopírované otvory vložit ({clipboard?.length ?? 0}).</span>
+        <button class="btn btn-sm" onClick={endPaste}>
+          ✔ Hotovo
+        </button>
       </div>
     );
   }

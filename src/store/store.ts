@@ -8,12 +8,12 @@
  * Díky tomu je historie levná a překreslení/uložení se pozná podle změny odkazu.
  */
 import { produce, freeze } from 'immer';
-import type { Floor, Id, Project } from '../model/types';
+import type { Floor, Id, Opening, Project } from '../model/types';
 import type { MoveTarget } from '../core/solver';
 import type { LineStyle } from '../model/types';
 import type { Side } from '../core/components';
 
-export type ToolId = 'select' | 'wall' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'dline' | 'arc' | 'text' | 'pan';
+export type ToolId = 'select' | 'wall' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'dline' | 'arc' | 'text' | 'paste' | 'pan';
 
 export type SingleSelection =
   | { kind: 'wall'; id: Id }
@@ -79,6 +79,12 @@ export interface Settings {
 
 export type SaveStatus = 'saved' | 'saving' | 'dirty' | 'error';
 
+/** Zkopírovaný otvor ke vložení do jiné stěny; `rel` = poloha začátku vůči prvnímu otvoru skupiny (mm). */
+export interface OpeningClip {
+  op: Opening;
+  rel: number;
+}
+
 export interface AppState {
   screen: 'projects' | 'editor';
   project: Project | null;
@@ -86,6 +92,8 @@ export interface AppState {
   tool: ToolId;
   selection: Selection;
   hover: Selection;
+  /** Zkopírované otvory (nástroj Vložit). */
+  clipboard: OpeningClip[] | null;
   numpad: NumPadState | null;
   camera: Camera;
   settings: Settings;
@@ -118,6 +126,7 @@ class Store {
     tool: 'wall',
     selection: null,
     hover: null,
+    clipboard: null,
     numpad: null,
     camera: { x: 0, y: 0, zoom: 0.15 },
     settings: loadSettings(),

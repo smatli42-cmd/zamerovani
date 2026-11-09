@@ -289,6 +289,11 @@ export function duplicateSelection(): void {
   const sel = store.get().selection;
   if (!sel) return;
   const items = sel.kind === 'multi' ? sel.items : [sel];
+  // Jen otvory (dveře, okna…) = do schránky; vloží se ťuknutím na jinou stěnu
+  if (items.every(i => i.kind === 'opening')) {
+    copyOpenings(items.map(i => i.id));
+    return;
+  }
   const created: { kind: 'wall' | 'opening' | 'room' | 'text'; id: Id }[] = [];
   store.edit(floor => {
     const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
@@ -322,6 +327,7 @@ export function duplicateSelection(): void {
       if (!target) continue;
       const no = { ...clone(op), id: newId('op'), wallId: target, number: nextOpeningNumber(floor, op.kind) };
       floor.openings[no.id] = no;
+      created.push({ kind: 'opening', id: no.id });
     }
     for (const it of items) {
       if (it.kind === 'room' && floor.rooms[it.id]) {
@@ -339,7 +345,52 @@ export function duplicateSelection(): void {
       }
     }
   });
-  if (created.length) store.set({ selection: created.length === 1 ? created[0]! : { kind: 'multi', items: created }, numpad: null });
+  // Kopie je vždy skupina, aby šla uchopit a přenést celá najednou (i s otvory)
+  if (created.length) store.set({ selection: { kind: 'multi', items: created }, numpad: null });
+}
+
+/** Zkopíruje otvory do schránky a přepne na nástroj Vložit. */
+function copyOpenings(ids: Id[]): void {
+  const floor = store.floor();
+  if (!floor) return;
+  const placed = ids.flatMap(id => {
+    const op = floor.openings[id];
+    const wall = op && floor.walls[op.wallId];
+    return op && wall ? [{ op: JSON.parse(JSON.stringify(op)) as Opening, start: openingStartFromA(op, wallLength(floor, wall)) }] : [];
+  });
+  if (!placed.length) return;
+  const first = Math.min(...placed.map(p => p.start));
+  const clipboard = placed.sort((p, q) => p.start - q.start).map(p => ({ op: p.op, rel: p.start - first }));
+  store.set({ clipboard, tool: 'paste', selection: null, numpad: null, hover: null });
+}
+
+/** Vloží zkopírované otvory na stěnu; `center` = kam (mm od rohu A) se umístí střed celé skupiny. */
+export function pasteOpenings(wallId: Id, center: number): boolean {
+  const clip = store.get().clipboard;
+  if (!clip?.length) return false;
+  const created: Id[] = [];
+  store.edit(floor => {
+    const wall = floor.walls[wallId];
+    if (!wall) return;
+    const len = wallLength(floor, wall);
+    const span = Math.max(...clip.map(c => c.rel + c.op.width));
+    if (span > len) return;
+    const s0 = Math.max(0, Math.min(len - span, Math.round((center - span / 2) / 10) * 10));
+    for (const c of clip) {
+      const op: Opening = { ...JSON.parse(JSON.stringify(c.op)), id: newId('op'), wallId, number: nextOpeningNumber(floor, c.op.kind), ref: 'a', offset: 0 };
+      setStartFromA(op, s0 + c.rel, len);
+      floor.openings[op.id] = op;
+      created.push(op.id);
+    }
+  });
+  if (!created.length) return false;
+  store.set({ selection: created.length === 1 ? { kind: 'opening', id: created[0]! } : { kind: 'multi', items: created.map(id => ({ kind: 'opening' as const, id })) } });
+  return true;
+}
+
+/** Ukončí režim vkládání. */
+export function endPaste(): void {
+  store.set({ clipboard: null, tool: 'select', selection: null });
 }
 
 // ---------------------------------------------------------------- Mazání
