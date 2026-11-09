@@ -1,7 +1,7 @@
 /**
  * Horní lišta editoru: zpět na projekty, podlaží, Zpět/Vpřed, nastavení, stav uložení.
  */
-import { useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { downloadBackup } from '../persistence/backup';
 import { saveNow } from '../persistence/autosave';
 import { addFloor, deleteFloor, renameFloor } from '../store/actions';
@@ -89,7 +89,7 @@ export function TopBar() {
       <button class="btn btn-dark" onClick={fitToDrawing} title="Zobrazit celý výkres">
         🎯
       </button>
-      <button class={`btn btn-dark ${showSettings ? 'active' : ''}`} onClick={() => setShowSettings(!showSettings)} title="Nastavení kreslení">
+      <button data-settings-btn class={`btn btn-dark ${showSettings ? 'active' : ''}`} onClick={() => setShowSettings(!showSettings)} title="Nastavení kreslení">
         ⚙️
       </button>
       <button class="btn btn-dark" onClick={() => downloadBackup(project)} title="Stáhnout zálohu projektu do souboru">
@@ -144,6 +144,16 @@ function suggestFloorName(existing: string[]): string {
 
 function SettingsPopover({ onClose }: { onClose: () => void }) {
   const settings = useStore(s => s.settings);
+  const box = useRef<HTMLDivElement>(null);
+  // Zavře se ťuknutím mimo okno (ne při zvednutí prstu – na dotykovém displeji by zmizelo dřív, než se stihne zapnout volba)
+  useEffect(() => {
+    const away = (e: PointerEvent) => {
+      const t = e.target as Element | null;
+      if (t && !box.current?.contains(t) && !t.closest('[data-settings-btn]')) onClose();
+    };
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, []);
   const toggle = (key: keyof Settings, label: string, hint: string) => (
     <label class="toggle-row" title={hint}>
       <input type="checkbox" checked={Boolean(settings[key])} onChange={() => store.updateSettings({ [key]: !settings[key] })} />
@@ -151,7 +161,7 @@ function SettingsPopover({ onClose }: { onClose: () => void }) {
     </label>
   );
   return (
-    <div class="popover settings-popover" onPointerLeave={onClose}>
+    <div class="popover settings-popover" ref={box}>
       {toggle('ortho', 'Pravé úhly (90°)', 'Stěny se kreslí jen vodorovně a svisle')}
       {toggle('snap', 'Přichytávat na rohy', 'Přichytávání na rohy, stěny a zarovnání')}
       {toggle('showDims', 'Zobrazit kóty', '')}
