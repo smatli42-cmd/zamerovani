@@ -6,6 +6,7 @@ import { doorTool, nicheTool, openingTool, roomTool, windowTool } from './placeT
 import { partitionTool } from './partitionTool';
 import { arcTool, circleTool, rectTool } from './shapeTools';
 import { pasteTool } from './pasteTool';
+import { leaderTool } from './leaderTool';
 import { textTool } from './textTool';
 import { selectTool } from './selectTool';
 import type { Tool } from './types';
@@ -24,6 +25,7 @@ export const tools: Record<ToolId, Tool> = {
   dline: partitionTool,
   arc: arcTool,
   text: textTool,
+  leader: leaderTool,
   paste: pasteTool,
   pan: {}
 };

@@ -104,6 +104,8 @@ export interface TextNote {
   size: number;
   /** Natočení ve stupních (po směru hodinových ručiček, Y míří dolů). */
   angle: number;
+  /** Hrot odkazové šipky (místo, na které text ukazuje); bez něj je text bez šipky. */
+  leader?: Pt;
 }
 
 /** Podlaží = jeden půdorys. */

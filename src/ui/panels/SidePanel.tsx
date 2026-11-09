@@ -262,6 +262,17 @@ function TextPanel({ note }: { note: TextNote }) {
         ✔ Hotovo
       </button>
       <div class="field field-inline">
+        <span>Šipka</span>
+        <Seg
+          options={[
+            { v: 'no', label: 'Bez šipky' },
+            { v: 'yes', label: 'S šipkou' }
+          ]}
+          value={note.leader ? 'yes' : 'no'}
+          onChange={v => set({ leader: v === 'yes' ? note.leader ?? { x: note.x - 600, y: note.y + 600 } : undefined })}
+        />
+      </div>
+      <div class="field field-inline">
         <span>Velikost</span>
         <Seg options={TEXT_SIZES} value={note.size} onChange={v => set({ size: v })} />
       </div>

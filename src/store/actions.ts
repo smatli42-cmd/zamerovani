@@ -209,10 +209,12 @@ export interface GroupOrigin {
   nodes: Record<Id, Pt>;
   rooms: Record<Id, Pt>;
   texts: Record<Id, Pt>;
+  /** Hroty odkazových šipek textů. */
+  leaders: Record<Id, Pt>;
 }
 
 export function groupOrigin(floor: Floor, items: readonly { kind: string; id: Id }[]): GroupOrigin {
-  const o: GroupOrigin = { nodes: {}, rooms: {}, texts: {} };
+  const o: GroupOrigin = { nodes: {}, rooms: {}, texts: {}, leaders: {} };
   for (const it of items) {
     if (it.kind === 'wall') {
       const w = floor.walls[it.id];
@@ -221,7 +223,11 @@ export function groupOrigin(floor: Floor, items: readonly { kind: string; id: Id
         if (n) o.nodes[id] = { x: n.x, y: n.y };
       }
     } else if (it.kind === 'room' && floor.rooms[it.id]) o.rooms[it.id] = { x: floor.rooms[it.id]!.x, y: floor.rooms[it.id]!.y };
-    else if (it.kind === 'text' && floor.texts[it.id]) o.texts[it.id] = { x: floor.texts[it.id]!.x, y: floor.texts[it.id]!.y };
+    else if (it.kind === 'text' && floor.texts[it.id]) {
+      const t = floor.texts[it.id]!;
+      o.texts[it.id] = { x: t.x, y: t.y };
+      if (t.leader) o.leaders[it.id] = { x: t.leader.x, y: t.leader.y };
+    }
   }
   return o;
 }
@@ -234,6 +240,7 @@ export function moveGroup(origin: GroupOrigin, dx: number, dy: number): void {
     for (const [id, p] of Object.entries(origin.nodes)) if (floor.nodes[id]) Object.assign(floor.nodes[id]!, { x: p.x + mx, y: p.y + my });
     for (const [id, p] of Object.entries(origin.rooms)) if (floor.rooms[id]) Object.assign(floor.rooms[id]!, { x: p.x + mx, y: p.y + my });
     for (const [id, p] of Object.entries(origin.texts)) if (floor.texts[id]) Object.assign(floor.texts[id]!, { x: p.x + mx, y: p.y + my });
+    for (const [id, p] of Object.entries(origin.leaders)) if (floor.texts[id]) floor.texts[id]!.leader = { x: p.x + mx, y: p.y + my };
   });
 }
 
@@ -300,6 +307,7 @@ export function rotateSelection(deg: number): void {
     for (const [id, p] of Object.entries(o.texts)) {
       const t = floor.texts[id]!;
       Object.assign(t, rot(p));
+      if (o.leaders[id]) t.leader = rot(o.leaders[id]!);
       t.angle = (((t.angle + deg) % 360) + 360) % 360;
     }
   });
@@ -369,6 +377,7 @@ export function duplicateSelection(): void {
         const t = { ...clone(floor.texts[it.id]!), id: newId('tx') };
         t.x += COPY_OFFSET;
         t.y += COPY_OFFSET;
+        if (t.leader) t.leader = { x: t.leader.x + COPY_OFFSET, y: t.leader.y + COPY_OFFSET };
         floor.texts[t.id] = t;
         created.push({ kind: 'text', id: t.id });
       }
@@ -579,10 +588,11 @@ export function takeFreshTextId(): Id | null {
   return id;
 }
 
-export function addText(p: Pt): Id {
+export function addText(p: Pt, leader?: Pt): Id {
   let id = '';
   store.edit(floor => {
     const t = createText(p.x, p.y);
+    if (leader) t.leader = { x: Math.round(leader.x), y: Math.round(leader.y) };
     floor.texts[t.id] = t;
     id = t.id;
   });
@@ -594,7 +604,9 @@ export function addText(p: Pt): Id {
 export function updateText(id: Id, patch: Partial<TextNote>): void {
   store.edit(floor => {
     const t = floor.texts[id];
-    if (t) Object.assign(t, patch);
+    if (!t) return;
+    Object.assign(t, patch);
+    if ('leader' in patch && !patch.leader) delete t.leader;
   });
 }
 
@@ -602,8 +614,12 @@ export function moveText(id: Id, p: Pt): void {
   store.edit(floor => {
     const t = floor.texts[id];
     if (t) {
-      t.x = Math.round(p.x / 10) * 10;
-      t.y = Math.round(p.y / 10) * 10;
+      const nx = Math.round(p.x / 10) * 10;
+      const ny = Math.round(p.y / 10) * 10;
+      // hrot šipky se posouvá spolu s textem
+      if (t.leader) t.leader = { x: t.leader.x + nx - t.x, y: t.leader.y + ny - t.y };
+      t.x = nx;
+      t.y = ny;
     }
   });
 }

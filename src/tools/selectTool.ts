@@ -9,7 +9,7 @@ import { findNodeNear, findWallNear, wallLength, wallNodes } from '../core/floor
 import { dist, projectToSegment, roundTo } from '../core/geometry';
 import type { Id, Pt } from '../model/types';
 import { selectInRect, normRect } from '../core/rectSelect';
-import { groupOrigin, type GroupOrigin, mergeNodeIfCoincident, moveGroup, moveNode, moveOpeningTo, moveRoom, moveText, setCircleRadius, setWallSagitta } from '../store/actions';
+import { groupOrigin, type GroupOrigin, mergeNodeIfCoincident, moveGroup, moveNode, moveOpeningTo, moveRoom, moveText, updateText, setCircleRadius, setWallSagitta } from '../store/actions';
 import { store } from '../store/store';
 import { pickAny } from './pick';
 import { HIT_PX, type PointerInput, type Tool } from './types';
@@ -17,6 +17,7 @@ import { HIT_PX, type PointerInput, type Tool } from './types';
 type DragKind = { kind: 'node'; id: Id } | { kind: 'opening'; id: Id; grabOffset: number } | { kind: 'room'; id: Id; dx: number; dy: number }
   | { kind: 'text'; id: Id; dx: number; dy: number }
   | { kind: 'handle'; id: Id }
+  | { kind: 'leader'; id: Id }
   | { kind: 'group'; origin: GroupOrigin; start: Pt };
 
 /** Rámeček výběru: zleva doprava okno (modře), zprava doleva křížení (zeleně, čárkovaně). */
@@ -46,6 +47,19 @@ export function arcUnderPen(p: PointerInput): Id | null {
   return dist(toScreen(at, store.get().camera), p.screen) <= HANDLE_PX ? wall.id : null;
 }
 
+/** Hrot odkazové šipky vybraného textu se dá táhnout. */
+export function grabLeaderHandle(p: PointerInput): boolean {
+  const floor = store.floor();
+  const sel = store.get().selection;
+  const t = floor && sel?.kind === 'text' ? floor.texts[sel.id] : null;
+  if (!t?.leader) return false;
+  if (dist(toScreen(t.leader, store.get().camera), p.screen) > HANDLE_PX) return false;
+  drag = { kind: 'leader', id: t.id };
+  downScreen = p.screen;
+  dragging = false;
+  return true;
+}
+
 export function grabArcHandle(p: PointerInput): boolean {
   const id = arcUnderPen(p);
   if (!id) return false;
@@ -59,7 +73,7 @@ export const selectTool: Tool = {
   down(p: PointerInput) {
     const floor = store.floor();
     if (!floor) return;
-    if (grabArcHandle(p)) return;
+    if (grabArcHandle(p) || grabLeaderHandle(p)) return;
     const cam = store.get().camera;
     const hit = pickAny(floor, p.world, cam);
     downScreen = p.screen;
@@ -120,7 +134,9 @@ export const selectTool: Tool = {
     if (!floor) return;
     const cam = store.get().camera;
 
-    if (drag.kind === 'group') {
+    if (drag.kind === 'leader') {
+      updateText(drag.id, { leader: { x: Math.round(p.world.x / 10) * 10, y: Math.round(p.world.y / 10) * 10 } });
+    } else if (drag.kind === 'group') {
       moveGroup(drag.origin, p.world.x - drag.start.x, p.world.y - drag.start.y);
     } else if (drag.kind === 'node') {
       const tol = HIT_PX.snapNode / cam.zoom;
