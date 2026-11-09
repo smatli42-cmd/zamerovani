@@ -4,6 +4,7 @@
  */
 import { createCircleWall, createFloor, createOpening, createRoom, createText, createWall, newId } from '../model/factory';
 import type { Floor, Id, LineStyle, Opening, OpeningKind, Pt, Room, TextNote, Wall, WallLabel } from '../model/types';
+import { arcChain, setChainSagitta } from '../core/arcChain';
 import { dist } from '../core/geometry';
 import { openingStartFromA, openingsOnWall, wallLength, wallsAtNode } from '../core/floorQueries';
 import { setWallLength, type MoveTarget } from '../core/solver';
@@ -143,7 +144,7 @@ export function setWallSagitta(wallId: Id, sagitta: number): void {
     const w = floor.walls[wallId];
     if (!w) return;
     if (Math.abs(sagitta) < 0.5) delete w.sagitta;
-    else w.sagitta = Math.round(sagitta);
+    else if (!setChainSagitta(floor, wallId, sagitta)) w.sagitta = Math.round(sagitta);
   });
 }
 
@@ -158,7 +159,7 @@ export function updateWall(wallId: Id, patch: { style?: LineStyle | undefined; s
     }
     if ('sagitta' in patch) {
       if (!patch.sagitta || Math.abs(patch.sagitta) < 0.5) delete w.sagitta;
-      else w.sagitta = Math.round(patch.sagitta);
+      else if (!w.sagitta || !setChainSagitta(floor, wallId, patch.sagitta)) w.sagitta = Math.round(patch.sagitta);
     }
   });
 }
@@ -457,7 +458,7 @@ export function numpadInitialValue(floor: Floor, t: NumPadTarget): number | null
       return floor.openings[t.openingId]?.width ?? null;
     case 'wall-sagitta': {
       const w = floor.walls[t.wallId];
-      return w ? Math.round(Math.abs(w.sagitta ?? 0)) : null;
+      return w ? Math.round(Math.abs(arcChain(floor, w.id)?.sagitta ?? w.sagitta ?? 0)) : null;
     }
     case 'circle-diameter': {
       const w = floor.walls[t.wallId];
@@ -504,7 +505,8 @@ export function applyNumpadValue(t: NumPadTarget, value: number): boolean {
     } else if (t.kind === 'wall-sagitta') {
       const w = floor.walls[t.wallId];
       if (!w || value < 1) return;
-      w.sagitta = (Math.sign(w.sagitta ?? 0) || 1) * value;
+      const sign = Math.sign(arcChain(floor, w.id)?.sagitta ?? w.sagitta ?? 0) || 1;
+      if (!setChainSagitta(floor, w.id, sign * value)) w.sagitta = sign * value;
       ok = true;
     } else if (t.kind === 'circle-diameter') {
       const w = floor.walls[t.wallId];

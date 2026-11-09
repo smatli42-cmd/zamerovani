@@ -2,6 +2,7 @@
  * Kreslení stěn, rohů a otvorů.
  */
 import { arcGeometry } from '../core/arc';
+import { arcChain } from '../core/arcChain';
 import { openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
 import { add, dist, lerp, normal, scale, unit } from '../core/geometry';
 import type { Floor, LineStyle, Opening, Pt, Wall } from '../model/types';
@@ -82,8 +83,7 @@ export function drawArcHandle(ctx: CanvasRenderingContext2D, floor: Floor, cam: 
   const n = wall && wallNodes(floor, wall);
   if (!wall || !n) return;
   // kruh: bod na obvodu vpravo od středu (tažením se mění poloměr); oblouk: jeho vrchol
-  const g = wall.radius === undefined ? arcGeometry(n[0], n[1], wall.sagitta ?? 0) : null;
-  const at = wall.radius !== undefined ? { x: n[0].x + wall.radius, y: n[0].y } : g?.apex;
+  const at = wall.radius !== undefined ? { x: n[0].x + wall.radius, y: n[0].y } : arcChain(floor, wall.id)?.geom.apex;
   if (!at) return;
   const p = toScreen(at, cam);
   ctx.save();

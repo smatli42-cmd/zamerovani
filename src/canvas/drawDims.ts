@@ -4,6 +4,7 @@
  * Uvnitř podél stěny se zobrazuje popisek stěny (tloušťka, materiál…).
  */
 import { arcGeometry } from '../core/arc';
+import { arcChain } from '../core/arcChain';
 import { openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
 import { centroid, dist, dot, lerp, normal, scale, sub, unit } from '../core/geometry';
 import { OPENING_DEFAULTS } from '../model/factory';
@@ -166,10 +167,15 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
     });
 
     // Vzepětí oblouku: od středu tětivy k vrcholu (klikací)
-    const g = arcGeometry(n[0], n[1], sag);
+    // oblouk rozdělený na části se kótuje jako celek (jen u první části)
+    const ch = Math.abs(sag) >= 0.5 ? arcChain(floor, wall.id) : null;
+    const g = ch ? ch.geom : arcGeometry(n[0], n[1], sag);
+    const chordMid = ch ? lerp(toScreen(ch.a, cam), toScreen(ch.b, cam), 0.5) : lerp(a, b, 0.5);
+    const chordLen = ch ? dist(ch.a, ch.b) : len;
+    const shownSag = ch ? ch.sagitta : sag;
     // u půlkruhu (kruh) se vzepětí nekótuje – je to poloměr
-    if (g && Math.abs(Math.abs(sag) - len / 2) > 1) {
-      drawDimLine(ctx, lerp(a, b, 0.5), toScreen(g.apex, cam), u, 0, String(Math.round(Math.abs(sag))), 'vzepětí', { color: '#334155', bg: '#ffffff', bold: false }, s, {
+    if (g && (!ch || ch.pieces[0]!.wall.id === wall.id) && Math.abs(Math.abs(shownSag) - chordLen / 2) > 1) {
+      drawDimLine(ctx, chordMid, toScreen(g.apex, cam), u, 0, String(Math.round(Math.abs(shownSag))), 'vzepětí', { color: '#334155', bg: '#ffffff', bold: false }, s, {
         type: 'numpad',
         target: { kind: 'wall-sagitta', wallId: wall.id },
         wallId: wall.id

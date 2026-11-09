@@ -4,7 +4,7 @@
  */
 import { requestRender } from '../canvas/invalidate';
 import { toScreen } from '../canvas/view';
-import { arcGeometry } from '../core/arc';
+import { arcChain } from '../core/arcChain';
 import { findNodeNear, findWallNear, wallLength, wallNodes } from '../core/floorQueries';
 import { dist, projectToSegment, roundTo } from '../core/geometry';
 import type { Id, Pt } from '../model/types';
@@ -36,8 +36,7 @@ export function arcUnderPen(p: PointerInput): Id | null {
   const wall = floor.walls[sel.id];
   const n = wall && wallNodes(floor, wall);
   if (!wall || !n) return null;
-  const g = wall.radius === undefined ? arcGeometry(n[0], n[1], wall.sagitta ?? 0) : null;
-  const at = wall.radius !== undefined ? { x: n[0].x + wall.radius, y: n[0].y } : g?.apex;
+  const at = wall.radius !== undefined ? { x: n[0].x + wall.radius, y: n[0].y } : arcChain(floor, wall.id)?.geom.apex;
   if (!at) return null;
   return dist(toScreen(at, store.get().camera), p.screen) <= HANDLE_PX ? wall.id : null;
 }
@@ -131,12 +130,16 @@ export const selectTool: Tool = {
         setCircleRadius(drag.id, Math.max(10, roundTo(dist(p.world, n[0]), 10)));
       } else if (wall && n) {
         // oblouk: vzepětí = vzdálenost pera od tětivy (se znaménkem podle strany)
-        const len = dist(n[0], n[1]) || 1;
-        const nx = -(n[1].y - n[0].y) / len;
-        const ny = (n[1].x - n[0].x) / len;
-        const mid = { x: (n[0].x + n[1].x) / 2, y: (n[0].y + n[1].y) / 2 };
+        // oblouk rozdělený na části se táhne celý (podle vnějších konců)
+        const ch = arcChain(floor, wall.id);
+        const pa = ch?.a ?? n[0];
+        const pb = ch?.b ?? n[1];
+        const len = dist(pa, pb) || 1;
+        const nx = -(pb.y - pa.y) / len;
+        const ny = (pb.x - pa.x) / len;
+        const mid = { x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2 };
         let h = roundTo((p.world.x - mid.x) * nx + (p.world.y - mid.y) * ny, 10);
-        if (h === 0) h = (Math.sign(wall.sagitta ?? 1) || 1) * 10; // 0 by znamenalo rovnou stěnu – tu se zbavíme jen v panelu
+        if (h === 0) h = (Math.sign(ch?.sagitta ?? wall.sagitta ?? 1) || 1) * 10; // 0 by znamenalo rovnou stěnu – tu se zbavíme jen v panelu
         setWallSagitta(drag.id, h);
       }
     }

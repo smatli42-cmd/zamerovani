@@ -8,6 +8,7 @@ import type { Floor, LineStyle, Opening, Room, TextNote, Wall, WallType } from '
 import { applyNumpadValue, deleteSelection, setOpeningRef, updateOpening, takeFreshTextId, updateRoom, updateText, updateWall, updateWallLabel } from '../../store/actions';
 import { openTarget } from '../../store/numpadController';
 import { store } from '../../store/store';
+import { arcChain } from '../../core/arcChain';
 import { useStore } from '../../store/useStore';
 import { NumField, Panel, Seg, TextField } from './fields';
 
@@ -96,10 +97,10 @@ function WallPanel({ floor, wall }: { floor: Floor; wall: Wall }) {
         <>
           <button class="field-button" onClick={() => openTarget({ kind: 'wall-sagitta', wallId: wall.id })}>
             <span>Vzepětí oblouku</span>
-            <b>{Math.abs(wall.sagitta)} mm</b>
+            <b>{Math.abs(arcChain(floor, wall.id)?.sagitta ?? wall.sagitta)} mm</b>
           </button>
           <p class="muted small">Vzepětí jde změnit i tažením modrého bodu uprostřed oblouku.</p>
-          <button class="btn" onClick={() => updateWall(wall.id, { sagitta: -(wall.sagitta ?? 0) })}>
+          <button class="btn" onClick={() => updateWall(wall.id, { sagitta: -(arcChain(floor, wall.id)?.sagitta ?? wall.sagitta ?? 0) })}>
             🔄 Vyklenout na opačnou stranu
           </button>
         </>
