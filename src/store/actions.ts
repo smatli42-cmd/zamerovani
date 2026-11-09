@@ -133,9 +133,26 @@ export function addCircleWalls(center: Pt, radius: number, style: LineStyle): vo
 /** Změní poloměr kruhové stěny (tažení bodu na obvodu, kóta průměru). */
 export function setCircleRadius(wallId: Id, radius: number): void {
   store.edit(floor => {
-    const w = floor.walls[wallId];
-    if (w && w.radius !== undefined && radius >= 5) w.radius = Math.round(radius);
+    resizeCircle(floor, wallId, radius);
   });
+}
+
+/** Nový poloměr kruhu; rohy ležící na obvodu (napojené stěny) se posunou radiálně spolu s ním. */
+function resizeCircle(floor: Floor, wallId: Id, radius: number): boolean {
+  const w = floor.walls[wallId];
+  const c = w && floor.nodes[w.a];
+  if (!w || !c || w.radius === undefined || radius < 5) return false;
+  const old = w.radius;
+  const next = Math.round(radius);
+  for (const n of Object.values(floor.nodes)) {
+    if (n.id === c.id) continue;
+    const d = Math.hypot(n.x - c.x, n.y - c.y);
+    if (Math.abs(d - old) > 1.5) continue;
+    n.x = c.x + ((n.x - c.x) * next) / d;
+    n.y = c.y + ((n.y - c.y) * next) / d;
+  }
+  w.radius = next;
+  return true;
 }
 
 /** Změní vzepětí obloukové stěny (tažení středového bodu); 0 = rovná stěna. */
@@ -509,10 +526,8 @@ export function applyNumpadValue(t: NumPadTarget, value: number): boolean {
       if (!setChainSagitta(floor, w.id, sign * value)) w.sagitta = sign * value;
       ok = true;
     } else if (t.kind === 'circle-diameter') {
-      const w = floor.walls[t.wallId];
-      if (!w || w.radius === undefined || value < 10) return;
-      w.radius = Math.round(value / 2);
-      ok = true;
+      if (value < 10) return;
+      ok = resizeCircle(floor, t.wallId, value / 2);
     } else if (t.kind === 'comp-gap') {
       ok = setComponentGap(floor, t.wallId, t.side, value);
     }
