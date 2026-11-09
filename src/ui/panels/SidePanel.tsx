@@ -52,12 +52,10 @@ export function SidePanel() {
         <Panel title={`Vybráno ${selection.items.length} prvků`} onClose={close}>
           <p class="small">{parts.map(([n, label]) => `${n} ${label}`).join(', ')}</p>
           <p class="muted small">Tažením za kterýkoli vybraný prvek posunete celý výběr. Ťuknutím do prázdného místa výběr zrušíte.</p>
-          <button class="btn" onClick={duplicateSelection}>
-            📄 Kopírovat
-          </button>
-          <button class="btn btn-danger" onClick={deleteSelection}>
-            🗑️ Smazat vybrané
-          </button>
+          <div class="panel-actions">
+            <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
+            <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
+          </div>
         </Panel>
       );
     }
@@ -102,7 +100,7 @@ function WallPanel({ floor, wall }: { floor: Floor; wall: Wall }) {
       )}
 
       {!circle && (
-      <div class="field">
+      <div class="field field-inline">
         <span>Tvar</span>
         <Seg
           options={[
@@ -120,20 +118,19 @@ function WallPanel({ floor, wall }: { floor: Floor; wall: Wall }) {
             <span>Vzepětí oblouku</span>
             <b>{Math.abs(arcChain(floor, wall.id)?.sagitta ?? wall.sagitta)} mm</b>
           </button>
-          <p class="muted small">Vzepětí jde změnit i tažením modrého bodu uprostřed oblouku.</p>
           <button class="btn" onClick={() => updateWall(wall.id, { sagitta: -(arcChain(floor, wall.id)?.sagitta ?? wall.sagitta ?? 0) })}>
             🔄 Vyklenout na opačnou stranu
           </button>
         </>
       ) : null}
-      <div class="field">
+      <div class="field field-inline">
         <span>Styl čáry</span>
         <Seg options={LINE_STYLES} value={wall.style ?? 'solid'} onChange={v => updateWall(wall.id, { style: v })} />
       </div>
 
       <h4>Popisek stěny</h4>
       <NumField label="Tloušťka" value={l.thickness} allowEmpty onCommit={v => updateWallLabel(wall.id, { thickness: v })} />
-      <div class="field">
+      <div class="field field-inline">
         <span>Typ</span>
         <Seg options={WALL_TYPES} value={l.type} onChange={v => updateWallLabel(wall.id, { type: l.type === v ? null : v })} />
       </div>
@@ -141,15 +138,15 @@ function WallPanel({ floor, wall }: { floor: Floor; wall: Wall }) {
         label="Materiál"
         value={l.material}
         placeholder="např. cihla plná"
-        presets={['cihla plná', 'CPP', 'Porotherm', 'pórobeton', 'kámen', 'beton', 'dřevo']}
+        presets={['cihla plná', 'Porotherm', 'pórobeton', 'beton']}
         onCommit={v => updateWallLabel(wall.id, { material: v })}
       />
       <TextField label="Poznámka" value={l.note} placeholder="např. vlhkost u paty" onCommit={v => updateWallLabel(wall.id, { note: v })} />
 
-      <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
-      <button class="btn btn-danger" onClick={deleteSelection}>
-        🗑️ Smazat stěnu
-      </button>
+      <div class="panel-actions">
+        <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
+        <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
+      </div>
     </Panel>
   );
 }
@@ -161,20 +158,13 @@ const OPENING_PRESETS: Record<Opening['kind'], number[]> = {
   niche: [300, 450, 600, 900]
 };
 
-const NOTE_PRESETS: Record<Opening['kind'], string[]> = {
-  door: ['1-křídlé', '2-křídlé', 'posuvné', 'prosklené', 'dřevěná zárubeň', 'ocelová zárubeň'],
-  window: ['1-dílné', '2-dílné', '3-dílné', 'francouzské', 'dřevěné', 'plastové', 'zdvojené'],
-  opening: ['oblouk', 'bez zárubně'],
-  niche: ['skříň', 'radiátor', 'zazděný otvor']
-};
-
 function OpeningPanel({ op }: { op: Opening }) {
   const info = OPENING_DEFAULTS[op.kind];
   const set = (patch: Partial<Opening>) => updateOpening(op.id, patch);
   return (
     <Panel title={`${info.label} ${op.number}`} onClose={close}>
-      <div class="field">
-        <span>Měřit odstup od rohu</span>
+      <div class="field field-inline">
+        <span>Měřit od rohu</span>
         <Seg
           options={[
             { v: 'a', label: 'A' },
@@ -184,14 +174,16 @@ function OpeningPanel({ op }: { op: Opening }) {
           onChange={v => setOpeningRef(op.id, v)}
         />
       </div>
-      <button class="field-button" onClick={() => openTarget({ kind: 'opening-offset', openingId: op.id, ref: op.ref })}>
-        <span>Odstup od rohu {op.ref.toUpperCase()}</span>
-        <b>{op.offset} mm</b>
-      </button>
-      <button class="field-button" onClick={() => openTarget({ kind: 'opening-width', openingId: op.id })}>
-        <span>Šířka</span>
-        <b>{op.width} mm</b>
-      </button>
+      <div class="field-grid">
+        <button class="field-button" onClick={() => openTarget({ kind: 'opening-offset', openingId: op.id, ref: op.ref })}>
+          <span>Odstup od {op.ref.toUpperCase()}</span>
+          <b>{op.offset} mm</b>
+        </button>
+        <button class="field-button" onClick={() => openTarget({ kind: 'opening-width', openingId: op.id })}>
+          <span>Šířka</span>
+          <b>{op.width} mm</b>
+        </button>
+      </div>
       <div class="chips">
         {OPENING_PRESETS[op.kind].map(w => (
           <button key={w} class={`chip ${w === op.width ? 'active' : ''}`} onClick={() => applyNumpadValue({ kind: 'opening-width', openingId: op.id }, w)}>
@@ -199,9 +191,11 @@ function OpeningPanel({ op }: { op: Opening }) {
           </button>
         ))}
       </div>
-      <NumField label="Výška" value={op.height} min={100} onCommit={v => v !== null && set({ height: v })} />
-      {op.kind !== 'door' && <NumField label="Parapet" value={op.sill} onCommit={v => v !== null && set({ sill: v })} />}
-      {op.kind === 'niche' && <NumField label="Hloubka niky" value={op.depth} min={10} onCommit={v => v !== null && set({ depth: v })} />}
+      <div class="field-grid">
+        <NumField label="Výška" value={op.height} min={100} onCommit={v => v !== null && set({ height: v })} />
+        {op.kind !== 'door' && <NumField label="Parapet" value={op.sill} onCommit={v => v !== null && set({ sill: v })} />}
+        {op.kind === 'niche' && <NumField label="Hloubka niky" value={op.depth} min={10} onCommit={v => v !== null && set({ depth: v })} />}
+      </div>
       {(op.kind === 'door' || op.kind === 'niche') && (
         <div class="btn-row">
           {op.kind === 'door' && (
@@ -214,14 +208,16 @@ function OpeningPanel({ op }: { op: Opening }) {
           </button>
         </div>
       )}
-      <TextField label="Číslo" value={op.number} onCommit={v => set({ number: v.trim() || op.number })} />
-      <TextField label="Popis" value={op.note} presets={NOTE_PRESETS[op.kind]} appendPreset onCommit={v => set({ note: v })} />
-      <button class="btn" onClick={duplicateSelection} title="Zkopíruje otvor; pak ťukni na stěnu, kam se vloží">
-        📄 Kopírovat a vložit na jinou stěnu
-      </button>
-      <button class="btn btn-danger" onClick={deleteSelection}>
-        🗑️ Smazat {info.label.toLowerCase()}
-      </button>
+      <div class="field-row">
+        <div style="flex:0 0 80px">
+          <TextField label="Číslo" value={op.number} onCommit={v => set({ number: v.trim() || op.number })} />
+        </div>
+        <TextField label="Popis" value={op.note} onCommit={v => set({ note: v })} />
+      </div>
+      <div class="panel-actions">
+        <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
+        <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
+      </div>
     </Panel>
   );
 }
@@ -255,11 +251,13 @@ function TextPanel({ note }: { note: TextNote }) {
       <button class="btn btn-primary btn-lg" style="width:100%" onClick={close}>
         ✔ Hotovo
       </button>
-      <h4>Velikost písma</h4>
-      <Seg options={TEXT_SIZES} value={note.size} onChange={v => set({ size: v })} />
-      <NumField label="Výška písma" value={note.size} min={20} onCommit={v => v !== null && set({ size: v })} />
-      <h4>Natočení</h4>
-      <Seg
+      <div class="field field-inline">
+        <span>Velikost</span>
+        <Seg options={TEXT_SIZES} value={note.size} onChange={v => set({ size: v })} />
+      </div>
+      <div class="field field-inline">
+        <span>Natočení</span>
+        <Seg
         options={[
           { v: 0, label: '0°' },
           { v: 90, label: '90°' },
@@ -269,12 +267,15 @@ function TextPanel({ note }: { note: TextNote }) {
         value={note.angle}
         onChange={v => set({ angle: v })}
       />
-      <NumField label="Úhel" value={note.angle} unit="°" onCommit={v => v !== null && set({ angle: ((v % 360) + 360) % 360 })} />
-      <p class="muted small">Tažením se text přesune.</p>
-      <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
-      <button class="btn btn-danger" onClick={deleteSelection}>
-        🗑️ Smazat text
-      </button>
+      </div>
+      <div class="field-grid">
+        <NumField label="Výška písma" value={note.size} min={20} onCommit={v => v !== null && set({ size: v })} />
+        <NumField label="Úhel" value={note.angle} unit="°" onCommit={v => v !== null && set({ angle: ((v % 360) + 360) % 360 })} />
+      </div>
+      <div class="panel-actions">
+        <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
+        <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
+      </div>
     </Panel>
   );
 }
@@ -285,8 +286,19 @@ function RoomPanel({ room }: { room: Room }) {
   const set = (patch: Partial<Room>) => updateRoom(room.id, patch);
   return (
     <Panel title={`Místnost ${room.number}`} onClose={close}>
-      <TextField label="Číslo" value={room.number} onCommit={v => set({ number: v.trim() })} />
-      <TextField label="Název" value={room.name} placeholder="např. Kuchyň" presets={ROOM_NAMES} onCommit={v => set({ name: v })} />
+      <div class="field-row">
+        <div style="flex:0 0 70px">
+          <TextField label="Číslo" value={room.number} onCommit={v => set({ number: v.trim() })} />
+        </div>
+        <TextField label="Název" value={room.name} placeholder="např. Kuchyň" onCommit={v => set({ name: v })} />
+      </div>
+      <div class="chips">
+        {ROOM_NAMES.map(n => (
+          <button key={n} type="button" class="chip" onClick={() => set({ name: n })}>
+            {n}
+          </button>
+        ))}
+      </div>
       <h4>Světlé výšky</h4>
       {room.heights.map((h, i) => (
         <div class="height-row" key={i}>
@@ -318,10 +330,10 @@ function RoomPanel({ room }: { room: Room }) {
         ＋ Další výška
       </button>
       <TextField label="Poznámka" value={room.note} onCommit={v => set({ note: v })} />
-      <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
-      <button class="btn btn-danger" onClick={deleteSelection}>
-        🗑️ Smazat místnost
-      </button>
+      <div class="panel-actions">
+        <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
+        <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
+      </div>
     </Panel>
   );
 }

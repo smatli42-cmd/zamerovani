@@ -662,3 +662,106 @@ textarea {
   margin: 0;
   gap: 8px;
 }
+
+/* ------------------------------------------------------------------ Kompaktní panely vlastností (nízké displeje tabletu) */
+.side-panel .panel-body {
+  padding: 8px 12px;
+}
+.side-panel .panel-body h4 {
+  margin: 8px 0 4px;
+}
+.side-panel .field {
+  margin-bottom: 6px;
+  gap: 2px;
+}
+.side-panel .field input,
+.side-panel .field textarea {
+  min-height: 36px;
+  padding: 4px 8px;
+}
+.side-panel .field-inline .seg {
+  flex: 1;
+  max-width: none;
+}
+.side-panel .field-inline > span:first-child {
+  margin-right: 8px;
+}
+.side-panel .seg button {
+  min-height: 34px;
+  font-size: 13px;
+}
+.side-panel .chips {
+  gap: 4px;
+  margin: 0 0 6px;
+}
+.side-panel .chip {
+  min-height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+.side-panel .field-button {
+  min-height: 36px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+.side-panel .btn {
+  min-height: 38px;
+}
+.side-panel .btn-row {
+  margin-bottom: 6px;
+}
+.side-panel .big-value {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 2px 6px;
+  padding: 4px 10px 6px;
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+.side-panel .big-value .hint {
+  font-size: 11px;
+}
+.side-panel .height-row input {
+  min-height: 36px;
+}
+/* Dvojice polí vedle sebe */
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 10px;
+  align-items: end;
+}
+.field-grid > .field-inline {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+.field-grid .input-unit {
+  display: flex;
+}
+.field-grid .input-unit input {
+  width: 100%;
+  min-width: 0;
+}
+.field-grid > .field-button {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  padding: 3px 10px;
+}
+/* Kopírovat + Smazat vedle sebe, vždy vidět dole */
+.panel-actions {
+  display: flex;
+  gap: 8px;
+  position: sticky;
+  bottom: 0;
+  margin-top: 6px;
+  padding-top: 4px;
+  background: #fff;
+  box-shadow: 0 -8px 8px -2px #fff;
+}
+.panel-actions .btn {
+  flex: 1;
+}
