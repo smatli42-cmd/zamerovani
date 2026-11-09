@@ -35,25 +35,29 @@ export function drawTexts(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
   ctx.restore();
 }
 
-/** Odkazová čára od okraje textu k hrotu se šipkou (hrot je při výběru úchyt). */
+/** Odkazová čára podle zvyklosti: vodorovná čára pod textem (stejně dlouhá jako text) a z jejího konce šikmá čára k hrotu se šipkou. */
 function drawLeader(ctx: CanvasRenderingContext2D, from: { x: number; y: number }, tip: { x: number; y: number }, angle: number, w: number, h: number, selected: boolean): void {
   const a = (angle * Math.PI) / 180;
-  const dx = tip.x - from.x;
-  const dy = tip.y - from.y;
-  // hrot v souřadnicích natočeného textu, čára začíná na okraji rámečku textu
-  const lx = dx * Math.cos(-a) - dy * Math.sin(-a);
-  const ly = dx * Math.sin(-a) + dy * Math.cos(-a);
+  const cos = Math.cos(a);
+  const sin = Math.sin(a);
+  const toScr = (x: number, y: number) => ({ x: from.x + x * cos - y * sin, y: from.y + x * sin + y * cos });
+  const lx = (tip.x - from.x) * cos + (tip.y - from.y) * sin; // hrot v souřadnicích natočeného textu
   const hw = w / 2 + 4;
-  const hh = h / 2 + 2;
-  const k = Math.min(Math.abs(lx) > 1e-6 ? hw / Math.abs(lx) : Infinity, Math.abs(ly) > 1e-6 ? hh / Math.abs(ly) : Infinity);
-  if (k >= 1) return; // hrot uvnitř textu
-  const sx = from.x + (lx * k) * Math.cos(a) - (ly * k) * Math.sin(a);
-  const sy = from.y + (lx * k) * Math.sin(a) + (ly * k) * Math.cos(a);
+  const yl = h / 2 + 3;
+  const u1 = toScr(-hw, yl);
+  const u2 = toScr(hw, yl);
+  const st = toScr(lx < 0 ? -hw : hw, yl); // šikmá čára začíná na straně, kde je hrot
+  const sx = st.x;
+  const sy = st.y;
   const ang = Math.atan2(tip.y - sy, tip.x - sx);
   ctx.save();
   ctx.strokeStyle = '#0f172a';
   ctx.fillStyle = '#0f172a';
   ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(u1.x, u1.y);
+  ctx.lineTo(u2.x, u2.y);
+  ctx.stroke();
   ctx.beginPath();
   ctx.moveTo(sx, sy);
   ctx.lineTo(tip.x, tip.y);
