@@ -42,7 +42,7 @@ function drawLeader(ctx: CanvasRenderingContext2D, from: { x: number; y: number 
   const sin = Math.sin(a);
   const toScr = (x: number, y: number) => ({ x: from.x + x * cos - y * sin, y: from.y + x * sin + y * cos });
   const lx = (tip.x - from.x) * cos + (tip.y - from.y) * sin; // hrot v souřadnicích natočeného textu
-  const hw = w / 2 + 4;
+  const hw = w / 2 + 1;
   const yl = h / 2 + 3;
   const u1 = toScr(-hw, yl);
   const u2 = toScr(hw, yl);
