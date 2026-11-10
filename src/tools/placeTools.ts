@@ -11,7 +11,7 @@ import { pickOpening, pickRoom } from './pick';
 import { selectTool } from './selectTool';
 import { HIT_PX, type PointerInput, type Tool } from './types';
 
-function makeOpeningTool(kind: OpeningKind): Tool {
+function makeOpeningTool(toolKind: OpeningKind): Tool {
   let delegating = false;
   return {
     down(p: PointerInput) {
@@ -27,6 +27,7 @@ function makeOpeningTool(kind: OpeningKind): Tool {
       const hit = findWallNear(floor, p.world, (HIT_PX.wall * 1.5) / cam.zoom);
       if (hit && !isCurved(hit.wall)) {
         // spárovaná příčka: dveře/okno/průchod se uloží na první čáru (kreslí se na obou), nika zůstane na ťuknuté čáře
+        const kind: OpeningKind = toolKind === 'window' ? store.get().settings.windowKind : toolKind;
         const prim = kind === 'niche' ? null : toPrimary(floor, hit.wall, hit.point);
         if (prim) addOpening(prim.wall.id, kind, prim.t);
         else if (kind !== 'niche' && hit.wall.part?.line === 2) return;

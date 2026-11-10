@@ -68,9 +68,16 @@ export function createCircleWall(center: Id, radius: number): Wall {
 /** Výchozí zárubeň dveří: 50 mm na každé straně, hloubka 100 mm. */
 export const DOOR_FRAME = { width: 50, depth: 100 };
 
+/** Výchozí rám okna: 50 mm na každé straně, hloubka 50 mm. */
+export const WINDOW_FRAME = { width: 50, depth: 50 };
+
+/** Okno nebo francouzské okno (stejná značka). */
+export const isWindowKind = (kind: OpeningKind): boolean => kind === 'window' || kind === 'french';
+
 export const OPENING_DEFAULTS: Record<OpeningKind, { width: number; height: number; sill: number; depth: number; prefix: string; label: string }> = {
   door: { width: 800, height: 1970, sill: 0, depth: 0, prefix: 'D', label: 'Dveře' },
   window: { width: 1200, height: 1500, sill: 900, depth: 0, prefix: 'O', label: 'Okno' },
+  french: { width: 900, height: 2200, sill: 50, depth: 0, prefix: 'O', label: 'Francouzské okno' },
   opening: { width: 900, height: 2100, sill: 0, depth: 0, prefix: 'P', label: 'Otvor' },
   niche: { width: 600, height: 1200, sill: 900, depth: 200, prefix: 'N', label: 'Nika' }
 };
@@ -102,7 +109,7 @@ export function createOpening(floor: Floor, wallId: Id, kind: OpeningKind, field
     hinge: 'a',
     swing: 1,
     note: '',
-    ...(kind === 'door' ? { frame: { ...DOOR_FRAME } } : {}),
+    ...(kind === 'door' ? { frame: { ...DOOR_FRAME } } : isWindowKind(kind) ? { frame: { ...WINDOW_FRAME } } : {}),
     ...fields
   };
 }

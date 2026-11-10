@@ -1,5 +1,5 @@
 /**
- * Lišta s volbami aktivního nástroje nad plátnem (Dvojčára: tloušťka a strana; tvary: styl čáry).
+ * Lišta s volbami aktivního nástroje nad plátnem (Dvojčára: tloušťka a strana; tvary: styl čáry; okno: druh).
  */
 import { endPaste } from '../store/actions';
 import { store } from '../store/store';
@@ -16,6 +16,21 @@ export function ToolOptions() {
       <div class="tool-options">
         <span class="muted small">Styl čáry nových stěn</span>
         <Seg options={LINE_STYLES} value={settings.shapeStyle} onChange={v => store.updateSettings({ shapeStyle: v })} />
+      </div>
+    );
+  }
+  if (tool === 'window') {
+    return (
+      <div class="tool-options">
+        <span class="muted small">Vkládat</span>
+        <Seg
+          options={[
+            { v: 'window', label: 'Okno' },
+            { v: 'french', label: 'Francouzské okno' }
+          ]}
+          value={settings.windowKind}
+          onChange={v => store.updateSettings({ windowKind: v })}
+        />
       </div>
     );
   }

@@ -2,8 +2,8 @@
  * Všechny změny výkresu na jednom místě. Rozhraní i nástroje volají tyto funkce,
  * nikdy nemění data přímo.
  */
-import { createCircleWall, createFloor, createOpening, createRoom, createText, createWall, newId, nextOpeningNumber } from '../model/factory';
-import { applyRevealPart, openingThickness, revealPartValue, type RevealPart } from '../core/doorLayout';
+import { createCircleWall, createFloor, createOpening, createRoom, createText, createWall, isWindowKind, newId, nextOpeningNumber } from '../model/factory';
+import { applyRevealPart, openingThickness, outwardSwing, revealPartValue, type RevealPart } from '../core/doorLayout';
 import type { Floor, Id, LineStyle, Opening, OpeningKind, Pt, Room, TextNote, Wall, WallLabel } from '../model/types';
 import { arcChain, setChainSagitta } from '../core/arcChain';
 import { dist } from '../core/geometry';
@@ -520,6 +520,8 @@ export function addOpening(wallId: Id, kind: OpeningKind, t: number): Id | null 
     const spanW = openingSpan({ ...probe, width });
     const startFromA = Math.max(0, Math.min(len - spanW, Math.round((center - spanW / 2) / 10) * 10));
     const op: Opening = { ...probe, width, ref, hinge: ref, offset: 0 };
+    // okno ve stěně kreslené jednou čarou: rám jde z líce ven (od středu výkresu)
+    if (isWindowKind(kind) && openingThickness(floor, op) === null) op.swing = outwardSwing(floor, wall);
     setStartFromA(op, startFromA, len);
     floor.openings[op.id] = op;
     createdId = op.id;

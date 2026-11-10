@@ -3,7 +3,7 @@
  */
 import { useEffect, useRef } from 'preact/hooks';
 import { wallLength, wallsAtNode } from '../../core/floorQueries';
-import { OPENING_DEFAULTS } from '../../model/factory';
+import { isWindowKind, OPENING_DEFAULTS } from '../../model/factory';
 import type { Floor, LineStyle, Opening, Room, TextNote, Wall, WallType } from '../../model/types';
 import { applyNumpadValue, deleteSelection, setPartitionStyle, setRevealEnabled, rotateSelection, duplicateSelection, setOpeningRef, updateOpening, takeFreshTextId, updateRoom, updateText, updateWall, updateWallLabel } from '../../store/actions';
 import { openTarget } from '../../store/numpadController';
@@ -189,6 +189,7 @@ function WallPanel({ floor, wall }: { floor: Floor; wall: Wall }) {
 const OPENING_PRESETS: Record<Opening['kind'], number[]> = {
   door: [600, 700, 800, 900, 1100, 1250],
   window: [600, 900, 1200, 1500, 1800, 2100],
+  french: [800, 900, 1000, 1200, 1500],
   opening: [700, 800, 900, 1200, 1500],
   niche: [300, 450, 600, 900]
 };
@@ -208,6 +209,19 @@ function OpeningPanel({ op }: { op: Opening }) {
   const set = (patch: Partial<Opening>) => updateOpening(op.id, patch);
   return (
     <Panel title={`${info.label} ${op.number}`} onClose={close}>
+      {isWindowKind(op.kind) && (
+        <div class="field field-inline">
+          <span>Druh</span>
+          <Seg
+            options={[
+              { v: 'window', label: 'Okno' },
+              { v: 'french', label: 'Francouzské' }
+            ]}
+            value={op.kind as 'window' | 'french'}
+            onChange={v => v !== op.kind && set({ kind: v, sill: OPENING_DEFAULTS[v].sill })}
+          />
+        </div>
+      )}
       <div class="field field-inline">
         <span>Měřit od rohu</span>
         <Seg
@@ -241,7 +255,7 @@ function OpeningPanel({ op }: { op: Opening }) {
         {op.kind !== 'door' && <NumField label="Parapet" value={op.sill} onCommit={v => v !== null && set({ sill: v })} />}
         {op.kind === 'niche' && <NumField label="Hloubka niky" value={op.depth} min={10} onCommit={v => v !== null && set({ depth: v })} />}
       </div>
-      {(op.kind === 'door' || op.kind === 'niche') && (
+      {(op.kind === 'door' || op.kind === 'niche' || (isWindowKind(op.kind) && op.frame)) && (
         <div class="btn-row">
           {op.kind === 'door' && (
             <button class="btn" onClick={() => set({ hinge: op.hinge === 'a' ? 'b' : 'a' })}>
@@ -249,15 +263,15 @@ function OpeningPanel({ op }: { op: Opening }) {
             </button>
           )}
           <button class="btn" onClick={() => set({ swing: op.swing === 1 ? -1 : 1 })}>
-            🔄 {op.kind === 'door' ? 'Dovnitř/ven' : 'Strana'}
+            🔄 {op.kind === 'door' ? 'Dovnitř/ven' : op.kind === 'niche' ? 'Strana' : 'Strana rámu'}
           </button>
         </div>
       )}
       {op.frame && (
         <div class="field-grid">
-          <RevealField op={op} part="frameWidth" label="Šířka zárubně" />
-          <RevealField op={op} part="frameDepth" label="Hloubka zárubně" />
-          {!op.reveal && <RevealField op={op} part="frameOffset" label="Odsazení zárubně" />}
+          <RevealField op={op} part="frameWidth" label={op.kind === 'door' ? 'Šířka zárubně' : 'Šířka rámu'} />
+          <RevealField op={op} part="frameDepth" label={op.kind === 'door' ? 'Hloubka zárubně' : 'Hloubka rámu'} />
+          {!op.reveal && <RevealField op={op} part="frameOffset" label={op.kind === 'door' ? 'Odsazení zárubně' : 'Odsazení rámu'} />}
         </div>
       )}
       {op.kind !== 'niche' && (
@@ -282,7 +296,7 @@ function OpeningPanel({ op }: { op: Opening }) {
                 <RevealField op={op} part="left" label="Vlevo" />
                 <RevealField op={op} part="right" label="Vpravo" />
               </div>
-              {op.kind !== 'door' && (
+              {op.kind !== 'door' && !op.frame && (
                 <button class="btn btn-sm" style="margin-bottom:6px" onClick={() => set({ swing: op.swing === 1 ? -1 : 1 })}>
                   🔄 Strana ostění
                 </button>

@@ -9,7 +9,8 @@ describe('ostění', () => {
     f.nodes.b = { id: 'b', x: 4000, y: 0 };
     const w = createWall('a', 'b');
     f.walls[w.id] = w;
-    const op = createOpening(f, w.id, 'window', { width: 1000, offset: 500, reveal: { depth: 150, left: 100, right: 200, top: 0 } });
+    // starší okno bez rámu (otvor = okno + ostění)
+    const op = createOpening(f, w.id, 'window', { width: 1000, offset: 500, frame: undefined, reveal: { depth: 150, left: 100, right: 200, top: 0 } });
     f.openings[op.id] = op;
     expect(openingSpan(op)).toBe(1300);
     const [placed] = openingsOnWall(f, w);

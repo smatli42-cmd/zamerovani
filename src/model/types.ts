@@ -53,7 +53,8 @@ export interface Wall {
   part?: { id: Id; line: 0 | 1 | 2 };
 }
 
-export type OpeningKind = 'door' | 'window' | 'opening' | 'niche';
+/** `french` = francouzské okno (stejná značka jako okno, výchozí parapet 50 mm). */
+export type OpeningKind = 'door' | 'window' | 'french' | 'opening' | 'niche';
 
 /** Otvor ve stěně (dveře, okno, průchod, nika). */
 export interface Opening {
@@ -81,7 +82,7 @@ export interface Opening {
    * širší než okno samotné. `top` je jen údaj pro export a pohledy (v půdorysu se nekreslí). Vše v mm.
    */
   reveal?: Reveal;
-  /** Zárubeň dveří (volitelné): `width` na každé straně dveří, `depth` ve směru tloušťky stěny. Jen u dveří. */
+  /** Zárubeň dveří / rám okna (volitelné): `width` na každé straně, `depth` ve směru tloušťky stěny. Dveře a okna. */
   frame?: { width: number; depth: number; /** Odsazení zárubně od líce A (jen bez ostění; chybí = uprostřed). */ offset?: number };
 }
 

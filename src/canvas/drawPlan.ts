@@ -7,6 +7,7 @@ import { doorLayout } from '../core/doorLayout';
 import { partitionThickness, twinOffset } from '../core/pairing';
 import { openingSpan, openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
 import { add, dist, dot, lerp, normal, scale, sub, unit } from '../core/geometry';
+import { isWindowKind } from '../model/factory';
 import type { Floor, LineStyle, Opening, Pt, Wall } from '../model/types';
 import { isSelected, type Camera, type Selection, type SingleSelection } from '../store/store';
 import { toScreen } from './view';
@@ -132,12 +133,12 @@ export function drawOpenings(ctx: CanvasRenderingContext2D, floor: Floor, cam: C
       const p1 = toScreen(lerp(n[0], n[1], po.start / len), cam);
       const p2 = toScreen(lerp(n[0], n[1], po.end / len), cam);
       const color = isSel(selection, 'opening', po.op.id) ? COLORS.selected : isSel(hover, 'opening', po.op.id) ? '#3b82f6' : COLORS.opening;
-      if (po.op.kind === 'door' && po.op.frame) {
-        // dveře se zárubní: jedna značka přes celou tloušťku (příčka: obě čáry), tenké čáry
+      if ((po.op.kind === 'door' || isWindowKind(po.op.kind)) && po.op.frame) {
+        // dveře se zárubní / okno s rámem: jedna značka přes celou tloušťku (příčka: obě čáry), tenké čáry
         const off = twinOffset(floor, wall);
         const offPx = off ? scale(toScreen(add(lerp(n[0], n[1], 0), off), cam), 1) : null;
         const origin = toScreen(lerp(n[0], n[1], 0), cam);
-        drawFramedDoor(ctx, p1, p2, po.op, cam, color, offPx ? sub(offPx, origin) : null, partitionThickness(floor, wall));
+        drawFramed(ctx, p1, p2, po.op, cam, color, offPx ? sub(offPx, origin) : null, partitionThickness(floor, wall));
         continue;
       }
       drawOpeningSymbol(ctx, p1, p2, po.op, cam, color);
@@ -155,11 +156,11 @@ export function drawOpenings(ctx: CanvasRenderingContext2D, floor: Floor, cam: C
 }
 
 /**
- * Dveře se zárubní (značka jako v Revitu, tenké čáry). Souřadnice x podél stěny od začátku otvoru, y od líce A.
+ * Dveře se zárubní a okno s rámem (značka jako v Revitu, tenké čáry). Okno má místo křídla čáru skla uprostřed rámu. Souřadnice x podél stěny od začátku otvoru, y od líce A.
  * Líce stěny se v otvoru přeruší; s ostěním je okraj stěny „vykousnutý“ (schod o hloubku ostění a délku ostění).
  * `off` = vektor (v px) od líce A k líci B u příčky, jinak se hloubka měří ve směru `swing`.
  */
-function drawFramedDoor(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, cam: Camera, color: string, off: Pt | null, T: number | null): void {
+function drawFramed(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, cam: Camera, color: string, off: Pt | null, T: number | null): void {
   const k = cam.zoom;
   const u = unit(s1, s2);
   const nrm = scale(normal(u), op.swing);
@@ -241,6 +242,18 @@ function drawFramedDoor(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Openi
     q.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
     ctx.closePath();
     ctx.stroke();
+  }
+
+  // okno: čára skla uprostřed hloubky rámu
+  if (op.kind !== 'door') {
+    const a = P(L + fw, fo + F / 2);
+    const b = P(span - R - fw, fo + F / 2);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+    ctx.restore();
+    return;
   }
 
   // křídlo (otevírá se ve směru swing; u příčky z té plochy zárubně, ke které směřuje)
@@ -326,10 +339,11 @@ function drawOpeningSymbol(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Op
   };
 
   // Ostění: čerchovaná čára v rovině stěny = konstrukce nad rovinou řezu (jako u niky)
-  if (rv && op.kind === 'window') lintel();
+  if (rv && isWindowKind(op.kind)) lintel();
 
   switch (op.kind) {
-    case 'window': {
+    case 'window':
+    case 'french': {
       const t = scale(normal(u), 5);
       ctx.beginPath();
       ctx.moveTo(p1.x + t.x, p1.y + t.y);

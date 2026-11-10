@@ -5,7 +5,9 @@
  * Tloušťka příčky T = hloubka ostění z líce A + hloubka zárubně + hloubka ostění z líce B
  * (hloubka z líce B se dopočítává, ukládá se jen hloubka z líce A).
  */
-import type { Floor, Opening } from '../model/types';
+import type { Floor, Opening, Wall } from '../model/types';
+import { wallNodes } from './floorQueries';
+import { normal, unit } from './geometry';
 import { partitionThickness } from './pairing';
 
 export type RevealPart = 'depth' | 'depthBack' | 'left' | 'right' | 'top' | 'frameWidth' | 'frameDepth' | 'frameOffset';
@@ -105,4 +107,18 @@ export function applyRevealPart(floor: Floor, op: Opening, part: RevealPart, val
     op.reveal[part] = v;
   }
   return true;
+}
+
+/**
+ * Strana (`swing`) stěny směrem ven od středu výkresu – výchozí strana rámu okna v obvodové stěně kreslené jednou čarou
+ * (rám začíná v líci a jde do stěny, tedy ven).
+ */
+export function outwardSwing(floor: Floor, wall: Wall): 1 | -1 {
+  const n = wallNodes(floor, wall);
+  const nodes = Object.values(floor.nodes);
+  if (!n || nodes.length === 0) return 1;
+  const c = { x: nodes.reduce((s, p) => s + p.x, 0) / nodes.length, y: nodes.reduce((s, p) => s + p.y, 0) / nodes.length };
+  const m = { x: (n[0].x + n[1].x) / 2, y: (n[0].y + n[1].y) / 2 };
+  const nrm = normal(unit(n[0], n[1]));
+  return nrm.x * (m.x - c.x) + nrm.y * (m.y - c.y) >= 0 ? 1 : -1;
 }

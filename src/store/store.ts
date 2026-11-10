@@ -78,6 +78,8 @@ export interface Settings {
   partSide: 1 | -1;
   /** Styl čáry nově kreslených tvarů (obdélník, kruh, oblouk). */
   shapeStyle: LineStyle;
+  /** Nástroj Okno: vkládá běžné nebo francouzské okno. */
+  windowKind: 'window' | 'french';
 }
 
 export type SaveStatus = 'saved' | 'saving' | 'dirty' | 'error';
@@ -108,7 +110,7 @@ export interface AppState {
 const SETTINGS_KEY = 'zamerovani.settings';
 
 function loadSettings(): Settings {
-  const defaults: Settings = { ortho: true, snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, partThickness: 100, partSide: 1, shapeStyle: 'solid' };
+  const defaults: Settings = { ortho: true, snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, partThickness: 100, partSide: 1, shapeStyle: 'solid', windowKind: 'window' };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     return raw ? { ...defaults, ...JSON.parse(raw) } : defaults;
