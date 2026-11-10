@@ -50,6 +50,7 @@ export function splitWallAt(floor: Floor, wallId: Id, nodeId: Id): [Id, Id] | nu
     };
     if (partSag) w.sagitta = partSag;
     if (wall.style) w.style = wall.style;
+    if (wall.part) w.part = { ...wall.part };
     return w;
   };
   const wA = part(wall.a, nodeId, lenA, sagParts ? sagParts[0] : null);

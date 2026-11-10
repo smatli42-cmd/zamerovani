@@ -29,7 +29,7 @@ export function ToolOptions() {
       </div>
     );
   }
-  if (tool !== 'dline') return null;
+  if (tool !== 'dline' && tool !== 'pricka') return null;
   return (
     <div class="tool-options">
       <NumField label="Tloušťka příčky" value={settings.partThickness} min={10} onCommit={v => v !== null && store.updateSettings({ partThickness: v })} />

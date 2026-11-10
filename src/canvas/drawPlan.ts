@@ -3,6 +3,7 @@
  */
 import { arcGeometry } from '../core/arc';
 import { arcChain } from '../core/arcChain';
+import { twinOffset } from '../core/pairing';
 import { openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
 import { add, dist, lerp, normal, scale, sub, unit } from '../core/geometry';
 import type { Floor, LineStyle, Opening, Pt, Wall } from '../model/types';
@@ -47,13 +48,17 @@ function pathWall(ctx: CanvasRenderingContext2D, wall: Wall, a: Pt, b: Pt, nodes
 export function drawWalls(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camera, selection: Selection, hover: Selection): void {
   ctx.save();
   ctx.lineCap = 'round';
+  // vybraná / pod perem ležící příčka se zvýrazní celá (obě čáry)
+  const partOf = (s: Selection): string | undefined => (s?.kind === 'wall' ? floor.walls[s.id]?.part?.id : undefined);
+  const selPart = partOf(selection);
+  const hoverPart = partOf(hover);
   for (const wall of Object.values(floor.walls)) {
     const n = wallNodes(floor, wall);
     if (!n) continue;
     const a = toScreen(n[0], cam);
     const b = toScreen(n[1], cam);
-    const selected = isSel(selection, 'wall', wall.id);
-    const hovered = isSel(hover, 'wall', wall.id);
+    const selected = isSel(selection, 'wall', wall.id) || (!!selPart && wall.part?.id === selPart);
+    const hovered = isSel(hover, 'wall', wall.id) || (!!hoverPart && wall.part?.id === hoverPart);
 
     if (selected || hovered) {
       ctx.strokeStyle = selected ? 'rgba(37,99,235,0.25)' : 'rgba(147,197,253,0.35)';
@@ -127,6 +132,14 @@ export function drawOpenings(ctx: CanvasRenderingContext2D, floor: Floor, cam: C
       const p2 = toScreen(lerp(n[0], n[1], po.end / len), cam);
       const color = isSel(selection, 'opening', po.op.id) ? COLORS.selected : isSel(hover, 'opening', po.op.id) ? '#3b82f6' : COLORS.opening;
       drawOpeningSymbol(ctx, p1, p2, po.op, cam, color);
+      // spárovaná příčka: otvor se kreslí i na druhém líci (dveře bez křídla, nika jen na své čáře)
+      const off = po.op.kind === 'niche' ? null : twinOffset(floor, wall);
+      if (off) {
+        const t1 = toScreen(add(lerp(n[0], n[1], po.start / len), off), cam);
+        const t2 = toScreen(add(lerp(n[0], n[1], po.end / len), off), cam);
+        const twin: Opening = { ...po.op, kind: po.op.kind === 'door' ? 'opening' : po.op.kind, swing: po.op.swing === 1 ? -1 : 1 };
+        drawOpeningSymbol(ctx, t1, t2, twin, cam, color);
+      }
     }
   }
   ctx.restore();

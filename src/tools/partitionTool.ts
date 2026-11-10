@@ -24,7 +24,9 @@ interface Drawing {
 let drawing: Drawing | null = null;
 let hoverSnap: SnapResult | null = null;
 
-export const partitionTool: Tool = {
+/** Dvojčára (dvě samostatné čáry) a Příčka (dvě spárované čáry se sdílenými otvory) se kreslí stejně. */
+function makePartitionTool(paired: boolean): Tool {
+  return {
   down(p: PointerInput) {
     const floor = store.floor();
     if (!floor) return;
@@ -48,7 +50,7 @@ export const partitionTool: Tool = {
     if (!d) return;
     if (dist(d.start.pt, d.end.pt) >= 50) {
       const { partThickness, partSide } = store.get().settings;
-      addPartition(d.start.pt, d.start.node?.id ?? null, d.end.pt, d.end.node?.id ?? null, partThickness, partSide);
+      addPartition(d.start.pt, d.start.node?.id ?? null, d.end.pt, d.end.node?.id ?? null, partThickness, partSide, paired);
     } else {
       // Ťuknutí bez tažení = výběr prvku pod perem
       const floor = store.floor();
@@ -109,4 +111,8 @@ export const partitionTool: Tool = {
     drawSnapMarker(ctx, cam, drawing.end);
     drawLengthBadge(ctx, a, b, Math.round(dist(s, e)));
   }
-};
+  };
+}
+
+export const partitionTool = makePartitionTool(false);
+export const prickaTool = makePartitionTool(true);

@@ -15,6 +15,7 @@ const TOOLS: { id: ToolId; icon: string; label: string; title: string }[] = [
   { id: 'room', icon: '🏷️', label: 'Místnost', title: 'Ťuknutím vložit štítek místnosti' },
   { id: 'rect', icon: '▭', label: 'Obdélník', title: 'Tažením nakreslit obdélník (sloup, komín, překlad…)' },
   { id: 'circle', icon: '◯', label: 'Kruh', title: 'Tažením od středu nakreslit kruh' },
+  { id: 'pricka', icon: '▥', label: 'Příčka', title: 'Spárovaná příčka (dvě čáry): táhni od stěny ke stěně; dveře a okna se do ní vkládají jednou a kreslí se na obou lících' },
   { id: 'dline', icon: '═', label: 'Dvojčára', title: 'Příčka dvěma čarami: táhni od stěny ke stěně, napojením se stěny rozdělí (tloušťka nad plátnem)' },
   { id: 'arc', icon: '◠', label: 'Oblouk', title: 'Tažením mezi krajními body nakreslit oblouk, vzepětí se upřesní kótou' },
   { id: 'leader', icon: '↗️', label: 'Šipka', title: 'Odkazová šipka s textem: táhni od místa, na které se ukazuje, tam kam má přijít text' },

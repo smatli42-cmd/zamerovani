@@ -10,6 +10,7 @@ import { openingSpan, openingStartFromA, openingsOnWall, wallLength, wallsAtNode
 import { setWallLength, type MoveTarget } from '../core/solver';
 import { componentGap, setComponentGap } from '../core/components';
 import { partitionPoints } from '../core/partition';
+import { partitionWalls } from '../core/pairing';
 import { splitWallsAtNode } from '../core/topology';
 import { store, type NumPadTarget } from './store';
 
@@ -80,25 +81,37 @@ export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: I
  * Konce na jiných stěnách je rozdělí v místě napojení (vzniknou samostatné úseky s kótami),
  * volný konec se uzavře krátkou stěnou o délce tloušťky.
  */
-export function addPartition(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, thickness: number, side: 1 | -1): void {
-  store.edit(floor => applyPartition(floor, start, startNodeId, end, endNodeId, thickness, side));
+export function addPartition(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, thickness: number, side: 1 | -1, paired = false): void {
+  store.edit(floor => applyPartition(floor, start, startNodeId, end, endNodeId, thickness, side, paired));
+  if (paired) {
+    // vybere novou příčku, ať je hned vidět její panel
+    const f = store.floor();
+    const last = f && Object.values(f.walls).filter(w => w.part?.line === 1).pop();
+    if (last) store.set({ selection: { kind: 'wall', id: last.id } });
+  }
 }
 
 /** Vlastní vytvoření příčky nad podlažím (bez store – testovatelné). */
-export function applyPartition(floor: Floor, start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, thickness: number, side: 1 | -1): void {
+export function applyPartition(floor: Floor, start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, thickness: number, side: 1 | -1, paired = false): void {
   const second = partitionPoints(floor, start, end, thickness, side);
   const a = getOrCreateNode(floor, start, startNodeId);
   const b = getOrCreateNode(floor, end, endNodeId);
   const a2 = getOrCreateNode(floor, second.a2, null);
   const b2 = getOrCreateNode(floor, second.b2, null);
   if (new Set([a, b, a2, b2]).size < 4) return;
-  const link = (x: Id, y: Id) => void linkWall(floor, x, y);
-  link(a, b);
-  link(a2, b2);
+  const partId = newId('pt');
+  const link = (x: Id, y: Id, line: 0 | 1 | 2) => {
+    const before = Object.keys(floor.walls).length;
+    const w = linkWall(floor, x, y);
+    // jen nově vytvořené stěny patří příčce (úsek existující stěny mezi čarami zůstává stěnou)
+    if (paired && w && (Object.keys(floor.walls).length > before || line !== 0)) w.part = { id: partId, line };
+  };
+  link(a, b, 1);
+  link(a2, b2, 2);
   for (const id of [a, b, a2, b2]) splitWallsAtNode(floor, id);
   // Konec opřený o stěnu už uzavírá úsek rozdělené stěny, volný konec dostane krátkou stěnu
-  link(a, a2);
-  link(b, b2);
+  link(a, a2, 0);
+  link(b, b2, 0);
 }
 
 /** Obdélník ze čtyř stěn (např. sloup, komín); rohy na jiných stěnách je rozdělí. */
@@ -162,6 +175,18 @@ export function setWallSagitta(wallId: Id, sagitta: number): void {
     if (!w) return;
     if (Math.abs(sagitta) < 0.5) delete w.sagitta;
     else if (!setChainSagitta(floor, wallId, sagitta)) w.sagitta = Math.round(sagitta);
+  });
+}
+
+/** Změní styl čáry celé příčky (obě čáry najednou). */
+export function setPartitionStyle(wallId: Id, style: LineStyle): void {
+  store.edit(floor => {
+    const w = floor.walls[wallId];
+    if (!w) return;
+    for (const pw of partitionWalls(floor, w)) {
+      if (style === 'solid') delete pw.style;
+      else pw.style = style;
+    }
   });
 }
 
@@ -347,13 +372,24 @@ export function duplicateSelection(): void {
       return nid;
     };
     const wallMap = new Map<Id, Id>();
-    for (const it of items) {
-      if (it.kind !== 'wall') continue;
+    const partMap = new Map<Id, Id>();
+    // vybraná příčka se kopíruje celá
+    const wallIds = new Set(items.filter(i => i.kind === 'wall').map(i => i.id));
+    for (const id of [...wallIds]) {
+      const pid = floor.walls[id]?.part?.id;
+      if (pid) for (const w of Object.values(floor.walls)) if (w.part?.id === pid) wallIds.add(w.id);
+    }
+    for (const id of wallIds) {
+      const it = { kind: 'wall' as const, id };
       const w = floor.walls[it.id];
       const a = w && nodeCopy(w.a);
       const b = w && nodeCopy(w.b);
       if (!w || !a || !b) continue;
       const nw: Wall = { ...clone(w), id: newId('w'), a, b };
+      if (w.part) {
+        if (!partMap.has(w.part.id)) partMap.set(w.part.id, newId('pt'));
+        nw.part = { id: partMap.get(w.part.id)!, line: w.part.line };
+      }
       floor.walls[nw.id] = nw;
       wallMap.set(w.id, nw.id);
       created.push({ kind: 'wall', id: nw.id });
@@ -439,6 +475,11 @@ export function deleteSelection(): void {
   const items = sel.kind === 'multi' ? sel.items : [sel];
   store.edit(
     floor => {
+      // příčka se maže celá (obě čáry i uzavírací stěny)
+      for (const it of [...items]) {
+        const w = it.kind === 'wall' ? floor.walls[it.id] : null;
+        if (w?.part) for (const pw of Object.values(floor.walls)) if (pw.part?.id === w.part.id) delete floor.walls[pw.id];
+      }
       for (const sel of items) switch (sel.kind) {
         case 'wall':
           delete floor.walls[sel.id];

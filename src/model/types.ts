@@ -46,6 +46,11 @@ export interface Wall {
   style?: LineStyle;
   /** Kruh: poloměr v mm. Kruhová stěna má a === b = střed kruhu. */
   radius?: number;
+  /**
+   * Spárovaná příčka: stěny téže příčky mají společné `id`; line 1 = první čára (nesou se na ní otvory),
+   * line 2 = druhá čára, line 0 = krátká uzavírací stěna volného konce.
+   */
+  part?: { id: Id; line: 0 | 1 | 2 };
 }
 
 export type OpeningKind = 'door' | 'window' | 'opening' | 'niche';

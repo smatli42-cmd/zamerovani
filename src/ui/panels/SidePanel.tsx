@@ -5,10 +5,11 @@ import { useEffect, useRef } from 'preact/hooks';
 import { wallLength, wallsAtNode } from '../../core/floorQueries';
 import { OPENING_DEFAULTS } from '../../model/factory';
 import type { Floor, LineStyle, Opening, Room, TextNote, Wall, WallType } from '../../model/types';
-import { applyNumpadValue, deleteSelection, setRevealEnabled, rotateSelection, duplicateSelection, setOpeningRef, updateOpening, takeFreshTextId, updateRoom, updateText, updateWall, updateWallLabel } from '../../store/actions';
+import { applyNumpadValue, deleteSelection, setPartitionStyle, setRevealEnabled, rotateSelection, duplicateSelection, setOpeningRef, updateOpening, takeFreshTextId, updateRoom, updateText, updateWall, updateWallLabel } from '../../store/actions';
 import { openTarget } from '../../store/numpadController';
 import { store } from '../../store/store';
 import { arcChain } from '../../core/arcChain';
+import { partitionThickness, thicknessTarget } from '../../core/pairing';
 import { useStore } from '../../store/useStore';
 import { NumField, Panel, Seg, TextField } from './fields';
 
@@ -26,6 +27,7 @@ export function SidePanel() {
   switch (selection.kind) {
     case 'wall': {
       const w = floor.walls[selection.id];
+      if (w?.part) return <PartitionPanel floor={floor} wall={w} />;
       return w ? <WallPanel floor={floor} wall={w} /> : null;
     }
     case 'opening': {
@@ -89,6 +91,28 @@ const WALL_TYPES: { v: WallType; label: string }[] = [
   { v: 'sdk', label: 'SDK' },
   { v: 'neovereno', label: '?' }
 ];
+
+function PartitionPanel({ floor, wall }: { floor: Floor; wall: Wall }) {
+  const thick = partitionThickness(floor, wall);
+  const target = thicknessTarget(floor, wall);
+  return (
+    <Panel title="Příčka" onClose={close}>
+      <button class="field-button" onClick={() => target && openTarget({ kind: 'wall-length', wallId: target.wallId, move: { nodeId: target.nodeId } })}>
+        <span>Tloušťka příčky</span>
+        <b>{thick ?? '?'} mm</b>
+      </button>
+      <div class="field field-inline">
+        <span>Styl čáry</span>
+        <Seg options={LINE_STYLES} value={wall.style ?? 'solid'} onChange={v => setPartitionStyle(wall.id, v)} />
+      </div>
+      <p class="muted small">Dveře a okna ťukni kamkoli na příčku, uloží se jednou a kreslí na obou čarách.</p>
+      <div class="panel-actions">
+        <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
+        <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
+      </div>
+    </Panel>
+  );
+}
 
 function WallPanel({ floor, wall }: { floor: Floor; wall: Wall }) {
   const len = Math.round(wallLength(floor, wall));
