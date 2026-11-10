@@ -3,9 +3,10 @@
  */
 import { arcGeometry } from '../core/arc';
 import { arcChain } from '../core/arcChain';
-import { twinOffset } from '../core/pairing';
-import { openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
-import { add, dist, lerp, normal, scale, sub, unit } from '../core/geometry';
+import { doorLayout } from '../core/doorLayout';
+import { partitionThickness, twinOffset } from '../core/pairing';
+import { openingSpan, openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
+import { add, dist, dot, lerp, normal, scale, sub, unit } from '../core/geometry';
 import type { Floor, LineStyle, Opening, Pt, Wall } from '../model/types';
 import { isSelected, type Camera, type Selection, type SingleSelection } from '../store/store';
 import { toScreen } from './view';
@@ -131,6 +132,14 @@ export function drawOpenings(ctx: CanvasRenderingContext2D, floor: Floor, cam: C
       const p1 = toScreen(lerp(n[0], n[1], po.start / len), cam);
       const p2 = toScreen(lerp(n[0], n[1], po.end / len), cam);
       const color = isSel(selection, 'opening', po.op.id) ? COLORS.selected : isSel(hover, 'opening', po.op.id) ? '#3b82f6' : COLORS.opening;
+      if (po.op.kind === 'door' && po.op.frame) {
+        // dveře se zárubní: jedna značka přes celou tloušťku (příčka: obě čáry), tenké čáry
+        const off = twinOffset(floor, wall);
+        const offPx = off ? scale(toScreen(add(lerp(n[0], n[1], 0), off), cam), 1) : null;
+        const origin = toScreen(lerp(n[0], n[1], 0), cam);
+        drawFramedDoor(ctx, p1, p2, po.op, cam, color, offPx ? sub(offPx, origin) : null, partitionThickness(floor, wall));
+        continue;
+      }
       drawOpeningSymbol(ctx, p1, p2, po.op, cam, color);
       // spárovaná příčka: otvor se kreslí i na druhém líci (dveře bez křídla, nika jen na své čáře)
       const off = po.op.kind === 'niche' ? null : twinOffset(floor, wall);
@@ -142,6 +151,112 @@ export function drawOpenings(ctx: CanvasRenderingContext2D, floor: Floor, cam: C
       }
     }
   }
+  ctx.restore();
+}
+
+/**
+ * Dveře se zárubní (značka jako v Revitu, tenké čáry). Souřadnice x podél stěny od začátku otvoru, y od líce A.
+ * Líce stěny se v otvoru přeruší; s ostěním je okraj stěny „vykousnutý“ (schod o hloubku ostění a délku ostění).
+ * `off` = vektor (v px) od líce A k líci B u příčky, jinak se hloubka měří ve směru `swing`.
+ */
+function drawFramedDoor(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, cam: Camera, color: string, off: Pt | null, T: number | null): void {
+  const k = cam.zoom;
+  const u = unit(s1, s2);
+  const nrm = scale(normal(u), op.swing);
+  const dir = off && T ? scale(off, 1 / Math.hypot(off.x, off.y)) : nrm;
+  const lay = doorLayout(op, off ? T : null);
+  const { L, R, fw, F, dA, dB, fo } = lay;
+  const span = openingSpan(op);
+  const P = (x: number, y: number): Pt => add(add(s1, scale(u, x * k)), scale(dir, y * k));
+  const thick = off && T ? T : null;
+
+  // přerušení líců
+  ctx.save();
+  ctx.strokeStyle = '#f8fafc';
+  ctx.lineWidth = 7;
+  ctx.lineCap = 'butt';
+  ctx.beginPath();
+  ctx.moveTo(s1.x, s1.y);
+  ctx.lineTo(s2.x, s2.y);
+  if (thick) {
+    const b1 = P(0, thick);
+    const b2 = P(span, thick);
+    ctx.moveTo(b1.x, b1.y);
+    ctx.lineTo(b2.x, b2.y);
+  }
+  ctx.stroke();
+
+  // okraj stěny po stranách otvoru (stejně silný jako stěna)
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 3;
+  ctx.lineJoin = 'miter';
+  const side = (mirror: boolean) => {
+    const X = (x: number) => (mirror ? span - x : x);
+    const pts: [number, number][] = [[0, 0]];
+    if (lay.reveal) {
+      pts.push([0, dA], [L, dA], [L, dA + F], [0, dA + F]);
+      if (thick) pts.push([0, thick]);
+    } else if (thick) pts.push([0, thick]);
+    else return;
+    ctx.beginPath();
+    pts.forEach(([x, y], i) => {
+      const p = P(X(x), y);
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    });
+    ctx.stroke();
+  };
+  side(false);
+  side(true);
+
+  // čáry v rovině líců přes otvor: s ostěním čerchovaně (konstrukce nad řezem), bez ostění tenká plná (práh)
+  const faceLine = (y: number, dashed: boolean) => {
+    const a = P(0, y);
+    const b = P(span, y);
+    ctx.save();
+    ctx.lineWidth = 1.2;
+    if (dashed) ctx.setLineDash([10, 3, 2, 3]);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+    ctx.restore();
+  };
+  faceLine(0, dA > 0);
+  if (thick) faceLine(thick, dB > 0);
+
+  // zárubně
+  ctx.lineWidth = 1.2;
+  for (const x0 of [L, span - R - fw]) {
+    const q = [P(x0, fo), P(x0 + fw, fo), P(x0 + fw, fo + F), P(x0, fo + F)];
+    ctx.beginPath();
+    q.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  // křídlo (otevírá se ve směru swing; u příčky z té plochy zárubně, ke které směřuje)
+  const towardB = thick !== null && dot(nrm, dir) > 0;
+  const yLeaf = thick !== null ? (towardB ? fo + F : fo) : fo;
+  const xHinge = op.hinge === 'a' ? L + fw : span - R - fw;
+  const xFree = op.hinge === 'a' ? span - R - fw : L + fw;
+  const hingePt = P(xHinge, yLeaf);
+  const freePt = P(xFree, yLeaf);
+  const leafEnd = add(hingePt, scale(nrm, op.width * k));
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(hingePt.x, hingePt.y);
+  ctx.lineTo(leafEnd.x, leafEnd.y);
+  ctx.stroke();
+  const a0 = Math.atan2(leafEnd.y - hingePt.y, leafEnd.x - hingePt.x);
+  const a1 = Math.atan2(freePt.y - hingePt.y, freePt.x - hingePt.x);
+  let diff = a1 - a0;
+  while (diff > Math.PI) diff -= Math.PI * 2;
+  while (diff < -Math.PI) diff += Math.PI * 2;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(hingePt.x, hingePt.y, op.width * k, a0, a1, diff < 0);
+  ctx.stroke();
   ctx.restore();
 }
 

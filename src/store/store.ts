@@ -10,6 +10,7 @@
 import { produce, freeze } from 'immer';
 import type { Floor, Id, Opening, Project } from '../model/types';
 import type { MoveTarget } from '../core/solver';
+import type { RevealPart } from '../core/doorLayout';
 import type { LineStyle } from '../model/types';
 import type { Side } from '../core/components';
 
@@ -39,7 +40,7 @@ export type NumPadTarget =
   | { kind: 'opening-width'; openingId: Id }
   | { kind: 'opening-gap'; firstId: Id; secondId: Id }
   /** Rozměr ostění: hloubka, šířka vlevo/vpravo, výška nahoře. */
-  | { kind: 'opening-reveal'; openingId: Id; part: 'depth' | 'left' | 'right' | 'top' }
+  | { kind: 'opening-reveal'; openingId: Id; part: RevealPart }
   /** Vzepětí obloukové stěny. */
   | { kind: 'wall-sagitta'; wallId: Id }
   /** Průměr kruhové stěny. */

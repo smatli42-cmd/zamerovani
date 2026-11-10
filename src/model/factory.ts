@@ -65,6 +65,9 @@ export function createCircleWall(center: Id, radius: number): Wall {
   return { id: newId('w'), a: center, b: center, measured: null, label: emptyWallLabel(), radius };
 }
 
+/** Výchozí zárubeň dveří: 50 mm na každé straně, hloubka 100 mm. */
+export const DOOR_FRAME = { width: 50, depth: 100 };
+
 export const OPENING_DEFAULTS: Record<OpeningKind, { width: number; height: number; sill: number; depth: number; prefix: string; label: string }> = {
   door: { width: 800, height: 1970, sill: 0, depth: 0, prefix: 'D', label: 'Dveře' },
   window: { width: 1200, height: 1500, sill: 900, depth: 0, prefix: 'O', label: 'Okno' },
@@ -99,6 +102,7 @@ export function createOpening(floor: Floor, wallId: Id, kind: OpeningKind, field
     hinge: 'a',
     swing: 1,
     note: '',
+    ...(kind === 'door' ? { frame: { ...DOOR_FRAME } } : {}),
     ...fields
   };
 }

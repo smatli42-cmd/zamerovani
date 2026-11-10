@@ -88,7 +88,7 @@ export interface PlacedOpening {
 }
 
 /** Celková šířka otvoru ve stěně: okno + ostění vlevo a vpravo. */
-export const openingSpan = (op: Opening): number => op.width + (op.reveal ? op.reveal.left + op.reveal.right : 0);
+export const openingSpan = (op: Opening): number => op.width + (op.frame ? op.frame.width * 2 : 0) + (op.reveal ? op.reveal.left + op.reveal.right : 0);
 
 export function openingStartFromA(op: Opening, wallLen: number): number {
   return op.ref === 'a' ? op.offset : wallLen - op.offset - openingSpan(op);

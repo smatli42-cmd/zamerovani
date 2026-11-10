@@ -81,6 +81,8 @@ export interface Opening {
    * širší než okno samotné. `top` je jen údaj pro export a pohledy (v půdorysu se nekreslí). Vše v mm.
    */
   reveal?: Reveal;
+  /** Zárubeň dveří (volitelné): `width` na každé straně dveří, `depth` ve směru tloušťky stěny. Jen u dveří. */
+  frame?: { width: number; depth: number };
 }
 
 export interface Reveal {

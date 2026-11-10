@@ -10,6 +10,7 @@ import { openTarget } from '../../store/numpadController';
 import { store } from '../../store/store';
 import { arcChain } from '../../core/arcChain';
 import { partitionThickness, thicknessTarget } from '../../core/pairing';
+import { openingThickness, revealPartValue, type RevealPart } from '../../core/doorLayout';
 import { useStore } from '../../store/useStore';
 import { NumField, Panel, Seg, TextField } from './fields';
 
@@ -192,11 +193,12 @@ const OPENING_PRESETS: Record<Opening['kind'], number[]> = {
   niche: [300, 450, 600, 900]
 };
 
-function RevealField({ op, part, label }: { op: Opening; part: 'depth' | 'left' | 'right' | 'top'; label: string }) {
+function RevealField({ op, part, label }: { op: Opening; part: RevealPart; label: string }) {
+  const floor = store.floor();
   return (
     <button class="field-button" onClick={() => openTarget({ kind: 'opening-reveal', openingId: op.id, part })}>
       <span>{label}</span>
-      <b>{op.reveal?.[part] ?? 0} mm</b>
+      <b>{(floor && revealPartValue(floor, op, part)) ?? 0} mm</b>
     </button>
   );
 }
@@ -251,6 +253,12 @@ function OpeningPanel({ op }: { op: Opening }) {
           </button>
         </div>
       )}
+      {op.frame && (
+        <div class="field-grid">
+          <RevealField op={op} part="frameWidth" label="Šířka zárubně" />
+          <RevealField op={op} part="frameDepth" label="Hloubka zárubně" />
+        </div>
+      )}
       {op.kind !== 'niche' && (
         <>
           <div class="field field-inline">
@@ -267,7 +275,8 @@ function OpeningPanel({ op }: { op: Opening }) {
           {op.reveal && (
             <>
               <div class="field-grid">
-                <RevealField op={op} part="depth" label="Hloubka" />
+                <RevealField op={op} part="depth" label={op.frame ? 'Hloubka (líc A)' : 'Hloubka'} />
+                {op.frame && openingThickness(store.floor()!, op) !== null && <RevealField op={op} part="depthBack" label="Hloubka (líc B)" />}
                 <RevealField op={op} part="top" label="Nahoře" />
                 <RevealField op={op} part="left" label="Vlevo" />
                 <RevealField op={op} part="right" label="Vpravo" />

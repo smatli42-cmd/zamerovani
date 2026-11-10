@@ -135,7 +135,11 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
         const sub = po.op.kind === 'door' || po.op.kind === 'opening' ? `${po.op.number} v${po.op.height}` : `${po.op.number} v${po.op.height} p${po.op.sill}`;
         const rv = po.op.reveal && po.op.kind !== 'niche' ? po.op.reveal : null;
         if (rv) marks.push({ at: po.start, text: String(Math.round(rv.left)), target: { kind: 'opening-reveal', openingId: po.op.id, part: 'left' } });
-        marks.push({ at: po.start + (rv?.left ?? 0), text: String(Math.round(po.op.width)), sub: sub || kindInfo.label, target: { kind: 'opening-width', openingId: po.op.id } });
+        const fw = po.op.frame?.width ?? 0;
+        const frameMark = (at: number) => marks.push({ at, text: String(Math.round(fw)), target: { kind: 'opening-reveal', openingId: po.op.id, part: 'frameWidth' } });
+        if (fw) frameMark(po.start + (rv?.left ?? 0));
+        marks.push({ at: po.start + (rv?.left ?? 0) + fw, text: String(Math.round(po.op.width)), sub: sub || kindInfo.label, target: { kind: 'opening-width', openingId: po.op.id } });
+        if (fw) frameMark(po.end - (rv?.right ?? 0) - fw);
         if (rv) marks.push({ at: po.end - rv.right, text: String(Math.round(rv.right)), target: { kind: 'opening-reveal', openingId: po.op.id, part: 'right' } });
         cursor = po.end;
       });

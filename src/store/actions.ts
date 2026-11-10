@@ -3,7 +3,8 @@
  * nikdy nemění data přímo.
  */
 import { createCircleWall, createFloor, createOpening, createRoom, createText, createWall, newId, nextOpeningNumber } from '../model/factory';
-import type { Floor, Id, LineStyle, Opening, OpeningKind, Pt, Reveal, Room, TextNote, Wall, WallLabel } from '../model/types';
+import { applyRevealPart, openingThickness, revealPartValue, type RevealPart } from '../core/doorLayout';
+import type { Floor, Id, LineStyle, Opening, OpeningKind, Pt, Room, TextNote, Wall, WallLabel } from '../model/types';
 import { arcChain, setChainSagitta } from '../core/arcChain';
 import { dist } from '../core/geometry';
 import { openingSpan, openingStartFromA, openingsOnWall, wallLength, wallsAtNode } from '../core/floorQueries';
@@ -513,10 +514,11 @@ export function addOpening(wallId: Id, kind: OpeningKind, t: number): Id | null 
     if (!wall) return;
     const len = wallLength(floor, wall);
     const probe = createOpening(floor, wallId, kind);
-    const width = Math.min(probe.width, Math.max(100, Math.round(len - 100)));
+    const width = Math.min(probe.width, Math.max(100, Math.round(len - 100 - (probe.frame?.width ?? 0) * 2)));
     const ref: 'a' | 'b' = t < 0.5 ? 'a' : 'b';
     const center = t * len;
-    const startFromA = Math.max(0, Math.min(len - width, Math.round((center - width / 2) / 10) * 10));
+    const spanW = openingSpan({ ...probe, width });
+    const startFromA = Math.max(0, Math.min(len - spanW, Math.round((center - spanW / 2) / 10) * 10));
     const op: Opening = { ...probe, width, ref, hinge: ref, offset: 0 };
     setStartFromA(op, startFromA, len);
     floor.openings[op.id] = op;
@@ -573,16 +575,17 @@ function setOpeningWidth(floor: Floor, op: Opening, width: number): void {
 }
 
 /** Změní rozměry ostění; protože se mění celková šířka otvoru, okraj u referenčního rohu zůstane na místě. */
-function setReveal(floor: Floor, op: Opening, patch: Partial<Reveal>): void {
+function setReveal(floor: Floor, op: Opening, part: RevealPart, value: number): boolean {
   const wall = floor.walls[op.wallId];
-  if (!op.reveal || !wall) return;
+  if (!wall) return false;
   const len = wallLength(floor, wall);
   const start = openingStartFromA(op, len);
   const ref = op.ref;
   const startFixed = ref === 'a' ? start : len - start - openingSpan(op);
-  Object.assign(op.reveal, patch);
+  if (!applyRevealPart(floor, op, part, value)) return false;
   op.offset = startFixed;
   setStartFromA(op, openingStartFromA(op, len), len);
+  return true;
 }
 
 /** Zapne (výchozí hodnoty) nebo vypne ostění otvoru. */
@@ -594,7 +597,12 @@ export function setRevealEnabled(id: Id, on: boolean): void {
     const len = wallLength(floor, wall);
     const start = openingStartFromA(op, len);
     const oldLeft = op.reveal?.left ?? 0;
-    if (on) op.reveal = op.reveal ?? { depth: 150, left: 100, right: 100, top: 0 };
+    if (on) {
+      const T = openingThickness(floor, op);
+      // dveře v příčce: ostění na obou lících stejně hluboké; jinak 150 mm
+      const depth = op.frame && T !== null ? Math.round(Math.max(0, T - op.frame.depth) / 2) : 150;
+      op.reveal = op.reveal ?? { depth, left: 100, right: 100, top: 0 };
+    }
     else delete op.reveal;
     // okno zůstane na stejném místě: otvor se rozšíří (nebo zúží) o ostění kolem okna
     setStartFromA(op, on ? start - (op.reveal?.left ?? 0) : start + oldLeft, len);
@@ -741,7 +749,10 @@ export function numpadInitialValue(floor: Floor, t: NumPadTarget): number | null
     case 'opening-width':
       return floor.openings[t.openingId]?.width ?? null;
     case 'opening-reveal':
-      return floor.openings[t.openingId]?.reveal?.[t.part] ?? null;
+      {
+        const op = floor.openings[t.openingId];
+        return op ? revealPartValue(floor, op, t.part) : null;
+      }
     case 'wall-sagitta': {
       const w = floor.walls[t.wallId];
       return w ? Math.round(Math.abs(arcChain(floor, w.id)?.sagitta ?? w.sagitta ?? 0)) : null;
@@ -787,9 +798,8 @@ export function applyNumpadValue(t: NumPadTarget, value: number): boolean {
       ok = true;
     } else if (t.kind === 'opening-reveal') {
       const op = floor.openings[t.openingId];
-      if (!op?.reveal) return;
-      setReveal(floor, op, { [t.part]: Math.round(value) });
-      ok = true;
+      if (!op) return;
+      ok = setReveal(floor, op, t.part, value);
     } else if (t.kind === 'opening-gap') {
       setGap(floor, t.firstId, t.secondId, value);
       ok = true;
