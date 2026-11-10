@@ -43,3 +43,8 @@ Počítá se z čáry líce a tloušťky; v `core/` bez DOM, s testy.
 - **[rozhodnuto]** Výchozí tloušťka u migrovaných stěn bez údaje: **300 mm**.
 - **[rozhodnuto]** Dvojčáry a spárované příčky se při migraci **slučují do jedné stěny automaticky** (bez dotazu); co nejde převést jednoznačně, zůstane jako dvě stěny a nahlásí se.
 - **[rozhodnuto]** Nika se ve výchozím stavu vkládá na **vnitřní líc** (stranu místnosti = čáru líce, opačně než roste tělo stěny).
+- **[rozhodnuto]** Nástroje **Obdélník, Kruh, Oblouk** zatím zůstávají **čárami bez tloušťky** (sloup, komín, překlad). V modelu je to stěna s `thickness = 0`.
+- **[rozhodnuto]** Stěny s tloušťkou musí později umět **minimálně oblouk** (dřív se oblouk kreslil jako stěna, teď je jen čára) – zařadit po rozběhnutí rovných stěn.
+- **[rozhodnuto]** Tělo stěny má **světle šedou výplň**.
+- **[rozhodnuto]** Dvojitá šipka pro přehození strany se ukazuje **jen u vybrané stěny**.
+- **[rozhodnuto]** Stávající výkresy jsou **jen zkušební** – migrace nemusí zachovat jejich podobu; stačí, aby se staré projekty načetly bez chyby (uživatel si založí nové). Pokud se to změní, uživatel dá vědět.
