@@ -255,3 +255,21 @@ export function sideFromPen(start: Pt, end: Pt, pen: Pt, threshold: number, curr
   if (Math.abs(off) <= threshold) return current;
   return off > 0 ? 1 : -1;
 }
+
+/**
+ * Navazuje kreslená stěna `from`→`to` rovně na volný konec existující stěny se stejnou tloušťkou
+ * v rohu `nodeId` (pokračování stejným směrem)? Vrací tu stěnu – kreslená se s ní sloučí do jedné.
+ */
+export function straightContinuation(floor: Floor, nodeId: Id | null, from: Pt, to: Pt, thickness: number, excludeWallId?: Id): Wall | null {
+  if (!nodeId || thickness <= 0 || dist(from, to) < 1) return null;
+  const at = Object.values(floor.walls).filter(w => w.id !== excludeWallId && (w.a === nodeId || w.b === nodeId));
+  if (at.length !== 1) return null;
+  const o = at[0]!;
+  if (!hasBody(o) || o.thickness !== thickness) return null;
+  const far = floor.nodes[o.a === nodeId ? o.b : o.a];
+  if (!far) return null;
+  const d1 = unit(from, to);
+  const d2 = unit(from, far);
+  // opačné směry od rohu = rovné pokračování
+  return d1.x * d2.y - d1.y * d2.x < 0.002 && d1.x * d2.y - d1.y * d2.x > -0.002 && dot(d1, d2) < -0.999 ? o : null;
+}

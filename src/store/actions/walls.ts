@@ -6,7 +6,7 @@ import type { Floor, Id, LineStyle, Pt, Wall, WallLabel } from '../../model/type
 import { setChainSagitta } from '../../core/arcChain';
 import { dist } from '../../core/geometry';
 import { setWallLength, type MoveTarget } from '../../core/solver';
-import { splitWallsAtNode } from '../../core/topology';
+import { mergeStraightAt, splitWallsAtNode } from '../../core/topology';
 import { hasBody, initialSide, orientLoopOutward } from '../../core/wallBody';
 import { store } from '../store';
 import { cleanup, getOrCreateNode, MERGE_TOL } from './shared';
@@ -55,7 +55,14 @@ export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: I
     // Konec na jiné stěně → rozdělit ji v místě napojení
     splitWallsAtNode(floor, a);
     splitWallsAtNode(floor, b);
-    if (isNew && hasBody(wall)) orientLoopOutward(floor, wall.id);
+    if (isNew && hasBody(wall)) {
+      // rovné pokračování stěny se stejnou tloušťkou = jedna stěna (nelze pak překlopit každou část zvlášť)
+      let id = mergeStraightAt(floor, wall.id, a);
+      id = mergeStraightAt(floor, id, b);
+      createdId = id;
+      cleanup(floor);
+      orientLoopOutward(floor, id);
+    }
   });
   if (createdId && select) store.set({ selection: { kind: 'wall', id: createdId } });
   return createdId;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { doorLayout, openingThickness } from '../core/doorLayout';
+import { openingStartFromA } from '../core/floorQueries';
 import { createProject } from '../model/factory';
 import { addOpening, addWall, applyNumpadValue, setRevealEnabled } from './actions';
 import { store } from './store';
@@ -63,5 +64,45 @@ describe('strana zvolená při kreslení', () => {
     const top = Object.values(store.floor()!.walls).find(w => store.floor()!.nodes[w.a]!.y === 0 && store.floor()!.nodes[w.b]!.y === 0)!;
     expect(top.side).toBe(1);
     expect(top.sideLocked).toBe(true);
+  });
+});
+
+describe('rovné pokračování stěny', () => {
+  const nodeAt = (x: number, y: number) => Object.values(store.floor()!.nodes).find(n => n.x === x && n.y === y)?.id ?? null;
+
+  it('navázání na volný konec stejnou tloušťkou a stejným směrem = jedna stěna, otvor zůstane na místě', () => {
+    store.openProject(createProject({ name: 't' }));
+    const w1 = addWall({ x: 0, y: 0 }, null, { x: 2000, y: 0 }, null, false, { thickness: 300, side: -1 })!;
+    const door = addOpening(w1, 'door', 0.5)!;
+    const before = store.floor()!.openings[door]!;
+    const startBefore = openingStartFromA(before, 2000);
+    addWall({ x: 2000, y: 0 }, nodeAt(2000, 0), { x: 3500, y: 0 }, null, false, { thickness: 300 });
+    const f = store.floor()!;
+    const walls = Object.values(f.walls);
+    expect(walls).toHaveLength(1);
+    const w = walls[0]!;
+    expect(Math.abs(f.nodes[w.b]!.x - f.nodes[w.a]!.x)).toBe(3500);
+    expect(w.side).toBe(-1);
+    expect(f.nodes[nodeAt(2000, 0) ?? ''] ).toBeUndefined();
+    const op = f.openings[door]!;
+    expect(op.wallId).toBe(w.id);
+    expect(openingStartFromA(op, 3500)).toBe(startBefore);
+  });
+
+  it('zalomení nebo jiná tloušťka se neslučuje', () => {
+    store.openProject(createProject({ name: 't' }));
+    addWall({ x: 0, y: 0 }, null, { x: 2000, y: 0 }, null, false, { thickness: 300 });
+    addWall({ x: 2000, y: 0 }, nodeAt(2000, 0), { x: 2000, y: 1500 }, null, false, { thickness: 300 });
+    expect(Object.keys(store.floor()!.walls)).toHaveLength(2);
+    addWall({ x: 0, y: 0 }, nodeAt(0, 0), { x: -1000, y: 0 }, null, false, { thickness: 150 });
+    expect(Object.keys(store.floor()!.walls)).toHaveLength(3);
+  });
+
+  it('kreslení proti směru ke konci stěny se také sloučí', () => {
+    store.openProject(createProject({ name: 't' }));
+    addWall({ x: 0, y: 0 }, null, { x: 2000, y: 0 }, null, false, { thickness: 200 });
+    addWall({ x: -1500, y: 0 }, null, { x: 0, y: 0 }, nodeAt(0, 0), false, { thickness: 200 });
+    const walls = Object.values(store.floor()!.walls);
+    expect(walls).toHaveLength(1);
   });
 });

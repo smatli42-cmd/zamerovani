@@ -4,7 +4,13 @@ Projekt je na OneDrive a uživatel střídá dva počítače (nikdy ne současn�
 **Na začátku sezení tento soubor přečti. Na konci práce (nebo po větším kroku) ho aktualizuj.**
 Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do „Historie“.
 
-## Poslední stav (2026-11-10, noc – kreslení stěny rovnou s tloušťkou, překlápění perem)
+## Poslední stav (2026-11-10, noc – sloučení rovného pokračování stěny)
+
+**Připomínka uživatele:** když se kreslení stěny přeruší a naváže se na její koncový bod se stejnou tloušťkou, mají se stěny sloučit do jedné (jinak by šlo každou část překlopit zvlášť).
+
+**Hotovo:** rovné pokračování (stejný směr, stejná tloušťka, volný konec stěny – v rohu není jiná stěna) se při dokončení **sloučí do jedné stěny** (`mergeStraightAt` v `core/topology.ts`, `straightContinuation` v `core/wallBody.ts`); platí i pro kreslení proti směru ke konci jiné stěny a na obou koncích najednou. Zůstane původní stěna (strana těla, zámek strany, popisek), otvory zůstanou na svém místě, změřená délka se zruší (náčrt), mezilehlý roh zmizí. Během takového pokračování se tělo perem nepřeklápí (náhled ukazuje stranu navazující stěny). Zalomení nebo jiná tloušťka = dvě stěny spojené rohem jako dřív. +3 testy (61). Ověřeno v prohlížeči. **Na tabletu neověřeno.**
+
+## Předchozí stav (2026-11-10, noc – kreslení stěny rovnou s tloušťkou, překlápění perem)
 
 **Připomínka uživatele:** stěna se kreslila jako čára a tloušťka se přidala až po dokončení; chce rovnou kreslit tloušťku a překlápět ji perem na jednu či druhou stranu (osa = čára líce modře, zbytek šedě).
 

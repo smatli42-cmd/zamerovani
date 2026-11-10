@@ -7,7 +7,7 @@ import { requestRender } from '../canvas/invalidate';
 import { toScreen } from '../canvas/view';
 import { add, dist, normal, scale, unit } from '../core/geometry';
 import { snapEnd, snapPoint, type SnapResult } from '../core/snapping';
-import { initialSideAt, sideFromPen } from '../core/wallBody';
+import { initialSideAt, sideFromPen, straightContinuation } from '../core/wallBody';
 import type { Pt } from '../model/types';
 import { addWall } from '../store/actions';
 import { activeWallThickness } from '../model/factory';
@@ -65,7 +65,12 @@ export const wallTool: Tool = {
     const end = snapEnd(floor, drawing.start.pt, p.world, snapOptions(drawing.start.node?.id));
     drawing.end = end;
     // u přichycení na roh / stěnu se strana už nemění (aby se stěna na poslední chvíli nepřeklopila)
-    if (!end.node && !end.wallHit && !end.special) {
+    const T = activeWallThickness(store.get().project);
+    const continues =
+      straightContinuation(floor, drawing.start.node?.id ?? null, drawing.start.pt, end.pt, T) ||
+      straightContinuation(floor, end.node?.id ?? null, end.pt, drawing.start.pt, T);
+    if (continues) drawing.side = null; // sloučí se s navazující stěnou → její strana
+    else if (!end.node && !end.wallHit && !end.special) {
       drawing.side = sideFromPen(drawing.start.pt, end.pt, p.world, FLIP_PX / store.get().camera.zoom, drawing.side);
     }
     requestRender();
