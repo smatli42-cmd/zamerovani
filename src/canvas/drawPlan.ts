@@ -155,7 +155,7 @@ function drawOpeningSymbol(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Op
     p1 = add(add(s1, scale(u, rv.left * k)), d);
     p2 = add(sub(s2, scale(u, rv.right * k)), d);
     ctx.strokeStyle = color;
-    ctx.lineWidth = 1.6;
+    ctx.lineWidth = 3; // stejně silné jako stěna
     ctx.beginPath();
     ctx.moveTo(s1.x, s1.y);
     ctx.lineTo(s1.x + d.x, s1.y + d.y);
@@ -176,8 +176,8 @@ function drawOpeningSymbol(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Op
     ctx.lineWidth = 1.2;
     ctx.setLineDash([10, 3, 2, 3]);
     ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(p2.x, p2.y);
+    ctx.moveTo(s1.x, s1.y); // v rovině stěny přes celý otvor (i s ostěním)
+    ctx.lineTo(s2.x, s2.y);
     ctx.stroke();
     ctx.restore();
   };
@@ -188,6 +188,9 @@ function drawOpeningSymbol(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Op
     ctx.lineTo(p.x + t.x, p.y + t.y);
     ctx.stroke();
   };
+
+  // Ostění: čerchovaná čára v rovině stěny = konstrukce nad rovinou řezu (jako u niky)
+  if (rv && op.kind === 'window') lintel();
 
   switch (op.kind) {
     case 'window': {
