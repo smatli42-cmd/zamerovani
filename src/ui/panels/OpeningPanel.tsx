@@ -30,6 +30,8 @@ function RevealField({ op, part, label }: { op: Opening; part: RevealPart; label
 
 export function OpeningPanel({ op }: { op: Opening }) {
   const info = OPENING_DEFAULTS[op.kind];
+  // stěna s tloušťkou: otvor jde skrz celé tělo, ostění z obou líců
+  const T = openingThickness(store.floor()!, op);
   const set = (patch: Partial<Opening>) => updateOpening(op.id, patch);
   return (
     <Panel title={`${info.label} ${op.number}`} onClose={close}>
@@ -79,7 +81,7 @@ export function OpeningPanel({ op }: { op: Opening }) {
         {op.kind !== 'door' && <NumField label="Parapet" value={op.sill} onCommit={v => v !== null && set({ sill: v })} />}
         {op.kind === 'niche' && <NumField label="Hloubka niky" value={op.depth} min={10} onCommit={v => v !== null && set({ depth: v })} />}
       </div>
-      {(op.kind === 'door' || op.kind === 'niche' || (isWindowKind(op.kind) && op.frame)) && (
+      {(op.kind === 'door' || op.kind === 'niche' || (isWindowKind(op.kind) && op.frame && T === null)) && (
         <div class="btn-row">
           {op.kind === 'door' && (
             <button class="btn" onClick={() => set({ hinge: op.hinge === 'a' ? 'b' : 'a' })}>
@@ -87,7 +89,7 @@ export function OpeningPanel({ op }: { op: Opening }) {
             </button>
           )}
           <button class="btn" onClick={() => set({ swing: op.swing === 1 ? -1 : 1 })}>
-            🔄 {op.kind === 'door' ? 'Dovnitř/ven' : op.kind === 'niche' ? 'Strana' : 'Strana rámu'}
+            🔄 {op.kind === 'door' ? 'Dovnitř/ven' : op.kind === 'niche' ? (T !== null ? 'Líc niky' : 'Strana') : 'Strana rámu'}
           </button>
         </div>
       )}
@@ -114,13 +116,13 @@ export function OpeningPanel({ op }: { op: Opening }) {
           {op.reveal && (
             <>
               <div class="field-grid">
-                <RevealField op={op} part="depth" label={op.frame ? 'Hloubka (líc A)' : 'Hloubka'} />
-                {op.frame && openingThickness(store.floor()!, op) !== null && <RevealField op={op} part="depthBack" label="Hloubka (líc B)" />}
+                <RevealField op={op} part="depth" label={T !== null ? 'Hloubka zevnitř' : 'Hloubka'} />
+                {T !== null && <RevealField op={op} part="depthBack" label="Hloubka zvenku" />}
                 <RevealField op={op} part="top" label="Nahoře" />
                 <RevealField op={op} part="left" label="Vlevo" />
                 <RevealField op={op} part="right" label="Vpravo" />
               </div>
-              {op.kind !== 'door' && !op.frame && (
+              {op.kind !== 'door' && !op.frame && T === null && (
                 <button class="btn btn-sm" style="margin-bottom:6px" onClick={() => set({ swing: op.swing === 1 ? -1 : 1 })}>
                   🔄 Strana ostění
                 </button>

@@ -211,9 +211,17 @@ export function drawOpenings(ctx: CanvasRenderingContext2D, floor: Floor, cam: C
       const p1 = toScreen(lerp(n[0], n[1], po.start / len), cam);
       const p2 = toScreen(lerp(n[0], n[1], po.end / len), cam);
       const color = isSel(selection, 'opening', po.op.id) ? COLORS.selected : isSel(hover, 'opening', po.op.id) ? '#3b82f6' : COLORS.opening;
-      if ((po.op.kind === 'door' || isWindowKind(po.op.kind)) && po.op.frame) {
-        // dveře se zárubní / okno s rámem (tenké čáry); kreslení skrz tělo stěny přijde v kroku 1
-        drawFramed(ctx, p1, p2, po.op, cam, color, null, null);
+      // stěna s tloušťkou: otvor skrz celé tělo (od líce A = čáry stěny k líci B)
+      const bn = hasBody(wall) ? bodyNormal(floor, wall) : null;
+      const off = bn ? scale(bn, wall.thickness * cam.zoom) : null;
+      if (po.op.kind === 'niche') {
+        if (off && bn) drawNicheInBody(ctx, p1, p2, po.op, cam, color, off, bn);
+        else drawOpeningSymbol(ctx, p1, p2, po.op, cam, color);
+        continue;
+      }
+      if (off || ((po.op.kind === 'door' || isWindowKind(po.op.kind)) && po.op.frame)) {
+        // dveře se zárubní / okno s rámem / průchod (tenké čáry); ve stěně s tloušťkou přes celé tělo
+        drawFramed(ctx, p1, p2, po.op, cam, color, off, off ? wall.thickness : null);
         continue;
       }
       drawOpeningSymbol(ctx, p1, p2, po.op, cam, color);
@@ -238,8 +246,26 @@ function drawFramed(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, 
   const P = (x: number, y: number): Pt => add(add(s1, scale(u, x * k)), scale(dir, y * k));
   const thick = off && T ? T : null;
 
-  // přerušení líců
   ctx.save();
+  // stěna s tloušťkou: vyčistit tělo v otvoru, zuby ostění (zdivo, o které se opírá zárubeň/rám) zůstanou šedé
+  if (thick) {
+    const quad = (x0: number, y0: number, x1: number, y1: number) => {
+      const q = [P(x0, y0), P(x1, y0), P(x1, y1), P(x0, y1)];
+      ctx.beginPath();
+      q.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+      ctx.closePath();
+      ctx.fill();
+    };
+    ctx.fillStyle = '#f8fafc';
+    quad(0, -2 / k, span, thick + 2 / k);
+    if (lay.reveal) {
+      ctx.fillStyle = COLORS.body;
+      quad(0, dA, L, dA + F);
+      quad(span - R, dA, span, dA + F);
+    }
+  }
+
+  // přerušení líců
   ctx.strokeStyle = '#f8fafc';
   ctx.lineWidth = 7;
   ctx.lineCap = 'butt';
@@ -254,9 +280,9 @@ function drawFramed(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, 
   }
   ctx.stroke();
 
-  // okraj stěny po stranách otvoru (stejně silný jako stěna)
+  // okraj stěny po stranách otvoru (stejně silný jako líc stěny)
   ctx.strokeStyle = color;
-  ctx.lineWidth = 3;
+  ctx.lineWidth = thick ? 2 : 3;
   ctx.lineJoin = 'miter';
   const side = (mirror: boolean) => {
     const X = (x: number) => (mirror ? span - x : x);
@@ -293,9 +319,15 @@ function drawFramed(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, 
   faceLine(0, true);
   if (thick) faceLine(thick, true);
 
+  // průchod bez dveří: jen okraje stěny a čerchované čáry líců
+  if (op.kind === 'opening') {
+    ctx.restore();
+    return;
+  }
+
   // zárubně + tenké plné čáry mezi nimi (práh)
   ctx.lineWidth = 1.2;
-  for (const y of [fo, fo + F]) {
+  for (const y of F > 0 ? [fo, fo + F] : []) {
     const a = P(L + fw, y);
     const b = P(span - R - fw, y);
     ctx.beginPath();
@@ -303,7 +335,7 @@ function drawFramed(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, 
     ctx.lineTo(b.x, b.y);
     ctx.stroke();
   }
-  for (const x0 of [L, span - R - fw]) {
+  for (const x0 of fw > 0 && F > 0 ? [L, span - R - fw] : []) {
     const q = [P(x0, fo), P(x0 + fw, fo), P(x0 + fw, fo + F), P(x0, fo + F)];
     ctx.beginPath();
     q.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
@@ -344,6 +376,53 @@ function drawFramed(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, 
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.arc(hingePt.x, hingePt.y, op.width * k, a0, a1, diff < 0);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/**
+ * Nika ve stěně s tloušťkou: patří k líci, ze kterého je přístupná, a zahlubuje se do těla.
+ * `swing` ve směru těla = nika na líci A (čára stěny, vnitřní líc), proti směru = na líci B (vnější).
+ */
+function drawNicheInBody(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, cam: Camera, color: string, off: Pt, bn: Pt): void {
+  const u = unit(s1, s2);
+  const into = scale(normal(u), op.swing);
+  const onA = dot(into, bn) > 0;
+  const a = onA ? s1 : add(s1, off);
+  const b = onA ? s2 : add(s2, off);
+  const thickPx = Math.hypot(off.x, off.y);
+  const d = scale(into, Math.min(thickPx, Math.max(6, op.depth * cam.zoom)));
+  ctx.save();
+  // vyčistit tělo v nice
+  ctx.fillStyle = '#f8fafc';
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.lineTo(b.x + d.x, b.y + d.y);
+  ctx.lineTo(a.x + d.x, a.y + d.y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#f8fafc';
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'butt';
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
+  // obrys niky a čerchovaná čára v líci (konstrukce nad řezem)
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(a.x + d.x, a.y + d.y);
+  ctx.lineTo(b.x + d.x, b.y + d.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
+  ctx.lineWidth = 1.2;
+  ctx.setLineDash([10, 3, 2, 3]);
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
   ctx.stroke();
   ctx.restore();
 }

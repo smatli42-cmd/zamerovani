@@ -3,7 +3,7 @@
  */
 import { store } from '../store/store';
 import { tools } from '../tools/registry';
-import { drawDims } from './drawDims';
+import { drawBodyDims, drawDims } from './drawDims';
 import { drawGrid, drawScaleBar } from './drawGrid';
 import { drawArcHandle, drawFlipArrow, drawNodes, drawOpenings, drawWalls } from './drawPlan';
 import { drawRooms } from './drawRooms';
@@ -83,6 +83,7 @@ function render(): void {
     drawTexts(ctx, floor, cam, state.selection);
     if (state.settings.showDims) drawDims(ctx, floor, cam, state.settings.dimScale, state.selection);
     if (state.settings.showDims) drawComponentDims(ctx, floor, cam, state.settings.dimScale, state.selection);
+    if (state.settings.showDims) drawBodyDims(ctx, floor, cam, state.settings.dimScale, state.selection);
     drawArcHandle(ctx, floor, cam, state.selection);
     drawFlipArrow(ctx, floor, cam, state.selection);
     drawMoveMarker(ctx);

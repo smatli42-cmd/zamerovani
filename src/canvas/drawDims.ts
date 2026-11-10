@@ -13,6 +13,8 @@ import type { Camera, NumPadTarget, Selection } from '../store/store';
 import { addHitBox, type HitAction } from './hitTargets';
 import { toScreen } from './view';
 import { bodyNormal, hasBody } from '../core/wallBody';
+import { doorLayout } from '../core/doorLayout';
+import { openingStartFromA } from '../core/floorQueries';
 
 const WALL_TYPE_TEXT: Record<string, string> = {
   obvodova: 'obvodová',
@@ -308,4 +310,51 @@ export function drawDimLine(
   ctx.restore();
 
   if (action) addHitBox({ x: mid.x, y: mid.y, halfW: boxW / 2, halfH: boxH / 2, angle, action });
+}
+
+/**
+ * Kóty v tloušťce stěny (jen u vybraného prvku): tloušťka vybrané stěny a hloubky ostění vybraného otvoru
+ * (od vnitřního a od vnějšího líce). Obě jsou klikací (NumPad).
+ */
+export function drawBodyDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camera, dimScale: number, selection: Selection): void {
+  if (selection?.kind !== 'wall' && selection?.kind !== 'opening') return;
+  const style: DimStyle = { color: '#334155', bg: '#ffffff', bold: false };
+  const op = selection.kind === 'opening' ? floor.openings[selection.id] : null;
+  const wall = selection.kind === 'wall' ? floor.walls[selection.id] : op ? floor.walls[op.wallId] : null;
+  if (!wall || !hasBody(wall)) return;
+  const n = wallNodes(floor, wall);
+  const bn = bodyNormal(floor, wall);
+  if (!n || !bn) return;
+  const len = wallLength(floor, wall);
+  const u = unit(n[0], n[1]);
+  ctx.save();
+  if (!op) {
+    // tloušťka ve čtvrtině stěny (uprostřed je dvojitá šipka)
+    const m = lerp(n[0], n[1], 0.25);
+    const q = { x: m.x + bn.x * wall.thickness, y: m.y + bn.y * wall.thickness };
+    drawDimLine(ctx, toScreen(m, cam), toScreen(q, cam), u, 0, String(wall.thickness), 'tloušťka', style, dimScale, {
+      type: 'numpad',
+      target: { kind: 'wall-thickness', wallId: wall.id },
+      wallId: wall.id
+    });
+  } else if (op.reveal && op.kind !== 'niche') {
+    const lay = doorLayout(op, wall.thickness);
+    const start = openingStartFromA(op, len);
+    const base = lerp(n[0], n[1], start / len);
+    const at = (y: number) => toScreen({ x: base.x + bn.x * y, y: base.y + bn.y * y }, cam);
+    const back = scale(u, -1);
+    if (lay.dA > 0)
+      drawDimLine(ctx, at(0), at(lay.dA), back, 16 * dimScale, String(Math.round(lay.dA)), undefined, style, dimScale, {
+        type: 'numpad',
+        target: { kind: 'opening-reveal', openingId: op.id, part: 'depth' },
+        wallId: wall.id
+      });
+    if (lay.dB > 0)
+      drawDimLine(ctx, at(lay.dA + lay.F), at(wall.thickness), back, 16 * dimScale, String(Math.round(lay.dB)), undefined, style, dimScale, {
+        type: 'numpad',
+        target: { kind: 'opening-reveal', openingId: op.id, part: 'depthBack' },
+        wallId: wall.id
+      });
+  }
+  ctx.restore();
 }

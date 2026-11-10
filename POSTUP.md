@@ -4,7 +4,21 @@ Projekt je na OneDrive a uživatel střídá dva počítače (nikdy ne současn�
 **Na začátku sezení tento soubor přečti. Na konci práce (nebo po větším kroku) ho aktualizuj.**
 Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do „Historie“.
 
-## Poslední stav (2026-11-10, noc – krok 0 hotový, část 0d: zrušení příček)
+## Poslední stav (2026-11-10, noc – krok 1: otvory skrz tělo stěny)
+
+**Rozhodnutí uživatele:** rám **okna bez ostění sedí u vnitřního líce** (dveře se zárubní dál uprostřed tloušťky); kóty tloušťky stěny a hloubky ostění **jen u vybraného prvku**.
+
+**Hotovo (krok 1):**
+- Otvor ve stěně s tloušťkou se kreslí **skrz celé tělo**: tělo se v otvoru vyčistí, oba líce se přeruší, okraje stěny po stranách (2 px), čerchované čáry v obou lících; dveře/okna se zárubní/rámem přes `drawFramed` s T = tloušťka stěny (ostění z obou líců, šedé „zuby“ zdiva u zárubně/rámu), **průchod** jen okraje a čerchované čáry, dveře/okna bez rámu (starší) také přes tělo. `openingThickness` = tloušťka stěny (u čar null → kreslení jako dřív).
+- **Nika** ve stěně s tloušťkou patří k líci: výchozí **vnitřní líc** (zahlubuje se do těla), tlačítko „Líc niky“ přepne na vnější líc (`drawNicheInBody`, `swing` ve směru těla = líc A).
+- Výchozí strany: dveře se otevírají do místnosti (od těla), nika na vnitřním líci; zapnutí ostění ve stěně s tloušťkou nechá zárubeň/rám na místě (hloubka zevnitř = jeho odsazení).
+- **Vkládání a výběr otvoru ťuknutím kamkoli do těla** (`wallForOpening`, `pickOpening` s pásem tloušťky) – nástroje Dveře/Okno/Otvor/Nika i Vložit.
+- Kóty (jen u vybraného, `drawBodyDims`): **tloušťka** vybrané stěny (klikací → NumPad cíl `wall-thickness`), **hloubky ostění** vybraného otvoru zevnitř/zvenku (klikací). Panel otvoru: „Hloubka zevnitř / zvenku“, NumPad popisky „od vnitřního / vnějšího líce“; tlačítka „Strana rámu / Strana ostění“ jen u stěn bez tloušťky.
+- Testy `store/openingsInBody.test.ts` (+4), upraven test výchozí polohy rámu okna. 56 testů, typecheck OK. Ověřeno v prohlížeči na PC (dveře do 150/200 stěny, okno do 300 stěny + ostění + kóta, nika, tloušťka přes kótu a panel, Zpět). **Na tabletu neověřeno.**
+
+**Známé / další:** dvojitá šipka u vybrané stěny může překrýt otvor uprostřed stěny; oblouky s tloušťkou zatím ne (dle rozhodnutí zařadit – zeptat se, zda teď); pak dle `ZADANI-OKNA-DVERE.md` úpravy modelu pro 3D, značky detailů, schodiště.
+
+## Předchozí stav (2026-11-10, noc – krok 0 hotový, část 0d: zrušení příček)
 
 **Hotovo (0d):** nástroje **Příčka** a **Dvojčára** jsou zrušené (příčka = stěna s malou tloušťkou z menu Stěny). Odstraněno: `core/pairing.ts`, `core/partition.ts`, `tools/partitionTool.ts`, `ui/panels/PartitionPanel.tsx` (+ jejich testy), `Wall.part`, akce `addPartition/applyPartition/setPartitionStyle`, nastavení `partThickness/partSide`, kreslení otvorů „na druhém líci“, kóta tloušťky příčky, vkládání přes druhou čáru (`toPrimary`). `SCHEMA_VERSION` = 7, migrace 6→7 odstraní `part` (staré čáry příček zůstanou čárami s tloušťkou 0 a otvory na své čáře – výkresy jsou jen zkušební; čáru jde vybrat a v panelu jí dát tloušťku). `openingThickness` zatím vrací null (otvor se kreslí jen na líci) – v kroku 1 bude tloušťka stěny. 52 testů, typecheck, build OK; v prohlížeči ověřeno (lišta bez Příčky/Dvojčáry, staré projekty se načtou, výběr staré čáry, kóty).
 

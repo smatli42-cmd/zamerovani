@@ -12,6 +12,7 @@ function title(floor: Floor | null, t: NumPadTarget): string {
   if (t.kind === 'wall-length') return 'Délka stěny';
   if (t.kind === 'wall-sagitta') return 'Vzepětí oblouku';
   if (t.kind === 'circle-diameter') return 'Průměr kruhu';
+  if (t.kind === 'wall-thickness') return 'Tloušťka stěny';
   if (t.kind === 'comp-gap') {
     const side = { left: 'vlevo', right: 'vpravo', top: 'nahoře', bottom: 'dole' }[t.side];
     return `Odstup od stěny ${side}`;
@@ -26,7 +27,7 @@ function title(floor: Floor | null, t: NumPadTarget): string {
     case 'opening-gap':
       return `${name} – meziostění`;
     case 'opening-reveal':
-      return `${name} – ${{ depth: 'ostění hloubka (líc A)', depthBack: 'ostění hloubka (líc B)', left: 'ostění vlevo', right: 'ostění vpravo', top: 'ostění nahoře', frameWidth: 'šířka zárubně', frameDepth: 'hloubka zárubně', frameOffset: 'odsazení zárubně od líce A' }[t.part]}`;
+      return `${name} – ${{ depth: 'hloubka ostění od vnitřního líce', depthBack: 'hloubka ostění od vnějšího líce', left: 'ostění vlevo', right: 'ostění vpravo', top: 'ostění nahoře', frameWidth: op?.kind === 'door' ? 'šířka zárubně' : 'šířka rámu', frameDepth: op?.kind === 'door' ? 'hloubka zárubně' : 'hloubka rámu', frameOffset: op?.kind === 'door' ? 'odsazení zárubně od vnitřního líce' : 'odsazení rámu od vnitřního líce' }[t.part]}`;
   }
 }
 

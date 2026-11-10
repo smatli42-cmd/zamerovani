@@ -45,6 +45,8 @@ export type NumPadTarget =
   | { kind: 'wall-sagitta'; wallId: Id }
   /** Průměr kruhové stěny. */
   | { kind: 'circle-diameter'; wallId: Id }
+  /** Tloušťka stěny (čára líce zůstane na místě). */
+  | { kind: 'wall-thickness'; wallId: Id }
   /** Odstup skupiny stěn (např. sloupu) od nejbližší stěny mimo skupinu; zadáním se skupina posune. */
   | { kind: 'comp-gap'; wallId: Id; side: Side };
 

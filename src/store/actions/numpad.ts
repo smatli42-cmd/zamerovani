@@ -36,6 +36,8 @@ export function numpadInitialValue(floor: Floor, t: NumPadTarget): number | null
       const w = floor.walls[t.wallId];
       return w ? Math.round(Math.abs(arcChain(floor, w.id)?.sagitta ?? w.sagitta ?? 0)) : null;
     }
+    case 'wall-thickness':
+      return floor.walls[t.wallId]?.thickness ?? null;
     case 'circle-diameter': {
       const w = floor.walls[t.wallId];
       return w?.radius !== undefined ? w.radius * 2 : null;
@@ -87,6 +89,11 @@ export function applyNumpadValue(t: NumPadTarget, value: number): boolean {
       if (!w || value < 1) return;
       const sign = Math.sign(arcChain(floor, w.id)?.sagitta ?? w.sagitta ?? 0) || 1;
       if (!setChainSagitta(floor, w.id, sign * value)) w.sagitta = sign * value;
+      ok = true;
+    } else if (t.kind === 'wall-thickness') {
+      const w = floor.walls[t.wallId];
+      if (!w || value < 10) return;
+      w.thickness = Math.round(value);
       ok = true;
     } else if (t.kind === 'circle-diameter') {
       if (value < 10) return;

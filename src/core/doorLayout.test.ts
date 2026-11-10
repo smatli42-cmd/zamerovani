@@ -45,14 +45,16 @@ describe('okna s rámem', () => {
     expect(fr.sill).toBe(50);
   });
 
-  it('okno v příčce: tloušťka = ostění A + rám + ostění B', () => {
+  it('okno ve stěně s tloušťkou: tloušťka = ostění A + rám + ostění B', () => {
     const f = createFloor('t');
     const w = createWall('a', 'b');
     const win = createOpening(f, w.id, 'window', { reveal: { depth: 100, left: 0, right: 0, top: 0 } });
     expect(doorLayout(win, 300).dB).toBe(150);
-    // bez ostění je rám v příčce uprostřed
+    // bez ostění je rám okna u vnitřního líce (líc A), zárubeň dveří uprostřed tloušťky
     delete win.reveal;
-    expect(doorLayout(win, 300).fo).toBe(125);
+    expect(doorLayout(win, 300).fo).toBe(0);
+    const door = createOpening(f, w.id, 'door');
+    expect(doorLayout(door, 300).fo).toBe(100);
   });
 
   it('okno a francouzské okno sdílí číslování O1, O2…', () => {

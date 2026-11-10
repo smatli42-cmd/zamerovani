@@ -2,7 +2,7 @@
  * Akce: otvory (dveře, okna, průchody, niky), ostění a zárubně.
  */
 import { createOpening, isWindowKind } from '../../model/factory';
-import { applyRevealPart, openingThickness, outwardSwing, type RevealPart } from '../../core/doorLayout';
+import { applyRevealPart, doorLayout, openingThickness, outwardSwing, type RevealPart } from '../../core/doorLayout';
 import type { Floor, Id, Opening, OpeningKind } from '../../model/types';
 import { openingSpan, openingStartFromA, openingsOnWall, wallLength } from '../../core/floorQueries';
 import { store } from '../store';
@@ -21,8 +21,12 @@ export function addOpening(wallId: Id, kind: OpeningKind, t: number): Id | null 
     const spanW = openingSpan({ ...probe, width });
     const startFromA = Math.max(0, Math.min(len - spanW, Math.round((center - spanW / 2) / 10) * 10));
     const op: Opening = { ...probe, width, ref, hinge: ref, offset: 0 };
+    const T = openingThickness(floor, op);
     // okno ve stěně kreslené jednou čarou: rám jde z líce ven (od středu výkresu)
-    if (isWindowKind(kind) && openingThickness(floor, op) === null) op.swing = outwardSwing(floor, wall);
+    if (isWindowKind(kind) && T === null) op.swing = outwardSwing(floor, wall);
+    // stěna s tloušťkou: nika na vnitřním líci (zahlubuje se do těla), dveře se otevírají do místnosti (od těla)
+    if (T !== null && kind === 'niche') op.swing = wall.side;
+    if (T !== null && kind === 'door') op.swing = wall.side === 1 ? -1 : 1;
     setStartFromA(op, startFromA, len);
     floor.openings[op.id] = op;
     createdId = op.id;
@@ -102,8 +106,8 @@ export function setRevealEnabled(id: Id, on: boolean): void {
     const oldLeft = op.reveal?.left ?? 0;
     if (on) {
       const T = openingThickness(floor, op);
-      // dveře v příčce: ostění na obou lících stejně hluboké; jinak 150 mm
-      const depth = op.frame && T !== null ? Math.round(Math.max(0, T - op.frame.depth) / 2) : 150;
+      // stěna s tloušťkou: zárubeň / rám zůstane, kde je (hloubka ostění = jeho odsazení od líce A); jinak 150 mm
+      const depth = T !== null ? Math.round(doorLayout(op, T).fo) : 150;
       op.reveal = op.reveal ?? { depth, left: 100, right: 100, top: 0 };
     }
     else delete op.reveal;

@@ -1,10 +1,10 @@
 /**
  * Hledání prvku pod perem/prstem (společné pro více nástrojů).
  */
-import { findNodeNear, findWallNear, isCurved, openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
+import { findNodeNear, findWallNear, isCurved, openingsOnWall, wallLength, wallNodes, type WallHit } from '../core/floorQueries';
 import { textBoxPx } from '../canvas/textBox';
-import { projectToSegment } from '../core/geometry';
-import { findBodyAt } from '../core/wallBody';
+import { dot, projectToSegment, sub } from '../core/geometry';
+import { bodyNormal, findBodyAt, hasBody } from '../core/wallBody';
 import type { Floor, Pt } from '../model/types';
 import type { Camera, Selection } from '../store/store';
 import { HIT_PX } from './types';
@@ -18,13 +18,31 @@ export function pickOpening(floor: Floor, p: Pt, cam: Camera): string | null {
     const n = wallNodes(floor, wall);
     if (!n || isCurved(wall)) continue;
     const pr = projectToSegment(p, n[0], n[1]);
-    if (pr.distance > tol * 1.5) continue;
+    // stěna s tloušťkou: otvor jde chytit kdekoli v tloušťce těla
+    const bn = hasBody(wall) ? bodyNormal(floor, wall) : null;
+    const across = bn ? dot(sub(p, n[0]), bn) : 0;
+    const inBody = !!bn && pr.t > 0 && pr.t < 1 && across >= -tol && across <= wall.thickness + tol;
+    if (pr.distance > tol * 1.5 && !inBody) continue;
     const along = pr.t * wallLength(floor, wall);
     for (const po of openingsOnWall(floor, wall)) {
       if (along >= po.start - tol * 0.3 && along <= po.end + tol * 0.3) return po.op.id;
     }
   }
   return null;
+}
+
+/**
+ * Stěna pro vložení otvoru: ťuknutí na čáru stěny nebo kamkoli do těla stěny s tloušťkou.
+ * Poloha podél stěny (`t`) se bere z kolmého průmětu na čáru líce.
+ */
+export function wallForOpening(floor: Floor, p: Pt, cam: Camera): WallHit | null {
+  const hit = findWallNear(floor, p, (HIT_PX.wall * 1.5) / cam.zoom);
+  if (hit) return hit;
+  const wall = findBodyAt(floor, p);
+  const n = wall && wallNodes(floor, wall);
+  if (!wall || !n) return null;
+  const pr = projectToSegment(p, n[0], n[1]);
+  return { wall, t: pr.t, point: pr.point, distance: pr.distance };
 }
 
 export function pickRoom(floor: Floor, p: Pt, cam: Camera): string | null {

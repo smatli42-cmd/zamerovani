@@ -6,6 +6,7 @@
  * (hloubka z líce B se dopočítává, ukládá se jen hloubka z líce A).
  */
 import type { Floor, Opening, Wall } from '../model/types';
+import { hasBody } from './wallBody';
 import { wallNodes } from './floorQueries';
 import { normal, unit } from './geometry';
 
@@ -41,20 +42,20 @@ export function doorLayout(op: Opening, T: number | null): DoorLayout {
     F,
     dA,
     dB,
-    fo: rv ? dA : (op.frame?.offset ?? (T !== null ? Math.max(0, (T - F) / 2) : 0)),
+    // bez ostění: zárubeň dveří uprostřed tloušťky, rám okna u vnitřního líce (líc A)
+    fo: rv ? dA : (op.frame?.offset ?? (T !== null && op.kind !== 'window' && op.kind !== 'french' ? Math.max(0, (T - F) / 2) : 0)),
     T,
     reveal: !!rv
   };
 }
 
 /**
- * Tloušťka stěny pro uspořádání otvoru (ostění z obou líců). Zatím null – otvor se kreslí jen na čáře líce;
- * v kroku 1 (otvory skrz tělo stěny) to bude tloušťka stěny.
+ * Tloušťka stěny, ve které leží otvor (otvor se kreslí skrz celé tělo, ostění z obou líců).
+ * null = stěna bez tloušťky (čára) – otvor se kreslí jen na čáře.
  */
 export function openingThickness(floor: Floor, op: Opening): number | null {
-  void floor;
-  void op;
-  return null;
+  const wall = floor.walls[op.wallId];
+  return wall && hasBody(wall) ? wall.thickness : null;
 }
 
 /** Hodnota dílu ostění / zárubně pro zobrazení a NumPad. */
