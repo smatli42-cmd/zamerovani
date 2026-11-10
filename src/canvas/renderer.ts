@@ -5,7 +5,7 @@ import { store } from '../store/store';
 import { tools } from '../tools/registry';
 import { drawDims } from './drawDims';
 import { drawGrid, drawScaleBar } from './drawGrid';
-import { drawArcHandle, drawNodes, drawOpenings, drawWalls } from './drawPlan';
+import { drawArcHandle, drawFlipArrow, drawNodes, drawOpenings, drawWalls } from './drawPlan';
 import { drawRooms } from './drawRooms';
 import { drawTexts } from './drawTexts';
 import { drawComponentDims } from './drawComponentDims';
@@ -84,6 +84,7 @@ function render(): void {
     if (state.settings.showDims) drawDims(ctx, floor, cam, state.settings.dimScale, state.selection);
     if (state.settings.showDims) drawComponentDims(ctx, floor, cam, state.settings.dimScale, state.selection);
     drawArcHandle(ctx, floor, cam, state.selection);
+    drawFlipArrow(ctx, floor, cam, state.selection);
     drawMoveMarker(ctx);
   }
   tools[state.tool].drawOverlay?.(ctx, cam);

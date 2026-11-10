@@ -12,6 +12,7 @@ import { toWorld, zoomAt } from '../canvas/view';
 import { findNodeNear } from '../core/floorQueries';
 import type { Pt } from '../model/types';
 import { openTarget, setMoveTarget } from '../store/numpadController';
+import { flipWallSide } from '../store/actions';
 import { store } from '../store/store';
 import { tools } from '../tools/registry';
 import { arcUnderPen } from '../tools/selectTool';
@@ -81,6 +82,11 @@ function handleOverlayTap(p: PointerInput): boolean {
   if (box?.action.type === 'numpad') {
     cancelTool();
     openTarget(box.action.target);
+    return true;
+  }
+  if (box?.action.type === 'flipWall') {
+    cancelTool();
+    flipWallSide(box.action.wallId);
     return true;
   }
   return false;

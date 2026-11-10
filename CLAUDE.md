@@ -24,4 +24,4 @@ Uživatel střídá dva počítače (projekt je na OneDrive). **Na začátku sez
 - Data projektu měnit jen přes `store.edit()` / `store/actions/`, nikdy přímo.
 - Při změně struktury dat zvýšit `SCHEMA_VERSION` a doplnit migraci v `persistence/migrate.ts`.
 - Všechny tvary (obdélník, kruh, oblouk, dvojčára/příčka) jsou běžné stěny (kruh = jedna stěna `Wall.radius` s a === b = střed) (`Wall`); oblouk = `Wall.sagitta` (vzepětí se znaménkem), styl čáry = `Wall.style`. Žádné samostatné „tvary“ v modelu nejsou. Otvory (dveře, okna) jdou zatím jen na rovné stěny.
-- Texty v aplikaci česky. Tloušťka stěn se graficky nekreslí (jen popisek stěny).
+- Texty v aplikaci česky. **Tloušťka stěn se kreslí vždy**: stěna = čára líce (`Wall.a/b`) + tělo `Wall.thickness` na straně `Wall.side` (geometrie těla a napojení v `core/wallBody.ts`). `thickness = 0` = čára bez tloušťky (tvary: obdélník, kruh, oblouk).

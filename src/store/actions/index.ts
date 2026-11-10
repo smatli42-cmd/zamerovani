@@ -3,7 +3,7 @@
  * nikdy nemění data přímo. Vlastní kód je rozdělený podle oblastí do souborů v této složce;
  * tady se znovu exportuje jen veřejné rozhraní (pomocné funkce mezi soubory ven nejdou).
  */
-export { addWall, addPartition, applyPartition, addRectWalls, addCircleWalls, setCircleRadius, setWallSagitta, setPartitionStyle, updateWall, applyWallLength, unlockWall, updateWallLabel, type GroupOrigin, groupOrigin, moveGroup, moveNode, mergeNodeIfCoincident } from './walls';
+export { addWall, addPartition, applyPartition, addRectWalls, addCircleWalls, setCircleRadius, setWallSagitta, setPartitionStyle, updateWall, applyWallLength, unlockWall, updateWallLabel, setWallThickness, flipWallSide, type GroupOrigin, groupOrigin, moveGroup, moveNode, mergeNodeIfCoincident } from './walls';
 export { rotateSelection, duplicateSelection, pasteOpenings, endPaste } from './copy';
 export { deleteSelection } from './delete';
 export { addOpening, updateOpening, moveOpeningTo, setOpeningRef, setRevealEnabled } from './openings';

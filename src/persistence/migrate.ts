@@ -2,7 +2,8 @@
  * Převod starších uložených projektů na aktuální strukturu dat.
  * Při každé změně SCHEMA_VERSION sem přidat krok „z verze N na N+1“.
  */
-import { createCircleWall, createWall, newId } from '../model/factory';
+import { createCircleWall, createWall, DEFAULT_WALL_THICKNESS, newId } from '../model/factory';
+import { hasBody, orientLoopOutward } from '../core/wallBody';
 import { SCHEMA_VERSION, type Floor, type LineStyle, type Project, type Pt } from '../model/types';
 
 export function migrateProject(raw: unknown): Project {
@@ -15,9 +16,10 @@ export function migrateProject(raw: unknown): Project {
   }
   // 2 → 3: tvary (obdélník, kruh, oblouk) se staly běžnými stěnami; 3 → 4: kruh je jedna stěna
   // 4 → 5: přibyly samostatné texty (floor.texts)
+  // 5 → 6: stěny mají tloušťku a stranu těla (Wall.thickness, Wall.side), tloušťka zmizela z popisku
   const floors = p.floors.map(f => {
     const j = joinSemicircles(convertShapesToWalls(f));
-    return { ...j, texts: j.texts ?? {} };
+    return addWallThickness({ ...j, texts: j.texts ?? {} });
   });
   return { ...p, floors, schema: SCHEMA_VERSION };
 }
@@ -106,4 +108,25 @@ function joinSemicircles(floor: Floor): Floor {
     walls[circle.id] = circle;
   }
   return { ...floor, walls, nodes };
+}
+
+/**
+ * Verze 6: tloušťka přešla z popisku stěny na stěnu. Tvary (kruhy, oblouky, čárkované/čerchované čáry)
+ * a čáry příček zůstanou čárami (0), ostatní stěny dostanou tloušťku z popisku nebo 300 mm.
+ * Strana těla: ven z uzavřených místností, jinak výchozí (stávající výkresy jsou jen zkušební).
+ */
+function addWallThickness(floor: Floor): Floor {
+  const walls: Floor['walls'] = {};
+  for (const w of Object.values(floor.walls)) {
+    if (typeof (w as { thickness?: unknown }).thickness === 'number') {
+      walls[w.id] = w;
+      continue;
+    }
+    const { thickness: labelThickness, ...label } = w.label as typeof w.label & { thickness?: number | null };
+    const line = w.radius !== undefined || !!w.sagitta || (w.style && w.style !== 'solid') || !!w.part;
+    walls[w.id] = { ...w, label, thickness: line ? 0 : (labelThickness ?? DEFAULT_WALL_THICKNESS), side: 1 };
+  }
+  const out = { ...floor, walls };
+  for (const w of Object.values(walls)) if (hasBody(w)) orientLoopOutward(out, w.id);
+  return out;
 }

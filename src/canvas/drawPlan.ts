@@ -11,9 +11,13 @@ import { isWindowKind } from '../model/factory';
 import type { Floor, LineStyle, Opening, Pt, Wall } from '../model/types';
 import { isSelected, type Camera, type Selection, type SingleSelection } from '../store/store';
 import { toScreen } from './view';
+import { bodyNormal, hasBody, wallBodies } from '../core/wallBody';
+import { addHitBox } from './hitTargets';
 
 export const COLORS = {
   wall: '#0f172a',
+  /** Výplň těla stěny. */
+  body: '#d4d4d8',
   selected: '#2563eb',
   hover: '#93c5fd',
   opening: '#0f172a',
@@ -54,7 +58,51 @@ export function drawWalls(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
   const partOf = (s: Selection): string | undefined => (s?.kind === 'wall' ? floor.walls[s.id]?.part?.id : undefined);
   const selPart = partOf(selection);
   const hoverPart = partOf(hover);
+
+  // Stěny s tloušťkou: nejdřív výplně všech těl (světle šedé), pak líce a čela volných konců – spoje bez čar
+  const bodies = wallBodies(floor);
+  const path = (pts: Pt[]) => {
+    ctx.beginPath();
+    pts.forEach((p, i) => {
+      const s = toScreen(p, cam);
+      if (i === 0) ctx.moveTo(s.x, s.y);
+      else ctx.lineTo(s.x, s.y);
+    });
+    ctx.closePath();
+  };
+  for (const body of bodies.values()) {
+    const sel = isSel(selection, 'wall', body.wallId);
+    const hov = isSel(hover, 'wall', body.wallId);
+    ctx.fillStyle = sel ? '#bfdbfe' : hov ? '#dbeafe' : COLORS.body;
+    path(body.poly);
+    ctx.fill();
+    // přesah výplně přes spoje (bez švů mezi sousedními těly)
+    ctx.strokeStyle = ctx.fillStyle;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+  for (const body of bodies.values()) {
+    const wall = floor.walls[body.wallId]!;
+    const sel = isSel(selection, 'wall', body.wallId);
+    ctx.strokeStyle = sel ? COLORS.selected : COLORS.wall;
+    ctx.lineWidth = 2;
+    const dash = LINE_DASH[wall.style ?? 'solid'];
+    ctx.setLineDash(dash);
+    ctx.lineCap = dash.length ? 'butt' : 'round';
+    ctx.beginPath();
+    for (const [p, q] of body.edges) {
+      const a = toScreen(p, cam);
+      const b = toScreen(q, cam);
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  ctx.lineCap = 'round';
+
   for (const wall of Object.values(floor.walls)) {
+    if (bodies.has(wall.id)) continue;
     const n = wallNodes(floor, wall);
     if (!n) continue;
     const a = toScreen(n[0], cam);
@@ -81,6 +129,41 @@ export function drawWalls(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
     ctx.lineCap = 'round';
   }
   ctx.restore();
+}
+
+/** Dvojitá šipka přes tělo vybrané stěny – ťuknutím se přehodí strana, na kterou roste tělo. */
+export function drawFlipArrow(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camera, selection: Selection): void {
+  if (selection?.kind !== 'wall') return;
+  const wall = floor.walls[selection.id];
+  const n = wall && hasBody(wall) ? wallNodes(floor, wall) : null;
+  const bn = wall && n ? bodyNormal(floor, wall) : null;
+  if (!wall || !n || !bn) return;
+  const mid = toScreen(add(lerp(n[0], n[1], 0.5), scale(bn, wall.thickness / 2)), cam);
+  const half = Math.max(18, (wall.thickness * cam.zoom) / 2 + 10);
+  const p1 = add(mid, scale(bn, half));
+  const p2 = add(mid, scale(bn, -half));
+  const head = (tip: Pt, dir: Pt) => {
+    const back = scale(dir, -9);
+    const side = scale(normal(dir), 6);
+    ctx.beginPath();
+    ctx.moveTo(tip.x, tip.y);
+    ctx.lineTo(tip.x + back.x + side.x, tip.y + back.y + side.y);
+    ctx.lineTo(tip.x + back.x - side.x, tip.y + back.y - side.y);
+    ctx.closePath();
+    ctx.fill();
+  };
+  ctx.save();
+  ctx.strokeStyle = COLORS.selected;
+  ctx.fillStyle = COLORS.selected;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(p1.x, p1.y);
+  ctx.lineTo(p2.x, p2.y);
+  ctx.stroke();
+  head(p1, bn);
+  head(p2, scale(bn, -1));
+  ctx.restore();
+  addHitBox({ x: mid.x, y: mid.y, halfW: 16, halfH: half, angle: Math.atan2(bn.y, bn.x) - Math.PI / 2, action: { type: 'flipWall', wallId: wall.id } });
 }
 
 /** Středový bod vybrané obloukové stěny – jeho tažením se mění vzepětí. */

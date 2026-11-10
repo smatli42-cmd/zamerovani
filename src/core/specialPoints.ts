@@ -5,6 +5,7 @@
 import type { Floor, Pt } from '../model/types';
 import { arcGeometry, nearestOnArc } from './arc';
 import { isCircle } from './floorQueries';
+import { bodySnapPoints } from './wallBody';
 
 export interface SpecialPoint extends Pt {
   /** Leží bod na stěně (lze ji v něm rozdělit)? Střed oblouku na stěně neleží. */
@@ -33,6 +34,8 @@ export function specialPoints(floor: Floor): SpecialPoint[] {
       if (nearestOnArc(q, a, b, w.sagitta ?? 0).distance < 1) out.push({ ...q, onWall: true });
     }
   }
+  // tělo stěn s tloušťkou: vnější rohy a středy čel volných konců (stěnu nedělí)
+  for (const p of bodySnapPoints(floor)) out.push({ ...p, onWall: false });
   return out;
 }
 

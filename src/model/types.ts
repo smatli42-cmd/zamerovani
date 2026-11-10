@@ -8,7 +8,7 @@
  * - Při změně struktury zvýšit SCHEMA_VERSION a doplnit migraci v persistence/migrate.ts.
  */
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 export type Id = string;
 
@@ -24,19 +24,24 @@ export interface Node extends Pt {
 
 export type WallType = 'obvodova' | 'nosna' | 'pricka' | 'sdk' | 'neovereno';
 
-/** Textový popisek stěny – tloušťka se graficky nekreslí, jen se uvádí. */
+/** Textový popisek stěny (typ, materiál, poznámka). Tloušťka je přímo u stěny (`Wall.thickness`). */
 export interface WallLabel {
-  thickness: number | null;
   type: WallType | null;
   material: string;
   note: string;
 }
 
-/** Stěna = čára vnitřního líce mezi dvěma rohy. */
+/** Stěna = čára vnitřního líce mezi dvěma rohy; tělo stěny tloušťky `thickness` leží na straně `side`. */
 export interface Wall {
   id: Id;
   a: Id;
   b: Id;
+  /** Tloušťka těla stěny v mm; 0 = čára bez tloušťky (tvary: obdélník, kruh, oblouk). */
+  thickness: number;
+  /** Na kterou stranu od čáry líce roste tělo: 1 = ve směru normal(a→b), -1 = opačně. */
+  side: 1 | -1;
+  /** Strana byla přehozena ručně – automatické natočení „ven od místnosti“ ji už nemění. */
+  sideLocked?: true;
   /** Změřená délka v mm, null = jen načrtnuto. */
   measured: number | null;
   label: WallLabel;

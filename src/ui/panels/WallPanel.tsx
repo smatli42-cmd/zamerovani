@@ -4,7 +4,7 @@
 import { arcChain } from '../../core/arcChain';
 import { wallLength } from '../../core/floorQueries';
 import type { Floor, Wall, WallType } from '../../model/types';
-import { deleteSelection, duplicateSelection, updateWall, updateWallLabel } from '../../store/actions';
+import { deleteSelection, duplicateSelection, flipWallSide, setWallThickness, updateWall, updateWallLabel } from '../../store/actions';
 import { openTarget } from '../../store/numpadController';
 import { close, LINE_STYLES } from './common';
 import { NumField, Panel, Seg, TextField } from './fields';
@@ -60,13 +60,22 @@ export function WallPanel({ floor, wall }: { floor: Floor; wall: Wall }) {
           </button>
         </>
       ) : null}
+      {!circle && !wall.sagitta && (
+        <div class="field-grid">
+          <NumField label="Tloušťka" value={wall.thickness} onCommit={v => v !== null && setWallThickness(wall.id, v)} />
+          {wall.thickness > 0 && (
+            <button class="btn" onClick={() => flipWallSide(wall.id)} title="Přehodí, na kterou stranu od čáry líce roste tělo stěny">
+              ⇅ Strana těla
+            </button>
+          )}
+        </div>
+      )}
       <div class="field field-inline">
         <span>Styl čáry</span>
         <Seg options={LINE_STYLES} value={wall.style ?? 'solid'} onChange={v => updateWall(wall.id, { style: v })} />
       </div>
 
       <h4>Popisek stěny</h4>
-      <NumField label="Tloušťka" value={l.thickness} allowEmpty onCommit={v => updateWallLabel(wall.id, { thickness: v })} />
       <div class="field field-inline">
         <span>Typ</span>
         <Seg options={WALL_TYPES} value={l.type} onChange={v => updateWallLabel(wall.id, { type: l.type === v ? null : v })} />

@@ -66,3 +66,31 @@ describe('migrace', () => {
     expect(() => migrateProject({ schema: 99, id: 'p', floors: [] })).toThrow();
   });
 });
+
+describe('migrace 5 → 6 (tloušťka stěn)', () => {
+  it('tloušťka z popisku přejde na stěnu, bez údaje 300 mm, tvary zůstanou čárou', () => {
+    const lbl = (thickness: number | null) => ({ thickness, type: null, material: '', note: '' });
+    const p = migrateProject({
+      schema: 5,
+      id: 'p',
+      floors: [
+        {
+          ...floor(),
+          texts: {},
+          nodes: { a: { id: 'a', x: 0, y: 0 }, b: { id: 'b', x: 1000, y: 0 }, c: { id: 'c', x: 2000, y: 0 } },
+          walls: {
+            w1: { id: 'w1', a: 'a', b: 'b', measured: null, label: lbl(450) },
+            w2: { id: 'w2', a: 'b', b: 'c', measured: null, label: lbl(null) },
+            w3: { id: 'w3', a: 'a', b: 'c', measured: null, label: lbl(null), style: 'dashed' }
+          }
+        }
+      ]
+    });
+    const w = p.floors[0]!.walls;
+    expect(w.w1!.thickness).toBe(450);
+    expect(w.w2!.thickness).toBe(300);
+    expect(w.w3!.thickness).toBe(0);
+    expect('thickness' in w.w1!.label).toBe(false);
+    expect([1, -1]).toContain(w.w1!.side);
+  });
+});

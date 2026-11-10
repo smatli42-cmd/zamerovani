@@ -13,6 +13,7 @@ import type { Floor, Id, Pt, Wall } from '../model/types';
 import type { Camera, NumPadTarget, Selection } from '../store/store';
 import { addHitBox, type HitAction } from './hitTargets';
 import { toScreen } from './view';
+import { bodyNormal, hasBody } from '../core/wallBody';
 
 const WALL_TYPE_TEXT: Record<string, string> = {
   obvodova: 'obvodová',
@@ -25,7 +26,7 @@ const WALL_TYPE_TEXT: Record<string, string> = {
 export function wallLabelText(wall: Wall): string {
   const l = wall.label;
   const parts: string[] = [];
-  if (l.thickness) parts.push(`tl. ${l.thickness}`);
+  if (wall.thickness > 0) parts.push(`tl. ${wall.thickness}`);
   if (l.type) parts.push(WALL_TYPE_TEXT[l.type] ?? l.type);
   if (l.material) parts.push(l.material);
   if (l.note) parts.push(l.note);
@@ -108,6 +109,9 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
     const placed = openingsOnWall(floor, wall);
     const rowGap = 30 * s;
     let offset = 26 * s;
+    // tělo stěny na straně kót → kóty se vynesou až za vnější líc
+    const bn = hasBody(wall) ? bodyNormal(floor, wall) : null;
+    if (bn && dot(bn, out) > 0) offset += wall.thickness * cam.zoom;
     // Nika vystupuje do strany (swing); pokud míří ke kótám, kóty se posunou za ni
     const nicheSide = normal(u);
     // Oblouková stěna: kóta tětivy se odsune za vyklenutí, pokud míří ke kótám

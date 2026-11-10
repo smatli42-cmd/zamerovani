@@ -5,6 +5,7 @@ import { findNodeNear, findWallNear, isCurved, openingsOnWall, wallLength, wallN
 import { textBoxPx } from '../canvas/textBox';
 import { projectToSegment } from '../core/geometry';
 import { toPrimary } from '../core/pairing';
+import { findBodyAt } from '../core/wallBody';
 import type { Floor, Pt } from '../model/types';
 import type { Camera, Selection } from '../store/store';
 import { HIT_PX } from './types';
@@ -72,5 +73,8 @@ export function pickAny(floor: Floor, p: Pt, cam: Camera): Selection {
   if (room) return { kind: 'room', id: room };
   const wall = findWallNear(floor, p, HIT_PX.wall / cam.zoom);
   if (wall) return { kind: 'wall', id: wall.wall.id };
+  // ťuknutí do těla stěny s tloušťkou
+  const body = findBodyAt(floor, p);
+  if (body) return { kind: 'wall', id: body.id };
   return null;
 }

@@ -7,7 +7,9 @@ import type { NumPadTarget } from '../store/store';
 
 export type HitAction =
   | { type: 'numpad'; target: NumPadTarget; wallId?: Id }
-  | { type: 'room'; roomId: Id };
+  | { type: 'room'; roomId: Id }
+  /** Dvojitá šipka u vybrané stěny – přehodí stranu těla. */
+  | { type: 'flipWall'; wallId: Id };
 
 export interface HitBox {
   /** Střed na obrazovce (px). */

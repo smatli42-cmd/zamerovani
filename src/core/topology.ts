@@ -44,12 +44,15 @@ export function splitWallAt(floor: Floor, wallId: Id, nodeId: Id): [Id, Id] | nu
       id: newId('w'),
       a,
       b,
+      thickness: wall.thickness,
+      side: wall.side,
       // Změřená stěna → obě části jsou dané změřením (celek + poloha napojení)
       measured: wall.measured === null ? null : Math.round(partLen),
       label: { ...wall.label }
     };
     if (partSag) w.sagitta = partSag;
     if (wall.style) w.style = wall.style;
+    if (wall.sideLocked) w.sideLocked = true;
     if (wall.part) w.part = { ...wall.part };
     return w;
   };

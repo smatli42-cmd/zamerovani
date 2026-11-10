@@ -9,6 +9,7 @@ import { setWallLength, type MoveTarget } from '../../core/solver';
 import { partitionPoints } from '../../core/partition';
 import { partitionWalls } from '../../core/pairing';
 import { splitWallsAtNode } from '../../core/topology';
+import { hasBody, initialSide, orientLoopOutward } from '../../core/wallBody';
 import { store } from '../store';
 import { cleanup, getOrCreateNode, MERGE_TOL } from './shared';
 
@@ -22,29 +23,35 @@ function findSameWall(floor: Floor, a: Id, b: Id, sagitta: number): Wall | undef
 }
 
 /** Vloží stěnu mezi dva rohy (pokud tam taková ještě není) a vrátí ji. */
-function linkWall(floor: Floor, a: Id, b: Id, sagitta = 0, style?: LineStyle): Wall | null {
+function linkWall(floor: Floor, a: Id, b: Id, sagitta = 0, style?: LineStyle, thickness = 0): Wall | null {
   if (a === b) return null;
   const same = findSameWall(floor, a, b, sagitta);
   if (same) return same;
-  const wall = createWall(a, b, sagitta);
+  const wall = createWall(a, b, sagitta, thickness);
   if (style && style !== 'solid') wall.style = style;
   floor.walls[wall.id] = wall;
   return wall;
 }
 
-/** Nová stěna; `sagitta` ≠ 0 = oblouková stěna. Konce na jiných stěnách je rozdělí. */
-export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, select = true, opts: { sagitta?: number; style?: LineStyle } = {}): Id | null {
+/**
+ * Nová stěna; `sagitta` ≠ 0 = oblouková stěna. Konce na jiných stěnách je rozdělí.
+ * `thickness` > 0 = stěna s tělem (strana těla navazuje na tah, uzavřená místnost se natočí ven); 0 = čára (tvar).
+ */
+export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, select = true, opts: { sagitta?: number; style?: LineStyle; thickness?: number } = {}): Id | null {
   let createdId: Id | null = null;
   store.edit(floor => {
     const a = getOrCreateNode(floor, start, startNodeId);
     const b = getOrCreateNode(floor, end, endNodeId);
     if (a === b) return;
-    const wall = linkWall(floor, a, b, opts.sagitta ?? 0, opts.style);
+    const isNew = !findSameWall(floor, a, b, opts.sagitta ?? 0);
+    const wall = linkWall(floor, a, b, opts.sagitta ?? 0, opts.style, opts.thickness ?? 0);
     if (!wall) return;
     createdId = wall.id;
+    if (isNew && hasBody(wall)) wall.side = initialSide(floor, wall);
     // Konec na jiné stěně → rozdělit ji v místě napojení
     splitWallsAtNode(floor, a);
     splitWallsAtNode(floor, b);
+    if (isNew && hasBody(wall)) orientLoopOutward(floor, wall.id);
   });
   if (createdId && select) store.set({ selection: { kind: 'wall', id: createdId } });
   return createdId;
@@ -177,6 +184,24 @@ export function updateWall(wallId: Id, patch: { style?: LineStyle | undefined; s
       if (!patch.sagitta || Math.abs(patch.sagitta) < 0.5) delete w.sagitta;
       else if (!w.sagitta || !setChainSagitta(floor, wallId, patch.sagitta)) w.sagitta = Math.round(patch.sagitta);
     }
+  });
+}
+
+/** Tloušťka stěny; čára líce zůstává na místě, tělo se rozšíří / zúží. 0 = čára bez tloušťky. */
+export function setWallThickness(wallId: Id, thickness: number): void {
+  store.edit(floor => {
+    const w = floor.walls[wallId];
+    if (w) w.thickness = Math.max(0, Math.round(thickness));
+  });
+}
+
+/** Přehodí stranu těla stěny (dvojitá šipka); ručně přehozenou stranu už automatika nemění. */
+export function flipWallSide(wallId: Id): void {
+  store.edit(floor => {
+    const w = floor.walls[wallId];
+    if (!w) return;
+    w.side = w.side === 1 ? -1 : 1;
+    w.sideLocked = true;
   });
 }
 

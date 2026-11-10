@@ -4,7 +4,23 @@ Projekt je na OneDrive a uživatel střídá dva počítače (nikdy ne současn�
 **Na začátku sezení tento soubor přečti. Na konci práce (nebo po větším kroku) ho aktualizuj.**
 Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do „Historie“.
 
-## Poslední stav (2026-11-10, noc – krok −1: rozdělení souborů)
+## Poslední stav (2026-11-10, noc – krok 0, části 0a + 0b: stěny s tloušťkou)
+
+**Rozhodnutí uživatele (zapsaná v `KRESLENI-STEN-NAVRH.md`):** migrované stěny bez tloušťky 300 mm; příčky slučovat automaticky; nika výchozí na vnitřním líci; Obdélník/Kruh/Oblouk zatím čáry bez tloušťky; **stěny s tloušťkou budou potřebovat minimálně oblouk** (zařadit později); výplň těla světle šedá; dvojitá šipka jen u vybrané stěny; **stávající výkresy jsou jen zkušební** – migrace je nemusí věrně zachovat, stačí, že se načtou.
+
+**Hotovo (0a + 0b):**
+- Model (`SCHEMA_VERSION` = 6): `Wall.thickness` (mm, 0 = čára/tvar), `Wall.side` (1/−1 = strana těla vůči normal(a→b)), `Wall.sideLocked` (ručně přehozeno). `WallLabel.thickness` zrušeno. Migrace 5→6 v `persistence/migrate.ts` (tvary, čárkované/čerchované čáry a čáry příček = 0, jinak tloušťka z popisku nebo 300; těla uzavřených místností ven) + test.
+- `core/wallBody.ts` (+ 10 testů): obrys těla, napojení v rohu (konce kolem rohu seřazené podle úhlu, sousední hranice se protnou = miter; L, T, X, různé tloušťky; čáry uvnitř spojů se nekreslí; u T vede obrys přes roh, aby nezůstal klín), `findBodyAt` (ťuknutí do těla), `bodySnapPoints` (vnější rohy + středy čel volných konců → přidány do zvláštních bodů přichytávání), `initialSide` (navazuje na tah, jinak ven od středu ostatních rohů), `orientLoopOutward` (po uzavření místnosti otočí těla všech stěn smyčky ven, kromě ručně přehozených).
+- Nástroj Stěna kreslí stěny 300 mm (`DEFAULT_WALL_THICKNESS`, menu předvoleb přijde v 0c). Rozdělení stěny přenáší tloušťku a stranu.
+- Kreslení: výplň `#d4d4d8`, líce 2 px, vybraná stěna modře; **dvojitá šipka** přes tělo vybrané stěny (klikací, `HitAction 'flipWall'`). Kóty se u stěny s tělem na straně kót odsunou za vnější líc. Popisek „tl. …“ z `Wall.thickness`.
+- Panel stěny: pole **Tloušťka** (změna drží čáru líce) a tlačítko **⇅ Strana těla** (rovné stěny). Akce `setWallThickness`, `flipWallSide`.
+- Ověřeno v prohlížeči na PC: místnost ze 4 stěn (po uzavření těla ven), vnitřní stěna do T, výběr ťuknutím do těla, šipka, tloušťka 150, načtení starého zkušebního projektu. 56 testů, typecheck, build OK. **Na tabletu neověřeno.**
+
+**Známé (patří do dalších částí):** otvory se zatím kreslí jen na čáře líce a šedé tělo je pod nimi vidět (krok 1: otvor skrz celé tělo); dveře/okno se vkládá jen ťuknutím na čáru líce, ne do těla (krok 1); přichycení na libovolný bod vnějšího líce zatím ne (jen rohy a čela); oblouk s tloušťkou zatím ne.
+
+**Další kroky:** 0c – menu Stěny (předvolby 100/150/200/300 + vlastní, poslední volba uložená s projektem); 0d – převod/odstranění příček a dvojčár (Příčka, Dvojčára, `Wall.part`, `pairing.ts`); pak krok 1 (otvory skrz tělo). Oblouk s tloušťkou zařadit po kroku 1 (zeptat se).
+
+## Předchozí stav (2026-11-10, noc – krok −1: rozdělení souborů)
 
 **Zadání se změnilo:** platí aktualizovaný `ZADANI-OKNA-DVERE.md` a `KRESLENI-STEN-NAVRH.md` (při rozporu má přednost). Spárovaná příčka i dvojčára se **ruší**, nově budou jen **stěny s tloušťkou**. Pořadí: (−1) rozdělení velkých souborů → (0) stěny s tloušťkou + migrace příček → (1) otvory a ostění ve stěně s tloušťkou.
 
