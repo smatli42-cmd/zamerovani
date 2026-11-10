@@ -214,6 +214,16 @@ class Store {
     this.set({ ...extra, project: after, saveStatus: 'dirty', canUndo: this.undoStack.length > 0 || this.inGesture, canRedo: this.redoStack.length > 0 });
   }
 
+  /**
+   * Změna nastavení projektu mimo historii Zpět/Vpřed (např. vybraná tloušťka stěn) – jen se uloží.
+   */
+  editProjectSettings(recipe: (draft: Project) => void): void {
+    const before = this.state.project;
+    if (!before) return;
+    const after = produce(before, recipe);
+    if (after !== before) this.set({ project: after, saveStatus: 'dirty' });
+  }
+
   /** Změna aktuálního podlaží. */
   edit(recipe: (floor: Floor, project: Project) => void, extra: Partial<AppState> = {}): void {
     const floorId = this.state.floorId;
@@ -260,7 +270,10 @@ class Store {
     this.restore(next);
   }
 
-  private restore(p: Project): void {
+  private restore(snapshot: Project): void {
+    // Zpět/Vpřed nemění nastavení projektu (vybraná tloušťka a předvolby stěn)
+    const cur = this.state.project;
+    const p: Project = cur ? { ...snapshot, wallThickness: cur.wallThickness, wallPresets: cur.wallPresets } : snapshot;
     const floorId = p.floors.some(f => f.id === this.state.floorId) ? this.state.floorId : (p.floors[0]?.id ?? null);
     this.set({
       project: p,

@@ -4,7 +4,13 @@ Projekt je na OneDrive a uživatel střídá dva počítače (nikdy ne současn�
 **Na začátku sezení tento soubor přečti. Na konci práce (nebo po větším kroku) ho aktualizuj.**
 Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do „Historie“.
 
-## Poslední stav (2026-11-10, noc – krok 0, části 0a + 0b: stěny s tloušťkou)
+## Poslední stav (2026-11-10, noc – krok 0, část 0c: menu Stěny)
+
+**Hotovo (0c):** při nástroji Stěna je v liště nad plátnem **menu tloušťky**: předvolby 100 / 150 / 200 / 300 + vlastní (pole „Vlastní“ přidá předvolbu a hned ji vybere, vlastní předvolby mají křížek k odebrání). Aktuální tloušťka je označená, nové stěny se kreslí jí. Uloženo **s projektem** (nepovinná pole `Project.wallThickness`, `Project.wallPresets`, bez změny schématu); výběr **není v historii Zpět/Vpřed** (`store.editProjectSettings`, `restore` zachová nastavení). Kód: `model/factory.ts` (`WALL_PRESETS`, `activeWallThickness`, `wallPresets`), `store/actions/project.ts`, `ui/ToolOptions.tsx`, CSS `.wall-options`. Test `store/wallPresets.test.ts`. 57 testů. Ověřeno v prohlížeči (stěna 100, vlastní 450, uložení po obnovení stránky). **Na tabletu neověřeno.**
+
+**Další krok:** 0d – převod a odstranění příček a dvojčár (nástroje Příčka, Dvojčára, `Wall.part`, `core/pairing.ts`, `PartitionPanel`; staré výkresy jsou jen zkušební, stačí, aby se načetly), pak krok 1 (otvory skrz tělo stěny, vkládání ťuknutím do těla, nika na vnitřním líci).
+
+## Předchozí stav (2026-11-10, noc – krok 0, části 0a + 0b: stěny s tloušťkou)
 
 **Rozhodnutí uživatele (zapsaná v `KRESLENI-STEN-NAVRH.md`):** migrované stěny bez tloušťky 300 mm; příčky slučovat automaticky; nika výchozí na vnitřním líci; Obdélník/Kruh/Oblouk zatím čáry bez tloušťky; **stěny s tloušťkou budou potřebovat minimálně oblouk** (zařadit později); výplň těla světle šedá; dvojitá šipka jen u vybrané stěny; **stávající výkresy jsou jen zkušební** – migrace je nemusí věrně zachovat, stačí, že se načtou.
 
@@ -18,7 +24,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Známé (patří do dalších částí):** otvory se zatím kreslí jen na čáře líce a šedé tělo je pod nimi vidět (krok 1: otvor skrz celé tělo); dveře/okno se vkládá jen ťuknutím na čáru líce, ne do těla (krok 1); přichycení na libovolný bod vnějšího líce zatím ne (jen rohy a čela); oblouk s tloušťkou zatím ne.
 
-**Další kroky:** 0c – menu Stěny (předvolby 100/150/200/300 + vlastní, poslední volba uložená s projektem); 0d – převod/odstranění příček a dvojčár (Příčka, Dvojčára, `Wall.part`, `pairing.ts`); pak krok 1 (otvory skrz tělo). Oblouk s tloušťkou zařadit po kroku 1 (zeptat se).
+**Další kroky:** ~~0c – menu Stěny~~ (hotovo); 0d – převod/odstranění příček a dvojčár (Příčka, Dvojčára, `Wall.part`, `pairing.ts`); pak krok 1 (otvory skrz tělo). Oblouk s tloušťkou zařadit po kroku 1 (zeptat se).
 
 ## Předchozí stav (2026-11-10, noc – krok −1: rozdělení souborů)
 

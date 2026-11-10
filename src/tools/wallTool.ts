@@ -8,7 +8,7 @@ import { dist } from '../core/geometry';
 import { snapEnd, snapPoint, type SnapResult } from '../core/snapping';
 import type { Pt } from '../model/types';
 import { addWall } from '../store/actions';
-import { DEFAULT_WALL_THICKNESS } from '../model/factory';
+import { activeWallThickness } from '../model/factory';
 import { store, type Camera } from '../store/store';
 import { pickAny } from './pick';
 import { grabArcHandle, selectTool } from './selectTool';
@@ -70,7 +70,7 @@ export const wallTool: Tool = {
     if (!d) return;
     if (dist(d.start.pt, d.end.pt) >= 50) {
       // Při kreslení se panel vlastností neotevírá (nepřekáží v kreslení)
-      addWall(d.start.pt, d.start.node?.id ?? null, d.end.pt, d.end.node?.id ?? null, false, { thickness: DEFAULT_WALL_THICKNESS });
+      addWall(d.start.pt, d.start.node?.id ?? null, d.end.pt, d.end.node?.id ?? null, false, { thickness: activeWallThickness(store.get().project) });
     } else {
       // Ťuknutí bez tažení = výběr prvku pod perem (otevře jeho vlastnosti)
       const floor = store.floor();

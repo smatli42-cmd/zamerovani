@@ -57,6 +57,17 @@ export function emptyWallLabel(): WallLabel {
 /** Výchozí tloušťka nové stěny (mm). */
 export const DEFAULT_WALL_THICKNESS = 300;
 
+/** Výchozí předvolby tloušťky v menu Stěny (mm). */
+export const WALL_PRESETS = [100, 150, 200, 300];
+
+/** Tloušťka, kterou se kreslí nové stěny (naposledy vybraná v projektu). */
+export const activeWallThickness = (project: Project | null): number => project?.wallThickness ?? DEFAULT_WALL_THICKNESS;
+
+/** Všechny předvolby tloušťky projektu (výchozí + vlastní), seřazené. */
+export function wallPresets(project: Project | null): number[] {
+  return [...new Set([...WALL_PRESETS, ...(project?.wallPresets ?? [])])].sort((a, b) => a - b);
+}
+
 /** Nová stěna; `thickness` 0 = čára bez tloušťky (tvary). */
 export function createWall(a: Id, b: Id, sagitta = 0, thickness = 0, side: 1 | -1 = 1): Wall {
   const wall: Wall = { id: newId('w'), a, b, thickness, side, measured: null, label: emptyWallLabel() };

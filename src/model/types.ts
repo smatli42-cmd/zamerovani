@@ -157,6 +157,10 @@ export interface Project {
   createdAt: number;
   updatedAt: number;
   floors: Floor[];
+  /** Naposledy vybraná tloušťka nových stěn (mm); chybí = výchozí 300. */
+  wallThickness?: number;
+  /** Vlastní předvolby tloušťky stěn přidané k výchozím (mm). */
+  wallPresets?: number[];
 }
 
 /** Krátký přehled projektu pro seznam projektů (bez výkresů). */

@@ -1,7 +1,8 @@
 /**
  * Lišta s volbami aktivního nástroje nad plátnem (Dvojčára: tloušťka a strana; tvary: styl čáry; okno: druh).
  */
-import { endPaste } from '../store/actions';
+import { activeWallThickness, WALL_PRESETS, wallPresets } from '../model/factory';
+import { addWallPreset, endPaste, removeWallPreset, setActiveWallThickness } from '../store/actions';
 import { store } from '../store/store';
 import { useStore } from '../store/useStore';
 import { NumField, Seg } from './panels/fields';
@@ -11,6 +12,31 @@ export function ToolOptions() {
   const tool = useStore(s => s.tool);
   const settings = useStore(s => s.settings);
   const clipboard = useStore(s => s.clipboard);
+  const project = useStore(s => s.project);
+  if (tool === 'wall') {
+    // menu Stěny: předvolby tloušťky, aktuální je označená (stačí zkontrolovat a kreslit)
+    const active = activeWallThickness(project);
+    return (
+      <div class="tool-options wall-options">
+        <span class="muted small">Tloušťka stěny</span>
+        <div class="chips">
+          {wallPresets(project).map(t => (
+            <span key={t} class="chip-wrap">
+              <button class={`chip ${t === active ? 'active' : ''}`} onClick={() => setActiveWallThickness(t)}>
+                {t}
+              </button>
+              {!WALL_PRESETS.includes(t) && (
+                <button class="chip-remove" title="Odebrat předvolbu" onClick={() => removeWallPreset(t)}>
+                  ✕
+                </button>
+              )}
+            </span>
+          ))}
+        </div>
+        <NumField label="Vlastní" value={wallPresets(project).includes(active) ? null : active} min={10} onCommit={v => v !== null && addWallPreset(v)} />
+      </div>
+    );
+  }
   if (tool === 'rect' || tool === 'circle' || tool === 'arc') {
     return (
       <div class="tool-options">
