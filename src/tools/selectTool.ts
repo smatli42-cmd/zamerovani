@@ -4,7 +4,7 @@
  */
 import { requestRender } from '../canvas/invalidate';
 import { toScreen } from '../canvas/view';
-import { arcChain } from '../core/arcChain';
+import { arcChain, arcHandles } from '../core/arcChain';
 import { findNodeNear, findWallNear, openingStartFromA, wallLength, wallNodes } from '../core/floorQueries';
 import { dist, projectToSegment, roundTo } from '../core/geometry';
 import type { Id, Pt } from '../model/types';
@@ -38,13 +38,18 @@ const HANDLE_PX = 18;
 export function arcUnderPen(p: PointerInput): Id | null {
   const floor = store.floor();
   const sel = store.get().selection;
-  if (!floor || sel?.kind !== 'wall') return null;
-  const wall = floor.walls[sel.id];
-  const n = wall && wallNodes(floor, wall);
-  if (!wall || !n) return null;
-  const at = wall.radius !== undefined ? { x: n[0].x + wall.radius, y: n[0].y } : arcChain(floor, wall.id)?.geom.apex;
-  if (!at) return null;
-  return dist(toScreen(at, store.get().camera), p.screen) <= HANDLE_PX ? wall.id : null;
+  if (!floor) return null;
+  // úchyty jsou uprostřed všech oblouků (ne jen vybraného); nejbližší pod perem
+  let best: Id | null = null;
+  let bestD = HANDLE_PX;
+  for (const h of arcHandles(floor, sel?.kind === 'wall' ? sel.id : null)) {
+    const d = dist(toScreen(h.at, store.get().camera), p.screen);
+    if (d <= bestD) {
+      best = h.wallId;
+      bestD = d;
+    }
+  }
+  return best;
 }
 
 /** Hrot odkazové šipky vybraného textu se dá táhnout. */
@@ -199,6 +204,9 @@ export const selectTool: Tool = {
     if (drag && dragging) {
       if (drag.kind === 'node') mergeNodeIfCoincident(drag.id);
       store.endGesture();
+    } else if (drag?.kind === 'handle') {
+      // ťuknutí na úchyt oblouku bez tažení = výběr stěny
+      store.set({ selection: { kind: 'wall', id: drag.id } });
     }
     drag = null;
     dragging = false;

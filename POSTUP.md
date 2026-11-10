@@ -6,6 +6,8 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Poslední stav (2026-11-11 – oblouková stěna)
 
+**Doplněno (požadavek uživatele – chytací bod uprostřed oblouku):** úchyt pro tažení vzepětí byl dřív jen u **vybrané** stěny, takže po nakreslení nebyl vidět. Teď je **úchyt uprostřed každého oblouku pořád** (světle modrý, u vybrané stěny tmavší a větší), při nástroji Stěna i Vybrat; tažením se mění vzepětí, ťuknutím bez tažení se stěna vybere. Rozdělený oblouk má jeden úchyt ve vrcholu celého řetězu. `arcHandles` v `core/arcChain.ts` (+ test), `arcUnderPen` / `drawArcHandle` ho používají. 65 testů. Ověřeno v prohlížeči (tažení 820 → 400 bez výběru). Pozn.: začátek nové stěny přesně ve vrcholu oblouku teď chytí úchyt – kdyby vadilo, řešit.
+
 **Požadavek uživatele:** oblouková stěna patří do **menu Stěny** (ne mezi tvary), kreslí se stejně jako rovná stěna, jen má navíc **výšku oblouku**. Rozhodnutí: oblouk se ve výchozím stavu **vyklene ven, na stranu těla** (překlopení perem otočí tělo i vyklenutí spolu; vyklenutí jde otočit v panelu).
 
 **Hotovo:**

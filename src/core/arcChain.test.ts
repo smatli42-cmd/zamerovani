@@ -29,3 +29,22 @@ describe('řetěz oblouků', () => {
     expect(Math.hypot(m.x - 1000, m.y - -200) < 1 || Math.hypot(m.x - 1000, m.y - 200) < 1).toBe(true);
   });
 });
+
+describe('úchyty oblouků', () => {
+  it('úchyt je uprostřed každého oblouku, i nevybraného; rozdělený oblouk má jeden', async () => {
+    const { arcHandles } = await import('./arcChain');
+    const f = createFloor('t');
+    f.nodes.a = { id: 'a', x: 0, y: 0 };
+    f.nodes.b = { id: 'b', x: 2000, y: 0 };
+    f.nodes.c = { id: 'c', x: 0, y: 3000 };
+    f.nodes.d = { id: 'd', x: 2000, y: 3000 };
+    const arc1 = createWall('a', 'b', 400, 300, 1);
+    const arc2 = createWall('c', 'd', -300);
+    const line = createWall('a', 'c');
+    for (const w of [arc1, arc2, line]) f.walls[w.id] = w;
+    const hs = arcHandles(f, null);
+    expect(hs).toHaveLength(2);
+    expect(hs.some(h => Math.abs(h.at.x - 1000) < 1 && Math.abs(h.at.y - 400) < 1)).toBe(true);
+    expect(arcHandles(f, arc1.id).find(h => h.wallId === arc1.id)!.selected).toBe(true);
+  });
+});

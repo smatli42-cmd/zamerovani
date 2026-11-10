@@ -2,7 +2,7 @@
  * Kreslení stěn, rohů a otvorů.
  */
 import { arcGeometry } from '../core/arc';
-import { arcChain } from '../core/arcChain';
+import { arcHandles } from '../core/arcChain';
 import { doorLayout } from '../core/doorLayout';
 import { openingSpan, openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
 import { add, dist, dot, lerp, normal, scale, sub, unit } from '../core/geometry';
@@ -164,22 +164,18 @@ export function drawFlipArrow(ctx: CanvasRenderingContext2D, floor: Floor, cam: 
 
 /** Středový bod vybrané obloukové stěny – jeho tažením se mění vzepětí. */
 export function drawArcHandle(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camera, selection: Selection): void {
-  if (selection?.kind !== 'wall') return;
-  const wall = floor.walls[selection.id];
-  const n = wall && wallNodes(floor, wall);
-  if (!wall || !n) return;
-  // kruh: bod na obvodu vpravo od středu (tažením se mění poloměr); oblouk: jeho vrchol
-  const at = wall.radius !== undefined ? { x: n[0].x + wall.radius, y: n[0].y } : arcChain(floor, wall.id)?.geom.apex;
-  if (!at) return;
-  const p = toScreen(at, cam);
+  // úchyt uprostřed každého oblouku (tažením se mění vzepětí), u vybraného kruhu bod na obvodu (poloměr)
   ctx.save();
-  ctx.fillStyle = COLORS.selected;
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.fill();
+  for (const h of arcHandles(floor, selection?.kind === 'wall' ? selection.id : null)) {
+    const p = toScreen(h.at, cam);
+    ctx.fillStyle = h.selected ? COLORS.selected : '#60a5fa';
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, h.selected ? 10 : 8, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fill();
+  }
   ctx.restore();
 }
 

@@ -123,3 +123,36 @@ export function setChainSagitta(floor: Floor, wallId: Id, sagitta: number): bool
   }
   return true;
 }
+
+/** Úchyt pro tažení vzepětí (oblouk) nebo poloměru (kruh). */
+export interface ArcHandle {
+  wallId: string;
+  at: Pt;
+  selected: boolean;
+}
+
+/**
+ * Úchyty uprostřed všech oblouků (rozdělený oblouk má jeden společný ve vrcholu celého řetězu)
+ * a bod na obvodu vybraného kruhu.
+ */
+export function arcHandles(floor: Floor, selectedWallId: string | null): ArcHandle[] {
+  const out: ArcHandle[] = [];
+  for (const w of Object.values(floor.walls)) {
+    const sel = w.id === selectedWallId;
+    if (w.radius !== undefined) {
+      const c = floor.nodes[w.a];
+      if (sel && c) out.push({ wallId: w.id, at: { x: c.x + w.radius, y: c.y }, selected: true });
+      continue;
+    }
+    if (!w.sagitta) continue;
+    const apex = arcChain(floor, w.id)?.geom.apex;
+    if (!apex) continue;
+    const same = out.find(h => Math.hypot(h.at.x - apex.x, h.at.y - apex.y) < 1);
+    if (same) {
+      if (sel) Object.assign(same, { wallId: w.id, selected: true });
+      continue;
+    }
+    out.push({ wallId: w.id, at: apex, selected: sel });
+  }
+  return out;
+}
