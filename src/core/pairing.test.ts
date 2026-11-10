@@ -37,7 +37,7 @@ describe('spárovaná příčka', () => {
     const line2 = Object.values(f.walls).find(w => w.part?.line === 2)!;
     const off = twinOffset(f, line1)!;
     expect(Math.hypot(off.x, off.y)).toBeCloseTo(100);
-    const n2 = [f.nodes[line2.a]!, f.nodes[line2.b]!];
+    const n2 = [f.nodes[line2.a]!, f.nodes[line2.b]!] as [{ x: number; y: number }, { x: number; y: number }];
     const mid2 = { x: (n2[0].x + n2[1].x) / 2, y: (n2[0].y + n2[1].y) / 2 };
     const prim = toPrimary(f, line2, mid2)!;
     expect(prim.wall.id).toBe(line1.id);
