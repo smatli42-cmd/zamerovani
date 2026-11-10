@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'preact/hooks';
 import { wallLength, wallsAtNode } from '../../core/floorQueries';
 import { OPENING_DEFAULTS } from '../../model/factory';
 import type { Floor, LineStyle, Opening, Room, TextNote, Wall, WallType } from '../../model/types';
-import { applyNumpadValue, deleteSelection, rotateSelection, duplicateSelection, setOpeningRef, updateOpening, takeFreshTextId, updateRoom, updateText, updateWall, updateWallLabel } from '../../store/actions';
+import { applyNumpadValue, deleteSelection, setRevealEnabled, rotateSelection, duplicateSelection, setOpeningRef, updateOpening, takeFreshTextId, updateRoom, updateText, updateWall, updateWallLabel } from '../../store/actions';
 import { openTarget } from '../../store/numpadController';
 import { store } from '../../store/store';
 import { arcChain } from '../../core/arcChain';
@@ -168,6 +168,15 @@ const OPENING_PRESETS: Record<Opening['kind'], number[]> = {
   niche: [300, 450, 600, 900]
 };
 
+function RevealField({ op, part, label }: { op: Opening; part: 'depth' | 'left' | 'right' | 'top'; label: string }) {
+  return (
+    <button class="field-button" onClick={() => openTarget({ kind: 'opening-reveal', openingId: op.id, part })}>
+      <span>{label}</span>
+      <b>{op.reveal?.[part] ?? 0} mm</b>
+    </button>
+  );
+}
+
 function OpeningPanel({ op }: { op: Opening }) {
   const info = OPENING_DEFAULTS[op.kind];
   const set = (patch: Partial<Opening>) => updateOpening(op.id, patch);
@@ -217,6 +226,36 @@ function OpeningPanel({ op }: { op: Opening }) {
             🔄 {op.kind === 'door' ? 'Dovnitř/ven' : 'Strana'}
           </button>
         </div>
+      )}
+      {op.kind !== 'niche' && (
+        <>
+          <div class="field field-inline">
+            <span>Ostění</span>
+            <Seg
+              options={[
+                { v: 'no', label: 'Bez ostění' },
+                { v: 'yes', label: 'S ostěním' }
+              ]}
+              value={op.reveal ? 'yes' : 'no'}
+              onChange={v => setRevealEnabled(op.id, v === 'yes')}
+            />
+          </div>
+          {op.reveal && (
+            <>
+              <div class="field-grid">
+                <RevealField op={op} part="depth" label="Hloubka" />
+                <RevealField op={op} part="top" label="Nahoře" />
+                <RevealField op={op} part="left" label="Vlevo" />
+                <RevealField op={op} part="right" label="Vpravo" />
+              </div>
+              {op.kind !== 'door' && (
+                <button class="btn btn-sm" style="margin-bottom:6px" onClick={() => set({ swing: op.swing === 1 ? -1 : 1 })}>
+                  🔄 Strana ostění
+                </button>
+              )}
+            </>
+          )}
+        </>
       )}
       <div class="field-row">
         <div style="flex:0 0 80px">

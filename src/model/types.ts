@@ -71,6 +71,18 @@ export interface Opening {
   /** Na kterou stranu stěny se dveře otevírají / nika ustupuje. */
   swing: 1 | -1;
   note: string;
+  /**
+   * Ostění (volitelné): okno/dveře jsou zasazené o `depth` dál do stěny a otvor ve stěně je o `left` a `right`
+   * širší než okno samotné. `top` je jen údaj pro export a pohledy (v půdorysu se nekreslí). Vše v mm.
+   */
+  reveal?: Reveal;
+}
+
+export interface Reveal {
+  depth: number;
+  left: number;
+  right: number;
+  top: number;
 }
 
 export interface RoomHeight {

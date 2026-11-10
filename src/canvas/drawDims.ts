@@ -132,7 +132,10 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
         });
         const kindInfo = OPENING_DEFAULTS[po.op.kind];
         const sub = po.op.kind === 'door' || po.op.kind === 'opening' ? `${po.op.number} v${po.op.height}` : `${po.op.number} v${po.op.height} p${po.op.sill}`;
-        marks.push({ at: po.start, text: String(Math.round(po.op.width)), sub: sub || kindInfo.label, target: { kind: 'opening-width', openingId: po.op.id } });
+        const rv = po.op.reveal && po.op.kind !== 'niche' ? po.op.reveal : null;
+        if (rv) marks.push({ at: po.start, text: String(Math.round(rv.left)), target: { kind: 'opening-reveal', openingId: po.op.id, part: 'left' } });
+        marks.push({ at: po.start + (rv?.left ?? 0), text: String(Math.round(po.op.width)), sub: sub || kindInfo.label, target: { kind: 'opening-width', openingId: po.op.id } });
+        if (rv) marks.push({ at: po.end - rv.right, text: String(Math.round(rv.right)), target: { kind: 'opening-reveal', openingId: po.op.id, part: 'right' } });
         cursor = po.end;
       });
       const last = placed[placed.length - 1]!;

@@ -25,6 +25,8 @@ function title(floor: Floor | null, t: NumPadTarget): string {
       return `${name} – šířka`;
     case 'opening-gap':
       return `${name} – meziostění`;
+    case 'opening-reveal':
+      return `${name} – ostění ${{ depth: 'hloubka', left: 'vlevo', right: 'vpravo', top: 'nahoře' }[t.part]}`;
   }
 }
 

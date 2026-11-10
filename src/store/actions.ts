@@ -3,10 +3,10 @@
  * nikdy nemění data přímo.
  */
 import { createCircleWall, createFloor, createOpening, createRoom, createText, createWall, newId, nextOpeningNumber } from '../model/factory';
-import type { Floor, Id, LineStyle, Opening, OpeningKind, Pt, Room, TextNote, Wall, WallLabel } from '../model/types';
+import type { Floor, Id, LineStyle, Opening, OpeningKind, Pt, Reveal, Room, TextNote, Wall, WallLabel } from '../model/types';
 import { arcChain, setChainSagitta } from '../core/arcChain';
 import { dist } from '../core/geometry';
-import { openingStartFromA, openingsOnWall, wallLength, wallsAtNode } from '../core/floorQueries';
+import { openingSpan, openingStartFromA, openingsOnWall, wallLength, wallsAtNode } from '../core/floorQueries';
 import { setWallLength, type MoveTarget } from '../core/solver';
 import { componentGap, setComponentGap } from '../core/components';
 import { partitionPoints } from '../core/partition';
@@ -411,7 +411,7 @@ export function pasteOpenings(wallId: Id, center: number): boolean {
     const wall = floor.walls[wallId];
     if (!wall) return;
     const len = wallLength(floor, wall);
-    const span = Math.max(...clip.map(c => c.rel + c.op.width));
+    const span = Math.max(...clip.map(c => c.rel + openingSpan(c.op)));
     if (span > len) return;
     const s0 = Math.max(0, Math.min(len - span, Math.round((center - span / 2) / 10) * 10));
     for (const c of clip) {
@@ -486,8 +486,9 @@ export function addOpening(wallId: Id, kind: OpeningKind, t: number): Id | null 
 }
 
 function setStartFromA(op: Opening, startFromA: number, wallLen: number): void {
-  const s = Math.max(0, Math.min(Math.max(0, wallLen - op.width), Math.round(startFromA)));
-  op.offset = op.ref === 'a' ? s : Math.max(0, Math.round(wallLen - s - op.width));
+  const span = openingSpan(op);
+  const s = Math.max(0, Math.min(Math.max(0, wallLen - span), Math.round(startFromA)));
+  op.offset = op.ref === 'a' ? s : Math.max(0, Math.round(wallLen - s - span));
 }
 
 export function updateOpening(id: Id, patch: Partial<Opening>): void {
@@ -528,6 +529,35 @@ function setOpeningWidth(floor: Floor, op: Opening, width: number): void {
   // offset je měřen od ref rohu → při změně šířky zůstává bližší okraj na místě automaticky
   const len = wallLength(floor, wall);
   setStartFromA(op, openingStartFromA(op, len), len);
+}
+
+/** Změní rozměry ostění; protože se mění celková šířka otvoru, okraj u referenčního rohu zůstane na místě. */
+function setReveal(floor: Floor, op: Opening, patch: Partial<Reveal>): void {
+  const wall = floor.walls[op.wallId];
+  if (!op.reveal || !wall) return;
+  const len = wallLength(floor, wall);
+  const start = openingStartFromA(op, len);
+  const ref = op.ref;
+  const startFixed = ref === 'a' ? start : len - start - openingSpan(op);
+  Object.assign(op.reveal, patch);
+  op.offset = startFixed;
+  setStartFromA(op, openingStartFromA(op, len), len);
+}
+
+/** Zapne (výchozí hodnoty) nebo vypne ostění otvoru. */
+export function setRevealEnabled(id: Id, on: boolean): void {
+  store.edit(floor => {
+    const op = floor.openings[id];
+    const wall = op && floor.walls[op.wallId];
+    if (!op || !wall) return;
+    const len = wallLength(floor, wall);
+    const start = openingStartFromA(op, len);
+    const oldLeft = op.reveal?.left ?? 0;
+    if (on) op.reveal = op.reveal ?? { depth: 150, left: 100, right: 100, top: 0 };
+    else delete op.reveal;
+    // okno zůstane na stejném místě: otvor se rozšíří (nebo zúží) o ostění kolem okna
+    setStartFromA(op, on ? start - (op.reveal?.left ?? 0) : start + oldLeft, len);
+  });
 }
 
 /** Změní mezeru mezi dvěma sousedními otvory – posune druhý a všechny další za ním. */
@@ -665,10 +695,12 @@ export function numpadInitialValue(floor: Floor, t: NumPadTarget): number | null
       if (!op || !wall) return null;
       const len = wallLength(floor, wall);
       const start = openingStartFromA(op, len);
-      return Math.round(t.ref === 'a' ? start : len - start - op.width);
+      return Math.round(t.ref === 'a' ? start : len - start - openingSpan(op));
     }
     case 'opening-width':
       return floor.openings[t.openingId]?.width ?? null;
+    case 'opening-reveal':
+      return floor.openings[t.openingId]?.reveal?.[t.part] ?? null;
     case 'wall-sagitta': {
       const w = floor.walls[t.wallId];
       return w ? Math.round(Math.abs(arcChain(floor, w.id)?.sagitta ?? w.sagitta ?? 0)) : null;
@@ -687,7 +719,7 @@ export function numpadInitialValue(floor: Floor, t: NumPadTarget): number | null
       const wall = a && floor.walls[a.wallId];
       if (!a || !b || !wall) return null;
       const len = wallLength(floor, wall);
-      return Math.round(openingStartFromA(b, len) - (openingStartFromA(a, len) + a.width));
+      return Math.round(openingStartFromA(b, len) - (openingStartFromA(a, len) + openingSpan(a)));
     }
   }
 }
@@ -711,6 +743,11 @@ export function applyNumpadValue(t: NumPadTarget, value: number): boolean {
       const op = floor.openings[t.openingId];
       if (!op || value < 100) return;
       setOpeningWidth(floor, op, value);
+      ok = true;
+    } else if (t.kind === 'opening-reveal') {
+      const op = floor.openings[t.openingId];
+      if (!op?.reveal) return;
+      setReveal(floor, op, { [t.part]: Math.round(value) });
       ok = true;
     } else if (t.kind === 'opening-gap') {
       setGap(floor, t.firstId, t.secondId, value);

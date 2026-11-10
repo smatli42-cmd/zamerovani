@@ -8,7 +8,7 @@ import { newId } from '../model/factory';
 import type { Floor, Id, Wall } from '../model/types';
 import { nearestOnArc, splitArcSagittas } from './arc';
 import { dist } from './geometry';
-import { openingStartFromA, wallNodes } from './floorQueries';
+import { openingSpan, openingStartFromA, wallNodes } from './floorQueries';
 
 /** Jak blízko (mm) musí roh ležet u stěny, aby ji rozdělil. */
 const ON_WALL_TOL = 1;
@@ -62,13 +62,13 @@ export function splitWallAt(floor: Floor, wallId: Id, nodeId: Id): [Id, Id] | nu
   for (const op of Object.values(floor.openings)) {
     if (op.wallId !== wallId) continue;
     const start = openingStartFromA(op, len);
-    const center = start + op.width / 2;
+    const center = start + openingSpan(op) / 2;
     const inA = center <= at;
     const target = inA ? wA : wB;
     const partLen = inA ? lenA : lenB;
-    const startInPart = Math.max(0, Math.min(partLen - op.width, inA ? start : start - at));
+    const startInPart = Math.max(0, Math.min(partLen - openingSpan(op), inA ? start : start - at));
     op.wallId = target.id;
-    op.offset = Math.max(0, Math.round(op.ref === 'a' ? startInPart : partLen - startInPart - op.width));
+    op.offset = Math.max(0, Math.round(op.ref === 'a' ? startInPart : partLen - startInPart - openingSpan(op)));
   }
   return [wA.id, wB.id];
 }

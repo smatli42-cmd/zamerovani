@@ -117,7 +117,7 @@ function commitAndNext(): void {
   if (!floor) return;
   const t = np.target;
 
-  if (t.kind === 'wall-sagitta' || t.kind === 'circle-diameter') return store.set({ numpad: null });
+  if (t.kind === 'wall-sagitta' || t.kind === 'circle-diameter' || t.kind === 'opening-reveal') return store.set({ numpad: null });
 
   // Odstupy skupiny stěn od okolí: vlevo → vpravo → nahoře → dole, pak konec
   if (t.kind === 'comp-gap') {

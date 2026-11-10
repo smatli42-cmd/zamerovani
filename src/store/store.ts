@@ -38,6 +38,8 @@ export type NumPadTarget =
   | { kind: 'opening-offset'; openingId: Id; ref: 'a' | 'b' }
   | { kind: 'opening-width'; openingId: Id }
   | { kind: 'opening-gap'; firstId: Id; secondId: Id }
+  /** Rozměr ostění: hloubka, šířka vlevo/vpravo, výška nahoře. */
+  | { kind: 'opening-reveal'; openingId: Id; part: 'depth' | 'left' | 'right' | 'top' }
   /** Vzepětí obloukové stěny. */
   | { kind: 'wall-sagitta'; wallId: Id }
   /** Průměr kruhové stěny. */

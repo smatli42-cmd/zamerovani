@@ -5,7 +5,7 @@
 import { requestRender } from '../canvas/invalidate';
 import { toScreen } from '../canvas/view';
 import { arcChain } from '../core/arcChain';
-import { findNodeNear, findWallNear, wallLength, wallNodes } from '../core/floorQueries';
+import { findNodeNear, findWallNear, openingStartFromA, wallLength, wallNodes } from '../core/floorQueries';
 import { dist, projectToSegment, roundTo } from '../core/geometry';
 import type { Id, Pt } from '../model/types';
 import { selectInRect, normRect } from '../core/rectSelect';
@@ -111,7 +111,7 @@ export const selectTool: Tool = {
       if (wall && n) {
         const len = wallLength(floor, wall);
         const along = projectToSegment(p.world, n[0], n[1]).t * len;
-        const start = op.ref === 'a' ? op.offset : len - op.offset - op.width;
+        const start = openingStartFromA(op, len);
         drag = { kind: 'opening', id: hit.id, grabOffset: along - start };
       }
     }

@@ -4,7 +4,7 @@
 import { arcGeometry } from '../core/arc';
 import { arcChain } from '../core/arcChain';
 import { openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
-import { add, dist, lerp, normal, scale, unit } from '../core/geometry';
+import { add, dist, lerp, normal, scale, sub, unit } from '../core/geometry';
 import type { Floor, LineStyle, Opening, Pt, Wall } from '../model/types';
 import { isSelected, type Camera, type Selection, type SingleSelection } from '../store/store';
 import { toScreen } from './view';
@@ -132,19 +132,40 @@ export function drawOpenings(ctx: CanvasRenderingContext2D, floor: Floor, cam: C
   ctx.restore();
 }
 
-function drawOpeningSymbol(ctx: CanvasRenderingContext2D, p1: Pt, p2: Pt, op: Opening, cam: Camera, color: string): void {
-  const u = unit(p1, p2);
+function drawOpeningSymbol(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, cam: Camera, color: string): void {
+  const u = unit(s1, s2);
   const nrm = scale(normal(u), op.swing);
-  const w = dist(p1, p2);
+  let p1 = s1;
+  let p2 = s2;
+  const rv = op.reveal && op.kind !== 'niche' ? op.reveal : null;
 
-  // Přerušení stěny
+  // Přerušení stěny (celý otvor včetně ostění)
   ctx.strokeStyle = '#f8fafc';
   ctx.lineWidth = 7;
   ctx.lineCap = 'butt';
   ctx.beginPath();
-  ctx.moveTo(p1.x, p1.y);
-  ctx.lineTo(p2.x, p2.y);
+  ctx.moveTo(s1.x, s1.y);
+  ctx.lineTo(s2.x, s2.y);
   ctx.stroke();
+
+  // Ostění: boční plochy jdou o hloubku do stěny, okno/dveře jsou zasazené uvnitř
+  if (rv) {
+    const k = dist(s1, s2) / (op.width + rv.left + rv.right || 1);
+    const d = scale(nrm, rv.depth * cam.zoom);
+    p1 = add(add(s1, scale(u, rv.left * k)), d);
+    p2 = add(sub(s2, scale(u, rv.right * k)), d);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(s1.x, s1.y);
+    ctx.lineTo(s1.x + d.x, s1.y + d.y);
+    ctx.lineTo(p1.x, p1.y);
+    ctx.moveTo(s2.x, s2.y);
+    ctx.lineTo(s2.x + d.x, s2.y + d.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
+  }
+  const w = dist(p1, p2);
 
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
