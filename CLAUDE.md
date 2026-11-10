@@ -13,15 +13,15 @@ Uživatel střídá dva počítače (projekt je na OneDrive). **Na začátku sez
 ## Struktura `src/`
 - `model/` – datové typy (`types.ts`) a vytváření prvků. Rozměry v mm, prvky v objektech podle ID.
 - `core/` – čistá geometrie, dotazy nad půdorysem, řešič délek, přichytávání. Bez DOM, testovatelné.
-- `store/` – `store.ts` (stav + historie Zpět/Vpřed přes immer), `actions.ts` (JEDINÉ místo, kde se mění výkres), `numpadController.ts`.
+- `store/` – `store.ts` (stav + historie Zpět/Vpřed přes immer), `actions/` (JEDINÉ místo, kde se mění výkres; rozdělené podle oblastí – `walls`, `copy`, `delete`, `openings`, `rooms`, `texts`, `floors`, `numpad`, společné `shared`; veřejné rozhraní přes `actions/index.ts`), `numpadController.ts`.
 - `persistence/` – IndexedDB (`db.ts`), automatické ukládání, záloha do souboru, migrace dat.
 - `canvas/` – vykreslování (jen při změně), klikací kóty (`hitTargets.ts`).
 - `tools/` – nástroje (rozhraní `Tool`), registr v `registry.ts`.
 - `input/` – pero/prst/myš (`pointer.ts`), klávesnice.
-- `ui/` – Preact komponenty (seznam projektů, editor, NumPad, panely).
+- `ui/` – Preact komponenty (seznam projektů, editor, NumPad, panely). Panely vlastností v `ui/panels/` (`SidePanel.tsx` jen vybírá panel: `WallPanel`, `PartitionPanel`, `OpeningPanel`, `TextPanel`, `RoomPanel`; společné `common.ts`, prvky formulářů `fields.tsx`).
 
 ## Pravidla
-- Data projektu měnit jen přes `store.edit()` / `actions.ts`, nikdy přímo.
+- Data projektu měnit jen přes `store.edit()` / `store/actions/`, nikdy přímo.
 - Při změně struktury dat zvýšit `SCHEMA_VERSION` a doplnit migraci v `persistence/migrate.ts`.
 - Všechny tvary (obdélník, kruh, oblouk, dvojčára/příčka) jsou běžné stěny (kruh = jedna stěna `Wall.radius` s a === b = střed) (`Wall`); oblouk = `Wall.sagitta` (vzepětí se znaménkem), styl čáry = `Wall.style`. Žádné samostatné „tvary“ v modelu nejsou. Otvory (dveře, okna) jdou zatím jen na rovné stěny.
 - Texty v aplikaci česky. Tloušťka stěn se graficky nekreslí (jen popisek stěny).
