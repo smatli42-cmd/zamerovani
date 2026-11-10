@@ -171,13 +171,13 @@ function drawOpeningSymbol(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Op
   ctx.fillStyle = color;
   ctx.lineWidth = 2;
   /** Čerchovaná čára v rovině stěny = konstrukce nad rovinou řezu (nadpraží). */
-  const lintel = () => {
+  const lintel = (a: Pt = s1, b: Pt = s2) => {
     ctx.save();
     ctx.lineWidth = 1.2;
     ctx.setLineDash([10, 3, 2, 3]);
     ctx.beginPath();
-    ctx.moveTo(s1.x, s1.y); // v rovině stěny přes celý otvor (i s ostěním)
-    ctx.lineTo(s2.x, s2.y);
+    ctx.moveTo(a.x, a.y); // výchozí: v rovině stěny přes celý otvor (i s ostěním)
+    ctx.lineTo(b.x, b.y);
     ctx.stroke();
     ctx.restore();
   };
@@ -221,6 +221,7 @@ function drawOpeningSymbol(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Op
       ctx.lineTo(leafEnd.x, leafEnd.y);
       ctx.stroke();
       lintel();
+      if (rv) lintel(p1, p2); // i v místě prahu (zasazení dveří o hloubku ostění)
       ctx.lineWidth = 1.2;
       const a0 = Math.atan2(leafEnd.y - hingePt.y, leafEnd.x - hingePt.x);
       const a1 = Math.atan2(freePt.y - hingePt.y, freePt.x - hingePt.x);
@@ -236,10 +237,12 @@ function drawOpeningSymbol(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Op
       jamb(p1);
       jamb(p2);
       lintel();
+      if (rv) lintel(p1, p2); // i v místě prahu (zasazení dveří o hloubku ostění)
       break;
     }
     case 'niche': {
       lintel();
+      if (rv) lintel(p1, p2); // i v místě prahu (zasazení dveří o hloubku ostění)
       const d = scale(nrm, Math.max(6, op.depth * cam.zoom));
       ctx.lineWidth = 2;
       ctx.beginPath();
