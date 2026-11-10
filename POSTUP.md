@@ -4,7 +4,19 @@ Projekt je na OneDrive a uživatel střídá dva počítače (nikdy ne současn�
 **Na začátku sezení tento soubor přečti. Na konci práce (nebo po větším kroku) ho aktualizuj.**
 Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do „Historie“.
 
-## Poslední stav (2026-11-10 – ostění; navazuje spárovaná příčka)
+## Poslední stav (2026-11-10, noc – krok −1: rozdělení souborů)
+
+**Zadání se změnilo:** platí aktualizovaný `ZADANI-OKNA-DVERE.md` a `KRESLENI-STEN-NAVRH.md` (při rozporu má přednost). Spárovaná příčka i dvojčára se **ruší**, nově budou jen **stěny s tloušťkou**. Pořadí: (−1) rozdělení velkých souborů → (0) stěny s tloušťkou + migrace příček → (1) otvory a ostění ve stěně s tloušťkou.
+
+**Hotovo – krok −1 (beze změny chování):**
+- `src/store/actions.ts` → složka `src/store/actions/`: `walls.ts` (stěny, příčky, tvary, oblouky, popisky, posun rohů/skupin), `copy.ts` (otočení, kopírování, schránka otvorů), `delete.ts`, `openings.ts`, `rooms.ts`, `texts.ts`, `floors.ts`, `numpad.ts`, `shared.ts` (`getOrCreateNode`, `cleanup`, `MERGE_TOL`). `index.ts` znovu exportuje přesně těch 39 veřejných jmen co dřív; pomocné funkce mezi soubory (`setStartFromA`, `setReveal`, `resizeCircle`…) ven nejdou. Importy `'…/store/actions'` se nemusely měnit.
+- `src/ui/panels/SidePanel.tsx` (85 řádků, jen vybírá panel; panel skupiny a rohu zůstal v něm) + `WallPanel.tsx`, `PartitionPanel.tsx`, `OpeningPanel.tsx`, `TextPanel.tsx`, `RoomPanel.tsx`, `common.ts` (`close`, `LINE_STYLES`; `SidePanel` dál re-exportuje `LINE_STYLES` pro `ToolOptions`).
+- Kontrola: skript porovnal řádky kódu (nic nechybí, nic nepřibylo), žádné kruhové importy. 45 testů, typecheck, build OK. V prohlížeči na PC vyzkoušeno: kreslení stěn, příčka, dveře do příčky, okno + přepnutí na francouzské + ostění, kopírování a vložení okna do jiné stěny, text, kopie stěny, otočení a smazání skupiny; konzole bez chyb. `CLAUDE.md` – aktualizovaná struktura.
+- `selectTool.ts` (242 ř.), `drawPlan.ts` (407 ř.), `drawDims.ts` (323 ř.) jsou pod ~500 řádků → ponechány.
+
+**Další krok: krok 0 – stěny s tloušťkou** (`KRESLENI-STEN-NAVRH.md`). Před začátkem se zeptat na otevřené body: výchozí tloušťka migrovaných stěn (300 mm?), migrace dvojčár/spárovaných příček automaticky nebo s dotazem, výchozí strana niky. Pravidlo v `CLAUDE.md` „tloušťka se graficky nekreslí“ změnit na „kreslí se vždy“.
+
+## Předchozí stav (2026-11-10 – ostění, příčka, dveře, okna)
 
 **Hotovo – okna s rámem (2026-11-10, druhý počítač):** podle obrázku uživatele má okno stejnou značku jako dveře se zárubní, jen místo křídla je **čára skla uprostřed hloubky rámu** (`drawFramed` v `drawPlan.ts`, dřív `drawFramedDoor`). Okno má `frame` jako dveře (výchozí `WINDOW_FRAME` 50 × 50 mm, otvor = ostění L + rám + okno + rám + ostění P). Ostění, odsazení rámu, hloubky z obou líců v příčce fungují stejně jako u dveří (`core/doorLayout.ts`). Nový druh **`french` = Francouzské okno** (stejná značka, výchozí parapet 50 mm, výška 2200, šířka 900; číslování O1, O2… společné s okny). Nástroj Okno má v liště nad plátnem volbu Okno / Francouzské okno (`settings.windowKind`), v panelu okna přepínač Druh (přepnutí nastaví výchozí parapet). Okno ve stěně kreslené jednou čarou: rám začíná v líci a jde do stěny; výchozí strana = ven od středu výkresu (`outwardSwing`), přepíná se tlačítkem „Strana rámu“. Starší okna bez `frame` se kreslí postaru (bez migrace, jako u dveří). Bez změny schématu. 45 testů. Ověřeno v prohlížeči na PC, **na tabletu neověřeno**. Přidán `.claude/launch.json` (náhled dev serveru v Claude).
 
