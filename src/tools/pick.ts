@@ -4,7 +4,6 @@
 import { findNodeNear, findWallNear, isCurved, openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
 import { textBoxPx } from '../canvas/textBox';
 import { projectToSegment } from '../core/geometry';
-import { toPrimary } from '../core/pairing';
 import { findBodyAt } from '../core/wallBody';
 import type { Floor, Pt } from '../model/types';
 import type { Camera, Selection } from '../store/store';
@@ -23,14 +22,6 @@ export function pickOpening(floor: Floor, p: Pt, cam: Camera): string | null {
     const along = pr.t * wallLength(floor, wall);
     for (const po of openingsOnWall(floor, wall)) {
       if (along >= po.start - tol * 0.3 && along <= po.end + tol * 0.3) return po.op.id;
-    }
-    // druhá čára spárované příčky: otvory leží na první čáře
-    const prim = toPrimary(floor, wall, p);
-    if (prim) {
-      const a2 = prim.t * wallLength(floor, prim.wall);
-      for (const po of openingsOnWall(floor, prim.wall)) {
-        if (a2 >= po.start - tol * 0.3 && a2 <= po.end + tol * 0.3) return po.op.id;
-      }
     }
   }
   return null;

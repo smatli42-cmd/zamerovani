@@ -8,7 +8,6 @@ import { useStore } from '../../store/useStore';
 import { close } from './common';
 import { NumField, Panel } from './fields';
 import { OpeningPanel } from './OpeningPanel';
-import { PartitionPanel } from './PartitionPanel';
 import { RoomPanel } from './RoomPanel';
 import { TextPanel } from './TextPanel';
 import { WallPanel } from './WallPanel';
@@ -27,7 +26,6 @@ export function SidePanel() {
   switch (selection.kind) {
     case 'wall': {
       const w = floor.walls[selection.id];
-      if (w?.part) return <PartitionPanel floor={floor} wall={w} />;
       return w ? <WallPanel floor={floor} wall={w} /> : null;
     }
     case 'opening': {

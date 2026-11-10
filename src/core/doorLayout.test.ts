@@ -25,7 +25,6 @@ describe('dveře se zárubní', () => {
     // změna hloubky zárubně přerozdělí obě ostění (součet 350 → 250, poměr 100:250 zůstane)
     const floor = createFloor('t2');
     floor.walls[w.id] = w;
-    w.part = { id: 'p', line: 1 };
     expect(applyRevealPart(floor, op, 'frameWidth', 70)).toBe(true);
     expect(op.frame!.width).toBe(70);
     expect(revealPartValue(floor, op, 'frameDepth')).toBe(100);

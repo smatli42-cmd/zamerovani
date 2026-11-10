@@ -94,3 +94,26 @@ describe('migrace 5 → 6 (tloušťka stěn)', () => {
     expect([1, -1]).toContain(w.w1!.side);
   });
 });
+
+describe('migrace 6 → 7 (zrušená příčka)', () => {
+  it('značka spárované příčky zmizí, čára i otvor zůstanou', () => {
+    const lbl = { type: null, material: '', note: '' };
+    const p = migrateProject({
+      schema: 6,
+      id: 'p',
+      floors: [
+        {
+          ...floor(),
+          texts: {},
+          nodes: { a: { id: 'a', x: 0, y: 0 }, b: { id: 'b', x: 1000, y: 0 } },
+          walls: { w1: { id: 'w1', a: 'a', b: 'b', thickness: 0, side: 1, measured: null, label: lbl, part: { id: 'pt', line: 1 } } },
+          openings: { o: { id: 'o', wallId: 'w1', kind: 'door', number: 'D1', width: 800, height: 1970, sill: 0, depth: 0, offset: 100, ref: 'a', hinge: 'a', swing: 1, note: '' } }
+        }
+      ]
+    });
+    const f = p.floors[0]!;
+    expect('part' in f.walls.w1!).toBe(false);
+    expect(f.walls.w1!.thickness).toBe(0);
+    expect(f.openings.o!.wallId).toBe('w1');
+  });
+});

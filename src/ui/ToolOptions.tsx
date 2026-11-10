@@ -1,5 +1,5 @@
 /**
- * Lišta s volbami aktivního nástroje nad plátnem (Dvojčára: tloušťka a strana; tvary: styl čáry; okno: druh).
+ * Lišta s volbami aktivního nástroje nad plátnem (Stěna: tloušťka; tvary: styl čáry; okno: druh; vkládání otvorů).
  */
 import { activeWallThickness, WALL_PRESETS, wallPresets } from '../model/factory';
 import { addWallPreset, endPaste, removeWallPreset, setActiveWallThickness } from '../store/actions';
@@ -70,13 +70,5 @@ export function ToolOptions() {
       </div>
     );
   }
-  if (tool !== 'dline' && tool !== 'pricka') return null;
-  return (
-    <div class="tool-options">
-      <NumField label="Tloušťka příčky" value={settings.partThickness} min={10} onCommit={v => v !== null && store.updateSettings({ partThickness: v })} />
-      <button class="btn btn-sm" onClick={() => store.updateSettings({ partSide: settings.partSide === 1 ? -1 : 1 })} title="Na kterou stranu od směru kreslení leží druhá čára">
-        ⇄ Druhá čára: {settings.partSide === 1 ? 'vlevo' : 'vpravo'} od směru kreslení
-      </button>
-    </div>
-  );
+  return null;
 }

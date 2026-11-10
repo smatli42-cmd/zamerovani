@@ -4,7 +4,6 @@
 import { arcGeometry } from '../core/arc';
 import { arcChain } from '../core/arcChain';
 import { doorLayout } from '../core/doorLayout';
-import { partitionThickness, twinOffset } from '../core/pairing';
 import { openingSpan, openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
 import { add, dist, dot, lerp, normal, scale, sub, unit } from '../core/geometry';
 import { isWindowKind } from '../model/factory';
@@ -54,10 +53,6 @@ function pathWall(ctx: CanvasRenderingContext2D, wall: Wall, a: Pt, b: Pt, nodes
 export function drawWalls(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camera, selection: Selection, hover: Selection): void {
   ctx.save();
   ctx.lineCap = 'round';
-  // vybraná / pod perem ležící příčka se zvýrazní celá (obě čáry)
-  const partOf = (s: Selection): string | undefined => (s?.kind === 'wall' ? floor.walls[s.id]?.part?.id : undefined);
-  const selPart = partOf(selection);
-  const hoverPart = partOf(hover);
 
   // Stěny s tloušťkou: nejdřív výplně všech těl (světle šedé), pak líce a čela volných konců – spoje bez čar
   const bodies = wallBodies(floor);
@@ -107,8 +102,8 @@ export function drawWalls(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
     if (!n) continue;
     const a = toScreen(n[0], cam);
     const b = toScreen(n[1], cam);
-    const selected = isSel(selection, 'wall', wall.id) || (!!selPart && wall.part?.id === selPart);
-    const hovered = isSel(hover, 'wall', wall.id) || (!!hoverPart && wall.part?.id === hoverPart);
+    const selected = isSel(selection, 'wall', wall.id);
+    const hovered = isSel(hover, 'wall', wall.id);
 
     if (selected || hovered) {
       ctx.strokeStyle = selected ? 'rgba(37,99,235,0.25)' : 'rgba(147,197,253,0.35)';
@@ -217,22 +212,11 @@ export function drawOpenings(ctx: CanvasRenderingContext2D, floor: Floor, cam: C
       const p2 = toScreen(lerp(n[0], n[1], po.end / len), cam);
       const color = isSel(selection, 'opening', po.op.id) ? COLORS.selected : isSel(hover, 'opening', po.op.id) ? '#3b82f6' : COLORS.opening;
       if ((po.op.kind === 'door' || isWindowKind(po.op.kind)) && po.op.frame) {
-        // dveře se zárubní / okno s rámem: jedna značka přes celou tloušťku (příčka: obě čáry), tenké čáry
-        const off = twinOffset(floor, wall);
-        const offPx = off ? scale(toScreen(add(lerp(n[0], n[1], 0), off), cam), 1) : null;
-        const origin = toScreen(lerp(n[0], n[1], 0), cam);
-        drawFramed(ctx, p1, p2, po.op, cam, color, offPx ? sub(offPx, origin) : null, partitionThickness(floor, wall));
+        // dveře se zárubní / okno s rámem (tenké čáry); kreslení skrz tělo stěny přijde v kroku 1
+        drawFramed(ctx, p1, p2, po.op, cam, color, null, null);
         continue;
       }
       drawOpeningSymbol(ctx, p1, p2, po.op, cam, color);
-      // spárovaná příčka: otvor se kreslí i na druhém líci (dveře bez křídla, nika jen na své čáře)
-      const off = po.op.kind === 'niche' ? null : twinOffset(floor, wall);
-      if (off) {
-        const t1 = toScreen(add(lerp(n[0], n[1], po.start / len), off), cam);
-        const t2 = toScreen(add(lerp(n[0], n[1], po.end / len), off), cam);
-        const twin: Opening = { ...po.op, kind: po.op.kind === 'door' ? 'opening' : po.op.kind, swing: po.op.swing === 1 ? -1 : 1 };
-        drawOpeningSymbol(ctx, t1, t2, twin, cam, color);
-      }
     }
   }
   ctx.restore();
@@ -241,7 +225,7 @@ export function drawOpenings(ctx: CanvasRenderingContext2D, floor: Floor, cam: C
 /**
  * Dveře se zárubní a okno s rámem (značka jako v Revitu, tenké čáry). Okno má místo křídla čáru skla uprostřed rámu. Souřadnice x podél stěny od začátku otvoru, y od líce A.
  * Líce stěny se v otvoru přeruší; s ostěním je okraj stěny „vykousnutý“ (schod o hloubku ostění a délku ostění).
- * `off` = vektor (v px) od líce A k líci B u příčky, jinak se hloubka měří ve směru `swing`.
+ * `off` = vektor (v px) od líce A k líci B u stěny s tloušťkou (krok 1), jinak se hloubka měří ve směru `swing`.
  */
 function drawFramed(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, cam: Camera, color: string, off: Pt | null, T: number | null): void {
   const k = cam.zoom;
@@ -339,7 +323,7 @@ function drawFramed(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, 
     return;
   }
 
-  // křídlo (otevírá se ve směru swing; u příčky z té plochy zárubně, ke které směřuje)
+  // křídlo (otevírá se ve směru swing; u stěny s tloušťkou z té plochy zárubně, ke které směřuje)
   const towardB = thick !== null && dot(nrm, dir) > 0;
   const yLeaf = thick !== null ? (towardB ? fo + F : fo) : fo;
   const xHinge = op.hinge === 'a' ? L + fw : span - R - fw;

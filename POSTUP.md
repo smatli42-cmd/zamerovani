@@ -4,11 +4,19 @@ Projekt je na OneDrive a uživatel střídá dva počítače (nikdy ne současn�
 **Na začátku sezení tento soubor přečti. Na konci práce (nebo po větším kroku) ho aktualizuj.**
 Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do „Historie“.
 
-## Poslední stav (2026-11-10, noc – krok 0, část 0c: menu Stěny)
+## Poslední stav (2026-11-10, noc – krok 0 hotový, část 0d: zrušení příček)
+
+**Hotovo (0d):** nástroje **Příčka** a **Dvojčára** jsou zrušené (příčka = stěna s malou tloušťkou z menu Stěny). Odstraněno: `core/pairing.ts`, `core/partition.ts`, `tools/partitionTool.ts`, `ui/panels/PartitionPanel.tsx` (+ jejich testy), `Wall.part`, akce `addPartition/applyPartition/setPartitionStyle`, nastavení `partThickness/partSide`, kreslení otvorů „na druhém líci“, kóta tloušťky příčky, vkládání přes druhou čáru (`toPrimary`). `SCHEMA_VERSION` = 7, migrace 6→7 odstraní `part` (staré čáry příček zůstanou čárami s tloušťkou 0 a otvory na své čáře – výkresy jsou jen zkušební; čáru jde vybrat a v panelu jí dát tloušťku). `openingThickness` zatím vrací null (otvor se kreslí jen na líci) – v kroku 1 bude tloušťka stěny. 52 testů, typecheck, build OK; v prohlížeči ověřeno (lišta bez Příčky/Dvojčáry, staré projekty se načtou, výběr staré čáry, kóty).
+
+**Pozor (vývoj na OneDrive):** po hromadné úpravě souborů skriptem Vite změnu nezachytil a posílal starý kód (chyba `twinOffset is not defined`). Pomohl restart `npm run dev`. Zapsáno do `CLAUDE.md`.
+
+**Krok 0 (stěny s tloušťkou) je tím hotový.** **Další krok: krok 1 – otvory a ostění ve stěně s tloušťkou** (`ZADANI-OKNA-DVERE.md`): otvor se vkládá ťuknutím na čáru líce i do těla, uloží se jednou a kreslí se skrz celé tělo (přerušení obou líců, dveře/okna se zárubní/rámem přes tloušťku, ostění z obou líců = `doorLayout` s T = tloušťka stěny), nika na vnitřním líci (ze strany místnosti), kóta hloubky ostění na výkrese. Před začátkem krátce navrhnout a zeptat se na nejasnosti. Potom (dle rozhodnutí) oblouk s tloušťkou.
+
+## Předchozí stav (2026-11-10, noc – krok 0, část 0c: menu Stěny)
 
 **Hotovo (0c):** při nástroji Stěna je v liště nad plátnem **menu tloušťky**: předvolby 100 / 150 / 200 / 300 + vlastní (pole „Vlastní“ přidá předvolbu a hned ji vybere, vlastní předvolby mají křížek k odebrání). Aktuální tloušťka je označená, nové stěny se kreslí jí. Uloženo **s projektem** (nepovinná pole `Project.wallThickness`, `Project.wallPresets`, bez změny schématu); výběr **není v historii Zpět/Vpřed** (`store.editProjectSettings`, `restore` zachová nastavení). Kód: `model/factory.ts` (`WALL_PRESETS`, `activeWallThickness`, `wallPresets`), `store/actions/project.ts`, `ui/ToolOptions.tsx`, CSS `.wall-options`. Test `store/wallPresets.test.ts`. 57 testů. Ověřeno v prohlížeči (stěna 100, vlastní 450, uložení po obnovení stránky). **Na tabletu neověřeno.**
 
-**Další krok:** 0d – převod a odstranění příček a dvojčár (nástroje Příčka, Dvojčára, `Wall.part`, `core/pairing.ts`, `PartitionPanel`; staré výkresy jsou jen zkušební, stačí, aby se načetly), pak krok 1 (otvory skrz tělo stěny, vkládání ťuknutím do těla, nika na vnitřním líci).
+**Další krok:** ~~0d~~ (hotovo), pak krok 1.
 
 ## Předchozí stav (2026-11-10, noc – krok 0, části 0a + 0b: stěny s tloušťkou)
 

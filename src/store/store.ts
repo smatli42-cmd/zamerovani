@@ -14,7 +14,7 @@ import type { RevealPart } from '../core/doorLayout';
 import type { LineStyle } from '../model/types';
 import type { Side } from '../core/components';
 
-export type ToolId = 'select' | 'wall' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'dline' | 'pricka' | 'arc' | 'text' | 'leader' | 'paste' | 'pan';
+export type ToolId = 'select' | 'wall' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'text' | 'leader' | 'paste' | 'pan';
 
 export type SingleSelection =
   | { kind: 'wall'; id: Id }
@@ -72,10 +72,6 @@ export interface Settings {
   fingerPan: boolean;
   /** Velikost písma kót (1 = výchozí). */
   dimScale: number;
-  /** Dvojčára (příčka): tloušťka mezi dvěma čarami (mm). */
-  partThickness: number;
-  /** Dvojčára: na kterou stranu od směru kreslení leží druhá čára (1 = vlevo, -1 = vpravo). */
-  partSide: 1 | -1;
   /** Styl čáry nově kreslených tvarů (obdélník, kruh, oblouk). */
   shapeStyle: LineStyle;
   /** Nástroj Okno: vkládá běžné nebo francouzské okno. */
@@ -110,7 +106,7 @@ export interface AppState {
 const SETTINGS_KEY = 'zamerovani.settings';
 
 function loadSettings(): Settings {
-  const defaults: Settings = { ortho: true, snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, partThickness: 100, partSide: 1, shapeStyle: 'solid', windowKind: 'window' };
+  const defaults: Settings = { ortho: true, snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', windowKind: 'window' };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     return raw ? { ...defaults, ...JSON.parse(raw) } : defaults;

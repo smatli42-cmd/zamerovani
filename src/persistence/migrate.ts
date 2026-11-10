@@ -17,9 +17,10 @@ export function migrateProject(raw: unknown): Project {
   // 2 → 3: tvary (obdélník, kruh, oblouk) se staly běžnými stěnami; 3 → 4: kruh je jedna stěna
   // 4 → 5: přibyly samostatné texty (floor.texts)
   // 5 → 6: stěny mají tloušťku a stranu těla (Wall.thickness, Wall.side), tloušťka zmizela z popisku
+  // 6 → 7: zrušena spárovaná příčka a dvojčára (Wall.part) – jejich čáry zůstanou obyčejnými čarami
   const floors = p.floors.map(f => {
     const j = joinSemicircles(convertShapesToWalls(f));
-    return addWallThickness({ ...j, texts: j.texts ?? {} });
+    return removePairing(addWallThickness({ ...j, texts: j.texts ?? {} }));
   });
   return { ...p, floors, schema: SCHEMA_VERSION };
 }
@@ -123,10 +124,24 @@ function addWallThickness(floor: Floor): Floor {
       continue;
     }
     const { thickness: labelThickness, ...label } = w.label as typeof w.label & { thickness?: number | null };
-    const line = w.radius !== undefined || !!w.sagitta || (w.style && w.style !== 'solid') || !!w.part;
+    const line = w.radius !== undefined || !!w.sagitta || (w.style && w.style !== 'solid') || !!(w as { part?: unknown }).part;
     walls[w.id] = { ...w, label, thickness: line ? 0 : (labelThickness ?? DEFAULT_WALL_THICKNESS), side: 1 };
   }
   const out = { ...floor, walls };
   for (const w of Object.values(walls)) if (hasBody(w)) orientLoopOutward(out, w.id);
   return out;
+}
+
+/**
+ * Verze 7: nástroje Příčka a Dvojčára jsou zrušené (příčka = stěna s malou tloušťkou). Značka spárování
+ * `part` se odstraní; čáry zůstanou jako čáry bez tloušťky a otvory na své čáře (výkresy byly jen zkušební).
+ */
+function removePairing(floor: Floor): Floor {
+  const walls: Floor['walls'] = {};
+  for (const w of Object.values(floor.walls)) {
+    const { part, ...rest } = w as typeof w & { part?: unknown };
+    void part;
+    walls[w.id] = rest;
+  }
+  return { ...floor, walls };
 }

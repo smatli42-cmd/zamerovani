@@ -72,13 +72,7 @@ export function duplicateSelection(): void {
       return nid;
     };
     const wallMap = new Map<Id, Id>();
-    const partMap = new Map<Id, Id>();
-    // vybraná příčka se kopíruje celá
     const wallIds = new Set(items.filter(i => i.kind === 'wall').map(i => i.id));
-    for (const id of [...wallIds]) {
-      const pid = floor.walls[id]?.part?.id;
-      if (pid) for (const w of Object.values(floor.walls)) if (w.part?.id === pid) wallIds.add(w.id);
-    }
     for (const id of wallIds) {
       const it = { kind: 'wall' as const, id };
       const w = floor.walls[it.id];
@@ -86,10 +80,6 @@ export function duplicateSelection(): void {
       const b = w && nodeCopy(w.b);
       if (!w || !a || !b) continue;
       const nw: Wall = { ...clone(w), id: newId('w'), a, b };
-      if (w.part) {
-        if (!partMap.has(w.part.id)) partMap.set(w.part.id, newId('pt'));
-        nw.part = { id: partMap.get(w.part.id)!, line: w.part.line };
-      }
       floor.walls[nw.id] = nw;
       wallMap.set(w.id, nw.id);
       created.push({ kind: 'wall', id: nw.id });

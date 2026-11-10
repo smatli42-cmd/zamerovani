@@ -5,7 +5,6 @@
  */
 import { arcGeometry } from '../core/arc';
 import { arcChain } from '../core/arcChain';
-import { thicknessTarget, twinOffset } from '../core/pairing';
 import { openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
 import { centroid, dist, dot, lerp, normal, scale, sub, unit } from '../core/geometry';
 import { OPENING_DEFAULTS } from '../model/factory';
@@ -161,21 +160,6 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
       offset += rowGap + (placed.length ? 8 * s : 0);
     }
 
-    // Tloušťka spárované příčky v místě otvoru (klikací; mění se tím tloušťka celé příčky)
-    const twin = twinOffset(floor, wall);
-    const tt = twin ? thicknessTarget(floor, wall) : null;
-    if (twin && tt) {
-      const thick = Math.round(Math.hypot(twin.x, twin.y));
-      for (const po of placed) {
-        if (po.op.kind === 'niche') continue;
-        const m = lerp(n[0], n[1], (po.start + (po.end - po.start) * 0.18) / len);
-        drawDimLine(ctx, toScreen(m, cam), toScreen({ x: m.x + twin.x, y: m.y + twin.y }, cam), u, 0, String(thick), 'tloušťka', { color: '#334155', bg: '#ffffff', bold: false }, s, {
-          type: 'numpad',
-          target: { kind: 'wall-length', wallId: tt.wallId, move: { nodeId: tt.nodeId } },
-          wallId: tt.wallId
-        });
-      }
-    }
 
     // 2. řada: celková délka stěny
     const measured = wall.measured;

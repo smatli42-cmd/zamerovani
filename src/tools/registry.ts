@@ -3,7 +3,6 @@
  */
 import type { ToolId } from '../store/store';
 import { doorTool, nicheTool, openingTool, roomTool, windowTool } from './placeTools';
-import { partitionTool, prickaTool } from './partitionTool';
 import { arcTool, circleTool, rectTool } from './shapeTools';
 import { pasteTool } from './pasteTool';
 import { leaderTool } from './leaderTool';
@@ -22,8 +21,6 @@ export const tools: Record<ToolId, Tool> = {
   room: roomTool,
   rect: rectTool,
   circle: circleTool,
-  dline: partitionTool,
-  pricka: prickaTool,
   arc: arcTool,
   text: textTool,
   leader: leaderTool,

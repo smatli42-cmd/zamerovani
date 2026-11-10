@@ -1,13 +1,11 @@
 /**
- * Akce: stěny (kreslení, příčky, tvary, oblouky, popisky) a posun rohů / skupin.
+ * Akce: stěny (kreslení, tvary, oblouky, tloušťka, popisky) a posun rohů / skupin.
  */
-import { createCircleWall, createWall, newId } from '../../model/factory';
+import { createCircleWall, createWall } from '../../model/factory';
 import type { Floor, Id, LineStyle, Pt, Wall, WallLabel } from '../../model/types';
 import { setChainSagitta } from '../../core/arcChain';
 import { dist } from '../../core/geometry';
 import { setWallLength, type MoveTarget } from '../../core/solver';
-import { partitionPoints } from '../../core/partition';
-import { partitionWalls } from '../../core/pairing';
 import { splitWallsAtNode } from '../../core/topology';
 import { hasBody, initialSide, orientLoopOutward } from '../../core/wallBody';
 import { store } from '../store';
@@ -55,44 +53,6 @@ export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: I
   });
   if (createdId && select) store.set({ selection: { kind: 'wall', id: createdId } });
   return createdId;
-}
-
-/**
- * Příčka dvěma čarami: dvě rovnoběžné stěny ve vzdálenosti `thickness`.
- * Konce na jiných stěnách je rozdělí v místě napojení (vzniknou samostatné úseky s kótami),
- * volný konec se uzavře krátkou stěnou o délce tloušťky.
- */
-export function addPartition(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, thickness: number, side: 1 | -1, paired = false): void {
-  store.edit(floor => applyPartition(floor, start, startNodeId, end, endNodeId, thickness, side, paired));
-  if (paired) {
-    // vybere novou příčku, ať je hned vidět její panel
-    const f = store.floor();
-    const last = f && Object.values(f.walls).filter(w => w.part?.line === 1).pop();
-    if (last) store.set({ selection: { kind: 'wall', id: last.id } });
-  }
-}
-
-/** Vlastní vytvoření příčky nad podlažím (bez store – testovatelné). */
-export function applyPartition(floor: Floor, start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, thickness: number, side: 1 | -1, paired = false): void {
-  const second = partitionPoints(floor, start, end, thickness, side);
-  const a = getOrCreateNode(floor, start, startNodeId);
-  const b = getOrCreateNode(floor, end, endNodeId);
-  const a2 = getOrCreateNode(floor, second.a2, null);
-  const b2 = getOrCreateNode(floor, second.b2, null);
-  if (new Set([a, b, a2, b2]).size < 4) return;
-  const partId = newId('pt');
-  const link = (x: Id, y: Id, line: 0 | 1 | 2) => {
-    const before = Object.keys(floor.walls).length;
-    const w = linkWall(floor, x, y);
-    // jen nově vytvořené stěny patří příčce (úsek existující stěny mezi čarami zůstává stěnou)
-    if (paired && w && (Object.keys(floor.walls).length > before || line !== 0)) w.part = { id: partId, line };
-  };
-  link(a, b, 1);
-  link(a2, b2, 2);
-  for (const id of [a, b, a2, b2]) splitWallsAtNode(floor, id);
-  // Konec opřený o stěnu už uzavírá úsek rozdělené stěny, volný konec dostane krátkou stěnu
-  link(a, a2, 0);
-  link(b, b2, 0);
 }
 
 /** Obdélník ze čtyř stěn (např. sloup, komín); rohy na jiných stěnách je rozdělí. */
@@ -156,18 +116,6 @@ export function setWallSagitta(wallId: Id, sagitta: number): void {
     if (!w) return;
     if (Math.abs(sagitta) < 0.5) delete w.sagitta;
     else if (!setChainSagitta(floor, wallId, sagitta)) w.sagitta = Math.round(sagitta);
-  });
-}
-
-/** Změní styl čáry celé příčky (obě čáry najednou). */
-export function setPartitionStyle(wallId: Id, style: LineStyle): void {
-  store.edit(floor => {
-    const w = floor.walls[wallId];
-    if (!w) return;
-    for (const pw of partitionWalls(floor, w)) {
-      if (style === 'solid') delete pw.style;
-      else pw.style = style;
-    }
   });
 }
 

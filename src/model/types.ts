@@ -8,7 +8,7 @@
  * - Při změně struktury zvýšit SCHEMA_VERSION a doplnit migraci v persistence/migrate.ts.
  */
 
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 export type Id = string;
 
@@ -51,11 +51,6 @@ export interface Wall {
   style?: LineStyle;
   /** Kruh: poloměr v mm. Kruhová stěna má a === b = střed kruhu. */
   radius?: number;
-  /**
-   * Spárovaná příčka: stěny téže příčky mají společné `id`; line 1 = první čára (nesou se na ní otvory),
-   * line 2 = druhá čára, line 0 = krátká uzavírací stěna volného konce.
-   */
-  part?: { id: Id; line: 0 | 1 | 2 };
 }
 
 /** `french` = francouzské okno (stejná značka jako okno, výchozí parapet 50 mm). */

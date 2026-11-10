@@ -2,13 +2,12 @@
  * Uspořádání dveří se zárubní v řezu stěnou (souřadnice x podél stěny od začátku otvoru, y od líce A ve směru tloušťky).
  *
  * Šířka otvoru v líci: ostění vlevo + zárubeň + dveře + zárubeň + ostění vpravo.
- * Tloušťka příčky T = hloubka ostění z líce A + hloubka zárubně + hloubka ostění z líce B
+ * Tloušťka stěny T = hloubka ostění z líce A + hloubka zárubně + hloubka ostění z líce B
  * (hloubka z líce B se dopočítává, ukládá se jen hloubka z líce A).
  */
 import type { Floor, Opening, Wall } from '../model/types';
 import { wallNodes } from './floorQueries';
 import { normal, unit } from './geometry';
-import { partitionThickness } from './pairing';
 
 export type RevealPart = 'depth' | 'depthBack' | 'left' | 'right' | 'top' | 'frameWidth' | 'frameDepth' | 'frameOffset';
 
@@ -24,7 +23,7 @@ export interface DoorLayout {
   dB: number;
   /** Odstup zárubně od líce A. */
   fo: number;
-  /** Tloušťka příčky (null = obyčejná stěna). */
+  /** Tloušťka stěny (null = otvor jen na čáře líce). */
   T: number | null;
   /** Je zapnuté ostění. */
   reveal: boolean;
@@ -48,10 +47,14 @@ export function doorLayout(op: Opening, T: number | null): DoorLayout {
   };
 }
 
-/** Tloušťka příčky, ve které leží otvor (null u obyčejné stěny). */
+/**
+ * Tloušťka stěny pro uspořádání otvoru (ostění z obou líců). Zatím null – otvor se kreslí jen na čáře líce;
+ * v kroku 1 (otvory skrz tělo stěny) to bude tloušťka stěny.
+ */
 export function openingThickness(floor: Floor, op: Opening): number | null {
-  const wall = floor.walls[op.wallId];
-  return wall ? partitionThickness(floor, wall) : null;
+  void floor;
+  void op;
+  return null;
 }
 
 /** Hodnota dílu ostění / zárubně pro zobrazení a NumPad. */
@@ -68,7 +71,7 @@ export function revealPartValue(floor: Floor, op: Opening, part: RevealPart): nu
 }
 
 /**
- * Zapíše hodnotu dílu ostění / zárubně a udrží vazby: tloušťka příčky = ostění A + zárubeň + ostění B.
+ * Zapíše hodnotu dílu ostění / zárubně a udrží vazby: tloušťka stěny = ostění A + zárubeň + ostění B.
  * Délky ostění (left/right) a šířka zárubně mění celkovou šířku otvoru – okraj u referenčního rohu to řeší volající.
  */
 export function applyRevealPart(floor: Floor, op: Opening, part: RevealPart, value: number): boolean {
