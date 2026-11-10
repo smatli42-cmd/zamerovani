@@ -165,7 +165,7 @@ function drawFramedDoor(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Openi
   const nrm = scale(normal(u), op.swing);
   const dir = off && T ? scale(off, 1 / Math.hypot(off.x, off.y)) : nrm;
   const lay = doorLayout(op, off ? T : null);
-  const { L, R, fw, F, dA, dB, fo } = lay;
+  const { L, R, fw, F, dA, fo } = lay;
   const span = openingSpan(op);
   const P = (x: number, y: number): Pt => add(add(s1, scale(u, x * k)), scale(dir, y * k));
   const thick = off && T ? T : null;
@@ -222,11 +222,19 @@ function drawFramedDoor(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Openi
     ctx.stroke();
     ctx.restore();
   };
-  faceLine(0, dA > 0);
-  if (thick) faceLine(thick, dB > 0);
+  faceLine(0, true);
+  if (thick) faceLine(thick, true);
 
-  // zárubně
+  // zárubně + tenké plné čáry mezi nimi (práh)
   ctx.lineWidth = 1.2;
+  for (const y of [fo, fo + F]) {
+    const a = P(L + fw, y);
+    const b = P(span - R - fw, y);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
   for (const x0 of [L, span - R - fw]) {
     const q = [P(x0, fo), P(x0 + fw, fo), P(x0 + fw, fo + F), P(x0, fo + F)];
     ctx.beginPath();

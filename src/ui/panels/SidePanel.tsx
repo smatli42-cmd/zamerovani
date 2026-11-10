@@ -257,6 +257,7 @@ function OpeningPanel({ op }: { op: Opening }) {
         <div class="field-grid">
           <RevealField op={op} part="frameWidth" label="Šířka zárubně" />
           <RevealField op={op} part="frameDepth" label="Hloubka zárubně" />
+          {!op.reveal && <RevealField op={op} part="frameOffset" label="Odsazení zárubně" />}
         </div>
       )}
       {op.kind !== 'niche' && (

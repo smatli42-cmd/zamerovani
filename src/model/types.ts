@@ -82,7 +82,7 @@ export interface Opening {
    */
   reveal?: Reveal;
   /** Zárubeň dveří (volitelné): `width` na každé straně dveří, `depth` ve směru tloušťky stěny. Jen u dveří. */
-  frame?: { width: number; depth: number };
+  frame?: { width: number; depth: number; /** Odsazení zárubně od líce A (jen bez ostění; chybí = uprostřed). */ offset?: number };
 }
 
 export interface Reveal {

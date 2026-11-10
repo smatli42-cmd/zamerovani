@@ -26,7 +26,7 @@ function title(floor: Floor | null, t: NumPadTarget): string {
     case 'opening-gap':
       return `${name} – meziostění`;
     case 'opening-reveal':
-      return `${name} – ${{ depth: 'ostění hloubka (líc A)', depthBack: 'ostění hloubka (líc B)', left: 'ostění vlevo', right: 'ostění vpravo', top: 'ostění nahoře', frameWidth: 'šířka zárubně', frameDepth: 'hloubka zárubně' }[t.part]}`;
+      return `${name} – ${{ depth: 'ostění hloubka (líc A)', depthBack: 'ostění hloubka (líc B)', left: 'ostění vlevo', right: 'ostění vpravo', top: 'ostění nahoře', frameWidth: 'šířka zárubně', frameDepth: 'hloubka zárubně', frameOffset: 'odsazení zárubně od líce A' }[t.part]}`;
   }
 }
 

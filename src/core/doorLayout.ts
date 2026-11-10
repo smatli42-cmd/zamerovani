@@ -8,7 +8,7 @@
 import type { Floor, Opening } from '../model/types';
 import { partitionThickness } from './pairing';
 
-export type RevealPart = 'depth' | 'depthBack' | 'left' | 'right' | 'top' | 'frameWidth' | 'frameDepth';
+export type RevealPart = 'depth' | 'depthBack' | 'left' | 'right' | 'top' | 'frameWidth' | 'frameDepth' | 'frameOffset';
 
 export interface DoorLayout {
   /** Délka ostění vlevo / vpravo (mm podél stěny). */
@@ -40,7 +40,7 @@ export function doorLayout(op: Opening, T: number | null): DoorLayout {
     F,
     dA,
     dB,
-    fo: rv ? dA : T !== null ? Math.max(0, (T - F) / 2) : 0,
+    fo: rv ? dA : (op.frame?.offset ?? (T !== null ? Math.max(0, (T - F) / 2) : 0)),
     T,
     reveal: !!rv
   };
@@ -56,6 +56,7 @@ export function openingThickness(floor: Floor, op: Opening): number | null {
 export function revealPartValue(floor: Floor, op: Opening, part: RevealPart): number | null {
   if (part === 'frameWidth') return op.frame?.width ?? null;
   if (part === 'frameDepth') return op.frame?.depth ?? null;
+  if (part === 'frameOffset') return op.frame ? Math.round(doorLayout(op, openingThickness(floor, op)).fo) : null;
   if (!op.reveal) return null;
   if (part === 'depthBack') {
     const T = openingThickness(floor, op);
@@ -74,6 +75,11 @@ export function applyRevealPart(floor: Floor, op: Opening, part: RevealPart, val
   if (part === 'frameWidth') {
     if (!op.frame) return false;
     op.frame.width = v;
+    return true;
+  }
+  if (part === 'frameOffset') {
+    if (!op.frame) return false;
+    op.frame.offset = T !== null ? Math.min(v, Math.max(0, T - op.frame.depth)) : v;
     return true;
   }
   if (part === 'frameDepth') {
