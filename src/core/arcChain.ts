@@ -88,9 +88,12 @@ function build(floor: Floor, g0: ArcGeometry, walls: Wall[], ends: Id[]): ArcCha
     const a = floor.nodes[e0]!;
     const b = floor.nodes[e1]!;
     const h = sagittaOf(g0.r, total);
-    let sagitta = h;
-    const test = arcGeometry(a, b, h);
-    if (!test || Math.hypot(test.center.x - g0.center.x, test.center.y - g0.center.y) > TOL) sagitta = -h;
+    // strana vyklenutí: celý oblouk leží na jedné straně tětivy – rozhodne vrchol kterékoli části
+    // (podle středu kružnice to u přesného půlkruhu nejde, obě strany mají týž střed)
+    const pw = pieces[0]!.wall;
+    const probe = arcGeometry(floor.nodes[pw.a]!, floor.nodes[pw.b]!, pw.sagitta ?? 0)!.apex;
+    const side = -(b.y - a.y) * (probe.x - (a.x + b.x) / 2) + (b.x - a.x) * (probe.y - (a.y + b.y) / 2);
+    const sagitta = side >= 0 ? h : -h;
     const geom = arcGeometry(a, b, sagitta);
     if (!geom) continue;
     const inner = [...new Set(walls.flatMap(w => [w.a, w.b]))].filter(id => id !== e0 && id !== e1).map(id => ({ id, f: rel(id) / total }));

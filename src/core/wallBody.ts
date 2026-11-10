@@ -75,9 +75,19 @@ interface End {
   lo: number;
   hi: number;
   ang: number;
+  /** Oblouková stěna: střed kružnice (hranice těla jsou soustředné kružnice). */
+  center?: Pt;
   loPt?: Pt;
   hiPt?: Pt;
   free?: boolean;
+}
+
+/** Hranice těla u konce: přímka (rovná stěna) nebo kružnice (oblouková). */
+type Boundary = { kind: 'line'; p: Pt; d: Pt } | { kind: 'circle'; c: Pt; r: number };
+
+function boundaryOf(e: End, off: number): Boundary {
+  const p = add(e.node, scale(e.n, off));
+  return e.center ? { kind: 'circle', c: e.center, r: dist(e.center, p) } : { kind: 'line', p, d: e.d };
 }
 
 /** Průsečík přímek p + s·d a q + t·e (null u rovnoběžných). */
@@ -87,6 +97,41 @@ function intersectLines(p: Pt, d: Pt, q: Pt, e: Pt): Pt | null {
   const w = sub(q, p);
   const t = (w.x * e.y - w.y * e.x) / cross;
   return add(p, scale(d, t));
+}
+
+function lineCircle(p: Pt, d: Pt, c: Pt, r: number): Pt[] {
+  const f = sub(p, c);
+  const b = dot(f, d);
+  const disc = b * b - (dot(f, f) - r * r);
+  if (disc < 0) return [];
+  const sq = Math.sqrt(disc);
+  return [add(p, scale(d, -b - sq)), add(p, scale(d, -b + sq))];
+}
+
+function circleCircle(c1: Pt, r1: number, c2: Pt, r2: number): Pt[] {
+  const dd = dist(c1, c2);
+  if (dd < 1e-6 || dd > r1 + r2 || dd < Math.abs(r1 - r2)) return []; // soustředné (tatáž kružnice) nebo bez průsečíku
+  const a = (r1 * r1 - r2 * r2 + dd * dd) / (2 * dd);
+  const h = Math.sqrt(Math.max(0, r1 * r1 - a * a));
+  const u = scale(sub(c2, c1), 1 / dd);
+  const m = add(c1, scale(u, a));
+  const v = normal(u);
+  return [add(m, scale(v, h)), add(m, scale(v, -h))];
+}
+
+/** Průsečík dvou hranic nejbližší rohu (přímka × přímka / kružnice, kružnice × kružnice). */
+function intersectBoundaries(b1: Boundary, b2: Boundary, near: Pt): Pt | null {
+  let pts: Pt[];
+  if (b1.kind === 'line' && b2.kind === 'line') {
+    const x = intersectLines(b1.p, b1.d, b2.p, b2.d);
+    pts = x ? [x] : [];
+  } else if (b1.kind === 'line' && b2.kind === 'circle') pts = lineCircle(b1.p, b1.d, b2.c, b2.r);
+  else if (b1.kind === 'circle' && b2.kind === 'line') pts = lineCircle(b2.p, b2.d, b1.c, b1.r);
+  else if (b1.kind === 'circle' && b2.kind === 'circle') pts = circleCircle(b1.c, b1.r, b2.c, b2.r);
+  else pts = [];
+  let best: Pt | null = null;
+  for (const q of pts) if (!best || dist(q, near) < dist(best, near)) best = q;
+  return best;
 }
 
 /** Obrysy těl všech stěn s tloušťkou. */
@@ -99,13 +144,14 @@ export function wallBodies(floor: Floor): Map<Id, WallBody> {
     const b = floor.nodes[w.b];
     if (!a || !b || dist(a, b) < 1) continue;
     const path = facePath(a, b, w.sagitta ?? 0);
+    const center = arcGeometry(a, b, w.sagitta ?? 0)?.center;
     const tA = path.tans[0]!;
     const tB = path.tans[path.tans.length - 1]!;
     const mk = (atA: boolean): End => {
       const d = atA ? tA : scale(tB, -1);
       const n = normal(d);
       const off = w.thickness * w.side * (atA ? 1 : -1);
-      return { wall: w, atA, node: atA ? a : b, d, n, lo: Math.min(0, off), hi: Math.max(0, off), ang: Math.atan2(d.y, d.x) };
+      return { wall: w, atA, node: atA ? a : b, d, n, lo: Math.min(0, off), hi: Math.max(0, off), ang: Math.atan2(d.y, d.x), ...(center ? { center } : {}) };
     };
     const eA = mk(true);
     const eB = mk(false);
@@ -129,7 +175,8 @@ export function wallBodies(floor: Floor): Map<Id, WallBody> {
       const next = ends[(i + 1) % ends.length]!;
       const p = add(node, scale(e.n, e.hi));
       const q = add(node, scale(next.n, next.lo));
-      const x = intersectLines(p, e.d, q, next.d);
+      // u obloukové stěny se počítá se skutečnou kružnicí líce (ne s tečnou)
+      const x = intersectBoundaries(boundaryOf(e, e.hi), boundaryOf(next, next.lo), node);
       if (x && dist(x, node) <= limit) {
         e.hiPt = x;
         next.loPt = x;
@@ -144,13 +191,24 @@ export function wallBodies(floor: Floor): Map<Id, WallBody> {
   for (const { eA, eB, path } of items) {
     const A = { lo: eA.loPt!, hi: eA.hiPt! };
     const B = { lo: eB.loPt!, hi: eB.hiPt! };
-    // vnitřní body obou hranic (u oblouku), v rámci konce A: hranice „lo“ vede k B.hi, „hi“ od B.lo
+    // vnitřní body obou hranic (u oblouku), v rámci konce A: hranice „lo“ vede k B.hi, „hi“ od B.lo;
+    // u napojení se oblouk ořízne – vynechají se body ležící za koncovým bodem hranice
     const mids = path.pts.slice(1, -1);
     const midT = path.tans.slice(1, -1);
-    const loCurve = mids.map((p, i) => add(p, scale(normal(midT[i]!), eA.lo)));
-    const hiCurve = mids.map((p, i) => add(p, scale(normal(midT[i]!), eA.hi)));
-    const loLine = [A.lo, ...loCurve, B.hi];
-    const hiLine = [B.lo, ...[...hiCurve].reverse(), A.hi];
+    const n = path.pts.length - 1;
+    const param = paramOnArc(path.pts[0]!, path.pts[n]!, eA.wall.sagitta ?? 0);
+    const curve = (off: number, from: Pt, to: Pt) => {
+      const pts = mids.map((p, i) => add(p, scale(normal(midT[i]!), off)));
+      if (!param) return pts;
+      const s0 = param(from);
+      const s1 = param(to);
+      return pts.filter((_, i) => {
+        const si = (i + 1) / n;
+        return si > s0 + 1e-6 && si < s1 - 1e-6;
+      });
+    };
+    const loLine = [A.lo, ...curve(eA.lo, A.lo, B.hi), B.hi];
+    const hiLine = [B.lo, ...curve(eA.hi, A.hi, B.lo).reverse(), A.hi];
     const edges: [Pt, Pt][] = [];
     for (const line of [loLine, hiLine]) for (let i = 0; i + 1 < line.length; i++) edges.push([line[i]!, line[i + 1]!]);
     if (eA.free) edges.push([A.hi, A.lo]);
@@ -168,6 +226,22 @@ export function wallBodies(floor: Floor): Map<Id, WallBody> {
     out.set(eA.wall.id, { wallId: eA.wall.id, poly, edges, snaps });
   }
   return out;
+}
+
+/** Poloha bodu podél oblouku a→b (0 = a, 1 = b) podle úhlu; null u rovné stěny. */
+function paramOnArc(a: Pt, b: Pt, sagitta: number): ((p: Pt) => number) | null {
+  const g = arcGeometry(a, b, sagitta);
+  if (!g) return null;
+  const TWO_PI = Math.PI * 2;
+  const span = Math.abs(g.sweep);
+  return (p: Pt) => {
+    const ang = Math.atan2(p.y - g.center.y, p.x - g.center.x);
+    let rel = g.sweep >= 0 ? ang - g.start : g.start - ang;
+    rel = ((rel % TWO_PI) + TWO_PI) % TWO_PI;
+    // kousek před začátkem oblouku = záporná poloha
+    if (rel > span + (TWO_PI - span) / 2) rel -= TWO_PI;
+    return rel / span;
+  };
 }
 
 export function pointInPolygon(p: Pt, poly: readonly Pt[]): boolean {

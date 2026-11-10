@@ -48,3 +48,19 @@ describe('úchyty oblouků', () => {
     expect(arcHandles(f, arc1.id).find(h => h.wallId === arc1.id)!.selected).toBe(true);
   });
 });
+
+describe('řetěz – přesný půlkruh', () => {
+  it('rozdělený půlkruh má vrchol na správné straně (obě strany mají týž střed)', async () => {
+    const { arcChain } = await import('./arcChain');
+    const { splitWallAt } = await import('./topology');
+    const f = createFloor('t');
+    f.nodes.L = { id: 'L', x: -1000, y: 0 };
+    f.nodes.R = { id: 'R', x: 1000, y: 0 };
+    const w = createWall('L', 'R', -1000); // vyklenutí nahoru (−y)
+    f.walls[w.id] = w;
+    f.nodes.M = { id: 'M', x: 1000 * Math.SQRT1_2, y: -1000 * Math.SQRT1_2 };
+    const [p1] = splitWallAt(f, w.id, 'M')!;
+    const ch = arcChain(f, p1)!;
+    expect(ch.geom.apex.y).toBeCloseTo(-1000, 0);
+  });
+});

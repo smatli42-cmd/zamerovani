@@ -177,3 +177,44 @@ describe('oblouková stěna v uzavřené místnosti', () => {
     expect(top.sagitta).toBe(-300); // vyklenutí nahoru = ven
   });
 });
+
+describe('napojení stěny na obloukovou stěnu (přesně na kružnici líce)', async () => {
+  const { splitWallAt } = await import('./topology');
+  /** Půlkruh se středem (0,0), r = 1000 (líc), tělo 200 dovnitř; rozdělený v bodě M na líci. */
+  function arcWithNode(angleDeg: number) {
+    const f = floorWith({ L: [-1000, 0], R: [1000, 0] });
+    const arc = createWall('L', 'R', -1000, 200, 1); // vyklenutí nahoru (−y), tělo ke středu
+    f.walls[arc.id] = arc;
+    const a = (angleDeg * Math.PI) / 180;
+    f.nodes.M = { id: 'M', x: 1000 * Math.cos(a), y: -1000 * Math.sin(a) };
+    splitWallAt(f, arc.id, 'M');
+    return f;
+  }
+  const r = (p: Pt) => Math.hypot(p.x, p.y);
+
+  it('stěna z líce ven: její hrany končí na vnějším líci, nezajedou do těla oblouku', () => {
+    const f = arcWithNode(45);
+    const m = f.nodes.M!;
+    f.nodes.P = { id: 'P', x: m.x + 800, y: m.y };
+    const st = createWall('M', 'P', 0, 200, -1); // tělo nahoru
+    f.walls[st.id] = st;
+    const body = wallBodies(f).get(st.id)!;
+    for (const p of body.poly) expect(r(p)).toBeGreaterThan(1000 - 1);
+  });
+
+  it('stěna z líce dovnitř přes tělo: začíná na vnitřním líci oblouku', () => {
+    const f = arcWithNode(135);
+    const m = f.nodes.M!;
+    f.nodes.P = { id: 'P', x: m.x, y: m.y + 1200 };
+    const st = createWall('M', 'P', 0, 200, -1); // normal(0,1) = (−1,0) → tělo doprava (−1 = +x)
+    f.walls[st.id] = st;
+    const body = wallBodies(f).get(st.id)!;
+    // rohy na začátku stěny (blízko M) leží na vnitřním líci (r = 800)
+    const near = body.poly.filter(p => Math.abs(p.y - m.y) < 400 && !(Math.abs(p.x - m.x) < 1 && Math.abs(p.y - m.y) < 1));
+    expect(near.length).toBeGreaterThan(0);
+    for (const p of near) expect(Math.abs(r(p) - 800)).toBeLessThan(1);
+    // bod těla oblouku mezi vnitřním a vnějším lícem nad příčkou patří oblouku (ne mezera)
+    const mid = { x: m.x + 100 * Math.SQRT1_2 + 30, y: m.y + 100 * Math.SQRT1_2 };
+    expect(findBodyAt(f, mid)).not.toBeNull();
+  });
+});
