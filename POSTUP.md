@@ -14,7 +14,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - Kontrola: skript porovnal řádky kódu (nic nechybí, nic nepřibylo), žádné kruhové importy. 45 testů, typecheck, build OK. V prohlížeči na PC vyzkoušeno: kreslení stěn, příčka, dveře do příčky, okno + přepnutí na francouzské + ostění, kopírování a vložení okna do jiné stěny, text, kopie stěny, otočení a smazání skupiny; konzole bez chyb. `CLAUDE.md` – aktualizovaná struktura.
 - `selectTool.ts` (242 ř.), `drawPlan.ts` (407 ř.), `drawDims.ts` (323 ř.) jsou pod ~500 řádků → ponechány.
 
-**Další krok: krok 0 – stěny s tloušťkou** (`KRESLENI-STEN-NAVRH.md`). Před začátkem se zeptat na otevřené body: výchozí tloušťka migrovaných stěn (300 mm?), migrace dvojčár/spárovaných příček automaticky nebo s dotazem, výchozí strana niky. Pravidlo v `CLAUDE.md` „tloušťka se graficky nekreslí“ změnit na „kreslí se vždy“.
+**Další krok: krok 0 – stěny s tloušťkou** (`KRESLENI-STEN-NAVRH.md`). Otevřené body uživatel rozhodl (zapsáno v `KRESLENI-STEN-NAVRH.md`): migrované stěny bez tloušťky = 300 mm, dvojčáry a spárované příčky se slučují automaticky, nika výchozí na vnitřní líc. Pravidlo v `CLAUDE.md` „tloušťka se graficky nekreslí“ změnit na „kreslí se vždy“.
 
 ## Předchozí stav (2026-11-10 – ostění, příčka, dveře, okna)
 

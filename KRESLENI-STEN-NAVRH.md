@@ -39,6 +39,7 @@ Počítá se z čáry líce a tloušťky; v `core/` bez DOM, s testy.
 - **Přichytávání při kreslení**: konec čáry líce, vnější roh konce stěny, střed čela, libovolný bod na čáře líce nebo na vnějším líci; zvolený bod se zvýrazní a určí typ spoje.
 - Oblouky a kruhy až později.
 
-## Otevřené otázky (drobné)
-- Výchozí tloušťka u migrovaných stěn bez údaje: 300 mm?
-- Migrace dvojčár a spárovaných příček: slučovat do jedné stěny automaticky, nebo se zeptat?
+## Rozhodnuté drobnosti (2026-11-10, noc)
+- **[rozhodnuto]** Výchozí tloušťka u migrovaných stěn bez údaje: **300 mm**.
+- **[rozhodnuto]** Dvojčáry a spárované příčky se při migraci **slučují do jedné stěny automaticky** (bez dotazu); co nejde převést jednoznačně, zůstane jako dvě stěny a nahlásí se.
+- **[rozhodnuto]** Nika se ve výchozím stavu vkládá na **vnitřní líc** (stranu místnosti = čáru líce, opačně než roste tělo stěny).
