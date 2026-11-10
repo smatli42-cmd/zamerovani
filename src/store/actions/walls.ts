@@ -35,7 +35,7 @@ function linkWall(floor: Floor, a: Id, b: Id, sagitta = 0, style?: LineStyle, th
  * Nová stěna; `sagitta` ≠ 0 = oblouková stěna. Konce na jiných stěnách je rozdělí.
  * `thickness` > 0 = stěna s tělem (strana těla navazuje na tah, uzavřená místnost se natočí ven); 0 = čára (tvar).
  */
-export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, select = true, opts: { sagitta?: number; style?: LineStyle; thickness?: number } = {}): Id | null {
+export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, select = true, opts: { sagitta?: number; style?: LineStyle; thickness?: number; side?: 1 | -1 } = {}): Id | null {
   let createdId: Id | null = null;
   store.edit(floor => {
     const a = getOrCreateNode(floor, start, startNodeId);
@@ -45,7 +45,13 @@ export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: I
     const wall = linkWall(floor, a, b, opts.sagitta ?? 0, opts.style, opts.thickness ?? 0);
     if (!wall) return;
     createdId = wall.id;
-    if (isNew && hasBody(wall)) wall.side = initialSide(floor, wall);
+    if (isNew && hasBody(wall)) {
+      // strana zvolená při kreslení (překlopení stylusem) platí natrvalo, jinak automaticky
+      if (opts.side) {
+        wall.side = opts.side;
+        wall.sideLocked = true;
+      } else wall.side = initialSide(floor, wall);
+    }
     // Konec na jiné stěně → rozdělit ji v místě napojení
     splitWallsAtNode(floor, a);
     splitWallsAtNode(floor, b);

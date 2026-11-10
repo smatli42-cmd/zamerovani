@@ -4,7 +4,13 @@ Projekt je na OneDrive a uživatel střídá dva počítače (nikdy ne současn�
 **Na začátku sezení tento soubor přečti. Na konci práce (nebo po větším kroku) ho aktualizuj.**
 Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do „Historie“.
 
-## Poslední stav (2026-11-10, noc – krok 1: otvory skrz tělo stěny)
+## Poslední stav (2026-11-10, noc – kreslení stěny rovnou s tloušťkou, překlápění perem)
+
+**Připomínka uživatele:** stěna se kreslila jako čára a tloušťka se přidala až po dokončení; chce rovnou kreslit tloušťku a překlápět ji perem na jednu či druhou stranu (osa = čára líce modře, zbytek šedě).
+
+**Hotovo:** nástroj Stěna při tažení ukazuje **modrou čáru líce** a **šedé tělo** v aktuální tloušťce. Když se pero odchýlí od přichycené čáry o víc než 10 px (`FLIP_PX` v `tools/wallTool.ts`), tělo se **překlopí na stranu pera**; bez odchýlení platí automatická strana (`initialSideAt` – navázání na tah, jinak ven od středu). U přichycení konce na roh / stěnu / zvláštní bod se strana už nemění. Strana zvolená perem se uloží jako ručně zvolená (`addWall(..., { side })` → `sideLocked`), takže ji uzavření místnosti nepřeklopí. `core/wallBody.ts`: `sideFromPen`, `initialSideAt` (+ testy). 58 testů. Ověřeno v prohlížeči (náhled, překlopení během tahu, uložená strana). **Na tabletu ověřit:** zda 10 px není příliš citlivé (třes ruky by mohl stěnu zamknout na nechtěnou stranu) – případně zvětšit `FLIP_PX`.
+
+## Předchozí stav (2026-11-10, noc – krok 1: otvory skrz tělo stěny)
 
 **Rozhodnutí uživatele:** rám **okna bez ostění sedí u vnitřního líce** (dveře se zárubní dál uprostřed tloušťky); kóty tloušťky stěny a hloubky ostění **jen u vybraného prvku**.
 

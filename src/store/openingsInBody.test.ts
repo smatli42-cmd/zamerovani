@@ -49,3 +49,19 @@ describe('otvory ve stěně s tloušťkou', () => {
     expect(store.floor()!.walls[wId]!.thickness).toBe(450);
   });
 });
+
+describe('strana zvolená při kreslení', () => {
+  it('se uloží a uzavření místnosti ji nepřeklopí', () => {
+    store.openProject(createProject({ name: 't' }));
+    const o = { thickness: 300 };
+    addWall({ x: 0, y: 0 }, null, { x: 4000, y: 0 }, null, false, { ...o, side: 1 }); // tělo dovnitř (+y)
+    const f0 = store.floor()!;
+    const n = (x: number, y: number) => Object.values(f0.nodes).find(q => q.x === x && q.y === y)?.id ?? null;
+    addWall({ x: 4000, y: 0 }, n(4000, 0), { x: 4000, y: 3000 }, null, false, o);
+    addWall({ x: 4000, y: 3000 }, n(4000, 3000), { x: 0, y: 3000 }, null, false, o);
+    addWall({ x: 0, y: 3000 }, n(0, 3000), { x: 0, y: 0 }, n(0, 0), false, o);
+    const top = Object.values(store.floor()!.walls).find(w => store.floor()!.nodes[w.a]!.y === 0 && store.floor()!.nodes[w.b]!.y === 0)!;
+    expect(top.side).toBe(1);
+    expect(top.sideLocked).toBe(true);
+  });
+});

@@ -1,11 +1,13 @@
 /**
- * Nástroj „Stěna“: tažením perem se nakreslí stěna (vnitřní líc).
+ * Nástroj „Stěna“: tažením perem se nakreslí stěna (čára líce = modře, tělo v aktuální tloušťce šedě).
  * Začátek i konec se přichytávají na rohy, směr do 90°, zarovnání s rohy.
+ * Odchýlením pera na jednu nebo druhou stranu od čáry se tělo překlopí (zvolená strana se zapamatuje).
  */
 import { requestRender } from '../canvas/invalidate';
 import { toScreen } from '../canvas/view';
-import { dist } from '../core/geometry';
+import { add, dist, normal, scale, unit } from '../core/geometry';
 import { snapEnd, snapPoint, type SnapResult } from '../core/snapping';
+import { initialSideAt, sideFromPen } from '../core/wallBody';
 import type { Pt } from '../model/types';
 import { addWall } from '../store/actions';
 import { activeWallThickness } from '../model/factory';
@@ -19,7 +21,12 @@ interface Drawing {
   end: SnapResult;
   /** Skutečné místo dotyku (bez přichycení) – pro výběr prvku ťuknutím. */
   downAt: Pt;
+  /** Strana těla zvolená odchýlením pera (null = automaticky). */
+  side: 1 | -1 | null;
 }
+
+/** O kolik px se musí pero odchýlit od čáry, aby se tělo překlopilo. */
+const FLIP_PX = 10;
 
 let drawing: Drawing | null = null;
 let hoverSnap: SnapResult | null = null;
@@ -45,7 +52,7 @@ export const wallTool: Tool = {
     handleDrag = grabArcHandle(p);
     if (handleDrag) return;
     const start = snapPoint(floor, p.world, snapOptions());
-    drawing = { start, end: start, downAt: p.world };
+    drawing = { start, end: start, downAt: p.world, side: null };
     hoverSnap = null;
     store.set({ selection: null, numpad: null });
     requestRender();
@@ -55,7 +62,12 @@ export const wallTool: Tool = {
     if (handleDrag) return selectTool.drag?.(p);
     const floor = store.floor();
     if (!floor || !drawing) return;
-    drawing.end = snapEnd(floor, drawing.start.pt, p.world, snapOptions(drawing.start.node?.id));
+    const end = snapEnd(floor, drawing.start.pt, p.world, snapOptions(drawing.start.node?.id));
+    drawing.end = end;
+    // u přichycení na roh / stěnu se strana už nemění (aby se stěna na poslední chvíli nepřeklopila)
+    if (!end.node && !end.wallHit && !end.special) {
+      drawing.side = sideFromPen(drawing.start.pt, end.pt, p.world, FLIP_PX / store.get().camera.zoom, drawing.side);
+    }
     requestRender();
   },
 
@@ -70,7 +82,10 @@ export const wallTool: Tool = {
     if (!d) return;
     if (dist(d.start.pt, d.end.pt) >= 50) {
       // Při kreslení se panel vlastností neotevírá (nepřekáží v kreslení)
-      addWall(d.start.pt, d.start.node?.id ?? null, d.end.pt, d.end.node?.id ?? null, false, { thickness: activeWallThickness(store.get().project) });
+      addWall(d.start.pt, d.start.node?.id ?? null, d.end.pt, d.end.node?.id ?? null, false, {
+        thickness: activeWallThickness(store.get().project),
+        ...(d.side ? { side: d.side } : {})
+      });
     } else {
       // Ťuknutí bez tažení = výběr prvku pod perem (otevře jeho vlastnosti)
       const floor = store.floor();
@@ -116,7 +131,26 @@ export const wallTool: Tool = {
     }
     ctx.restore();
 
-    // Náhled stěny
+    // Náhled těla stěny (šedě) na zvolené / automatické straně
+    const floor = store.floor();
+    const T = activeWallThickness(store.get().project);
+    if (floor && T > 0 && dist(drawing.start.pt, drawing.end.pt) >= 1) {
+      const side = drawing.side ?? initialSideAt(floor, drawing.start.pt, drawing.end.pt, drawing.start.node?.id ?? null, drawing.end.node?.id ?? null);
+      const n = scale(normal(unit(drawing.start.pt, drawing.end.pt)), side * T);
+      const q = [drawing.start.pt, drawing.end.pt, add(drawing.end.pt, n), add(drawing.start.pt, n)].map(p => toScreen(p, cam));
+      ctx.save();
+      ctx.fillStyle = 'rgba(161,161,170,0.55)';
+      ctx.strokeStyle = '#71717a';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      q.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Náhled čáry líce (osa, od které se měří a kam přibývá / ubývá zdivo)
     ctx.save();
     ctx.strokeStyle = '#2563eb';
     ctx.lineWidth = 3;

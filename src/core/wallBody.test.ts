@@ -124,3 +124,15 @@ describe('strana těla', () => {
     expect(orientLoopOutward(f, w2.id)).toBe(false);
   });
 });
+
+describe('překlopení těla perem při kreslení', () => {
+  it('odchýlení pera nad / pod čáru určí stranu, malé odchýlení stranu nemění', async () => {
+    const { sideFromPen } = await import('./wallBody');
+    const a = { x: 0, y: 0 };
+    const b = { x: 1000, y: 0 }; // normal(1,0) = (0,1) → side 1 = +y
+    expect(sideFromPen(a, b, { x: 1000, y: 5 }, 50, null)).toBeNull();
+    expect(sideFromPen(a, b, { x: 1000, y: 80 }, 50, null)).toBe(1);
+    expect(sideFromPen(a, b, { x: 1000, y: -80 }, 50, 1)).toBe(-1);
+    expect(sideFromPen(a, b, { x: 1000, y: -10 }, 50, -1)).toBe(-1);
+  });
+});

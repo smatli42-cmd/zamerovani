@@ -168,19 +168,29 @@ export function bodySnapPoints(floor: Floor): Pt[] {
  * (tělo se drží „venku“ podél celého tahu); jinak ven od středu ostatních rohů.
  */
 export function initialSide(floor: Floor, wall: Wall): 1 | -1 {
-  const others = Object.values(floor.walls).filter(w => w.id !== wall.id && hasBody(w));
-  for (const id of [wall.a, wall.b]) {
+  const a = floor.nodes[wall.a];
+  const b = floor.nodes[wall.b];
+  if (!a || !b) return 1;
+  return initialSideAt(floor, a, b, wall.a, wall.b, wall.id);
+}
+
+/**
+ * Výchozí strana těla pro stěnu z bodu `a` do `b` (i pro stěnu, která se teprve kreslí):
+ * `aId`/`bId` = rohy, na které se konce napojují (null = nový roh).
+ */
+export function initialSideAt(floor: Floor, a: Pt, b: Pt, aId: Id | null, bId: Id | null, excludeWallId?: Id): 1 | -1 {
+  const others = Object.values(floor.walls).filter(w => w.id !== excludeWallId && hasBody(w));
+  for (const [id, atStart] of [[aId, true], [bId, false]] as const) {
+    if (!id) continue;
     const at = others.filter(w => w.a === id || w.b === id);
     if (at.length !== 1) continue;
     const w = at[0]!;
     // tah p→q→r: stejná strana; protisměrně opačná
-    const sameDir = (id === wall.a && w.b === id) || (id === wall.b && w.a === id);
+    const sameDir = (atStart && w.b === id) || (!atStart && w.a === id);
     return sameDir ? w.side : w.side === 1 ? -1 : 1;
   }
-  const a = floor.nodes[wall.a];
-  const b = floor.nodes[wall.b];
-  const rest = Object.values(floor.nodes).filter(n => n.id !== wall.a && n.id !== wall.b);
-  if (!a || !b || rest.length === 0) return 1;
+  const rest = Object.values(floor.nodes).filter(n => n.id !== aId && n.id !== bId && dist(n, a) > 1 && dist(n, b) > 1);
+  if (rest.length === 0 || dist(a, b) < 1) return 1;
   const c = centroid(rest);
   const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
   return dot(sub(mid, c), normal(unit(a, b))) >= 0 ? 1 : -1;
@@ -233,4 +243,15 @@ export function orientLoopOutward(floor: Floor, wallId: Id): boolean {
     if (pointInPolygon(probe, poly)) w.side = w.side === 1 ? -1 : 1;
   }
   return true;
+}
+
+/**
+ * Strana těla podle polohy pera při kreslení: když se pero odchýlí od (přichycené) čáry stěny
+ * o víc než `threshold` (mm), tělo se překlopí na stranu pera; jinak zůstane `current` (null = automaticky).
+ */
+export function sideFromPen(start: Pt, end: Pt, pen: Pt, threshold: number, current: 1 | -1 | null): 1 | -1 | null {
+  if (dist(start, end) < 1) return current;
+  const off = dot(sub(pen, end), normal(unit(start, end)));
+  if (Math.abs(off) <= threshold) return current;
+  return off > 0 ? 1 : -1;
 }
