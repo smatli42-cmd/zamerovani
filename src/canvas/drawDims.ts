@@ -12,7 +12,7 @@ import type { Floor, Id, Pt, Wall } from '../model/types';
 import type { Camera, NumPadTarget, Selection } from '../store/store';
 import { addHitBox, type HitAction } from './hitTargets';
 import { toScreen } from './view';
-import { bodyNormal, hasBody } from '../core/wallBody';
+import { bodyNormal, facePointAt, hasBody } from '../core/wallBody';
 import { doorLayout } from '../core/doorLayout';
 import { openingStartFromA } from '../core/floorQueries';
 
@@ -329,10 +329,12 @@ export function drawBodyDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: C
   const u = unit(n[0], n[1]);
   ctx.save();
   if (!op) {
-    // tloušťka ve čtvrtině stěny (uprostřed je dvojitá šipka)
-    const m = lerp(n[0], n[1], 0.25);
-    const q = { x: m.x + bn.x * wall.thickness, y: m.y + bn.y * wall.thickness };
-    drawDimLine(ctx, toScreen(m, cam), toScreen(q, cam), u, 0, String(wall.thickness), 'tloušťka', style, dimScale, {
+    // tloušťka ve čtvrtině stěny (uprostřed je dvojitá šipka); u oblouku kolmo k oblouku
+    const fp = facePointAt(floor, wall, 0.25);
+    if (!fp) return ctx.restore();
+    const m = fp.pt;
+    const q = { x: m.x + fp.into.x * wall.thickness, y: m.y + fp.into.y * wall.thickness };
+    drawDimLine(ctx, toScreen(m, cam), toScreen(q, cam), normal(fp.into), 0, String(wall.thickness), 'tloušťka', style, dimScale, {
       type: 'numpad',
       target: { kind: 'wall-thickness', wallId: wall.id },
       wallId: wall.id

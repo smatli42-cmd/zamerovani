@@ -29,3 +29,12 @@ export function removeWallPreset(thickness: number): void {
     p.wallPresets = (p.wallPresets ?? []).filter(x => x !== thickness);
   });
 }
+
+/** Výška oblouku (vzepětí) nově kreslených obloukových stěn. */
+export function setWallArcHeight(height: number): void {
+  const h = Math.round(height);
+  if (!(h > 0)) return;
+  store.editProjectSettings(p => {
+    p.wallArcHeight = h;
+  });
+}

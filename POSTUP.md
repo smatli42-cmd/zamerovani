@@ -4,7 +4,18 @@ Projekt je na OneDrive a uživatel střídá dva počítače (nikdy ne současn�
 **Na začátku sezení tento soubor přečti. Na konci práce (nebo po větším kroku) ho aktualizuj.**
 Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do „Historie“.
 
-## Poslední stav (2026-11-10, noc – sloučení rovného pokračování stěny)
+## Poslední stav (2026-11-11 – oblouková stěna)
+
+**Požadavek uživatele:** oblouková stěna patří do **menu Stěny** (ne mezi tvary), kreslí se stejně jako rovná stěna, jen má navíc **výšku oblouku**. Rozhodnutí: oblouk se ve výchozím stavu **vyklene ven, na stranu těla** (překlopení perem otočí tělo i vyklenutí spolu; vyklenutí jde otočit v panelu).
+
+**Hotovo:**
+- Menu Stěny: přepínač **Rovná / Oblouková** (`settings.wallShape`, v zařízení) a u obloukové pole **Výška oblouku** (`Project.wallArcHeight`, výchozí 500, mimo historii – `setWallArcHeight`). Lišta se na úzkém displeji zalomí.
+- Nástroj Stěna v režimu Oblouková: náhled oblouku (modrá čára líce, šedé tělo podél oblouku), vzepětí = výška oblouku na stranu těla (max. půlkruh), překlápění perem jako u rovné; rovné pokračování se u oblouku neslučuje.
+- `core/wallBody.ts`: tělo i pro obloukové stěny (`facePath` – lomená čára s tečnami, napojení podle tečny na konci, hranice těla jako odsazené oblouky), `facePointAt`, `WallBody.snaps` (body přichytávání bez vzorků oblouku). Po uzavření místnosti se u oblouku s tělem otočí i vyklenutí (zůstane ven s tělem). Kruhy a tvary zůstávají čárami.
+- Panel stěny: pole Tloušťka i u obloukové stěny, vzepětí zaokrouhlené (dřív ukazovalo `500.0000000000001`). Dvojitá šipka u oblouku mimo vrchol (tam je úchyt vzepětí), kóta tloušťky kolmo k oblouku.
+- +4 testy (64). Ověřeno v prohlížeči (náhled a překlopení oblouku, místnost s obloukovou stěnou – tělo i vyklenutí ven, výběr, panel). **Na tabletu neověřeno.** Otvory do obloukových stěn zatím nejdou (jako dřív).
+
+## Předchozí stav (2026-11-10, noc – sloučení rovného pokračování stěny)
 
 **Uživatel potvrdil (2026-11-10): „vše funguje“** – stěny s tloušťkou, menu Stěny, otvory skrz tělo, kreslení s náhledem a překlápěním perem, sloučení rovného pokračování. **Další krok si uživatel vybere:** oblouk s tloušťkou (rozhodnuto, že bude potřeba), nebo dle `ZADANI-OKNA-DVERE.md` úpravy modelu pro 3D, značky detailů, schodiště.
 

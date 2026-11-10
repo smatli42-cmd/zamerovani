@@ -98,7 +98,7 @@ export function splitWallsAtNode(floor: Floor, nodeId: Id): void {
 export function mergeStraightAt(floor: Floor, wallId: Id, nodeId: Id): Id {
   const w = floor.walls[wallId];
   const node = floor.nodes[nodeId];
-  if (!w || !node || (w.a !== nodeId && w.b !== nodeId)) return wallId;
+  if (!w || !node || w.sagitta || (w.a !== nodeId && w.b !== nodeId)) return wallId;
   const wFarId = w.a === nodeId ? w.b : w.a;
   const wFar = floor.nodes[wFarId];
   if (!wFar) return wallId;

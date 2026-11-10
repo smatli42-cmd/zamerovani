@@ -796,3 +796,12 @@ textarea {
   line-height: 1;
   cursor: pointer;
 }
+
+/* Menu Stěny: přepínač Rovná / Oblouková a výška oblouku (na užším displeji se lišta zalomí) */
+.wall-options {
+  flex-wrap: wrap;
+  max-width: calc(100% - 20px);
+}
+.wall-options .seg {
+  width: auto;
+}

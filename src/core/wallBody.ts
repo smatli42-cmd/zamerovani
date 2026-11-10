@@ -2,22 +2,55 @@
  * Tělo stěny s tloušťkou: obrys (mnohoúhelník) a čáry k vykreslení, napojení stěn v rozích a T,
  * výchozí strana těla („ven od místnosti“) a body pro přichytávání.
  *
- * Stěna je čára líce a→b; tělo leží na straně `side` (1 = ve směru normal(a→b)) v šířce `thickness`.
- * Napojení v rohu: konce stěn kolem rohu se seřadí podle úhlu a sousední hranice se protnou
+ * Stěna je čára líce a→b (rovná nebo oblouková – `sagitta`); tělo leží na straně `side`
+ * (1 = ve směru normal(tečny a→b)) v šířce `thickness`. Oblouk se kreslí jako lomená čára.
+ * Napojení v rohu: konce stěn kolem rohu se seřadí podle úhlu tečny a sousední hranice se protnou
  * (jako „miter“ v Revitu) – funguje pro L, T i X a různé tloušťky. Čáry uvnitř spojů se nekreslí.
  */
 import type { Floor, Id, Pt, Wall } from '../model/types';
+import { arcGeometry } from './arc';
 import { add, centroid, dist, dot, normal, scale, sub, unit } from './geometry';
 
-/** Má stěna tělo? (zatím jen rovné stěny s tloušťkou; oblouky a kruhy jsou čáry) */
-export const hasBody = (w: Wall): boolean => w.thickness > 0 && w.radius === undefined && !w.sagitta && w.a !== w.b;
+/** Má stěna tělo? (rovné i obloukové stěny s tloušťkou; kruhy a čáry bez tloušťky ne) */
+export const hasBody = (w: Wall): boolean => w.thickness > 0 && w.radius === undefined && w.a !== w.b;
 
-/** Jednotkový vektor od čáry líce směrem do těla stěny. */
+/** Jednotkový vektor od čáry líce směrem do těla stěny (u oblouku v jeho vrcholu = kolmo k tětivě). */
 export function bodyNormal(floor: Floor, w: Wall): Pt | null {
   const a = floor.nodes[w.a];
   const b = floor.nodes[w.b];
   if (!a || !b || dist(a, b) < 1e-6) return null;
   return scale(normal(unit(a, b)), w.side);
+}
+
+/** Čára líce jako body s tečnami (směr a→b); rovná stěna = 2 body, oblouk = lomená čára. */
+export function facePath(a: Pt, b: Pt, sagitta: number, steps = 32): { pts: Pt[]; tans: Pt[] } {
+  const g = arcGeometry(a, b, sagitta);
+  if (!g) {
+    const u = unit(a, b);
+    return { pts: [a, b], tans: [u, u] };
+  }
+  const pts: Pt[] = [];
+  const tans: Pt[] = [];
+  const sgn = Math.sign(g.sweep) || 1;
+  for (let i = 0; i <= steps; i++) {
+    const ang = g.start + (g.sweep * i) / steps;
+    pts.push(i === 0 ? a : i === steps ? b : { x: g.center.x + g.r * Math.cos(ang), y: g.center.y + g.r * Math.sin(ang) });
+    tans.push({ x: -Math.sin(ang) * sgn, y: Math.cos(ang) * sgn });
+  }
+  return { pts, tans };
+}
+
+/** Bod na čáře líce v poloze s (0–1) a směr do těla v tom místě. */
+export function facePointAt(floor: Floor, w: Wall, s: number): { pt: Pt; into: Pt } | null {
+  const a = floor.nodes[w.a];
+  const b = floor.nodes[w.b];
+  if (!a || !b || dist(a, b) < 1e-6) return null;
+  const path = facePath(a, b, w.sagitta ?? 0, 64);
+  const i = Math.max(0, Math.min(path.pts.length - 1, Math.round(s * (path.pts.length - 1))));
+  if (path.pts.length === 2) {
+    return { pt: { x: a.x + (b.x - a.x) * s, y: a.y + (b.y - a.y) * s }, into: scale(normal(path.tans[0]!), w.side) };
+  }
+  return { pt: path.pts[i]!, into: scale(normal(path.tans[i]!), w.side) };
 }
 
 export interface WallBody {
@@ -26,13 +59,15 @@ export interface WallBody {
   poly: Pt[];
   /** Čáry k vykreslení: oba líce a čela volných konců (spoje se nekreslí). */
   edges: [Pt, Pt][];
+  /** Body pro přichytávání: vnější rohy konců a středy čel volných konců. */
+  snaps: Pt[];
 }
 
 interface End {
   wall: Wall;
   atA: boolean;
   node: Pt;
-  /** Směr od rohu podél stěny. */
+  /** Směr od rohu podél stěny (tečna). */
   d: Pt;
   /** normal(d) */
   n: Pt;
@@ -57,22 +92,24 @@ function intersectLines(p: Pt, d: Pt, q: Pt, e: Pt): Pt | null {
 /** Obrysy těl všech stěn s tloušťkou. */
 export function wallBodies(floor: Floor): Map<Id, WallBody> {
   const byNode = new Map<Id, End[]>();
-  const pairs: [End, End][] = [];
+  const items: { eA: End; eB: End; path: { pts: Pt[]; tans: Pt[] } }[] = [];
   for (const w of Object.values(floor.walls)) {
     if (!hasBody(w)) continue;
     const a = floor.nodes[w.a];
     const b = floor.nodes[w.b];
     if (!a || !b || dist(a, b) < 1) continue;
-    const dA = unit(a, b);
+    const path = facePath(a, b, w.sagitta ?? 0);
+    const tA = path.tans[0]!;
+    const tB = path.tans[path.tans.length - 1]!;
     const mk = (atA: boolean): End => {
-      const d = atA ? dA : scale(dA, -1);
+      const d = atA ? tA : scale(tB, -1);
       const n = normal(d);
       const off = w.thickness * w.side * (atA ? 1 : -1);
       return { wall: w, atA, node: atA ? a : b, d, n, lo: Math.min(0, off), hi: Math.max(0, off), ang: Math.atan2(d.y, d.x) };
     };
     const eA = mk(true);
     const eB = mk(false);
-    pairs.push([eA, eB]);
+    items.push({ eA, eB, path });
     for (const [id, e] of [[w.a, eA], [w.b, eB]] as const) (byNode.get(id) ?? byNode.set(id, []).get(id)!).push(e);
   }
 
@@ -104,18 +141,31 @@ export function wallBodies(floor: Floor): Map<Id, WallBody> {
   }
 
   const out = new Map<Id, WallBody>();
-  for (const [eA, eB] of pairs) {
+  for (const { eA, eB, path } of items) {
     const A = { lo: eA.loPt!, hi: eA.hiPt! };
     const B = { lo: eB.loPt!, hi: eB.hiPt! };
-    const edges: [Pt, Pt][] = [
-      [A.lo, B.hi],
-      [B.lo, A.hi]
-    ];
+    // vnitřní body obou hranic (u oblouku), v rámci konce A: hranice „lo“ vede k B.hi, „hi“ od B.lo
+    const mids = path.pts.slice(1, -1);
+    const midT = path.tans.slice(1, -1);
+    const loCurve = mids.map((p, i) => add(p, scale(normal(midT[i]!), eA.lo)));
+    const hiCurve = mids.map((p, i) => add(p, scale(normal(midT[i]!), eA.hi)));
+    const loLine = [A.lo, ...loCurve, B.hi];
+    const hiLine = [B.lo, ...[...hiCurve].reverse(), A.hi];
+    const edges: [Pt, Pt][] = [];
+    for (const line of [loLine, hiLine]) for (let i = 0; i + 1 < line.length; i++) edges.push([line[i]!, line[i + 1]!]);
     if (eA.free) edges.push([A.hi, A.lo]);
     if (eB.free) edges.push([B.hi, B.lo]);
     // u napojeného konce vede obrys přes roh – jinak by u T zůstal mezi šikmým řezem a příčkou nevyplněný klín
-    const poly = [A.lo, B.hi, ...(eB.free ? [] : [eB.node]), B.lo, A.hi, ...(eA.free ? [] : [eA.node])];
-    out.set(eA.wall.id, { wallId: eA.wall.id, poly, edges });
+    const poly = [...loLine, ...(eB.free ? [] : [eB.node]), ...hiLine, ...(eA.free ? [] : [eA.node])];
+    const snaps: Pt[] = [];
+    for (const [e, pts] of [
+      [eA, [A.lo, A.hi]],
+      [eB, [B.lo, B.hi]]
+    ] as const) {
+      for (const p of pts) if (dist(p, e.node) >= 1) snaps.push(p);
+      if (e.free) snaps.push({ x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 });
+    }
+    out.set(eA.wall.id, { wallId: eA.wall.id, poly, edges, snaps });
   }
   return out;
 }
@@ -138,27 +188,11 @@ export function findBodyAt(floor: Floor, p: Pt): Wall | null {
   return null;
 }
 
-/** Body těl pro přichytávání: vnější rohy (body obrysu mimo rohy líce) a středy čel volných konců. */
+/** Body těl pro přichytávání: vnější rohy konců (mimo rohy líce) a středy čel volných konců. */
 export function bodySnapPoints(floor: Floor): Pt[] {
   const out: Pt[] = [];
-  const near = (p: Pt) => Object.values(floor.nodes).some(n => dist(n, p) < 1);
   for (const body of wallBodies(floor).values()) {
-    for (const p of body.poly) if (!near(p) && !out.some(q => dist(q, p) < 1)) out.push(p);
-  }
-  // středy čel volných konců
-  const deg = new Map<Id, number>();
-  for (const w of Object.values(floor.walls)) {
-    if (!hasBody(w)) continue;
-    deg.set(w.a, (deg.get(w.a) ?? 0) + 1);
-    deg.set(w.b, (deg.get(w.b) ?? 0) + 1);
-  }
-  for (const w of Object.values(floor.walls)) {
-    const bn = hasBody(w) ? bodyNormal(floor, w) : null;
-    if (!bn) continue;
-    for (const id of [w.a, w.b]) {
-      const n = floor.nodes[id];
-      if (n && deg.get(id) === 1) out.push(add(n, scale(bn, w.thickness / 2)));
-    }
+    for (const p of body.snaps) if (!out.some(q => dist(q, p) < 1)) out.push(p);
   }
   return out;
 }
@@ -240,7 +274,10 @@ export function orientLoopOutward(floor: Floor, wallId: Id): boolean {
     const bn = bodyNormal(floor, w);
     if (!a || !b || !bn) continue;
     const probe = add({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, bn);
-    if (pointInPolygon(probe, poly)) w.side = w.side === 1 ? -1 : 1;
+    if (pointInPolygon(probe, poly)) {
+      w.side = w.side === 1 ? -1 : 1;
+      if (w.sagitta) w.sagitta = -w.sagitta;
+    }
   }
   return true;
 }
@@ -265,7 +302,7 @@ export function straightContinuation(floor: Floor, nodeId: Id | null, from: Pt, 
   const at = Object.values(floor.walls).filter(w => w.id !== excludeWallId && (w.a === nodeId || w.b === nodeId));
   if (at.length !== 1) return null;
   const o = at[0]!;
-  if (!hasBody(o) || o.thickness !== thickness) return null;
+  if (!hasBody(o) || o.thickness !== thickness || o.sagitta) return null;
   const far = floor.nodes[o.a === nodeId ? o.b : o.a];
   if (!far) return null;
   const d1 = unit(from, to);

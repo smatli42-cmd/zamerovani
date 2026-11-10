@@ -156,6 +156,8 @@ export interface Project {
   wallThickness?: number;
   /** Vlastní předvolby tloušťky stěn přidané k výchozím (mm). */
   wallPresets?: number[];
+  /** Výška oblouku (vzepětí) nově kreslených obloukových stěn (mm); chybí = 500. */
+  wallArcHeight?: number;
 }
 
 /** Krátký přehled projektu pro seznam projektů (bez výkresů). */

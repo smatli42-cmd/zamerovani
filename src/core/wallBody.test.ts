@@ -136,3 +136,44 @@ describe('překlopení těla perem při kreslení', () => {
     expect(sideFromPen(a, b, { x: 1000, y: -10 }, 50, -1)).toBe(-1);
   });
 });
+
+describe('oblouková stěna s tloušťkou', () => {
+  it('tělo sleduje oblouk: u vrcholu je tělo za lícem, tětiva v těle není', () => {
+    const f = floorWith({ a: [0, 0], b: [2000, 0] });
+    const w = createWall('a', 'b', 400, 200, 1); // vyklenutí i tělo do +y
+    f.walls[w.id] = w;
+    expect(findBodyAt(f, { x: 1000, y: 500 })?.id).toBe(w.id); // vrchol 400, tělo 400–600
+    expect(findBodyAt(f, { x: 1000, y: 300 })).toBeNull(); // uvnitř oblouku (místnost)
+    expect(findBodyAt(f, { x: 1000, y: 0 })).toBeNull(); // tětiva
+  });
+
+  it('napojení rovné stěny na oblouk: spoj bez mezery, čela jen na volných koncích', () => {
+    const f = floorWith({ a: [0, 0], b: [2000, 0], c: [2000, -1500] });
+    const arc = createWall('a', 'b', 400, 200, 1);
+    const st = createWall('b', 'c', 0, 200, 1);
+    f.walls[arc.id] = arc;
+    f.walls[st.id] = st;
+    const bodies = wallBodies(f);
+    expect(bodies.get(arc.id)!.edges.length).toBeGreaterThan(10); // lomená čára oblouku
+    // volný konec oblouku v bodě a má čelo, napojený konec v b ne
+    const caps = (id: string) => bodies.get(id)!.snaps.length;
+    expect(caps(arc.id)).toBeGreaterThan(0);
+  });
+});
+
+describe('oblouková stěna v uzavřené místnosti', () => {
+  it('po uzavření se tělo i vyklenutí otočí ven', () => {
+    const f = floorWith({ a: [0, 0], b: [3000, 0], c: [3000, 2000], d: [0, 2000] });
+    // horní stěna a→b: normal(1,0) = (0,1) = dovnitř místnosti; oblouk i tělo zatím dovnitř
+    const top = createWall('a', 'b', 300, 200, 1);
+    const others = [
+      ['b', 'c'],
+      ['c', 'd'],
+      ['d', 'a']
+    ].map(([p, q]) => createWall(p!, q!, 0, 200, 1));
+    for (const w of [top, ...others]) f.walls[w.id] = w;
+    expect(orientLoopOutward(f, others[2]!.id)).toBe(true);
+    expect(top.side).toBe(-1);
+    expect(top.sagitta).toBe(-300); // vyklenutí nahoru = ven
+  });
+});

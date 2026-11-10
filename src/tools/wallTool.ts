@@ -1,16 +1,17 @@
 /**
- * Nástroj „Stěna“: tažením perem se nakreslí stěna (čára líce = modře, tělo v aktuální tloušťce šedě).
+ * Nástroj „Stěna“: tažením perem se nakreslí stěna (čára líce = modře, tělo v aktuální tloušťce šedě),
+ * rovná nebo oblouková (menu Stěny; oblouk se vyklene o „výšku oblouku“ na stranu těla, tj. ven).
  * Začátek i konec se přichytávají na rohy, směr do 90°, zarovnání s rohy.
  * Odchýlením pera na jednu nebo druhou stranu od čáry se tělo překlopí (zvolená strana se zapamatuje).
  */
 import { requestRender } from '../canvas/invalidate';
 import { toScreen } from '../canvas/view';
-import { add, dist, normal, scale, unit } from '../core/geometry';
+import { add, dist, normal, scale } from '../core/geometry';
 import { snapEnd, snapPoint, type SnapResult } from '../core/snapping';
-import { initialSideAt, sideFromPen, straightContinuation } from '../core/wallBody';
+import { facePath, initialSideAt, sideFromPen, straightContinuation } from '../core/wallBody';
 import type { Pt } from '../model/types';
 import { addWall } from '../store/actions';
-import { activeWallThickness } from '../model/factory';
+import { activeWallArcHeight, activeWallThickness } from '../model/factory';
 import { store, type Camera } from '../store/store';
 import { pickAny } from './pick';
 import { grabArcHandle, selectTool } from './selectTool';
@@ -44,6 +45,21 @@ export function snapOptions(startNodeId?: string) {
 
 let handleDrag = false;
 
+/** Strana těla kreslené stěny: zvolená perem, jinak automaticky. */
+function drawingSide(d: Drawing): 1 | -1 {
+  const floor = store.floor();
+  if (d.side || !floor) return d.side ?? 1;
+  return initialSideAt(floor, d.start.pt, d.end.pt, d.start.node?.id ?? null, d.end.node?.id ?? null);
+}
+
+/** Vzepětí kreslené stěny: u obloukové výška oblouku na stranu těla (max. půlkruh), u rovné 0. */
+function drawingSagitta(d: Drawing): number {
+  const { settings, project } = store.get();
+  if (settings.wallShape !== 'arc') return 0;
+  const half = dist(d.start.pt, d.end.pt) / 2;
+  return drawingSide(d) * Math.min(activeWallArcHeight(project), Math.floor(half));
+}
+
 export const wallTool: Tool = {
   down(p: PointerInput) {
     const floor = store.floor();
@@ -67,8 +83,9 @@ export const wallTool: Tool = {
     // u přichycení na roh / stěnu se strana už nemění (aby se stěna na poslední chvíli nepřeklopila)
     const T = activeWallThickness(store.get().project);
     const continues =
-      straightContinuation(floor, drawing.start.node?.id ?? null, drawing.start.pt, end.pt, T) ||
-      straightContinuation(floor, end.node?.id ?? null, end.pt, drawing.start.pt, T);
+      store.get().settings.wallShape === 'straight' &&
+      (straightContinuation(floor, drawing.start.node?.id ?? null, drawing.start.pt, end.pt, T) ||
+        straightContinuation(floor, end.node?.id ?? null, end.pt, drawing.start.pt, T));
     if (continues) drawing.side = null; // sloučí se s navazující stěnou → její strana
     else if (!end.node && !end.wallHit && !end.special) {
       drawing.side = sideFromPen(drawing.start.pt, end.pt, p.world, FLIP_PX / store.get().camera.zoom, drawing.side);
@@ -87,9 +104,11 @@ export const wallTool: Tool = {
     if (!d) return;
     if (dist(d.start.pt, d.end.pt) >= 50) {
       // Při kreslení se panel vlastností neotevírá (nepřekáží v kreslení)
+      const sagitta = drawingSagitta(d);
       addWall(d.start.pt, d.start.node?.id ?? null, d.end.pt, d.end.node?.id ?? null, false, {
         thickness: activeWallThickness(store.get().project),
-        ...(d.side ? { side: d.side } : {})
+        ...(d.side ? { side: d.side } : {}),
+        ...(sagitta ? { sagitta } : {})
       });
     } else {
       // Ťuknutí bez tažení = výběr prvku pod perem (otevře jeho vlastnosti)
@@ -136,13 +155,13 @@ export const wallTool: Tool = {
     }
     ctx.restore();
 
-    // Náhled těla stěny (šedě) na zvolené / automatické straně
-    const floor = store.floor();
+    // Náhled těla stěny (šedě) na zvolené / automatické straně; oblouková stěna podél oblouku
     const T = activeWallThickness(store.get().project);
-    if (floor && T > 0 && dist(drawing.start.pt, drawing.end.pt) >= 1) {
-      const side = drawing.side ?? initialSideAt(floor, drawing.start.pt, drawing.end.pt, drawing.start.node?.id ?? null, drawing.end.node?.id ?? null);
-      const n = scale(normal(unit(drawing.start.pt, drawing.end.pt)), side * T);
-      const q = [drawing.start.pt, drawing.end.pt, add(drawing.end.pt, n), add(drawing.start.pt, n)].map(p => toScreen(p, cam));
+    const path = facePath(drawing.start.pt, drawing.end.pt, drawingSagitta(drawing));
+    if (T > 0 && dist(drawing.start.pt, drawing.end.pt) >= 1) {
+      const side = drawingSide(drawing);
+      const outer = path.pts.map((p, i) => add(p, scale(normal(path.tans[i]!), side * T)));
+      const q = [...path.pts, ...outer.reverse()].map(p => toScreen(p, cam));
       ctx.save();
       ctx.fillStyle = 'rgba(161,161,170,0.55)';
       ctx.strokeStyle = '#71717a';
@@ -161,8 +180,11 @@ export const wallTool: Tool = {
     ctx.lineWidth = 3;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
+    path.pts.forEach((p, i) => {
+      const s = toScreen(p, cam);
+      if (i === 0) ctx.moveTo(s.x, s.y);
+      else ctx.lineTo(s.x, s.y);
+    });
     ctx.stroke();
     ctx.restore();
 

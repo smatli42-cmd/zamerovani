@@ -1,8 +1,8 @@
 /**
  * Lišta s volbami aktivního nástroje nad plátnem (Stěna: tloušťka; tvary: styl čáry; okno: druh; vkládání otvorů).
  */
-import { activeWallThickness, WALL_PRESETS, wallPresets } from '../model/factory';
-import { addWallPreset, endPaste, removeWallPreset, setActiveWallThickness } from '../store/actions';
+import { activeWallArcHeight, activeWallThickness, WALL_PRESETS, wallPresets } from '../model/factory';
+import { addWallPreset, endPaste, removeWallPreset, setActiveWallThickness, setWallArcHeight } from '../store/actions';
 import { store } from '../store/store';
 import { useStore } from '../store/useStore';
 import { NumField, Seg } from './panels/fields';
@@ -18,6 +18,17 @@ export function ToolOptions() {
     const active = activeWallThickness(project);
     return (
       <div class="tool-options wall-options">
+        <Seg
+          options={[
+            { v: 'straight', label: 'Rovná' },
+            { v: 'arc', label: 'Oblouková' }
+          ]}
+          value={settings.wallShape}
+          onChange={v => store.updateSettings({ wallShape: v })}
+        />
+        {settings.wallShape === 'arc' && (
+          <NumField label="Výška oblouku" value={activeWallArcHeight(project)} min={10} onCommit={v => v !== null && setWallArcHeight(v)} />
+        )}
         <span class="muted small">Tloušťka stěny</span>
         <div class="chips">
           {wallPresets(project).map(t => (

@@ -11,4 +11,4 @@ export { addRoom, updateRoom, moveRoom } from './rooms';
 export { takeFreshTextId, addText, updateText, moveText } from './texts';
 export { addFloor, renameFloor, deleteFloor } from './floors';
 export { numpadInitialValue, applyNumpadValue } from './numpad';
-export { setActiveWallThickness, addWallPreset, removeWallPreset } from './project';
+export { setActiveWallThickness, addWallPreset, removeWallPreset, setWallArcHeight } from './project';

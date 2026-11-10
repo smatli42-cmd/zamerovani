@@ -53,14 +53,14 @@ export function WallPanel({ floor, wall }: { floor: Floor; wall: Wall }) {
         <>
           <button class="field-button" onClick={() => openTarget({ kind: 'wall-sagitta', wallId: wall.id })}>
             <span>Vzepětí oblouku</span>
-            <b>{Math.abs(arcChain(floor, wall.id)?.sagitta ?? wall.sagitta)} mm</b>
+            <b>{Math.round(Math.abs(arcChain(floor, wall.id)?.sagitta ?? wall.sagitta))} mm</b>
           </button>
           <button class="btn" onClick={() => updateWall(wall.id, { sagitta: -(arcChain(floor, wall.id)?.sagitta ?? wall.sagitta ?? 0) })}>
             🔄 Vyklenout na opačnou stranu
           </button>
         </>
       ) : null}
-      {!circle && !wall.sagitta && (
+      {!circle && (
         <div class="field-grid">
           <NumField label="Tloušťka" value={wall.thickness} onCommit={v => v !== null && setWallThickness(wall.id, v)} />
           {wall.thickness > 0 && (

@@ -63,6 +63,9 @@ export const WALL_PRESETS = [100, 150, 200, 300];
 /** Tloušťka, kterou se kreslí nové stěny (naposledy vybraná v projektu). */
 export const activeWallThickness = (project: Project | null): number => project?.wallThickness ?? DEFAULT_WALL_THICKNESS;
 
+/** Výška oblouku, kterou se kreslí nové obloukové stěny (mm). */
+export const activeWallArcHeight = (project: Project | null): number => project?.wallArcHeight ?? 500;
+
 /** Všechny předvolby tloušťky projektu (výchozí + vlastní), seřazené. */
 export function wallPresets(project: Project | null): number[] {
   return [...new Set([...WALL_PRESETS, ...(project?.wallPresets ?? [])])].sort((a, b) => a - b);

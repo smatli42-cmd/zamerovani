@@ -10,7 +10,7 @@ import { isWindowKind } from '../model/factory';
 import type { Floor, LineStyle, Opening, Pt, Wall } from '../model/types';
 import { isSelected, type Camera, type Selection, type SingleSelection } from '../store/store';
 import { toScreen } from './view';
-import { bodyNormal, hasBody, wallBodies } from '../core/wallBody';
+import { bodyNormal, facePointAt, hasBody, wallBodies } from '../core/wallBody';
 import { addHitBox } from './hitTargets';
 
 export const COLORS = {
@@ -130,10 +130,11 @@ export function drawWalls(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
 export function drawFlipArrow(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camera, selection: Selection): void {
   if (selection?.kind !== 'wall') return;
   const wall = floor.walls[selection.id];
-  const n = wall && hasBody(wall) ? wallNodes(floor, wall) : null;
-  const bn = wall && n ? bodyNormal(floor, wall) : null;
-  if (!wall || !n || !bn) return;
-  const mid = toScreen(add(lerp(n[0], n[1], 0.5), scale(bn, wall.thickness / 2)), cam);
+  // u obloukové stěny mimo vrchol (tam je úchyt pro tažení vzepětí)
+  const fp = wall && hasBody(wall) ? facePointAt(floor, wall, wall.sagitta ? 0.7 : 0.5) : null;
+  if (!wall || !fp) return;
+  const bn = fp.into;
+  const mid = toScreen(add(fp.pt, scale(bn, wall.thickness / 2)), cam);
   const half = Math.max(18, (wall.thickness * cam.zoom) / 2 + 10);
   const p1 = add(mid, scale(bn, half));
   const p2 = add(mid, scale(bn, -half));
