@@ -4,7 +4,11 @@ Projekt je na OneDrive a uživatel střídá dva počítače (nikdy ne současn�
 **Na začátku sezení tento soubor přečti. Na konci práce (nebo po větším kroku) ho aktualizuj.**
 Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do „Historie“.
 
-## Poslední stav (2026-11-11 – oblouková stěna)
+## Poslední stav (2026-11-11 – audit stěn, fáze 1)
+
+**Audit stěn podle `KATALOG-STEN.md` (zadání `ZADANI-AUDIT-STEN.md`):** hotová **fáze 1** = jen dokument `AUDIT-STEN.md` (v kódu nic neměněno). Výsledek: hotovo 29, částečně 8, chybí 5 (C1.5 křížení, C1.6+E7 nespojovat konec, D3 zkrátit/prodloužit, F7 upozornění u rohu), rozpor D10/E3 (typ a materiál se kreslí na výkrese v `drawDims.ts: wallLabelText`) a C1.11 (hrana odskoku se nekreslí – naměřeno). **Čeká se na souhlas uživatele s pořadím** (návrh v `AUDIT-STEN.md`), pak **fáze 2** (testy z příkladů C2/1–11, bez oprav). Zadání a katalog (`KATALOG-STEN.md`, `ZADANI-AUDIT-STEN.md`) jsou zatím necommitnuté soubory uživatele. Pravidla: katalog a testy neupravovat, po každé fázi se zastavit.
+
+## Předchozí stav (2026-11-11 – oblouková stěna)
 
 **Oprava napojení na obloukovou stěnu (poznatek uživatele s obrázkem):** stěny napojené na oblouk se špatně ořezávaly (hrana zajela do těla oblouku, mezera u stěny procházející tělem, škvíra pod příčkou), protože roh se počítal z tečny oblouku. Teď se hranice obloukové stěny při napojení berou jako **skutečné kružnice** (průsečík přímka × kružnice / kružnice × kružnice nejbližší rohu, jako v Revitu) a hranice oblouku se v místě napojení **ořízne** (vynechají se body lomené čáry za koncovým bodem). `core/wallBody.ts`: `Boundary`, `intersectBoundaries`, `paramOnArc`. Současně opravena starší chyba `arcChain`: u přesného **půlkruhu** rozděleného napojením se určila opačná strana vyklenutí (úchyt vzepětí se kreslil pod obloukem) – strana se teď určí podle vrcholu části řetězu. +3 testy (68). Ověřeno v prohlížeči (příčka z líce ven, z líce dovnitř přes tělo, ve vrcholu).
 
