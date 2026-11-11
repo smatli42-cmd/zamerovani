@@ -8,6 +8,15 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Chyba z krok 1 opravena (čeká na vyzkoušení):** přes oddělený roh ležela kóta „odstup skupiny“ (`core/components.ts` → `drawComponentDims.ts`, NumPad `comp-gap`; ne `shiftJunction`) a bránila ťuknutí na roh. Teď: `visibleComponentGap` – kóta se nekreslí (ani nenabízí) u skupin s odděleným koncem a při nulovém odstupu; ostatní kóty beze změny. Obecně: v `input/pointer.ts: handleOverlayTap` má roh pod perem (`findNodeNear`, `HIT_PX.node`) přednost před klikacími kótami. Testy: `core/components.test.ts` (+3 → 88 + 2 it.fails). Ověřeno v prohlížeči (L-roh před/po odpojení, tažení za roh posunulo jen uzel odděleného konce). **Krok 2 (osa stěny): návrh odeslán, čeká se na schválení (3 otázky: kóty 2a/2b, kreslení osy, zapamatování strany).**
 
+**Fronta zbývajících kroků (stav 2026-11-11, večer; po jednom, vždy test → screenshot → commit → POSTUP → zastavit):**
+1. **Osa stěny** (B1, B4, B10, C2/12–15) – návrh je hotový a odeslaný, **čeká na schválení**. Jádro: nepovinné `Wall.axis?: 'center'` (chybí = líc, bez migrace, SCHEMA_VERSION zůstává 7), `bodyRange(w)` (líc side 1 = [0,t], side −1 = [−t,0], střed = [−t/2,t/2]) v `wallBody.ts`, `facePointAt` vrací blízkou hranu těla; `setWallAxis` (čára a uzly zůstanou, posune se tělo), přepínač Osa Líc/Střed v menu Stěny (`settings.wallAxis`) a v panelu stěny, strana těla se pamatuje; snap na osu / střed těla cílové stěny; `mergeStraightAt` jen při stejné ose. Otevřené otázky: (a) kóty: 2a = míra uzel–uzel s příznakem „osa“, 2b (líc–líc, zasahuje do řešiče a NumPadu) až po potvrzení; (b) osa se kreslí jen u vybrané stěny (doporučeno); (c) při přepnutí střed → líc se vrátí původní strana. Testy C2/12–15 napsat první.
+2. **Tažení a posun jako blok** (D2, D11, D12, D13, D14, C2/16) – nejdřív návrh společné funkce `resolveDragPoint` podle `KRESLENI-EDITACE-KONCU.md`, čekat na schválení. D12 posun celé stěny (i jedné samostatné), D11 držení směru při tažení konce, D13 přichycení kolmice s ikonou ⊥, D14 výběr z překrývajících se koncových bodů (konec vybrané stěny má přednost; opakované ťuknutí přepíná mezi překrývajícími se konci – dnes se bere uzel vytvořený naposled).
+3. **F4** (otvory při dělení stěny).
+4. **D3** (samostatný nástroj zkrátit/prodloužit do rohu).
+5. **C1.11** (hrana odskoku; test C2/6 je `it.fails`; u středových os odskok symetricky).
+6. **C1.5** (křížení; test C2/11 je `it.fails`) – nakonec. Dále z auditu: F7, D4, A2/A10/B6.
+Dále: doladit okna (ostění/rám); na závěr s dovolením navrhnout řádek do CLAUDE.md o katalogu chování. Známé: oddělené rohy × `orientLoopOutward`, starý projekt s `noJoin` na sdíleném uzlu (viz výše).
+
 ## Předchozí stav (2026-11-11 – C1.13 fyzicky oddělený konec)
 
 **Známé (2026-11-11):** detekce uzavřených smyček pro natočení těl ven (`orientLoopOutward`) se na oddělených (nespojených) rozích může zlomit; plochy a obvody místností se neřeší (automatické vytváření a počítání místností není potřeba – katalog).
