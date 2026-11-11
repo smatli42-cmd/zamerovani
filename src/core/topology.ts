@@ -58,6 +58,9 @@ export function splitWallAt(floor: Floor, wallId: Id, nodeId: Id): [Id, Id] | nu
   };
   const wA = part(wall.a, nodeId, lenA, sagParts ? sagParts[0] : null);
   const wB = part(nodeId, wall.b, lenB, sagParts ? sagParts[1] : null);
+  // příznak „nespojovat“ patří původním koncům; nový roh uprostřed ho nemá
+  if (wall.noJoinA) wA.noJoinA = true;
+  if (wall.noJoinB) wB.noJoinB = true;
   delete floor.walls[wallId];
   floor.walls[wA.id] = wA;
   floor.walls[wB.id] = wB;
@@ -120,8 +123,17 @@ export function mergeStraightAt(floor: Floor, wallId: Id, nodeId: Id): Id {
     starts.push({ op, start });
     op.wallId = o.id;
   }
-  if (o.a === nodeId) o.a = wFarId;
-  else o.b = wFarId;
+  // vzdálený konec nové části se stává koncem sloučené stěny – přenese se i jeho příznak
+  const wFarNoJoin = w.a === nodeId ? w.noJoinB : w.noJoinA;
+  if (o.a === nodeId) {
+    o.a = wFarId;
+    if (wFarNoJoin) o.noJoinA = true;
+    else delete o.noJoinA;
+  } else {
+    o.b = wFarId;
+    if (wFarNoJoin) o.noJoinB = true;
+    else delete o.noJoinB;
+  }
   o.measured = null;
   delete floor.walls[w.id];
   const newLen = oldLen + added;

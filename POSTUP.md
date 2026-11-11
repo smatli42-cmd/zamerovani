@@ -4,7 +4,11 @@ Projekt je na OneDrive a uživatel střídá dva počítače (nikdy ne současn�
 **Na začátku sezení tento soubor přečti. Na konci práce (nebo po větším kroku) ho aktualizuj.**
 Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do „Historie“.
 
-## Poslední stav (2026-11-11 – audit stěn, fáze 1 a 2)
+## Poslední stav (2026-11-11 – audit stěn, fáze 3, krok C1.6 + E7)
+
+**Hotovo (čeká na vyzkoušení uživatelem):** „nespojovat konec“. Model: nepovinná pole `Wall.noJoinA?: true` / `noJoinB?: true` (bez zvýšení SCHEMA_VERSION, chybí = napojuje se jako dřív, stávající projekty beze změny). `core/wallBody.ts: wallBodies` – konec s příznakem se z napojení v uzlu vyřadí a uzavře vlastním čelem kolmo na čáře líce; zbylé konce v uzlu se napojují mezi sebou (jediný zbylý = také čelo). `core/topology.ts`: dělení stěny dává příznak původním koncům (nový roh uprostřed ho nemá), sloučení rovného pokračování přenese příznak vzdáleného konce. Akce `setWallNoJoin(wallId, end, noJoin)` v `store/actions/walls.ts`; panel stěny má přepínač **Konec A / B: Spojený | Nespojený**, nabízí se jen tam, kde se na konci stýká další stěna s tloušťkou (nebo je už vypnutý). Test C2/10 už není `it.todo` (80 testů prochází + 2 `it.fails`). Ověřeno v prohlížeči (L-roh 300+300: po vypnutí dvě samostatná těla s čárou mezi nimi). **Nad rámec návrhu nic; T-napojení používá stejný přepínač (konec se zastaví na líci jako volný konec) – v prohlížeči neověřeno.** Další krok fáze 3: F4 (otvory při dělení stěny) – až po potvrzení uživatele.
+
+## Předchozí stav (2026-11-11 – audit stěn, fáze 1 a 2)
 
 **Fáze 2 hotová (zastaveno, čeká na uživatele):** `src/core/wallJoins.catalog.test.ts` – testy z příkladů C2/1–11 (79 testů prochází, 2 `it.fails` = nálezy C2/6 hrana odskoku a C2/11 křížení, 1 `it.todo` = C2/10 odpojení; nic neopraveno). **Hotová i oprava D10/E3:** popisek stěny na výkrese zrušen (`drawDims.ts`), typ/materiál/poznámka jen v panelu, tloušťka jen jako kóta u vybrané stěny. Pořadí fáze 3 schváleno: D10/E3 ✔ → C1.6+E7 → F4 → C1.11 → F7 → D2 → D3 (nástroj) → D4 → A2/A10/B6 → C1.5 (nakonec). Katalog a zadání auditu jsou teď v repozitáři. Po jednom kroku se zastavit a nechat uživatele vyzkoušet.
 

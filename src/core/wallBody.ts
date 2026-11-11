@@ -159,13 +159,19 @@ export function wallBodies(floor: Floor): Map<Id, WallBody> {
     for (const [id, e] of [[w.a, eA], [w.b, eB]] as const) (byNode.get(id) ?? byNode.set(id, []).get(id)!).push(e);
   }
 
-  for (const ends of byNode.values()) {
-    const node = ends[0]!.node;
-    if (ends.length === 1) {
-      const e = ends[0]!;
+  for (const all of byNode.values()) {
+    const node = all[0]!.node;
+    const closeFree = (e: End) => {
       e.loPt = add(node, scale(e.n, e.lo));
       e.hiPt = add(node, scale(e.n, e.hi));
       e.free = true;
+    };
+    // „nespojovat konec“: takový konec má vlastní čelo a do napojení ostatních nevstupuje
+    const ends = all.filter(e => !(e.atA ? e.wall.noJoinA : e.wall.noJoinB));
+    for (const e of all) if (!ends.includes(e)) closeFree(e);
+    if (ends.length === 0) continue;
+    if (ends.length === 1) {
+      closeFree(ends[0]!);
       continue;
     }
     ends.sort((p, q) => p.ang - q.ang);

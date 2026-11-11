@@ -42,6 +42,9 @@ export interface Wall {
   side: 1 | -1;
   /** Strana byla přehozena ručně – automatické natočení „ven od místnosti“ ji už nemění. */
   sideLocked?: true;
+  /** Konec A / B se nenapojuje na ostatní stěny v rohu (má vlastní čelo); chybí = napojuje se. */
+  noJoinA?: true;
+  noJoinB?: true;
   /** Změřená délka v mm, null = jen načrtnuto. */
   measured: number | null;
   label: WallLabel;

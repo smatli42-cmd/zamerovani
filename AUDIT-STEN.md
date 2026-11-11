@@ -41,7 +41,7 @@ Stav: **hotovo** / **částečně** / **chybí** / **nejasné**. „Test“ = ex
 | C1.3 | Bez priorit, těla sjednocená bez čar uvnitř | hotovo | `wallBody.ts` (konce se řadí podle úhlu, spoje bez hran) | částečně (L, T; ne 3+ stěn) | Hrany spojů se nekreslí. |
 | C1.4 | T-napojení | hotovo | `wallBody.ts`, `topology.ts` | ano (`wallBody.test` „napojení T“) | Příčka končí na líci průchozí stěny, ta se nepřeruší. |
 | C1.5 | Křížení „+“ a 3+ stěny: stěny samostatné, těla sloučená, průchozí se nepřerušují | **chybí** | – (`topology.ts` dělí jen tam, kde leží **roh**; křížení bez rohu se nenapojí) | ne | **Naměřeno:** dvě stěny 300 a 100 se křížící bez společného rohu mají každá 4 vlastní hrany (`[4,4]`), čáry se uvnitř křížení kreslí. |
-| C1.6 | Zrušit napojení u konkrétního konce | **chybí** | – (v modelu není pole) | ne | `grep` na „nespojovat/noJoin“ nic nenašel. |
+| C1.6 | Zrušit napojení u konkrétního konce | **hotovo (fáze 3)** | `wallBody.ts: wallBodies`, `Wall.noJoinA/B`, `actions/walls.ts: setWallNoJoin`, panel stěny | ano (C2/10) | Přepínač Konec A/B; nespojený konec má vlastní čelo.|
 | C1.8 | Různé tloušťky v rohu → průsečík vnějších čar | hotovo | `wallBody.ts: intersectBoundaries` | ano (`wallBody.test` „roh L s různými tloušťkami“) | Vnější roh v průsečíku odsazených čar. |
 | C1.9 | Úhel jiný než 90° | **částečně** | `wallBody.ts` (obecný průsečík, pojistka `limit = 4 × tloušťka`) | ne (jen 90° a oblouky) | Počítá se obecně, ale **není test na 60°** (C2/3); u velmi ostrých úhlů se při překročení limitu spadne na kolmý řez. |
 | C1.10 | Volný konec rovný, kolmo | hotovo | `wallBody.ts` (`free`, čelo v `edges`) | ano (`wallBody.test` „samostatná stěna“) | Obě čela volných konců jsou v `edges`. |
@@ -69,7 +69,7 @@ Stav: **hotovo** / **částečně** / **chybí** / **nejasné**. „Test“ = ex
 | E2 | Strana těla | hotovo | `Wall.side`, `Wall.sideLocked` | ano | – |
 | E3 ✎ | Typ a materiál jen ve vlastnostech | ~~rozpor~~ **opraveno 2026-11-11** | `WallPanel.tsx` (panel ✔), `drawDims.ts: wallLabelText` (výkres ✘) | ne | Viz D10. |
 | E4 | Styl čáry | hotovo | `Wall.style`, `actions/walls.ts: updateWall` | ne | – |
-| E7 | Příznak „nespojovat konec“ | **chybí** | – | ne | Viz C1.6. |
+| E7 | Příznak „nespojovat konec“ | **hotovo (fáze 3)** | `Wall.noJoinA/B` | ano (C2/10) | Viz C1.6.|
 
 ## F. Otvory a niky
 
@@ -123,7 +123,7 @@ Soubor `src/core/wallJoins.catalog.test.ts` (souřadnice katalogu s osou Y nahor
 | C2/7 změna tloušťky | projde | líc a rohy se nehýbou, vnější roh (−300, 200) |
 | C2/8 přehození strany | projde | napojení se přepočítá, po vrácení strany stejné obrysy |
 | C2/9 posun rohu po přímce A | projde | B se otočí, vnější roh na vnější čáře A, 300 mm od líce B |
-| C2/10 odpojení | **`it.todo`** | funkce C1.6 / E7 neexistuje |
+| C2/10 odpojení | prošel (fáze 3) | přepínač „nespojovat konec“ doplněn |
 | C2/11 křížení | stěny zůstanou samostatné (projde); **`it.fails`: uvnitř křížení jsou čáry** | nález C1.5 |
 
 Pozn.: „žádná čára uvnitř“ ověřuje pomocná funkce `hasLineInsideUnion`, která vzorkuje vykreslené hrany a hledá ty, které leží uvnitř sjednocených těl. Že skutečně něco najde, dokazuje `it.fails` u C2/11 (kdyby nenašla nic, `it.fails` by selhal).

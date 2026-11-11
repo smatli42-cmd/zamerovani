@@ -166,6 +166,19 @@ export function flipWallSide(wallId: Id): void {
   });
 }
 
+/** Zapne / vypne „nespojovat konec“ (end = 'a' | 'b'): konec má vlastní čelo a nenapojuje se na sousedy. */
+export function setWallNoJoin(wallId: Id, end: 'a' | 'b', noJoin: boolean): void {
+  store.edit(floor => {
+    const w = floor.walls[wallId];
+    if (!w) return;
+    if (end === 'a') {
+      if (noJoin) w.noJoinA = true;
+      else delete w.noJoinA;
+    } else if (noJoin) w.noJoinB = true;
+    else delete w.noJoinB;
+  });
+}
+
 export function applyWallLength(wallId: Id, length: number, move: MoveTarget): boolean {
   let ok = false;
   store.edit(floor => {

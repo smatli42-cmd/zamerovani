@@ -4,7 +4,7 @@
 import { arcChain } from '../../core/arcChain';
 import { wallLength } from '../../core/floorQueries';
 import type { Floor, Wall, WallType } from '../../model/types';
-import { deleteSelection, duplicateSelection, flipWallSide, setWallThickness, updateWall, updateWallLabel } from '../../store/actions';
+import { deleteSelection, duplicateSelection, flipWallSide, setWallNoJoin, setWallThickness, updateWall, updateWallLabel } from '../../store/actions';
 import { openTarget } from '../../store/numpadController';
 import { close, LINE_STYLES } from './common';
 import { NumField, Panel, Seg, TextField } from './fields';
@@ -70,6 +70,26 @@ export function WallPanel({ floor, wall }: { floor: Floor; wall: Wall }) {
           )}
         </div>
       )}
+      {!circle && wall.thickness > 0 && (['a', 'b'] as const).map(end => {
+        const node = end === 'a' ? wall.a : wall.b;
+        const off = end === 'a' ? !!wall.noJoinA : !!wall.noJoinB;
+        // přepínač se nabízí jen tam, kde se stýká další stěna s tloušťkou (nebo už je vypnutý)
+        const shared = Object.values(floor.walls).some(o => o.id !== wall.id && o.thickness > 0 && (o.a === node || o.b === node));
+        if (!shared && !off) return null;
+        return (
+          <div class="field field-inline" key={end}>
+            <span>Konec {end === 'a' ? 'A' : 'B'}</span>
+            <Seg
+              options={[
+                { v: 'join', label: 'Spojený' },
+                { v: 'free', label: 'Nespojený' }
+              ]}
+              value={off ? 'free' : 'join'}
+              onChange={v => setWallNoJoin(wall.id, end, v === 'free')}
+            />
+          </div>
+        );
+      })}
       <div class="field field-inline">
         <span>Styl čáry</span>
         <Seg options={LINE_STYLES} value={wall.style ?? 'solid'} onChange={v => updateWall(wall.id, { style: v })} />

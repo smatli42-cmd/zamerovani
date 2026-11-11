@@ -197,9 +197,22 @@ describe('C2/9: přesunutí konce stěny A tažením po její přímce', () => {
 });
 
 describe('C2/10: odpojení v rohu (C1.6)', () => {
-  // Podle katalogu má jít vypnout spojení: dvě samostatná těla s čárou mezi nimi, každé dojde ke své čáře líce.
-  // Aplikace dnes nemá žádný příznak „nespojovat konec“ (C1.6 / E7 chybí) – nejde napsat ani spustit.
-  it.todo('C2/10: po vypnutí spojení v rohu mají obě stěny vlastní čela a čáru mezi sebou');
+  // Příklad 1 (L-roh 300 + 300) s příznakem „nespojovat konec“ u B v rohu: dvě samostatná těla s čárou mezi nimi,
+  // každé dojde ke své čáře líce (A po x = 0, B po y = 0 – katalog i aplikace).
+  it('C2/10: po vypnutí spojení v rohu mají obě stěny vlastní čela a čáru mezi sebou', () => {
+    const { f, A, B } = corner(300, 300);
+    f.walls[B]!.noJoinA = true; // B začíná v rohu c
+    const b = wallBodies(f);
+    // B dojde ke své čáře líce: čelo kolmo na B v y = 0, tj. od (0,0) do (−300,0)
+    expect(hasEdge(f, 0, 0, -300, 0)).toBe(true);
+    // A zůstává spojený sám se sebou (jediný spojený konec = vlastní čelo kolmo na A: x = 0)
+    expect(hasEdge(f, 0, 0, 0, 300)).toBe(true);
+    // vnější roh se nevytvoří
+    expect(has(b.get(A)!.poly, -300, 300)).toBe(false);
+    expect(has(b.get(B)!.poly, -300, 300)).toBe(false);
+    // těla se nepřekrývají → žádná čára uvnitř sjednocení
+    expect(hasLineInsideUnion(f)).toBe(false);
+  });
 });
 
 describe('C2/11: křížení, A = 300 a B = 100', () => {
