@@ -8,31 +8,13 @@ import { arcChain } from '../core/arcChain';
 import { openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
 import { centroid, dist, dot, lerp, normal, scale, sub, unit } from '../core/geometry';
 import { OPENING_DEFAULTS } from '../model/factory';
-import type { Floor, Id, Pt, Wall } from '../model/types';
+import type { Floor, Id, Pt } from '../model/types';
 import type { Camera, NumPadTarget, Selection } from '../store/store';
 import { addHitBox, type HitAction } from './hitTargets';
 import { toScreen } from './view';
 import { bodyNormal, facePointAt, hasBody } from '../core/wallBody';
 import { doorLayout } from '../core/doorLayout';
 import { openingStartFromA } from '../core/floorQueries';
-
-const WALL_TYPE_TEXT: Record<string, string> = {
-  obvodova: 'obvodová',
-  nosna: 'nosná',
-  pricka: 'příčka',
-  sdk: 'SDK',
-  neovereno: 'neověřeno'
-};
-
-export function wallLabelText(wall: Wall): string {
-  const l = wall.label;
-  const parts: string[] = [];
-  if (wall.thickness > 0) parts.push(`tl. ${wall.thickness}`);
-  if (l.type) parts.push(WALL_TYPE_TEXT[l.type] ?? l.type);
-  if (l.material) parts.push(l.material);
-  if (l.note) parts.push(l.note);
-  return parts.join(' · ');
-}
 
 /** Těžiště každé souvislé skupiny stěn (pro určení strany „ven“). */
 function componentCentroids(floor: Floor): Map<Id, Pt> {
@@ -196,13 +178,6 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
       });
     }
 
-    // Popisek stěny (uvnitř místnosti podél stěny)
-    const label = wallLabelText(wall);
-    if (label && screenLen > 60) {
-      const mid = lerp(a, b, 0.5);
-      const pos = { x: mid.x - out.x * 14 * s, y: mid.y - out.y * 14 * s };
-      drawRotatedText(ctx, pos, u, label, `italic ${Math.round(11 * s)}px system-ui, sans-serif`, '#475569', screenLen - 20);
-    }
   }
   ctx.restore();
 }
@@ -212,21 +187,6 @@ function readableAngle(u: Pt): number {
   if (ang > Math.PI / 2 + 0.01) ang -= Math.PI;
   if (ang < -Math.PI / 2 - 0.01) ang += Math.PI;
   return ang;
-}
-
-function drawRotatedText(ctx: CanvasRenderingContext2D, pos: Pt, u: Pt, text: string, font: string, color: string, maxW: number): void {
-  ctx.save();
-  ctx.translate(pos.x, pos.y);
-  ctx.rotate(readableAngle(u));
-  ctx.font = font;
-  ctx.fillStyle = color;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  let t = text;
-  while (t.length > 3 && ctx.measureText(t).width > maxW) t = t.slice(0, -2);
-  if (t !== text) t = `${t.slice(0, -1)}…`;
-  ctx.fillText(t, 0, 0);
-  ctx.restore();
 }
 
 export function drawDimLine(
