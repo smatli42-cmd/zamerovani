@@ -213,6 +213,16 @@ describe('C2/10: odpojení v rohu (C1.6)', () => {
     // těla se nepřekrývají → žádná čára uvnitř sjednocení
     expect(hasLineInsideUnion(f)).toBe(false);
   });
+
+  it('C2/10 + C1.13: stěna s vlastním rohem na stejných souřadnicích se kreslí stejně (A: čelo x = 0, B: čelo y = 0)', () => {
+    const { f, A, B } = corner(300, 300);
+    f.nodes.c2 = { id: 'c2', x: 0, y: 0 };
+    f.walls[B]!.a = 'c2';
+    f.walls[B]!.noJoinA = true;
+    expect(hasEdge(f, 0, 0, -300, 0)).toBe(true);
+    expect(hasEdge(f, 0, 0, 0, 300)).toBe(true);
+    expect(has(wallBodies(f).get(A)!.poly, -300, 300)).toBe(false);
+  });
 });
 
 describe('C2/11: křížení, A = 300 a B = 100', () => {

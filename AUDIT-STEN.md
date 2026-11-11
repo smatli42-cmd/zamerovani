@@ -130,3 +130,7 @@ Pozn.: „žádná čára uvnitř“ ověřuje pomocná funkce `hasLineInsideUni
 
 ## Další doporučení
 - `core/wallBody.ts` (386 řádků) je na hranici; než se přidá C1.5, rozdělit na výpočet napojení a kreslení hran.
+
+## C1.13 (fyzicky oddělený konec) – hotovo 2026-11-11
+
+Nespojený konec má vlastní uzel (`setWallNoJoin`), uzly se samy nesloučí (`mergeNodeIfCoincident`, `getOrCreateNode`), test `store/noJoin.test.ts` + rozšířený C2/10.

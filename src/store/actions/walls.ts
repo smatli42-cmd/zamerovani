@@ -1,7 +1,7 @@
 /**
  * Akce: stěny (kreslení, tvary, oblouky, tloušťka, popisky) a posun rohů / skupin.
  */
-import { createCircleWall, createWall } from '../../model/factory';
+import { createCircleWall, createWall, newId } from '../../model/factory';
 import type { Floor, Id, LineStyle, Pt, Wall, WallLabel } from '../../model/types';
 import { setChainSagitta } from '../../core/arcChain';
 import { dist } from '../../core/geometry';
@@ -9,7 +9,7 @@ import { setWallLength, type MoveTarget } from '../../core/solver';
 import { mergeStraightAt, splitWallsAtNode } from '../../core/topology';
 import { hasBody, initialSide, orientLoopOutward } from '../../core/wallBody';
 import { store } from '../store';
-import { cleanup, getOrCreateNode, MERGE_TOL } from './shared';
+import { cleanup, getOrCreateNode, MERGE_TOL, nodeHasNoJoin } from './shared';
 
 /** Je tu už stejná stěna (stejné rohy a stejný tvar)? Dvě půlkružnice mezi týmiž rohy jsou různé stěny. */
 function findSameWall(floor: Floor, a: Id, b: Id, sagitta: number): Wall | undefined {
@@ -171,11 +171,36 @@ export function setWallNoJoin(wallId: Id, end: 'a' | 'b', noJoin: boolean): void
   store.edit(floor => {
     const w = floor.walls[wallId];
     if (!w) return;
-    if (end === 'a') {
-      if (noJoin) w.noJoinA = true;
-      else delete w.noJoinA;
-    } else if (noJoin) w.noJoinB = true;
-    else delete w.noJoinB;
+    const nodeId = end === 'a' ? w.a : w.b;
+    const node = floor.nodes[nodeId];
+    if (!node) return;
+    const setFlag = (on: boolean) => {
+      if (end === 'a') {
+        if (on) w.noJoinA = true;
+        else delete w.noJoinA;
+      } else if (on) w.noJoinB = true;
+      else delete w.noJoinB;
+    };
+    const setNode = (id: Id) => {
+      if (end === 'a') w.a = id;
+      else w.b = id;
+    };
+    const sharedWithOthers = Object.values(floor.walls).some(o => o.id !== w.id && (o.a === nodeId || o.b === nodeId));
+    if (noJoin) {
+      // fyzicky oddělený konec: stěna dostane vlastní roh na stejných souřadnicích (C1.13)
+      if (sharedWithOthers) {
+        const id = newId('n');
+        floor.nodes[id] = { id, x: node.x, y: node.y };
+        setNode(id);
+      }
+      setFlag(true);
+    } else {
+      setFlag(false);
+      // zpět na Spojený: roh se sloučí s rohem na stejném místě (pokud tam není další oddělený konec)
+      const other = Object.values(floor.nodes).find(n => n.id !== nodeId && dist(n, node) < MERGE_TOL && !nodeHasNoJoin(floor, n.id));
+      if (other) setNode(other.id);
+      cleanup(floor);
+    }
   });
 }
 
@@ -257,7 +282,9 @@ export function mergeNodeIfCoincident(nodeId: Id): void {
   store.edit(floor => {
     const moved = floor.nodes[nodeId];
     if (!moved) return;
-    const other = Object.values(floor.nodes).find(n => n.id !== nodeId && dist(n, moved) < MERGE_TOL);
+    // oddělené (nespojené) konce se samy nesloučí (C1.13) – ani pohybem tohoto rohu, ani cílem
+    const movedFlagged = nodeHasNoJoin(floor, nodeId);
+    const other = movedFlagged ? undefined : Object.values(floor.nodes).find(n => n.id !== nodeId && dist(n, moved) < MERGE_TOL && !nodeHasNoJoin(floor, n.id));
     if (!other) {
       // Roh přetažený na stěnu ji rozdělí
       splitWallsAtNode(floor, nodeId);
