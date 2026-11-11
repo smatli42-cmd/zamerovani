@@ -5,7 +5,7 @@ Navazuje na `KRESLENI-STEN-NAVRH.md` (tam jsou dříve schválená rozhodnutí) 
 
 ## Jak číst dokument
 - Sloupec **Rozhodnutí**: ✔ ano, ✗ ne, ↷ později, ✎ jinak (je popsáno). **(vy)** = rozhodl uživatel 2026-11-11. **(já)** = rozhodnutí ponechal uživatel na asistentovi, kdykoli jde změnit. Ostatní řádky jsou vyplněny podle sloupce „Návrh“ a platí, dokud je někdo nepřepíše.
-- Sloupec „Stav“ vychází jen z dokumentů projektu, **kód nebyl čten**. Řádky „audit“ ověří Claude Code.
+- Sloupec „Stav“ byl původně z dokumentů projektu a částečně ho opravil audit Claude Code (`AUDIT-STEN.md`, platí ten). Řádky „audit“ ověřil nebo ověří Claude Code.
 - U chování Revitu a Archicadu vychází většina buněk z oficiální nápovědy (zdroje na konci). **Z paměti nebo jen z názvu funkce** jsou: A5 (Revit), A9 (Archicad „magic wand“), D4 a D6 (Archicad), D5, D13 (Revit „Perpendicular snap“). Berte je jako k ověření.
 
 ---
@@ -55,14 +55,14 @@ Navazuje na `KRESLENI-STEN-NAVRH.md` (tam jsou dříve schválená rozhodnutí) 
 | C1.3 | Pořadí/priorita stěn v napojení | Previous / Next (do 4 stěn) | **Junction Order** pro 3+ stěny | bez priorit; těla se sjednotí bez čar uvnitř | – | ✔ |
 | C1.4 | T-napojení | jen Butt | závisí na prioritách, častý problém | základní, ladit v praxi | rozhodnuto dříve | ✔ |
 | C1.5 | Křížení „+“ a 3+ stěny v bodě | až 4 stěny přes Wall Joins | Junction Order | **každá stěna zůstane samostatná, těla se sloučí do jednoho obrysu bez čar uvnitř; průchozí stěny se nepřerušují** | ne | ✔ (já) |
-| C1.6 | Zrušit napojení (mezi stěnami zůstane čára) | **Disallow Join** / Allow Join | Layer Intersection Number, vypínač čištění | přepínač „nespojovat“ u konkrétního konce; **od 2026-11-11 i fyzicky oddělený konec (viz C1.13)** | kreslení hotovo (`noJoinA/B`), fyzické oddělení chybí | ✔ (vy) |
+| C1.6 | Zrušit napojení (mezi stěnami zůstane čára) | **Disallow Join** / Allow Join | Layer Intersection Number, vypínač čištění | přepínač „nespojovat“ u konkrétního konce; **od 2026-11-11 i fyzicky oddělený konec (viz C1.13)** | hotovo (`noJoinA/B` + vlastní uzel, viz C1.13) | ✔ (vy) |
 | C1.7 | Zobrazení napojení podle pohledu | Wall Join Display | globální čištění | NE | – | ✗ |
 | C1.8 | Různé tloušťky v rohu | průsečík vnějších líců | podle priorit | průsečík vnějších odsazených čar | rozhodnuto dříve | ✔ |
 | C1.9 | Úhel jiný než 90° | Miter / Square off | ref. čáry se protnou | průsečík vnějších odsazených čar | rozhodnuto dříve | ✔ |
 | C1.10 | Volný konec | rovný uzavřený | rovný | rovný uzavřený, kolmo | rozhodnuto dříve | ✔ |
 | C1.11 | Stěny v jedné přímce s různou tloušťkou (odskok) | spojí se s přechodem | – | **dvě samostatné stěny; u spoje odskok na vnější straně; každá se dál upravuje zvlášť** | ne | ✔ (vy) |
 | C1.12 | Sloučení souběžných stejných stěn v jednu | ne | – | POZ | ne | ↷ |
-| C1.13 | Nespojený konec je i **fyzicky oddělený** | – | – | každá stěna má na nespojeném konci vlastní uzel (stejné souřadnice), táhnou se samostatně; přepnutí zpět na Spojený uzly sloučí; sloučení uzlů „při shodě souřadnic“ se u označeného konce nesmí provést samo | chybí (dnes sdílený uzel) | ✔ (vy) |
+| C1.13 | Nespojený konec je i **fyzicky oddělený** | – | – | každá stěna má na nespojeném konci vlastní uzel (stejné souřadnice), táhnou se samostatně; přepnutí zpět na Spojený uzly sloučí; sloučení uzlů „při shodě souřadnic“ se u označeného konce nesmí provést samo | hotovo (2026-11-11, krok 1) | ✔ (vy) |
 
 ### C2. Příklady „vstup → očekávaný výsledek“ (podklad pro testy)
 
@@ -89,8 +89,8 @@ Souřadnice v mm. Vnitřní roh místnosti = (0, 0), místnost leží v kladném
 
 | # | Chování | Revit | Archicad | Návrh | Stav | Rozhodnutí |
 |---|---|---|---|---|---|---|
-| D1 | Tažení koncového bodu | ano | ano (stretch) | MVP | hotovo / rozhodnuto (směr, hystereze) | ✔ |
-| D2 | Posun celé stěny | ano | ano | MVP | audit | ✔ |
+| D1 | Tažení koncového bodu | ano | ano (stretch) | MVP | hotovo (bez držení směru, viz D11) | ✔ |
+| D2 | Posun celé stěny | ano | ano | MVP | částečně (viz D12) | ✔ |
 | D3 | Zkrátit/prodloužit do rohu: klepnete na část, kterou ponecháte | Trim/Extend: do rohu, jeden prvek, více prvků | – | původně ? | audit | ✔ jako **samostatný nástroj** (vy) |
 | D4 | Rozdělit stěnu (případně s mezerou, smazat vnitřní úsek) | Split Element / Split with Gap | Split | MVP | audit | ✔ |
 | D5 | Zámek zarovnání | Align + zámek | – | POZ | ne | ↷ |
@@ -102,6 +102,7 @@ Souřadnice v mm. Vnitřní roh místnosti = (0, 0), místnost leží v kladném
 | D11 | Tažení konce stěny drží původní směr (pomocná čára, zachycení, hystereze; u společného konce více stěn se směr volí tažením po pomocné čáře) | čáry přichycení | – | přesně podle `kresleni-editace-koncu-a-smeru.md` (projekt v Claude) | **chybí** (v kódu jen vodicí čáry zarovnání s rohy, ne držení směru) | ✔ (vy, rozhodnuto dříve) |
 | D12 | **Posun celé stěny** tažením (včetně jedné samostatné stěny) s pomocnou čárou původního směru | ano | ano | volný posun, k původnímu směru se přichytí pomocnou čárou (jako u D11) | částečně (jen skupinou, jedna stěna nejde) | ✔ (vy) |
 | D13 | Přichycení **kolmice** při tažení stěny nebo konce k jiné stěně, s ikonou ⊥ jako indikací pravého úhlu | ano (Perpendicular snap) | ano | v okamžiku přichycení se ukáže ikona kolmice | chybí | ✔ (vy) |
+| D14 | **Výběr jednoho z překrývajících se koncových bodů** (např. oddělený roh, kde leží dva konce přes sebe): uživatel si vybere, kterým bude hýbat | Tab přepíná mezi prvky pod kurzorem | – | **dvě cesty**: (1) konec **vybrané stěny má při tažení přednost**, takže se stěna nejdřív vybere ťuknutím do těla a pak se táhne za její konec; (2) opakované ťuknutí na stejné místo přepíná mezi překrývajícími se konci | chybí (vybere se vždy jen jeden) | ✔ (vy, 2026-11-11 23:21) |
 
 ## E. Vlastnosti stěny
 
@@ -113,7 +114,7 @@ Souřadnice v mm. Vnitřní roh místnosti = (0, 0), místnost leží v kladném
 | E4 | Styl čáry | hotovo | hotovo | ✔ |
 | E5 | Výška stěny | POZ | ne | ↷ |
 | E6 | Poznámka, fotky | POZ | ne | ↷ |
-| E7 | Příznak „nespojovat konec“ (C1.6) | MVP | ne | ✔ |
+| E7 | Příznak „nespojovat konec“ (C1.6) | MVP | hotovo (spolu s C1.13, krok 1 z 2026-11-11) | ✔ |
 
 ## F. Otvory a niky ve stěně
 
@@ -168,6 +169,8 @@ Souřadnice v mm. Vnitřní roh místnosti = (0, 0), místnost leží v kladném
 2. **Osa stěny je volitelná:** líc (jedna nebo druhá strana) nebo střed (B1, B10). Při přepnutí osa (čára) zůstane a tělo se posune (B4).
 3. **Posun celé stěny** (D12): volný posun, k původnímu směru se přichytí pomocnou čárou. Přibývá **přichycení kolmice s ikonou ⊥** (D13).
 4. **Tažení konce s držením směru** (D11) je rozhodnuté dříve a zatím nenaprogramované.
+5. **Výběr z překrývajících se koncových bodů** (D14): přednost má konec vybrané stěny, opakované ťuknutí přepíná.
+6. **Automatické vytváření a počítání místností není potřeba** (rozhodnuto dříve, potvrzeno 2026-11-11). Detekce uzavřených smyček pro natočení těl ven se proto nesmí na oddělených rozích zlomit, ale plocha ani obvod místností se neřeší.
 
 ## Zdroje
 - Revit, napojení stěn: [Change the Configuration of a Wall Join](https://help.autodesk.com/cloudhelp/2022/ENU/RevitLT-ArchDes/files/GUID-19EAF7A9-331F-4271-94CC-43B76B13011E.htm), [Modify Wall Joins](https://help.autodesk.com/cloudhelp/2023/ENU/Revit-ArchDesign/files/GUID-7AFCACAC-9ED2-44A4-A30E-7D7ED16E01E5.htm), [Revit Pure: wall joins tips](https://bimpure.com/blog/8-tips-to-understand-revit-wall-joins)

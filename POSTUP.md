@@ -6,6 +6,8 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Poslední stav (2026-11-11 – C1.13 fyzicky oddělený konec)
 
+**Známé (2026-11-11):** detekce uzavřených smyček pro natočení těl ven (`orientLoopOutward`) se na oddělených (nespojených) rozích může zlomit; plochy a obvody místností se neřeší (automatické vytváření a počítání místností není potřeba – katalog).
+
 **Hotovo (čeká na vyzkoušení):** katalog + `KRESLENI-EDITACE-KONCU.md` commitnuté. Krok 1 podle nového pořadí uživatele: **nespojený konec má vlastní uzel** – `setWallNoJoin` (`actions/walls.ts`) při zapnutí vytvoří stěně nový uzel na stejných souřadnicích, při přepnutí zpět uzly sloučí (pokud tam není jiný oddělený konec); `mergeNodeIfCoincident` a `getOrCreateNode` (`actions/shared.ts: nodeHasNoJoin`) označený konec samy nespojí. Testy: `store/noJoin.test.ts` (+4), C2/10 rozšířen (+1) → 85 + 2 it.fails. Ověřeno v prohlížeči (uzly 3 → 4 → 3). Pozn.: starý projekt s příznakem na sdíleném uzlu se kreslí správně, ale uzel zůstane sdílený, dokud se přepínač nepřepne; místnosti (rooms) přes oddělený roh zatím neřešeno.
 
 **Další kroky (pořadí uživatele):** 2) osa stěny (B1/B4/B10, C2/12–15) – nejdřív návrh datového modelu a čekat na schválení; 3) tažení a posun jako blok (D2, D11–D13, C2/16, `resolveDragPoint`) – nejdřív návrh; 4) F4, D3, C1.11, C1.5.
