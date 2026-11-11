@@ -4,7 +4,9 @@ Projekt je na OneDrive a uživatel střídá dva počítače (nikdy ne současn�
 **Na začátku sezení tento soubor přečti. Na konci práce (nebo po větším kroku) ho aktualizuj.**
 Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do „Historie“.
 
-## Poslední stav (2026-11-11 – audit stěn, fáze 1)
+## Poslední stav (2026-11-11 – audit stěn, fáze 1 a 2)
+
+**Fáze 2 hotová (zastaveno, čeká na uživatele):** `src/core/wallJoins.catalog.test.ts` – testy z příkladů C2/1–11 (79 testů prochází, 2 `it.fails` = nálezy C2/6 hrana odskoku a C2/11 křížení, 1 `it.todo` = C2/10 odpojení; nic neopraveno). **Hotová i oprava D10/E3:** popisek stěny na výkrese zrušen (`drawDims.ts`), typ/materiál/poznámka jen v panelu, tloušťka jen jako kóta u vybrané stěny. Pořadí fáze 3 schváleno: D10/E3 ✔ → C1.6+E7 → F4 → C1.11 → F7 → D2 → D3 (nástroj) → D4 → A2/A10/B6 → C1.5 (nakonec). Katalog a zadání auditu jsou teď v repozitáři. Po jednom kroku se zastavit a nechat uživatele vyzkoušet.
 
 **Audit stěn podle `KATALOG-STEN.md` (zadání `ZADANI-AUDIT-STEN.md`):** hotová **fáze 1** = jen dokument `AUDIT-STEN.md` (v kódu nic neměněno). Výsledek: hotovo 29, částečně 8, chybí 5 (C1.5 křížení, C1.6+E7 nespojovat konec, D3 zkrátit/prodloužit, F7 upozornění u rohu), rozpor D10/E3 (typ a materiál se kreslí na výkrese v `drawDims.ts: wallLabelText`) a C1.11 (hrana odskoku se nekreslí – naměřeno). **Čeká se na souhlas uživatele s pořadím** (návrh v `AUDIT-STEN.md`), pak **fáze 2** (testy z příkladů C2/1–11, bez oprav). Zadání a katalog (`KATALOG-STEN.md`, `ZADANI-AUDIT-STEN.md`) jsou zatím necommitnuté soubory uživatele. Pravidla: katalog a testy neupravovat, po každé fázi se zastavit.
 

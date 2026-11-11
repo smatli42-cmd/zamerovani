@@ -59,7 +59,7 @@ Stav: **hotovo** / **částečně** / **chybí** / **nejasné**. „Test“ = ex
 | D7 | Smazání stěny, sousedé se přepočítají, otvory se smažou | hotovo | `actions/delete.ts`, `actions/shared.ts: cleanup` | ne | Těla se neukládají, přepočítají se samy; `cleanup` smaže otvory bez stěny a osiřelé rohy. |
 | D8 | Výběr: klik, okno, křížení, vícenásobný | hotovo | `selectTool.ts`, `core/rectSelect.ts` | ano (`rectSelect.test`) | – |
 | D9 | Zpět/vpřed po každé akci | hotovo | `store/store.ts: edit` (immer, historie) | částečně | Všechny akce jdou přes `store.edit()`; výběr tloušťky je záměrně mimo historii. |
-| D10 ✎ | Typ stěny jen ve vlastnostech, na výkrese ne | **rozpor** | `canvas/drawDims.ts: wallLabelText` (řádky 27–35, volá se v řádku ~200) | ne | Popisek na výkrese skládá `tl. N · typ · materiál · poznámka`, tedy **typ i materiál se kreslí**. |
+| D10 ✎ | Typ stěny jen ve vlastnostech, na výkrese ne | ~~rozpor~~ **opraveno 2026-11-11** (popisek stěny na výkrese zrušen) | `canvas/drawDims.ts: wallLabelText` (řádky 27–35, volá se v řádku ~200) | ne | Popisek na výkrese skládá `tl. N · typ · materiál · poznámka`, tedy **typ i materiál se kreslí**. |
 
 ## E. Vlastnosti stěny
 
@@ -67,7 +67,7 @@ Stav: **hotovo** / **částečně** / **chybí** / **nejasné**. „Test“ = ex
 |---|---|---|---|---|---|
 | E1 | Tloušťka (mm), bez příznaku odhad/změřeno | hotovo | `Wall.thickness`, `WallPanel.tsx` | ano | V modelu příznak není. |
 | E2 | Strana těla | hotovo | `Wall.side`, `Wall.sideLocked` | ano | – |
-| E3 ✎ | Typ a materiál jen ve vlastnostech | **rozpor** | `WallPanel.tsx` (panel ✔), `drawDims.ts: wallLabelText` (výkres ✘) | ne | Viz D10. |
+| E3 ✎ | Typ a materiál jen ve vlastnostech | ~~rozpor~~ **opraveno 2026-11-11** | `WallPanel.tsx` (panel ✔), `drawDims.ts: wallLabelText` (výkres ✘) | ne | Viz D10. |
 | E4 | Styl čáry | hotovo | `Wall.style`, `actions/walls.ts: updateWall` | ne | – |
 | E7 | Příznak „nespojovat konec“ | **chybí** | – | ne | Viz C1.6. |
 
@@ -109,6 +109,24 @@ Stav: **hotovo** / **částečně** / **chybí** / **nejasné**. „Test“ = ex
 
 Pozn. k vašemu návrhu začátku (C1.6+E7, F4, C1.11, C1.5, D3): doporučuji před něj dát jen **krok 1** (malý rozpor s rozhodnutím) a **C1.5 odsunout za D2–D3**, protože je největší a pro zaměřování stavu je křížení vzácné.
 
+## Fáze 2: testy z příkladů C2/1–11 (2026-11-11)
+Soubor `src/core/wallJoins.catalog.test.ts` (souřadnice katalogu s osou Y nahoru jsou přepočítané na (x, −y), popsáno v záhlaví souboru). Výsledek: **11 testů prochází, 2 jsou `it.fails` (nález), 1 `it.todo`**. Celkem v projektu 79 prošlo, 2 očekávaně selhávají, 1 todo.
+
+| Příklad | Výsledek | Poznámka |
+|---|---|---|
+| C2/1 L-roh 300 + 300 | projde | vnější roh (−300, 300), vnitřní roh (0,0), žádná čára uvnitř |
+| C2/2 L-roh 300 + 100 | projde | A končí na x = −100, B na y = 300 (katalog −300) |
+| C2/3 úhel 60°, 200 | projde | vnější roh (−346,41; 200) |
+| C2/4 volný konec 200 | projde | čelo kolmé délky 200, 4 hrany |
+| C2/5 T 300 + 100 | projde | průchozí stěna v aplikaci vždy dostane v místě napojení roh, tedy je to dvě stěny (viz C1.5 jen pro křížení bez rohu) |
+| C2/6 odskok | část projde (zůstanou dvě stěny, bez dělicí čáry přes tělo); **`it.fails`: hrana odskoku (1000,200)–(1000,300) se nekreslí** | nález C1.11 |
+| C2/7 změna tloušťky | projde | líc a rohy se nehýbou, vnější roh (−300, 200) |
+| C2/8 přehození strany | projde | napojení se přepočítá, po vrácení strany stejné obrysy |
+| C2/9 posun rohu po přímce A | projde | B se otočí, vnější roh na vnější čáře A, 300 mm od líce B |
+| C2/10 odpojení | **`it.todo`** | funkce C1.6 / E7 neexistuje |
+| C2/11 křížení | stěny zůstanou samostatné (projde); **`it.fails`: uvnitř křížení jsou čáry** | nález C1.5 |
+
+Pozn.: „žádná čára uvnitř“ ověřuje pomocná funkce `hasLineInsideUnion`, která vzorkuje vykreslené hrany a hledá ty, které leží uvnitř sjednocených těl. Že skutečně něco najde, dokazuje `it.fails` u C2/11 (kdyby nenašla nic, `it.fails` by selhal).
+
 ## Další doporučení
-- Do testů z fáze 2 patří příklady C2/1–11 (příklady 7, 8, 9, 10, 11 dnes nemají test).
 - `core/wallBody.ts` (386 řádků) je na hranici; než se přidá C1.5, rozdělit na výpočet napojení a kreslení hran.
