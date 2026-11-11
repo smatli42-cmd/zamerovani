@@ -78,6 +78,9 @@ function handleOverlayTap(p: PointerInput): boolean {
   // Středový bod vybraného oblouku má přednost před kótami, které ho mohou překrývat
   if (arcUnderPen(p)) return false;
 
+  // Úchyt rohu / koncového bodu má při ťuknutí přednost před klikacími kótami (ty ho mohou překrývat)
+  if (findNodeNear(floor, p.world, HIT_PX.node / state.camera.zoom)) return false;
+
   const box = hitTest(p.screen, p.device === 'touch' ? 8 : 4);
   if (box?.action.type === 'numpad') {
     cancelTool();

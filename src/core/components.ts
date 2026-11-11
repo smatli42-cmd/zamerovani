@@ -105,6 +105,18 @@ export function componentGap(floor: Floor, wallId: Id, side: Side): ComponentGap
   return best;
 }
 
+/**
+ * Odstup, který se smí ukázat a nabídnout (kóta + klikací zásah). Neukazuje se u skupin s odděleným (nespojeným)
+ * koncem (roh je součást obrysu, ne samostatný předmět) ani nulový odstup (stěny se dotýkají – není co zadávat).
+ */
+export function visibleComponentGap(floor: Floor, wallId: Id, side: Side): ComponentGap | null {
+  const nodes = componentNodes(floor, wallId);
+  const separated = Object.values(floor.walls).some(w => (nodes.has(w.a) && w.noJoinA) || (nodes.has(w.b) && w.noJoinB));
+  if (separated) return null;
+  const gap = componentGap(floor, wallId, side);
+  return gap && gap.value >= 1 ? gap : null;
+}
+
 /** Posune celou skupinu tak, aby odstup ve straně `side` byl `value`. */
 export function setComponentGap(floor: Floor, wallId: Id, side: Side, value: number): boolean {
   const gap = componentGap(floor, wallId, side);

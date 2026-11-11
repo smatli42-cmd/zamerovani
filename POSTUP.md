@@ -4,7 +4,11 @@ Projekt je na OneDrive a uživatel střídá dva počítače (nikdy ne současn�
 **Na začátku sezení tento soubor přečti. Na konci práce (nebo po větším kroku) ho aktualizuj.**
 Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do „Historie“.
 
-## Poslední stav (2026-11-11 – C1.13 fyzicky oddělený konec)
+## Poslední stav (2026-11-11 – oprava kóty odstupu u odděleného rohu)
+
+**Chyba z krok 1 opravena (čeká na vyzkoušení):** přes oddělený roh ležela kóta „odstup skupiny“ (`core/components.ts` → `drawComponentDims.ts`, NumPad `comp-gap`; ne `shiftJunction`) a bránila ťuknutí na roh. Teď: `visibleComponentGap` – kóta se nekreslí (ani nenabízí) u skupin s odděleným koncem a při nulovém odstupu; ostatní kóty beze změny. Obecně: v `input/pointer.ts: handleOverlayTap` má roh pod perem (`findNodeNear`, `HIT_PX.node`) přednost před klikacími kótami. Testy: `core/components.test.ts` (+3 → 88 + 2 it.fails). Ověřeno v prohlížeči (L-roh před/po odpojení, tažení za roh posunulo jen uzel odděleného konce). **Krok 2 (osa stěny): návrh odeslán, čeká se na schválení (3 otázky: kóty 2a/2b, kreslení osy, zapamatování strany).**
+
+## Předchozí stav (2026-11-11 – C1.13 fyzicky oddělený konec)
 
 **Známé (2026-11-11):** detekce uzavřených smyček pro natočení těl ven (`orientLoopOutward`) se na oddělených (nespojených) rozích může zlomit; plochy a obvody místností se neřeší (automatické vytváření a počítání místností není potřeba – katalog).
 
