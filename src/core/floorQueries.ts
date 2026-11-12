@@ -2,7 +2,7 @@
  * Dotazy nad půdorysem (podlažím) – čtení bez změn.
  */
 import type { Floor, Id, Node, Opening, Wall } from '../model/types';
-import { nearestOnArc, nearestOnCircle } from './arc';
+import { arcGeometry, nearestOnArc, nearestOnCircle } from './arc';
 import { dist, unit } from './geometry';
 import type { Pt } from '../model/types';
 
@@ -191,31 +191,122 @@ export function hostedOn(floor: Floor, wallId: Id): { id: Id; t: number }[] {
     .sort((p, q) => p.t - q.t);
 }
 
+/** Křížení dvou stěn s tloušťkou (C1.5): bod, kde se jejich osy protnou uvnitř obou (ne u konců). */
+export interface Crossing {
+  id: Id;
+  pt: Pt;
+  walls: [Id, Id];
+}
+
+/** Stěna s tělem pro křížení (bez závislosti na wallBody – kruhový import). */
+const crossable = (w: Wall) => w.thickness > 0 && w.radius === undefined && w.a !== w.b;
+
+/** Průsečíky přímky p + s·d (s ∈ [0,1] pro úsečku) s kružnicí. */
+function segCircle(p: Pt, q: Pt, c: Pt, r: number): Pt[] {
+  const d = { x: q.x - p.x, y: q.y - p.y };
+  const f = { x: p.x - c.x, y: p.y - c.y };
+  const A = d.x * d.x + d.y * d.y;
+  const B = 2 * (f.x * d.x + f.y * d.y);
+  const C = f.x * f.x + f.y * f.y - r * r;
+  const disc = B * B - 4 * A * C;
+  if (A < 1e-9 || disc < 0) return [];
+  const sq = Math.sqrt(disc);
+  return [(-B - sq) / (2 * A), (-B + sq) / (2 * A)].filter(s => s >= 0 && s <= 1).map(s => ({ x: p.x + d.x * s, y: p.y + d.y * s }));
+}
+
 /**
- * Úseky stěn pro graf (skupiny, místnosti): průběžná stěna se v napojených rozích rozdělí jen virtuálně.
- * Každý úsek nese skutečnou stěnu.
+ * Všechna křížení stěn s tloušťkou (rovné i oblouky): průsečík os ve vnitřku obou stěn, dál než 5 mm
+ * od jejich konců (konec na stěně je T-napojení – Node.host). Spoj se počítá z geometrie, stěny se nedělí.
  */
-export function wallSegments(floor: Floor): { wall: Wall; from: Id; to: Id }[] {
-  const out: { wall: Wall; from: Id; to: Id }[] = [];
-  // jeden průchod rohy: stěna → napojené rohy (místo hledání pro každou stěnu zvlášť)
-  const byHost = new Map<Id, Node[]>();
-  for (const n of Object.values(floor.nodes)) if (n.host) (byHost.get(n.host) ?? byHost.set(n.host, []).get(n.host)!).push(n);
+export function wallCrossings(floor: Floor): Crossing[] {
+  const items: { w: Wall; a: Pt; b: Pt; g: ReturnType<typeof arcGeometry> }[] = [];
   for (const w of Object.values(floor.walls)) {
-    const list = byHost.get(w.id);
+    if (!crossable(w)) continue;
     const a = floor.nodes[w.a];
     const b = floor.nodes[w.b];
-    let mids: Id[] = [];
-    if (list && a && b) {
-      const e = { x: b.x - a.x, y: b.y - a.y };
-      mids = list
-        .filter(n => n.id !== w.a && n.id !== w.b)
-        .map(n => ({ id: n.id, t: w.sagitta ? nearestOnArc(n, a, b, w.sagitta).t : (n.x - a.x) * e.x + (n.y - a.y) * e.y }))
-        .sort((p, q) => p.t - q.t)
-        .map(h => h.id);
+    if (a && b && dist(a, b) > 1) items.push({ w, a, b, g: arcGeometry(a, b, w.sagitta ?? 0) });
+  }
+  const out: Crossing[] = [];
+  const onArc = (p: Pt, it: (typeof items)[number]) => !it.g || nearestOnArc(p, it.a, it.b, it.w.sagitta ?? 0).distance < 0.01;
+  for (let i = 0; i < items.length; i++) {
+    for (let j = i + 1; j < items.length; j++) {
+      const P = items[i]!;
+      const Q = items[j]!;
+      // sdílený roh = napojení v rohu, ne křížení
+      if (P.w.a === Q.w.a || P.w.a === Q.w.b || P.w.b === Q.w.a || P.w.b === Q.w.b) continue;
+      let pts: Pt[] = [];
+      if (!P.g && !Q.g) {
+        const d1 = { x: P.b.x - P.a.x, y: P.b.y - P.a.y };
+        const d2 = { x: Q.b.x - Q.a.x, y: Q.b.y - Q.a.y };
+        const den = d1.x * d2.y - d1.y * d2.x;
+        if (Math.abs(den) < 1e-9) continue;
+        const w0 = { x: Q.a.x - P.a.x, y: Q.a.y - P.a.y };
+        const s = (w0.x * d2.y - w0.y * d2.x) / den;
+        const t = (w0.x * d1.y - w0.y * d1.x) / den;
+        if (s >= 0 && s <= 1 && t >= 0 && t <= 1) pts = [{ x: P.a.x + d1.x * s, y: P.a.y + d1.y * s }];
+      } else if (!P.g || !Q.g) {
+        const S = P.g ? Q : P;
+        const R = P.g ? P : Q;
+        pts = segCircle(S.a, S.b, R.g!.center, R.g!.r).filter(p => onArc(p, R));
+      } else {
+        const c1 = P.g.center;
+        const c2 = Q.g!.center;
+        const r1 = P.g.r;
+        const r2 = Q.g!.r;
+        const dd = dist(c1, c2);
+        if (dd < 1e-6 || dd > r1 + r2 || dd < Math.abs(r1 - r2)) continue;
+        const m = (r1 * r1 - r2 * r2 + dd * dd) / (2 * dd);
+        const h = Math.sqrt(Math.max(0, r1 * r1 - m * m));
+        const u = { x: (c2.x - c1.x) / dd, y: (c2.y - c1.y) / dd };
+        const base = { x: c1.x + u.x * m, y: c1.y + u.y * m };
+        pts = [1, -1].map(k => ({ x: base.x - u.y * h * k, y: base.y + u.x * h * k })).filter(p => onArc(p, P) && onArc(p, Q));
+      }
+      pts.forEach((pt, k) => {
+        if ([P.a, P.b, Q.a, Q.b].some(e => dist(e, pt) <= 5)) return;
+        out.push({ id: `x:${P.w.id}|${Q.w.id}|${k}`, pt, walls: [P.w.id, Q.w.id] });
+      });
     }
-    const chain = [w.a, ...mids, w.b];
-    for (let i = 0; i + 1 < chain.length; i++) out.push({ wall: w, from: chain[i]!, to: chain[i + 1]! });
   }
   return out;
 }
 
+/** Poloha bodu podél stěny (0 = a, 1 = b; u oblouku po oblouku) – pro řazení napojení a křížení. */
+export function paramOnWall(w: Wall, a: Pt, b: Pt, p: Pt): number {
+  if (w.sagitta) return nearestOnArc(p, a, b, w.sagitta).t;
+  const e = { x: b.x - a.x, y: b.y - a.y };
+  return ((p.x - a.x) * e.x + (p.y - a.y) * e.y) / (e.x * e.x + e.y * e.y || 1);
+}
+
+/** Úsek grafu stěn: skutečná stěna mezi dvěma body (roh, napojený roh nebo křížení). */
+export interface WallSegment {
+  wall: Wall;
+  from: Id;
+  to: Id;
+  fromPt: Pt;
+  toPt: Pt;
+}
+
+/**
+ * Úseky stěn pro graf (skupiny, místnosti, řešič): průběžná stěna se v napojených rozích (T bez dělení)
+ * a v kříženích (C1.5) rozdělí jen virtuálně. Křížení mají ID „x:…“ (nejsou v floor.nodes).
+ */
+export function wallSegments(floor: Floor, crossings: Crossing[] = wallCrossings(floor)): WallSegment[] {
+  const out: WallSegment[] = [];
+  // jeden průchod rohy a kříženími: stěna → body uprostřed ní
+  const mids = new Map<Id, { id: Id; pt: Pt }[]>();
+  const add = (wallId: Id, id: Id, pt: Pt) => (mids.get(wallId) ?? mids.set(wallId, []).get(wallId)!).push({ id, pt });
+  for (const n of Object.values(floor.nodes)) if (n.host) add(n.host, n.id, n);
+  for (const c of crossings) for (const w of c.walls) add(w, c.id, c.pt);
+  for (const w of Object.values(floor.walls)) {
+    const a = floor.nodes[w.a];
+    const b = floor.nodes[w.b];
+    if (!a || !b) continue;
+    const inner = (mids.get(w.id) ?? [])
+      .filter(m => m.id !== w.a && m.id !== w.b)
+      .map(m => ({ ...m, t: paramOnWall(w, a, b, m.pt) }))
+      .sort((p, q) => p.t - q.t);
+    const chain = [{ id: w.a, pt: a as Pt }, ...inner, { id: w.b, pt: b as Pt }];
+    for (let i = 0; i + 1 < chain.length; i++) out.push({ wall: w, from: chain[i]!.id, to: chain[i + 1]!.id, fromPt: chain[i]!.pt, toPt: chain[i + 1]!.pt });
+  }
+  return out;
+}

@@ -162,7 +162,6 @@ function SettingsPopover({ onClose }: { onClose: () => void }) {
   );
   return (
     <div class="popover settings-popover" ref={box}>
-      {toggle('ortho', 'Pravé úhly (90°)', 'Stěny se kreslí jen vodorovně a svisle')}
       {toggle('snap', 'Přichytávat na rohy', 'Přichytávání na rohy, stěny a zarovnání')}
       {toggle('showDims', 'Zobrazit kóty', '')}
       {toggle('showGrid', 'Zobrazit mřížku', '')}

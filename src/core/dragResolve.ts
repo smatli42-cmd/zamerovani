@@ -8,6 +8,7 @@
 import type { Floor, Id, Pt } from '../model/types';
 import { add, dist, dot, normal, scale, sub, unit } from './geometry';
 import { isCurved } from './floorQueries';
+import { arcGeometry, nearestOnArc } from './arc';
 
 export interface DragLine {
   id: string;
@@ -110,12 +111,36 @@ function straightWalls(floor: Floor, exclude: Set<Id>) {
   return out;
 }
 
-/** Zarážky na čáře: průsečíky s ostatními rovnými stěnami. */
-function stopsOn(o: Pt, d: Pt, walls: { a: Pt; b: Pt }[]): Pt[] {
+/** Oblouky (ne kruhy) kromě vyloučených – pro zarážky. */
+function arcWalls(floor: Floor, exclude: Set<Id>) {
+  const out: { a: Pt; b: Pt; sagitta: number }[] = [];
+  for (const w of Object.values(floor.walls)) {
+    if (exclude.has(w.id) || !w.sagitta || w.radius !== undefined) continue;
+    const a = floor.nodes[w.a];
+    const b = floor.nodes[w.b];
+    if (a && b && dist(a, b) > 1) out.push({ a, b, sagitta: w.sagitta });
+  }
+  return out;
+}
+
+/** Zarážky na čáře: průsečíky s ostatními rovnými stěnami a s oblouky. */
+function stopsOn(o: Pt, d: Pt, walls: { a: Pt; b: Pt }[], arcs: { a: Pt; b: Pt; sagitta: number }[] = []): Pt[] {
   const out: Pt[] = [];
   for (const w of walls) {
     const x = lineSegment(o, d, w.a, w.b);
     if (x) out.push(x);
+  }
+  for (const w of arcs) {
+    const g = arcGeometry(w.a, w.b, w.sagitta);
+    if (!g) continue;
+    const f = sub(o, g.center);
+    const bb = dot(f, d);
+    const disc = bb * bb - (dot(f, f) - g.r * g.r);
+    if (disc < 0) continue;
+    for (const sgn of [-1, 1]) {
+      const p = add(o, scale(d, -bb + sgn * Math.sqrt(disc)));
+      if (nearestOnArc(p, w.a, w.b, w.sagitta).distance < 0.01) out.push(p);
+    }
   }
   return out;
 }
@@ -148,19 +173,21 @@ function allNodeDragLines(floor: Floor, nodeId: Id): DragLine[] {
   const node = floor.nodes[nodeId];
   if (!node) return [];
   const own = Object.values(floor.walls).filter(w => (w.a === nodeId || w.b === nodeId) && w.a !== w.b && w.radius === undefined && !isCurved(w));
-  const others = straightWalls(floor, new Set(Object.values(floor.walls).filter(w => w.a === nodeId || w.b === nodeId).map(w => w.id)));
+  const ownIds = new Set(Object.values(floor.walls).filter(w => w.a === nodeId || w.b === nodeId).map(w => w.id));
+  const others = straightWalls(floor, ownIds);
+  const arcs = arcWalls(floor, ownIds);
   const lines: DragLine[] = [];
   for (const w of own) {
     const far = floor.nodes[w.a === nodeId ? w.b : w.a];
     if (!far || dist(far, node) < 1) continue;
     const d = unit(far, node);
-    lines.push({ id: `orig:${w.id}`, origin: far, dir: d, weight: 1.5, stops: stopsOn(far, d, others) });
+    lines.push({ id: `orig:${w.id}`, origin: far, dir: d, weight: 1.5, stops: stopsOn(far, d, others, arcs) });
     if (own.length === 1) {
       const n = normal(d);
-      lines.push({ id: `perp:${w.id}`, origin: far, dir: n, weight: 1, stops: stopsOn(far, n, others) });
+      lines.push({ id: `perp:${w.id}`, origin: far, dir: n, weight: 1, stops: stopsOn(far, n, others, arcs) });
       for (const ax of [{ x: 1, y: 0 }, { x: 0, y: 1 }]) {
         if (Math.abs(dot(ax, d)) > 0.999 || Math.abs(dot(ax, n)) > 0.999) continue; // splývá s původním směrem / kolmicí
-        lines.push({ id: `axis:${w.id}:${ax.x}`, origin: far, dir: ax, weight: 1, stops: stopsOn(far, ax, others) });
+        lines.push({ id: `axis:${w.id}:${ax.x}`, origin: far, dir: ax, weight: 1, stops: stopsOn(far, ax, others, arcs) });
       }
     }
     // kolmice k jiné stěně, ke které se konec blíží (D13) – výběr podle blízkosti dělá linesNear
@@ -189,4 +216,34 @@ export function wallMoveLines(floor: Floor, wallId: Id, grab: Pt): DragLine[] {
     { id: 'along', origin: grab, dir: d, weight: 1.5 },
     { id: 'offset', origin: grab, dir: normal(d), weight: 1.5 }
   ];
+}
+
+/**
+ * Pomocné čáry pro kreslení nové stěny z bodu `start` (stejná mechanika jako tažení konce, D11/D13):
+ * vodorovně a svisle (zachycení 1,5×), u začátku v rohu pokračování a kolmice napojených rovných stěn,
+ * kolmice k blízkým stěnám (⊥); zarážky na průsečících se stěnami i oblouky. Jinak se kreslí libovolným směrem.
+ */
+export function drawLinesFrom(floor: Floor, start: Pt, startNodeId: Id | null): DragLine[] {
+  const own = startNodeId ? Object.values(floor.walls).filter(w => (w.a === startNodeId || w.b === startNodeId) && w.a !== w.b && w.radius === undefined && !isCurved(w)) : [];
+  const ownIds = new Set(own.map(w => w.id));
+  const others = straightWalls(floor, ownIds);
+  const arcs = arcWalls(floor, ownIds);
+  const lines: DragLine[] = [];
+  const push = (id: string, dir: Pt, weight: number, extra: Partial<DragLine> = {}) =>
+    lines.push({ id, origin: start, dir, weight, stops: stopsOn(start, dir, others, arcs), ...extra });
+  push('axis:x', { x: 1, y: 0 }, 1.5);
+  push('axis:y', { x: 0, y: 1 }, 1.5);
+  for (const w of own) {
+    const far = floor.nodes[w.a === startNodeId ? w.b : w.a];
+    if (!far || dist(far, start) < 1) continue;
+    const d = unit(far, start);
+    push(`cont:${w.id}`, d, 1.2);
+    push(`perp:${w.id}`, normal(d), 1.2);
+  }
+  for (const o of others) {
+    const n = normal(unit(o.a, o.b));
+    const foot = lineSegment(start, n, o.a, o.b);
+    lines.push({ id: `wperp:${o.id}`, origin: start, dir: n, weight: 1, perpTo: o.id, perpSeg: [o.a, o.b], stops: foot ? [foot] : [] });
+  }
+  return lines;
 }

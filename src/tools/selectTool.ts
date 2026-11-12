@@ -352,7 +352,7 @@ export const selectTool: Tool = {
 };
 
 /** Pomocné čáry tažení: původní směry tence čárkovaně, zachycená čára tučně; ikona ⊥ u kolmice (D13). */
-function drawGuides(ctx: CanvasRenderingContext2D, g: NonNullable<typeof shown>, cam: Camera): void {
+export function drawGuides(ctx: CanvasRenderingContext2D, g: { line: DragLine | null; point: Pt; lines: DragLine[] }, cam: Camera): void {
   const L = 100000; // mm – čára přes celé plátno
   const seg = (l: DragLine) => [toScreen({ x: l.origin.x - l.dir.x * L, y: l.origin.y - l.dir.y * L }, cam), toScreen({ x: l.origin.x + l.dir.x * L, y: l.origin.y + l.dir.y * L }, cam)] as const;
   ctx.save();

@@ -237,9 +237,9 @@ describe('C2/11: křížení, A = 300 a B = 100', () => {
   it('obě stěny zůstanou samostatné a nepřerušené', () => {
     expect(Object.keys(cross().walls)).toHaveLength(2);
   });
-  // Podle katalogu se těla sloučí do jednoho obrysu bez čar uvnitř křížení; aplikace kreslí obě stěny
-  // celé včetně hran uvnitř křížení (naměřeno 4 + 4 hrany, AUDIT-STEN.md, C1.5).
-  it.fails('C2/11: uvnitř křížení není žádná čára', () => {
+  // Podle katalogu se těla sloučí do jednoho obrysu bez čar uvnitř křížení. Dříve nález (it.fails, AUDIT-STEN.md,
+  // C1.5); opraveno 2026-11-12 – křížení se počítá z geometrie (wallCrossings), obě stěny zůstávají celé.
+  it('C2/11: uvnitř křížení není žádná čára', () => {
     expect(hasLineInsideUnion(cross())).toBe(false);
   });
 });

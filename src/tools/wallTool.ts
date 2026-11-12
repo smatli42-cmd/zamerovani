@@ -6,15 +6,17 @@
  */
 import { requestRender } from '../canvas/invalidate';
 import { toScreen } from '../canvas/view';
-import { add, dist, normal, scale } from '../core/geometry';
+import { add, dist, dot, normal, scale, sub } from '../core/geometry';
+import { dragParams, drawLinesFrom, linesNear, resolveDragPoint, type DragLine } from '../core/dragResolve';
+import { findWallNear } from '../core/floorQueries';
 import { snapEnd, snapPoint, type SnapResult } from '../core/snapping';
 import { facePath, initialSideAt, sideFromPen, straightContinuation } from '../core/wallBody';
-import type { Pt, Wall } from '../model/types';
+import type { Floor, Pt, Wall } from '../model/types';
 import { addWall } from '../store/actions';
 import { activeWallArcHeight, activeWallThickness } from '../model/factory';
 import { store, type Camera } from '../store/store';
 import { pickAny } from './pick';
-import { grabArcHandle, selectTool } from './selectTool';
+import { drawGuides, grabArcHandle, selectTool } from './selectTool';
 import { HIT_PX, type PointerInput, type Tool } from './types';
 
 interface Drawing {
@@ -24,6 +26,40 @@ interface Drawing {
   downAt: Pt;
   /** Strana těla zvolená odchýlením pera (null = automaticky). */
   side: 1 | -1 | null;
+  /** Pomocné čáry z počátku (vodorovně / svisle, pokračování, kolmice) a zachycená čára (hystereze). */
+  lines: DragLine[];
+  lock: string | null;
+  guide: { line: DragLine | null; point: Pt; lines: DragLine[] } | null;
+}
+
+/** Poloměr zachycení pomocné čáry (px) a vzdálenost, do které se nabízí kolmice ke stěně. */
+const capturePx = (p: PointerInput) => (p.device === 'touch' ? 16 : 10);
+const NEAR_PX = 60;
+
+/**
+ * Konec kreslené stěny: roh a zvláštní bod mají přednost; pak pomocná čára (délka po 10 mm, na průsečíku
+ * se stěnou přesně, konec na stěně se na ni napojí); jinak libovolný směr (D11/D13 i pro kreslení).
+ */
+function guidedEnd(floor: Floor, d: Drawing, p: PointerInput): SnapResult {
+  const { settings, camera } = store.get();
+  const base = snapEnd(floor, d.start.pt, p.world, snapOptions(d.start.node?.id));
+  d.guide = null;
+  if (!settings.snap || base.node || base.special) {
+    d.lock = null;
+    return base;
+  }
+  const ls = linesNear(d.lines, p.world, NEAR_PX / camera.zoom);
+  const r = resolveDragPoint(p.world, ls, d.lock, dragParams(capturePx(p), camera.zoom));
+  d.lock = r.line?.id ?? null;
+  if (!r.line) return base;
+  let pt = r.point;
+  if (!(r.line.stops ?? []).some(s => dist(s, pt) < 1e-6)) {
+    const len = Math.round(dot(sub(pt, r.line.origin), r.line.dir) / 10) * 10;
+    pt = add(r.line.origin, scale(r.line.dir, len));
+  }
+  d.guide = { line: r.line, point: pt, lines: [] };
+  const hit = findWallNear(floor, pt, 1.5);
+  return { pt, node: null, wallHit: hit ? { ...hit, point: pt } : null, guides: [] };
 }
 
 /** O kolik px se musí pero odchýlit od čáry, aby se tělo překlopilo. */
@@ -35,7 +71,8 @@ let hoverSnap: SnapResult | null = null;
 export function snapOptions(startNodeId?: string) {
   const { settings, camera } = store.get();
   return {
-    ortho: settings.ortho,
+    // kreslí se libovolným směrem; vodorovně / svisle pomáhají pomocné čáry (dřív přepínač Pravé úhly)
+    ortho: false,
     snap: settings.snap,
     nodeTol: HIT_PX.snapNode / camera.zoom,
     alignTol: HIT_PX.snapAlign / camera.zoom,
@@ -68,7 +105,7 @@ export const wallTool: Tool = {
     handleDrag = grabArcHandle(p);
     if (handleDrag) return;
     const start = snapPoint(floor, p.world, snapOptions());
-    drawing = { start, end: start, downAt: p.world, side: null };
+    drawing = { start, end: start, downAt: p.world, side: null, lines: drawLinesFrom(floor, start.pt, start.node?.id ?? null), lock: null, guide: null };
     hoverSnap = null;
     store.set({ selection: null, numpad: null });
     requestRender();
@@ -78,7 +115,7 @@ export const wallTool: Tool = {
     if (handleDrag) return selectTool.drag?.(p);
     const floor = store.floor();
     if (!floor || !drawing) return;
-    const end = snapEnd(floor, drawing.start.pt, p.world, snapOptions(drawing.start.node?.id));
+    const end = guidedEnd(floor, drawing, p);
     drawing.end = end;
     // u přichycení na roh / stěnu se strana už nemění (aby se stěna na poslední chvíli nepřeklopila)
     const T = activeWallThickness(store.get().project);
@@ -143,6 +180,9 @@ export const wallTool: Tool = {
     if (!drawing) return;
     const a = toScreen(drawing.start.pt, cam);
     const b = toScreen(drawing.end.pt, cam);
+
+    // Pomocná čára kreslení (vodorovně / svisle, kolmice ⊥) – stejně jako při tažení konce
+    if (drawing.guide) drawGuides(ctx, drawing.guide, cam);
 
     // Vodítka zarovnání
     ctx.save();

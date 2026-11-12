@@ -10,7 +10,7 @@
 import type { Floor, Id, Pt, Wall } from '../model/types';
 import { arcGeometry } from './arc';
 import { add, centroid, dist, dot, normal, scale, sub, unit } from './geometry';
-import { wallSegments } from './floorQueries';
+import { wallCrossings, wallSegments } from './floorQueries';
 
 /** Má stěna tělo? (rovné i obloukové stěny s tloušťkou; kruhy a čáry bez tloušťky ne) */
 export const hasBody = (w: Wall): boolean => w.thickness > 0 && w.radius === undefined && w.a !== w.b;
@@ -37,7 +37,7 @@ export function bodyNormal(floor: Floor, w: Wall): Pt | null {
 }
 
 /** Čára líce jako body s tečnami (směr a→b); rovná stěna = 2 body, oblouk = lomená čára. */
-export function facePath(a: Pt, b: Pt, sagitta: number, steps = 32): { pts: Pt[]; tans: Pt[] } {
+export function facePath(a: Pt, b: Pt, sagitta: number, steps = 64): { pts: Pt[]; tans: Pt[] } {
   const g = arcGeometry(a, b, sagitta);
   if (!g) {
     const u = unit(a, b);
@@ -207,9 +207,13 @@ export function wallBodies(floor: Floor): Map<Id, WallBody> {
   // T bez dělení: v napojeném rohu dostane průběžná stěna (rovná i oblouk) dva virtuální konce (k a, k b) – napojení
   // se spočítá stejně jako u stěny rozdělené v tom místě, ale stěna zůstane jedna (líce se jen přeruší)
   const virtualByHost = new Map<Id, { t: number; toA: End; toB: End }[]>();
-  for (const node of Object.values(floor.nodes)) {
-    const h = node.host ? floor.walls[node.host] : undefined;
-    if (!h || !hasBody(h) || h.a === node.id || h.b === node.id) continue;
+  // body uprostřed stěny: napojené rohy (T bez dělení) a křížení dvou stěn (C1.5, počítá se z geometrie)
+  const junctions: { key: Id; node: Pt; wallId: Id }[] = [];
+  for (const n of Object.values(floor.nodes)) if (n.host) junctions.push({ key: n.id, node: n, wallId: n.host });
+  for (const c of wallCrossings(floor)) for (const wid of c.walls) junctions.push({ key: c.id, node: c.pt, wallId: wid });
+  for (const { key, node, wallId } of junctions) {
+    const h = floor.walls[wallId];
+    if (!h || !hasBody(h) || h.a === key || h.b === key) continue;
     const a = floor.nodes[h.a];
     const b = floor.nodes[h.b];
     if (!a || !b || dist(a, b) < 1) continue;
@@ -228,7 +232,7 @@ export function wallBodies(floor: Floor): Map<Id, WallBody> {
     const toA: End = { wall: h, atA: false, node, d: mu, n: normal(mu), lo: -r1, hi: -r0, ang: Math.atan2(mu.y, mu.x), virtual: true, ...c };
     const t = g ? (paramOnArc(a, b, h.sagitta ?? 0)?.(node) ?? 0) : dot(sub(node, a), u) / dist(a, b);
     (virtualByHost.get(h.id) ?? virtualByHost.set(h.id, []).get(h.id)!).push({ t, toA, toB });
-    (byNode.get(node.id) ?? byNode.set(node.id, []).get(node.id)!).push(toA, toB);
+    (byNode.get(key) ?? byNode.set(key, []).get(key)!).push(toA, toB);
   }
   for (const list of virtualByHost.values()) list.sort((p, q) => p.t - q.t);
 
@@ -418,8 +422,11 @@ export function orientLoopOutward(floor: Floor, wallId: Id): boolean {
   const start = floor.walls[wallId];
   if (!start || !hasBody(start)) return false;
   const adj = new Map<Id, { wall: Wall; to: Id }[]>();
-  // průběžné stěny s napojenými rohy (T bez dělení) se v grafu rozdělí virtuálně
-  for (const { wall: w, from, to } of wallSegments(floor)) {
+  // průběžné stěny s napojenými rohy (T bez dělení) a kříženími se v grafu rozdělí virtuálně
+  const pts = new Map<Id, Pt>();
+  for (const { wall: w, from, to, fromPt, toPt } of wallSegments(floor)) {
+    pts.set(from, fromPt);
+    pts.set(to, toPt);
     if (w.id === wallId || !hasBody(w)) continue;
     (adj.get(from) ?? adj.set(from, []).get(from)!).push({ wall: w, to });
     (adj.get(to) ?? adj.set(to, []).get(to)!).push({ wall: w, to: from });
@@ -446,7 +453,7 @@ export function orientLoopOutward(floor: Floor, wallId: Id): boolean {
     polyIds.push(p.from);
     id = p.from;
   }
-  const poly = polyIds.map(id => floor.nodes[id]!).filter(Boolean);
+  const poly = polyIds.map(id => floor.nodes[id] ?? pts.get(id)).filter((p): p is Pt => !!p);
   if (poly.length < 3) return false;
   for (const w of new Set(loopWalls)) {
     // ručně zvolená strana se nemění; u osy uprostřed se strana jen pamatuje pro návrat na líc (B4) – také ne

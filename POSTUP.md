@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-12 (noc, 5) – kreslení libovolným směrem, křížení stěn (C1.5)
+- **Co se změnilo:** Uživatel potvrdil předchozí kroky („vše funguje“). Nástroj Stěna kreslí libovolným směrem; pomocné čáry (`drawLinesFrom` v `core/dragResolve.ts`: vodorovně / svisle, pokračování a kolmice stěn v počátečním rohu, kolmice ⊥ k blízkým stěnám) se zachycením a hysterezí jako při tažení konce. Zarážky pomocných čar i na obloucích. Křížení dvou stěn s tloušťkou se počítá z geometrie (`wallCrossings` ve `floorQueries`): obě stěny zůstanou celé, těla se spojí bez čar uvnitř (C1.5, C2/11 už není nález), křížení patří do grafu skupin a místností. Oblouky se kreslí jemněji (64 úseků).
+- **Viditelně v aplikaci:** stěna jde nakreslit šikmo; blízko vodorovného / svislého směru se přilepí na fialovou čárkovanou čáru (tučná = zachyceno), u kolmice ke stěně ikona ⊥; konec u stěny / oblouku se na ni přichytí a napojí. Stěny nakreslené nebo protažené přes sebe (i přes oblouk) se v křížení spojí bez čar uvnitř. Z nastavení zmizel přepínač „Pravé úhly (90°)“.
+- **Rozhodnuto samostatně:** přepínač Pravé úhly zrušen (nahrazen pomocnými čarami); křížení jen u stěn s tloušťkou (čáry bez tloušťky se nespojují); křížení se neukládá, počítá se – přesune se samo s posunem stěn; konec dál než 5 mm od průsečíku = křížení, blíž = konec (T se řeší napojením).
+- **Otevřené:** přichytávání k oběma lícům stěny (připomínka uživatele) – odloženo, souvisí s polohou napojeného rohu (dnes na ose) a s dalšími kroky (okna, zkrátit/prodloužit do rohu D3); vyčnívající konec po protažení přes stěnu zatím ručně (D3).
+- **Chyby od uživatele:** „Nová stěna jde kreslit jen vodorovně nebo svisle.“ Opraveno (testy `tools/wallTool.draw.test.ts`). „Stěny nakreslené přes sebe se nespojí, např. stěnu protaženou přes oblouk nepřipojím.“ Opraveno (testy `core/crossings.test.ts`, C2/11).
+
 ### 2026-11-12 (noc, 4) – oblouky se při napojení také nedělí
 - **Co se změnilo:** Napojení na oblouk funguje stejně jako na rovnou stěnu: roh má `Node.host`, oblouk zůstane jedna stěna. `wallBodies` počítá virtuální konce oblouku (tečna, soustředné kružnice), líce se přeruší jen u napojené stěny; při změně vzepětí roh sleduje oblouk (průsečík napojené stěny s kružnicí). Migrace spojí i staré rozdělené oblouky (`mergeArcAt`). `attachOrSplitAtNode` přejmenováno na `attachAtNode` (už nic nedělí).
 - **Viditelně v aplikaci:** oblouk s napojenou příčkou je jeden (jedna kóta, jeden úchyt vzepětí, vybírá se celý); prohloubení oblouku příčku prodlouží a nechá napojenou. Staré výkresy: rozdělené oblouky se po načtení spojí.
@@ -85,7 +92,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 2. **F4** (otvory při dělení stěny).
 3. **D3** (samostatný nástroj zkrátit/prodloužit do rohu).
 4. **C1.11** (hrana odskoku; test C2/6 je `it.fails`; u středových os odskok symetricky).
-5. **C1.5** (křížení; test C2/11 je `it.fails`) – nakonec. Dále z auditu: F7, D4, A2/A10/B6.
+5. ~~**C1.5**~~ (křížení – hotovo 2026-11-12). Dále z auditu: F7, D4, A2/A10/B6. **Přichytávání k oběma lícům stěny** (připomínka uživatele) – zařadit spolu s D3 / okny.
 Dále: doladit okna (ostění/rám); na závěr s dovolením navrhnout řádek do CLAUDE.md o katalogu chování. Známé: oddělené rohy × `orientLoopOutward`, starý projekt s `noJoin` na sdíleném uzlu. Sloupec „Stav“ v katalogu (B1/B4/B10) je zastaralý – katalog se bez pokynu uživatele nemění.
 
 ## Předchozí stav (2026-11-11 – oprava kóty odstupu u odděleného rohu)
