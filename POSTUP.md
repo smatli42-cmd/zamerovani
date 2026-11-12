@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-12 (večer) – výběr konce u rozpojeného rohu (D14)
+- **Co se změnilo:** Uživatel potvrdil, že osy fungují. Opravena nahlášená chyba u rozpojeného rohu: ťuknutí na roh teď bere v úvahu, co je vybrané (`chooseNodeAt`, `nextNodeAt` v `core/floorQueries.ts`, `pickAny(..., current)`).
+- **Viditelně v aplikaci:** u rozpojeného rohu se po výběru stěny ťuknutím na roh vybere konec **té** stěny; další ťuknutí na stejné místo přepne na konec druhé stěny; tažením se hýbe jen vybraným koncem.
+- **Rozhodnuto samostatně:** vybraný roh se při dalším dotyku drží (aby šel táhnout), na druhý konec se přepne až po ťuknutí bez tažení.
+- **Otevřené:** zbytek kroku „tažení a posun jako blok“ (D2, D11, D12, D13, C2/16).
+- **Chyby od uživatele:** „U rozpojených stěn šel vybrat koncový bod jen u stěny, u které se rozpojení nastavilo; u druhé se vybrala zase ta první.“ Příčina: dva rohy na stejném místě a výběr bral vždy ten naposled vytvořený. Opraveno podle katalogu D14 (přednost konce vybrané stěny + přepínání opakovaným ťuknutím), testy `core/nodePick.test.ts`, ověřeno v prohlížeči.
+
 ### 2026-11-12 – osa stěny, kóty po líci, pracovní postup
 - **Co se změnilo:** Stěna může mít osu na líci nebo uprostřed tloušťky. U osy uprostřed se dá kótovat a zadat i míra po líci. Nastaven samostatný pracovní postup (CLAUDE.md, reviewer, `/pokracuji`, `/konec`, deník změn).
 - **Viditelně v aplikaci:** přepínač Osa Líc | Střed v menu Stěny a v panelu stěny; u vybrané stěny s osou uprostřed čerchovaná osa a modré klikací kóty „líc“; celková délka má podpis „osa“; u osy uprostřed chybí dvojitá šipka a tlačítko „Strana těla“.
@@ -26,6 +33,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Rozhodnuto samostatně
 (Rozhodnutí mimo katalog, udělaná bez uživatele – nejnovější nahoře. Uživatel je může kdykoli změnit.)
+- 2026-11-12: D14 – už vybraný roh se při dalším dotyku drží (kvůli tažení); na překrývající se roh se přepne až ťuknutím bez tažení.
 - 2026-11-12: Stěna s osou uprostřed se při uzavření místnosti neotáčí „ven“ (`orientLoopOutward`) – strana se jen pamatuje, aby se po návratu na líc vrátila ta původní.
 - 2026-11-12: Přichycení u B10 = na čáru / střed čáry cílové stěny (u osy uprostřed je to přímo osa). Zvláštní bod „střed těla“ u cílové stěny s osou na líci se nepřidal (stávající přichycení na střed čela volného konce zůstává).
 - 2026-11-12: Kóty líců (2b) jen u vybrané stěny a jen u rovné; oblouk s osou uprostřed má jen kótu po ose.
@@ -35,7 +43,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - 2026-11-12: `CLAUDE.md` existoval – nepřepsán, jen doplněn o cíl, nasazení a pracovní postup.
 
 **Fronta zbývajících kroků (stav 2026-11-12):**
-1. **Tažení a posun jako blok** (D2, D11, D12, D13, D14, C2/16) – nejdřív plán společné funkce `resolveDragPoint` podle `KRESLENI-EDITACE-KONCU.md`. D12 posun celé stěny (i jedné samostatné), D11 držení směru při tažení konce, D13 přichycení kolmice s ikonou ⊥, D14 výběr z překrývajících se koncových bodů (konec vybrané stěny má přednost; opakované ťuknutí přepíná).
+1. **Tažení a posun jako blok** (D2, D11, D12, D13, C2/16; **D14 hotovo 2026-11-12**) – nejdřív plán společné funkce `resolveDragPoint` podle `KRESLENI-EDITACE-KONCU.md`. D12 posun celé stěny (i jedné samostatné), D11 držení směru při tažení konce, D13 přichycení kolmice s ikonou ⊥, D14 výběr z překrývajících se koncových bodů (konec vybrané stěny má přednost; opakované ťuknutí přepíná).
 2. **F4** (otvory při dělení stěny).
 3. **D3** (samostatný nástroj zkrátit/prodloužit do rohu).
 4. **C1.11** (hrana odskoku; test C2/6 je `it.fails`; u středových os odskok symetricky).

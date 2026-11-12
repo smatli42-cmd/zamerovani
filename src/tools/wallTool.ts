@@ -117,7 +117,7 @@ export const wallTool: Tool = {
     } else {
       // Ťuknutí bez tažení = výběr prvku pod perem (otevře jeho vlastnosti)
       const floor = store.floor();
-      if (floor) store.set({ selection: pickAny(floor, d.downAt, store.get().camera) });
+      if (floor) store.set({ selection: pickAny(floor, d.downAt, store.get().camera, store.get().selection) });
     }
     requestRender();
   },

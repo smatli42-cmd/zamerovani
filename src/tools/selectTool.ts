@@ -5,7 +5,7 @@
 import { requestRender } from '../canvas/invalidate';
 import { toScreen } from '../canvas/view';
 import { arcChain, arcHandles } from '../core/arcChain';
-import { findNodeNear, findWallNear, openingStartFromA, wallLength, wallNodes } from '../core/floorQueries';
+import { findNodeNear, findWallNear, nextNodeAt, openingStartFromA, wallLength, wallNodes } from '../core/floorQueries';
 import { dist, projectToSegment, roundTo } from '../core/geometry';
 import type { Id, Pt } from '../model/types';
 import { selectInRect, normRect } from '../core/rectSelect';
@@ -25,6 +25,8 @@ let band: { start: Pt; end: Pt; startScreen: Pt; endScreen: Pt } | null = null;
 
 let drag: DragKind | null = null;
 let downScreen: Pt | null = null;
+/** Místo ťuknutí na už vybraný roh – po zvednutí bez tažení se přepne na překrývající se roh (D14). */
+let cycleAt: Pt | null = null;
 let dragging = false;
 
 /** Poloměr zásahu středového bodu oblouku (px). */
@@ -80,10 +82,13 @@ export const selectTool: Tool = {
     if (!floor) return;
     if (grabArcHandle(p) || grabLeaderHandle(p)) return;
     const cam = store.get().camera;
-    const hit = pickAny(floor, p.world, cam);
+    const before = store.get().selection;
+    const hit = pickAny(floor, p.world, cam, before);
     downScreen = p.screen;
     dragging = false;
     drag = null;
+    // D14: ťuknutí znovu na vybraný roh, pod kterým leží další (oddělený roh) → po zvednutí bez tažení přepnout
+    cycleAt = hit?.kind === 'node' && before?.kind === 'node' && before.id === hit.id ? p.world : null;
 
     if (!hit) {
       // Tažení z prázdného místa = výběr obdélníkem, ťuknutí = zrušení výběru
@@ -207,7 +212,13 @@ export const selectTool: Tool = {
     } else if (drag?.kind === 'handle') {
       // ťuknutí na úchyt oblouku bez tažení = výběr stěny
       store.set({ selection: { kind: 'wall', id: drag.id } });
+    } else if (drag?.kind === 'node' && cycleAt) {
+      // opakované ťuknutí na překrývající se konce přepíná mezi nimi (D14)
+      const floor = store.floor();
+      const next = floor && nextNodeAt(floor, cycleAt, HIT_PX.node / store.get().camera.zoom, drag.id);
+      if (next) store.set({ selection: { kind: 'node', id: next.id } });
     }
+    cycleAt = null;
     drag = null;
     dragging = false;
     downScreen = null;
@@ -216,7 +227,7 @@ export const selectTool: Tool = {
   hover(p: PointerInput) {
     const floor = store.floor();
     if (!floor) return;
-    const hit = pickAny(floor, p.world, store.get().camera);
+    const hit = pickAny(floor, p.world, store.get().camera, store.get().selection);
     const cur = store.get().hover;
     if (hit?.kind !== cur?.kind || (hit as { id?: Id } | null)?.id !== (cur as { id?: Id } | null)?.id) {
       store.set({ hover: hit });

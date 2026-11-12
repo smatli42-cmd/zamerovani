@@ -58,6 +58,37 @@ export function findNodeNear(floor: Floor, p: Pt, maxDist: number, excludeId?: I
   return best;
 }
 
+/** Uzly pod bodem: nejbližší a všechny ostatní na stejném místě (oddělený roh, C1.13), seřazené podle ID. */
+export function nodesAt(floor: Floor, p: Pt, maxDist: number): Node[] {
+  const near = findNodeNear(floor, p, maxDist);
+  if (!near) return [];
+  return Object.values(floor.nodes)
+    .filter(n => dist(n, near) < 1)
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
+
+/**
+ * Uzel pod perem s ohledem na výběr (D14): už vybraný uzel zůstává (aby šel táhnout), jinak má přednost
+ * konec vybrané stěny; bez výběru nejbližší uzel jako dřív.
+ */
+export function chooseNodeAt(floor: Floor, p: Pt, maxDist: number, prefer: { wallId?: Id; nodeId?: Id }): Node | null {
+  const cands = nodesAt(floor, p, maxDist);
+  if (cands.length < 2) return cands[0] ?? null;
+  const keep = cands.find(n => n.id === prefer.nodeId);
+  if (keep) return keep;
+  const w = prefer.wallId ? floor.walls[prefer.wallId] : undefined;
+  const end = w && cands.find(n => n.id === w.a || n.id === w.b);
+  return end ?? findNodeNear(floor, p, maxDist);
+}
+
+/** Opakované ťuknutí na překrývající se konce (D14): další uzel po `currentId`; null = na místě je jen jeden. */
+export function nextNodeAt(floor: Floor, p: Pt, maxDist: number, currentId: Id): Node | null {
+  const cands = nodesAt(floor, p, maxDist);
+  const i = cands.findIndex(n => n.id === currentId);
+  if (cands.length < 2 || i < 0) return null;
+  return cands[(i + 1) % cands.length]!;
+}
+
 export interface WallHit {
   wall: Wall;
   t: number;
