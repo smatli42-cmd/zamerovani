@@ -1,7 +1,16 @@
 # Zaměřování – poznámky pro vývoj
 
 Offline PWA pro zaměřování skutečného stavu budov na tabletu (primárně Galaxy Tab S9 FE + S-Pen).
-Požadavky a plán po fázích: `POZADAVKY.md`. Starý první prototyp (jen pro inspiraci): `prototyp/`.
+Cíl: zaměřit a zakreslit skutečný stav stavby přímo na místě, bez internetu. Vrstvy: `model → core → store → canvas/tools/input → ui` (viz Struktura). Nasazení: každý push do `main` sestaví a nasadí GitHub Actions na GitHub Pages (https://smatli42-cmd.github.io/zamerovani/).
+Požadavky a plán po fázích: `POZADAVKY.md`. Kde co leží: `INDEX.md`. Starý první prototyp (jen pro inspiraci): `prototyp/`.
+
+## Pracovní postup (závazné)
+- **`KATALOG-STEN.md` je závazný.** Testy ani katalog nikdy neměň kvůli tomu, aby něco prošlo. Selhávající test = nález → `it.fails` / `it.todo` s důvodem.
+- Pracuj přímo na `main`: commit + push, **bez pull requestů**. Odpovídej česky, stručně, pro nekodéra.
+- **Samostatnost:** pracuj bez uživatele, dokud to jde – plánuj, implementuj, testuj, spusť agenta `reviewer` a nálezy oprav sám. Rozhodnutí, která nejsou v katalogu, udělej podle nejrozumnější varianty, zapiš do `POSTUP.md` (sekce „Rozhodnuto samostatně“) a pokračuj.
+- **Zeptej se jen u:** (a) nevratných věcí, (b) rozporu katalogu a požadavku uživatele, (c) testu, který nejde opravit bez změny zadání.
+- **Zastav se jen po krocích, které mění viditelné chování aplikace** – napiš na 3 řádky, co má uživatel vyzkoušet. Technické kroky dělej souvisle dál.
+- Příkazy `/pokracuji` (začátek sezení) a `/konec` (konec sezení) jsou v `.claude/commands/`.
 
 ## Předávání mezi počítači
 Uživatel střídá dva počítače (projekt je na OneDrive). **Na začátku sezení přečti `POSTUP.md`** a na konci práce / po větším kroku ho aktualizuj (poslední stav, rozpracované, další kroky) a změny commitni. Uživatelův postup přepnutí je v `PREPNUTI-POCITACE.md`; když řekne „končím“, udělej aktualizaci POSTUP.md + commit + push.
