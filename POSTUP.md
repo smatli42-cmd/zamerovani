@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-12 (konec sezení)
+- **Co se změnilo:** Uživatel potvrdil, že vše funguje, a ukončil sezení. Aktualizován Poslední stav a fronta kroků (výstupek z jiného sezení zařazen jako první, kóta polohy napojení, D3, líce).
+- **Viditelně v aplikaci:** nic nového (souhrn sezení viz záznamy níže).
+- **Rozhodnuto samostatně:** pořadí fronty (výstupek první, protože je schválený; pak kóta polohy napojení, která po zrušení dělení chybí).
+- **Otevřené:** vyzkoušet vše na tabletu; fronta kroků v Posledním stavu.
+- **Chyby od uživatele:** žádné nové.
+
 ### 2026-11-12 (noc, 5) – kreslení libovolným směrem, křížení stěn (C1.5)
 - **Co se změnilo:** Uživatel potvrdil předchozí kroky („vše funguje“). Nástroj Stěna kreslí libovolným směrem; pomocné čáry (`drawLinesFrom` v `core/dragResolve.ts`: vodorovně / svisle, pokračování a kolmice stěn v počátečním rohu, kolmice ⊥ k blízkým stěnám) se zachycením a hysterezí jako při tažení konce. Zarážky pomocných čar i na obloucích. Křížení dvou stěn s tloušťkou se počítá z geometrie (`wallCrossings` ve `floorQueries`): obě stěny zůstanou celé, těla se spojí bez čar uvnitř (C1.5, C2/11 už není nález), křížení patří do grafu skupin a místností. Oblouky se kreslí jemněji (64 úseků).
 - **Viditelně v aplikaci:** stěna jde nakreslit šikmo; blízko vodorovného / svislého směru se přilepí na fialovou čárkovanou čáru (tučná = zachyceno), u kolmice ke stěně ikona ⊥; konec u stěny / oblouku se na ni přichytí a napojí. Stěny nakreslené nebo protažené přes sebe (i přes oblouk) se v křížení spojí bez čar uvnitř. Z nastavení zmizel přepínač „Pravé úhly (90°)“.
@@ -61,7 +68,24 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Otevřené:** vyzkoušet na tabletu; další krok tažení a posun jako blok (D2, D11–D14).
 - **Chyby od uživatele:** zatím žádné.
 
-## Poslední stav (2026-11-12 – osa stěny líc / střed, kóty 2a + 2b)
+## Poslední stav (2026-11-12, konec sezení)
+
+**Hotové (uživatel vše vyzkoušel na PC a potvrdil „vše funguje“; na tabletu neověřeno):** osa stěny líc / střed a kóty po líci (B1, B4, B10, 2a, 2b); výběr konce u rozpojeného rohu (D14); tažení s držením směru, posun vybrané stěny, kolmice ⊥ (D11, D12, D13, C2/16); T-napojení bez dělení průběžné stěny i oblouku (`Node.host`, `core/hosting.ts`, migrace na schéma 9); řešič délek nehýbe jinými skupinami; kreslení nové stěny libovolným směrem s pomocnými čarami; křížení stěn bez dělení (C1.5, `wallCrossings`, `junctionPoints`, ořez hran). Podrobnosti v Deníku změn. Testy 186 + 1 `it.fails` (C2/6), typecheck a build OK.
+
+**Rozpracované:** nic.
+
+**Fronta kroků (pořadí):**
+1. **Výstupek / vybrání stěny** (návrh v `KRESLENI-VYSTUPKU.md` z jiného sezení, schváleno uživatelem v chatu, nenaprogramováno): obrys nakreslený nástrojem Čára s oběma konci na líci stěny se sám uzavře a připojí (výstupek ven, vybrání do těla), stěna zůstává celistvá, vlastní kóty, model `Floor.protrusions` s výškou a materiálem. Nejdřív návrh do repa + sekce „I. Výstupek a vybrání“ v `KATALOG-STEN.md` s příklady, **pak se zastavit a nechat uživatele schválit**.
+2. **Kóta polohy napojení na průběžné stěně** (od zrušení dělení se poloha příčky na stěně nekótuje) – řetězová kóta s NumPadem.
+3. **D3** – samostatný nástroj zkrátit / prodloužit do rohu (vyčnívající konce po křížení).
+4. **Přichytávání k oběma lícům stěny** (připomínka uživatele) – zároveň vyřešit polohu napojeného rohu mimo osu; souvisí s D3 a okny.
+5. **F4** (otvory při dělení stěny – napojení už nedělí, dělí se jen výslovně).
+6. **C1.11** (hrana odskoku; test C2/6 je `it.fails`; u středových os odskok symetricky).
+7. Z auditu: F7, D4, A2 / A10 / B6. Dále doladit okna (ostění / rám).
+
+**Známé drobnosti:** začátek nové stěny přesně ve vrcholu oblouku chytí úchyt vzepětí; změna průměru kruhu posune i cizí roh ležící přesně na obvodu (`resizeCircle`); sloupec „Stav“ v katalogu (B1/B4/B10, C1.5) je zastaralý – katalog se bez pokynu uživatele nemění; Vite z OneDrive občas pošle starý soubor → restart vývojového serveru.
+
+## Předchozí stav (2026-11-12 – osa stěny líc / střed, kóty 2a + 2b)
 
 **Hotovo (čeká na vyzkoušení uživatelem):**
 - **Pracovní postup** nastaven: `CLAUDE.md` (samostatnost, kdy se ptát / zastavit), `INDEX.md`, agent `reviewer` (`.claude/agents/`), příkazy `/pokracuji` a `/konec`, sdílená oprávnění `.claude/settings.json`.
@@ -87,15 +111,6 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - 2026-11-12: Rovné pokračování se slučuje jen při stejné ose (jinak dvě stěny).
 - 2026-11-12: Test C2/14 ověřuje konec B na kreslených čarách – výplň těla vede přes roh jako u C2/5 (leží uvnitř těla A, nic nepřečnívá).
 - 2026-11-12: `CLAUDE.md` existoval – nepřepsán, jen doplněn o cíl, nasazení a pracovní postup.
-
-**Fronta zbývajících kroků (stav 2026-11-12):**
-1. ~~**Tažení a posun jako blok**~~ (D2, D11, D12, D13, C2/16, D14 – **hotovo 2026-11-12**, čeká na vyzkoušení; zbývá použít `resolveDragPoint` i v nástroji Stěna) – nejdřív plán společné funkce `resolveDragPoint` podle `KRESLENI-EDITACE-KONCU.md`. D12 posun celé stěny (i jedné samostatné), D11 držení směru při tažení konce, D13 přichycení kolmice s ikonou ⊥, D14 výběr z překrývajících se koncových bodů (konec vybrané stěny má přednost; opakované ťuknutí přepíná).
-1b. **Výstupek / vybrání stěny** (nová funkce od 2026-11-12, návrh v `KRESLENI-VYSTUPKU.md`, schváleno uživatelem v chatu, nenaprogramováno): obrys nakreslený nástrojem Čára s oběma konci na líci stěny se sám uzavře a připojí (výstupek ven, vybrání do těla), stěna zůstává celistvá, vlastní kóty, model `Floor.protrusions` s výškou a materiálem, export-ready. Nejdřív návrh do repa + sekce „I. Výstupek a vybrání“ v `KATALOG-STEN.md` s příklady, **pak se zastavit a nechat uživatele schválit**. Zařadit po dokončení kroku 1, před F4.
-2. **F4** (otvory při dělení stěny).
-3. **D3** (samostatný nástroj zkrátit/prodloužit do rohu).
-4. **C1.11** (hrana odskoku; test C2/6 je `it.fails`; u středových os odskok symetricky).
-5. ~~**C1.5**~~ (křížení – hotovo 2026-11-12). Dále z auditu: F7, D4, A2/A10/B6. **Přichytávání k oběma lícům stěny** (připomínka uživatele) – zařadit spolu s D3 / okny.
-Dále: doladit okna (ostění/rám); na závěr s dovolením navrhnout řádek do CLAUDE.md o katalogu chování. Známé: oddělené rohy × `orientLoopOutward`, starý projekt s `noJoin` na sdíleném uzlu. Sloupec „Stav“ v katalogu (B1/B4/B10) je zastaralý – katalog se bez pokynu uživatele nemění.
 
 ## Předchozí stav (2026-11-11 – oprava kóty odstupu u odděleného rohu)
 
