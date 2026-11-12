@@ -4,24 +4,37 @@ Projekt je na OneDrive a uživatel střídá dva počítače (nikdy ne současn�
 **Na začátku sezení tento soubor přečti. Na konci práce (nebo po větším kroku) ho aktualizuj.**
 Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do „Historie“.
 
-## Poslední stav (2026-11-11 – oprava kóty odstupu u odděleného rohu)
+## Poslední stav (2026-11-12 – osa stěny líc / střed, kóty 2a + 2b)
 
-**Chyba z krok 1 opravena (čeká na vyzkoušení):** přes oddělený roh ležela kóta „odstup skupiny“ (`core/components.ts` → `drawComponentDims.ts`, NumPad `comp-gap`; ne `shiftJunction`) a bránila ťuknutí na roh. Teď: `visibleComponentGap` – kóta se nekreslí (ani nenabízí) u skupin s odděleným koncem a při nulovém odstupu; ostatní kóty beze změny. Obecně: v `input/pointer.ts: handleOverlayTap` má roh pod perem (`findNodeNear`, `HIT_PX.node`) přednost před klikacími kótami. Testy: `core/components.test.ts` (+3 → 88 + 2 it.fails). Ověřeno v prohlížeči (L-roh před/po odpojení, tažení za roh posunulo jen uzel odděleného konce). **Krok 2 (osa stěny): návrh odeslán, čeká se na schválení (3 otázky: kóty 2a/2b, kreslení osy, zapamatování strany).**
-
-**2026-11-12: pracovní postup nastaven** (`CLAUDE.md` – samostatnost, `INDEX.md`, agent `reviewer`, příkazy `/pokracuji` a `/konec`, `.claude/settings.json`). **Osa stěny schválena:** kóty 2a teď a 2b hned po ní (před tažením); osa se kreslí jen u vybrané stěny; při přepnutí střed → líc se vrátí původní strana těla.
+**Hotovo (čeká na vyzkoušení uživatelem):**
+- **Pracovní postup** nastaven: `CLAUDE.md` (samostatnost, kdy se ptát / zastavit), `INDEX.md`, agent `reviewer` (`.claude/agents/`), příkazy `/pokracuji` a `/konec`, sdílená oprávnění `.claude/settings.json`.
+- **Osa stěny (B1, B4, B10, C2/12–15)**: nepovinné `Wall.axis?: 'center'` (chybí = líc, SCHEMA_VERSION zůstává 7). `core/wallBody.ts`: `bodyRange`, `bodyStart`; napojení v rozích počítá s osou. Akce `setWallAxis` (osa a rohy zůstanou, posune se tělo; strana se pamatuje, návrat na líc ji vrátí). Přepínač **Osa Líc | Střed** v menu Stěny (`settings.wallAxis`) a v panelu stěny. Osa uprostřed se kreslí čerchovaně jen u vybrané stěny. Otvory, kóta tloušťky a hloubky ostění jdou přes celé tělo. Dělení stěny osu přenáší, rovné pokračování se slučuje jen při stejné ose.
+- **Kóty 2a**: celková délka zůstává uzel–uzel po ose, u osy uprostřed s podpisem „osa“.
+- **Kóty 2b**: u vybrané rovné stěny s osou uprostřed jsou navíc dvě klikací kóty „líc“ (vnější za celkovou délkou, vnitřní na druhé straně). Zadání míry líce dopočítá délku osy (posune konec B, `setFaceLength` v `store/actions/numpad.ts`, jeden krok Zpět); `measured` = výsledná délka osy. `WallBody.faces`, `faceLength`.
+- Testy: C2/12–15 v `wallJoins.catalog.test.ts`, `store/wallAxis.test.ts`, `store/wallFaceLength.test.ts` → 102 + 2 it.fails. Ověřeno v prohlížeči (T napojení středem na střed, přepnutí osy v panelu, okno ve stěně s osou uprostřed, zadání líce 1400 → osa 1550). **Na tabletu neověřeno.** Reviewer: krok osa bez závažných nálezů, drobnosti opraveny.
+- Pozor: Vite z OneDrive znovu poslal starý soubor (`faceLength is not defined`) – pomohl restart `npm run dev` (viz CLAUDE.md).
 
 ## Rozhodnuto samostatně
 (Rozhodnutí mimo katalog, udělaná bez uživatele – nejnovější nahoře. Uživatel je může kdykoli změnit.)
+- 2026-11-12: Stěna s osou uprostřed se při uzavření místnosti neotáčí „ven“ (`orientLoopOutward`) – strana se jen pamatuje, aby se po návratu na líc vrátila ta původní.
+- 2026-11-12: Přichycení u B10 = na čáru / střed čáry cílové stěny (u osy uprostřed je to přímo osa). Zvláštní bod „střed těla“ u cílové stěny s osou na líci se nepřidal (stávající přichycení na střed čela volného konce zůstává).
+- 2026-11-12: Kóty líců (2b) jen u vybrané stěny a jen u rovné; oblouk s osou uprostřed má jen kótu po ose.
+- 2026-11-12: U osy uprostřed se skryje dvojitá šipka a tlačítko „Strana těla“ (strana nemá viditelný účinek, jen se pamatuje).
+- 2026-11-12: Rovné pokračování se slučuje jen při stejné ose (jinak dvě stěny).
+- 2026-11-12: Test C2/14 ověřuje konec B na kreslených čarách – výplň těla vede přes roh jako u C2/5 (leží uvnitř těla A, nic nepřečnívá).
 - 2026-11-12: `CLAUDE.md` existoval – nepřepsán, jen doplněn o cíl, nasazení a pracovní postup.
 
-**Fronta zbývajících kroků (stav 2026-11-11, večer; po jednom, vždy test → screenshot → commit → POSTUP → zastavit):**
-1. **Osa stěny** (B1, B4, B10, C2/12–15) – návrh je hotový a odeslaný, **čeká na schválení**. Jádro: nepovinné `Wall.axis?: 'center'` (chybí = líc, bez migrace, SCHEMA_VERSION zůstává 7), `bodyRange(w)` (líc side 1 = [0,t], side −1 = [−t,0], střed = [−t/2,t/2]) v `wallBody.ts`, `facePointAt` vrací blízkou hranu těla; `setWallAxis` (čára a uzly zůstanou, posune se tělo), přepínač Osa Líc/Střed v menu Stěny (`settings.wallAxis`) a v panelu stěny, strana těla se pamatuje; snap na osu / střed těla cílové stěny; `mergeStraightAt` jen při stejné ose. Otevřené otázky: (a) kóty: 2a = míra uzel–uzel s příznakem „osa“, 2b (líc–líc, zasahuje do řešiče a NumPadu) až po potvrzení; (b) osa se kreslí jen u vybrané stěny (doporučeno); (c) při přepnutí střed → líc se vrátí původní strana. Testy C2/12–15 napsat první.
-2. **Tažení a posun jako blok** (D2, D11, D12, D13, D14, C2/16) – nejdřív návrh společné funkce `resolveDragPoint` podle `KRESLENI-EDITACE-KONCU.md`, čekat na schválení. D12 posun celé stěny (i jedné samostatné), D11 držení směru při tažení konce, D13 přichycení kolmice s ikonou ⊥, D14 výběr z překrývajících se koncových bodů (konec vybrané stěny má přednost; opakované ťuknutí přepíná mezi překrývajícími se konci – dnes se bere uzel vytvořený naposled).
-3. **F4** (otvory při dělení stěny).
-4. **D3** (samostatný nástroj zkrátit/prodloužit do rohu).
-5. **C1.11** (hrana odskoku; test C2/6 je `it.fails`; u středových os odskok symetricky).
-6. **C1.5** (křížení; test C2/11 je `it.fails`) – nakonec. Dále z auditu: F7, D4, A2/A10/B6.
-Dále: doladit okna (ostění/rám); na závěr s dovolením navrhnout řádek do CLAUDE.md o katalogu chování. Známé: oddělené rohy × `orientLoopOutward`, starý projekt s `noJoin` na sdíleném uzlu (viz výše).
+**Fronta zbývajících kroků (stav 2026-11-12):**
+1. **Tažení a posun jako blok** (D2, D11, D12, D13, D14, C2/16) – nejdřív plán společné funkce `resolveDragPoint` podle `KRESLENI-EDITACE-KONCU.md`. D12 posun celé stěny (i jedné samostatné), D11 držení směru při tažení konce, D13 přichycení kolmice s ikonou ⊥, D14 výběr z překrývajících se koncových bodů (konec vybrané stěny má přednost; opakované ťuknutí přepíná).
+2. **F4** (otvory při dělení stěny).
+3. **D3** (samostatný nástroj zkrátit/prodloužit do rohu).
+4. **C1.11** (hrana odskoku; test C2/6 je `it.fails`; u středových os odskok symetricky).
+5. **C1.5** (křížení; test C2/11 je `it.fails`) – nakonec. Dále z auditu: F7, D4, A2/A10/B6.
+Dále: doladit okna (ostění/rám); na závěr s dovolením navrhnout řádek do CLAUDE.md o katalogu chování. Známé: oddělené rohy × `orientLoopOutward`, starý projekt s `noJoin` na sdíleném uzlu. Sloupec „Stav“ v katalogu (B1/B4/B10) je zastaralý – katalog se bez pokynu uživatele nemění.
+
+## Předchozí stav (2026-11-11 – oprava kóty odstupu u odděleného rohu)
+
+**Chyba z krok 1 opravena (čeká na vyzkoušení):** přes oddělený roh ležela kóta „odstup skupiny“ (`core/components.ts` → `drawComponentDims.ts`, NumPad `comp-gap`; ne `shiftJunction`) a bránila ťuknutí na roh. Teď: `visibleComponentGap` – kóta se nekreslí (ani nenabízí) u skupin s odděleným koncem a při nulovém odstupu; ostatní kóty beze změny. Obecně: v `input/pointer.ts: handleOverlayTap` má roh pod perem (`findNodeNear`, `HIT_PX.node`) přednost před klikacími kótami. Testy: `core/components.test.ts` (+3 → 88 + 2 it.fails). Ověřeno v prohlížeči (L-roh před/po odpojení, tažení za roh posunulo jen uzel odděleného konce). **Krok 2 (osa stěny): návrh odeslán, čeká se na schválení (3 otázky: kóty 2a/2b, kreslení osy, zapamatování strany).**
 
 ## Předchozí stav (2026-11-11 – C1.13 fyzicky oddělený konec)
 

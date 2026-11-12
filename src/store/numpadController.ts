@@ -22,7 +22,7 @@ export function openTarget(target: NumPadTarget): void {
   if (target.kind === 'wall-length' && floor.walls[target.wallId]?.radius !== undefined) target = { kind: 'circle-diameter', wallId: target.wallId };
   const v = numpadInitialValue(floor, target);
   const selection =
-    target.kind === 'wall-length' || target.kind === 'wall-sagitta' || target.kind === 'circle-diameter' || target.kind === 'wall-thickness' || target.kind === 'comp-gap'
+    target.kind === 'wall-length' || target.kind === 'wall-sagitta' || target.kind === 'circle-diameter' || target.kind === 'wall-thickness' || target.kind === 'wall-face-length' || target.kind === 'comp-gap'
       ? ({ kind: 'wall', id: target.wallId } as const)
       : ({ kind: 'opening', id: target.kind === 'opening-gap' ? target.secondId : target.openingId } as const);
   store.set({ numpad: { target, buffer: v === null ? '' : String(v), fresh: true }, selection });
@@ -117,7 +117,7 @@ function commitAndNext(): void {
   if (!floor) return;
   const t = np.target;
 
-  if (t.kind === 'wall-sagitta' || t.kind === 'circle-diameter' || t.kind === 'wall-thickness' || t.kind === 'opening-reveal') return store.set({ numpad: null });
+  if (t.kind === 'wall-sagitta' || t.kind === 'circle-diameter' || t.kind === 'wall-thickness' || t.kind === 'wall-face-length' || t.kind === 'opening-reveal') return store.set({ numpad: null });
 
   // Odstupy skupiny stěn od okolí: vlevo → vpravo → nahoře → dole, pak konec
   if (t.kind === 'comp-gap') {

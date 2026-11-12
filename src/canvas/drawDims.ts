@@ -12,7 +12,7 @@ import type { Floor, Id, Pt } from '../model/types';
 import type { Camera, NumPadTarget, Selection } from '../store/store';
 import { addHitBox, type HitAction } from './hitTargets';
 import { toScreen } from './view';
-import { bodyNormal, bodyStart, facePointAt, hasBody } from '../core/wallBody';
+import { bodyNormal, bodyStart, facePointAt, hasBody, polylineLength, wallBodies } from '../core/wallBody';
 import { doorLayout } from '../core/doorLayout';
 import { openingStartFromA } from '../core/floorQueries';
 
@@ -55,6 +55,9 @@ export interface DimStyle {
 export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camera, dimScale: number, selection: Selection): void {
   const centroids = componentCentroids(floor);
   const s = dimScale;
+  // těla stěn až když jsou potřeba (kóty líců vybrané stěny)
+  let bodyCache: ReturnType<typeof wallBodies> | null = null;
+  const bodies = () => (bodyCache ??= wallBodies(floor));
   ctx.save();
 
   for (const wall of Object.values(floor.walls)) {
@@ -165,6 +168,31 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
       target: { kind: 'wall-length', wallId: wall.id, move: { nodeId: wall.b } },
       wallId: wall.id
     });
+
+    // 2b: vybraná rovná stěna s osou uprostřed – míry obou líců (klikací, délka osy se dopočítá);
+    // vnější líc za celkovou délkou, vnitřní na druhé straně stěny
+    const faces = selected && wall.axis === 'center' && !sag && hasBody(wall) ? bodies().get(wall.id)?.faces : null;
+    if (faces) {
+      const outFace: 0 | 1 = dot(normal(u), out) > 0 ? 1 : 0;
+      const half = (wall.thickness / 2) * cam.zoom;
+      for (const face of [0, 1] as const) {
+        const pts = faces[face];
+        if (pts.length < 2) continue;
+        const isOut = face === outFace;
+        drawDimLine(
+          ctx,
+          toScreen(pts[0]!, cam),
+          toScreen(pts[pts.length - 1]!, cam),
+          isOut ? out : scale(out, -1),
+          isOut ? offset + rowGap - half : 26 * s,
+          String(Math.round(polylineLength(pts))),
+          'líc',
+          { color: '#334155', bg: '#dbeafe', bold: false },
+          s,
+          { type: 'numpad', target: { kind: 'wall-face-length', wallId: wall.id, face }, wallId: wall.id }
+        );
+      }
+    }
 
     // Vzepětí oblouku: od středu tětivy k vrcholu (klikací)
     // oblouk rozdělený na části se kótuje jako celek (jen u první části)

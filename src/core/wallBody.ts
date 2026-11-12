@@ -74,6 +74,20 @@ export interface WallBody {
   edges: [Pt, Pt][];
   /** Body pro přichytávání: vnější rohy konců a středy čel volných konců. */
   snaps: Pt[];
+  /**
+   * Oba líce jako lomené čáry ve směru a→b (po napojení v rozích): [0] = líc na záporné straně normal(a→b),
+   * [1] = na kladné straně. Pro kóty líc–líc u osy uprostřed (2b).
+   */
+  faces: [Pt[], Pt[]];
+}
+
+/** Délka lomené čáry. */
+export const polylineLength = (pts: readonly Pt[]): number => pts.reduce((s, p, i) => (i ? s + dist(pts[i - 1]!, p) : 0), 0);
+
+/** Délka líce stěny (face 0 / 1 jako ve `WallBody.faces`); null = stěna bez těla. */
+export function faceLength(floor: Floor, wallId: Id, face: 0 | 1): number | null {
+  const body = wallBodies(floor).get(wallId);
+  return body ? polylineLength(body.faces[face]) : null;
 }
 
 interface End {
@@ -245,7 +259,8 @@ export function wallBodies(floor: Floor): Map<Id, WallBody> {
       for (const p of pts) if (dist(p, e.node) >= 1) snaps.push(p);
       if (e.free) snaps.push({ x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 });
     }
-    out.set(eA.wall.id, { wallId: eA.wall.id, poly, edges, snaps });
+    // líc „lo“ (od konce A) leží na straně, kam míří normal(a→b) × znaménko lo; lo ≤ hi, takže lo = záporná strana
+    out.set(eA.wall.id, { wallId: eA.wall.id, poly, edges, snaps, faces: [loLine, [...hiLine].reverse()] });
   }
   return out;
 }
@@ -364,7 +379,8 @@ export function orientLoopOutward(floor: Floor, wallId: Id): boolean {
   const poly = polyIds.map(id => floor.nodes[id]!).filter(Boolean);
   if (poly.length < 3) return false;
   for (const w of loopWalls) {
-    if (w.sideLocked) continue;
+    // ručně zvolená strana se nemění; u osy uprostřed se strana jen pamatuje pro návrat na líc (B4) – také ne
+    if (w.sideLocked || w.axis === 'center') continue;
     const a = floor.nodes[w.a];
     const b = floor.nodes[w.b];
     const bn = bodyNormal(floor, w);

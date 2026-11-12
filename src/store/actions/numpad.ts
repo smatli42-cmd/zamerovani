@@ -9,6 +9,28 @@ import { componentGap, setComponentGap } from '../../core/components';
 import { store, type NumPadTarget } from '../store';
 import { setGap, setOpeningWidth, setReveal, setStartFromA } from './openings';
 import { applyWallLength, resizeCircle } from './walls';
+import { setWallLength } from '../../core/solver';
+import { faceLength, hasBody } from '../../core/wallBody';
+
+/**
+ * Míra líce u stěny s osou uprostřed (2b): délka osy se upraví tak, aby měl líc zadanou délku
+ * (posouvá se konec B jako u délky stěny). Napojení v rozích se po posunu mění, proto se dorovnává
+ * v několika krocích. `measured` zůstane délka osy (výsledek), líc se neukládá – počítá se.
+ */
+function setFaceLength(floor: Floor, wallId: string, face: 0 | 1, value: number): boolean {
+  const w = floor.walls[wallId];
+  if (!w || !hasBody(w) || w.axis !== 'center' || w.sagitta || value < 10) return false;
+  for (let i = 0; i < 6; i++) {
+    const cur = faceLength(floor, wallId, face);
+    const a = floor.nodes[w.a];
+    const b = floor.nodes[w.b];
+    if (cur === null || !a || !b) return false;
+    const diff = value - cur;
+    if (Math.abs(diff) < 0.05) break;
+    if (!setWallLength(floor, wallId, Math.hypot(b.x - a.x, b.y - a.y) + diff, { nodeId: w.b })) return false;
+  }
+  return true;
+}
 
 /** Výchozí hodnota zobrazená v NumPadu pro daný cíl. */
 export function numpadInitialValue(floor: Floor, t: NumPadTarget): number | null {
@@ -38,6 +60,10 @@ export function numpadInitialValue(floor: Floor, t: NumPadTarget): number | null
     }
     case 'wall-thickness':
       return floor.walls[t.wallId]?.thickness ?? null;
+    case 'wall-face-length': {
+      const l = faceLength(floor, t.wallId, t.face);
+      return l === null ? null : Math.round(l);
+    }
     case 'circle-diameter': {
       const w = floor.walls[t.wallId];
       return w?.radius !== undefined ? w.radius * 2 : null;
@@ -63,7 +89,9 @@ export function applyNumpadValue(t: NumPadTarget, value: number): boolean {
   if (t.kind === 'wall-length') return applyWallLength(t.wallId, value, t.move);
   let ok = false;
   store.edit(floor => {
-    if (t.kind === 'opening-offset') {
+    if (t.kind === 'wall-face-length') {
+      ok = setFaceLength(floor, t.wallId, t.face, value);
+    } else if (t.kind === 'opening-offset') {
       const op = floor.openings[t.openingId];
       const wall = op && floor.walls[op.wallId];
       if (!op || !wall) return;

@@ -47,6 +47,8 @@ export type NumPadTarget =
   | { kind: 'circle-diameter'; wallId: Id }
   /** Tloušťka stěny (čára líce zůstane na místě). */
   | { kind: 'wall-thickness'; wallId: Id }
+  /** Míra líce stěny s osou uprostřed (face 0/1 = `WallBody.faces`); délka osy se dopočítá (2b). */
+  | { kind: 'wall-face-length'; wallId: Id; face: 0 | 1 }
   /** Odstup skupiny stěn (např. sloupu) od nejbližší stěny mimo skupinu; zadáním se skupina posune. */
   | { kind: 'comp-gap'; wallId: Id; side: Side };
 

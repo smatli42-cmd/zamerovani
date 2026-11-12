@@ -13,6 +13,7 @@ function title(floor: Floor | null, t: NumPadTarget): string {
   if (t.kind === 'wall-sagitta') return 'Vzepětí oblouku';
   if (t.kind === 'circle-diameter') return 'Průměr kruhu';
   if (t.kind === 'wall-thickness') return 'Tloušťka stěny';
+  if (t.kind === 'wall-face-length') return 'Délka stěny po líci';
   if (t.kind === 'comp-gap') {
     const side = { left: 'vlevo', right: 'vpravo', top: 'nahoře', bottom: 'dole' }[t.side];
     return `Odstup od stěny ${side}`;
