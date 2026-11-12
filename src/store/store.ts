@@ -13,6 +13,7 @@ import type { MoveTarget } from '../core/solver';
 import type { RevealPart } from '../core/doorLayout';
 import type { LineStyle } from '../model/types';
 import type { Side } from '../core/components';
+import { syncHosted } from '../core/hosting';
 
 export type ToolId = 'select' | 'wall' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'text' | 'leader' | 'paste' | 'pan';
 
@@ -231,9 +232,13 @@ class Store {
   /** Změna aktuálního podlaží. */
   edit(recipe: (floor: Floor, project: Project) => void, extra: Partial<AppState> = {}): void {
     const floorId = this.state.floorId;
+    const before = this.state.project?.floors.find(x => x.id === floorId);
     this.editProject(p => {
       const f = p.floors.find(x => x.id === floorId);
-      if (f) recipe(f, p);
+      if (!f) return;
+      recipe(f, p);
+      // napojené rohy (T bez dělení) sledují svou průběžnou stěnu
+      syncHosted(before, f);
     }, extra);
   }
 

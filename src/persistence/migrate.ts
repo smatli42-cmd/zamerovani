@@ -4,6 +4,7 @@
  */
 import { createCircleWall, createWall, DEFAULT_WALL_THICKNESS, newId } from '../model/factory';
 import { hasBody, orientLoopOutward } from '../core/wallBody';
+import { mergeStraightAt } from '../core/topology';
 import { SCHEMA_VERSION, type Floor, type LineStyle, type Project, type Pt } from '../model/types';
 
 export function migrateProject(raw: unknown): Project {
@@ -18,9 +19,12 @@ export function migrateProject(raw: unknown): Project {
   // 4 → 5: přibyly samostatné texty (floor.texts)
   // 5 → 6: stěny mají tloušťku a stranu těla (Wall.thickness, Wall.side), tloušťka zmizela z popisku
   // 6 → 7: zrušena spárovaná příčka a dvojčára (Wall.part) – jejich čáry zůstanou obyčejnými čarami
+  // 7 → 8: T bez dělení – průběžné stěny rozdělené napojením se spojí zpět, roh se na ně napojí (Node.host)
+  const old = p.schema ?? 1;
   const floors = p.floors.map(f => {
     const j = joinSemicircles(convertShapesToWalls(f));
-    return removePairing(addWallThickness({ ...j, texts: j.texts ?? {} }));
+    const r = removePairing(addWallThickness({ ...j, texts: j.texts ?? {} }));
+    return old < 8 ? joinSplitWalls(r) : r;
   });
   return { ...p, floors, schema: SCHEMA_VERSION };
 }
@@ -144,4 +148,34 @@ function removePairing(floor: Floor): Floor {
     walls[w.id] = rest;
   }
   return { ...floor, walls };
+}
+
+/**
+ * 7 → 8: stěny rozdělené napojením jiné stěny (dřívější T, i po odpojení) se spojí zpět do jedné:
+ * dvě rovně navazující části se stejnou tloušťkou, stranou, osou, stylem a popiskem; roh, kde se napojují
+ * další stěny, zůstane napojený na spojenou stěnu (Node.host). Změřené délky se sečtou.
+ */
+export function joinSplitWalls(floor: Floor): Floor {
+  const f: Floor = structuredClone(floor);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const node of Object.values(f.nodes)) {
+      const at = Object.values(f.walls).filter(w => w.a === node.id || w.b === node.id);
+      for (const w of at) {
+        const same = at.find(o => o.id !== w.id && JSON.stringify(o.label) === JSON.stringify(w.label));
+        if (!same) continue;
+        const before = Object.keys(f.walls).length;
+        mergeStraightAt(f, w.id, node.id, true);
+        if (Object.keys(f.walls).length < before) {
+          changed = true;
+          break;
+        }
+      }
+    }
+  }
+  // rohy, které po spojení nenese žádná stěna, zmizí
+  const used = new Set(Object.values(f.walls).flatMap(w => [w.a, w.b]));
+  for (const id of Object.keys(f.nodes)) if (!used.has(id)) delete f.nodes[id];
+  return f;
 }

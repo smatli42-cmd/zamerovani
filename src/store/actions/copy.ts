@@ -84,6 +84,12 @@ export function duplicateSelection(): void {
       wallMap.set(w.id, nw.id);
       created.push({ kind: 'wall', id: nw.id });
     }
+    // napojení T se kopíruje, jen když se kopíruje i průběžná stěna (jinak je kopie samostatná)
+    for (const [oldId, nid] of nodeMap) {
+      const host = floor.nodes[oldId]?.host;
+      const newHost = host && wallMap.get(host);
+      if (newHost && floor.nodes[nid]) floor.nodes[nid]!.host = newHost;
+    }
     // otvory se kopírují se svou stěnou (nebo samostatně vybrané otvory se stěnou, která se kopíruje)
     for (const op of Object.values(floor.openings)) {
       const target = wallMap.get(op.wallId);

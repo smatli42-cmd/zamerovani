@@ -6,7 +6,7 @@
  */
 import type { Floor, Id, Pt } from '../model/types';
 import { arcPolyline, circlePolyline } from './arc';
-import { wallNodes } from './floorQueries';
+import { wallNodes, wallSegments } from './floorQueries';
 
 export type Side = 'left' | 'right' | 'top' | 'bottom';
 
@@ -18,11 +18,13 @@ export function componentNodes(floor: Floor, wallId: Id): Set<Id> {
   const stack = [start.a, start.b];
   seen.add(start.a);
   seen.add(start.b);
-  const walls = Object.values(floor.walls);
+  // úseky: průběžná stěna s napojenými rohy (T bez dělení) je spojená i s napojenou stěnou
+  const segs = wallSegments(floor);
+  for (const s of segs) if (s.wall.id === wallId) for (const id of [s.from, s.to]) if (!seen.has(id)) (seen.add(id), stack.push(id));
   while (stack.length) {
     const cur = stack.pop()!;
-    for (const w of walls) {
-      const next = w.a === cur ? w.b : w.b === cur ? w.a : null;
+    for (const w of segs) {
+      const next = w.from === cur ? w.to : w.to === cur ? w.from : null;
       if (next && !seen.has(next)) {
         seen.add(next);
         stack.push(next);

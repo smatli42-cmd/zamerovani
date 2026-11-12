@@ -87,10 +87,11 @@ describe('D13 / C2/16: kolmice při tažení konce k jiné stěně', () => {
     const b = store.floor()!.walls[A]!.b;
     dragPath([[2000, 400], [2600, 200], [2970, 50]]);
     const f = store.floor()!;
-    // konec A leží na stěně x = 3000 v y = 0 (pravý úhel), stěna se v tom místě rozdělila
+    // konec A leží na stěně x = 3000 v y = 0 (pravý úhel) a je na ni napojený; stěna se nedělí (2026-11-12)
     const end = f.nodes[f.walls[A]!.b] ?? f.nodes[b];
     expect(end).toMatchObject({ x: 3000, y: 0 });
-    expect(Object.keys(f.walls)).toHaveLength(3);
+    expect(Object.keys(f.walls)).toHaveLength(2);
+    expect(end!.host).toBeDefined();
   });
 });
 

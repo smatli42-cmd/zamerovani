@@ -79,13 +79,15 @@ describe('kreslení s osou uprostřed (B10)', () => {
     expect(hi).toBeCloseTo(100, 2);
   });
 
-  it('napojení do středu stěny s osou uprostřed ji rozdělí a obě části si osu ponechají', () => {
+  // změněno 2026-11-12 na pokyn uživatele: napojení doprostřed stěnu nedělí (T bez dělení, core/hosting.ts)
+  it('napojení do středu stěny s osou uprostřed ji nerozdělí a osa zůstane', () => {
     store.openProject(createProject({ name: 't' }));
-    addWall({ x: 0, y: 0 }, null, { x: 2000, y: 0 }, null, false, { thickness: 300, axis: 'center' });
-    addWall({ x: 1000, y: 0 }, null, { x: 1000, y: -1500 }, null, false, { thickness: 100, axis: 'center' });
-    const walls = Object.values(store.floor()!.walls);
-    expect(walls).toHaveLength(3);
-    expect(walls.every(w => w.axis === 'center')).toBe(true);
+    const A = addWall({ x: 0, y: 0 }, null, { x: 2000, y: 0 }, null, false, { thickness: 300, axis: 'center' })!;
+    const B = addWall({ x: 1000, y: 0 }, null, { x: 1000, y: -1500 }, null, false, { thickness: 100, axis: 'center' })!;
+    const f = store.floor()!;
+    expect(Object.values(f.walls)).toHaveLength(2);
+    expect(f.walls[A]!.axis).toBe('center');
+    expect(f.nodes[f.walls[B]!.a]!.host).toBe(A);
   });
 
   it('rovné pokračování se slučuje jen při stejné ose', () => {

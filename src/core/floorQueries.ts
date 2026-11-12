@@ -176,3 +176,31 @@ export function nextWallInChain(floor: Floor, wallId: Id, fromNodeId: Id): { wal
   const w = candidates.find(c => c.measured === null) ?? candidates[0]!;
   return { wall: w, nodeId: otherEnd(w, fromNodeId) };
 }
+
+/** Napojené rohy na stěně seřazené od konce a, s polohou t. */
+export function hostedOn(floor: Floor, wallId: Id): { id: Id; t: number }[] {
+  const w = floor.walls[wallId];
+  const a = w && floor.nodes[w.a];
+  const b = w && floor.nodes[w.b];
+  if (!w || !a || !b) return [];
+  const e = { x: b.x - a.x, y: b.y - a.y };
+  const len2 = e.x * e.x + e.y * e.y || 1;
+  return Object.values(floor.nodes)
+    .filter(n => n.host === wallId && n.id !== w.a && n.id !== w.b)
+    .map(n => ({ id: n.id, t: ((n.x - a.x) * e.x + (n.y - a.y) * e.y) / len2 }))
+    .sort((p, q) => p.t - q.t);
+}
+
+/**
+ * Úseky stěn pro graf (skupiny, místnosti): průběžná stěna se v napojených rozích rozdělí jen virtuálně.
+ * Každý úsek nese skutečnou stěnu.
+ */
+export function wallSegments(floor: Floor): { wall: Wall; from: Id; to: Id }[] {
+  const out: { wall: Wall; from: Id; to: Id }[] = [];
+  for (const w of Object.values(floor.walls)) {
+    const chain = [w.a, ...hostedOn(floor, w.id).map(h => h.id), w.b];
+    for (let i = 0; i + 1 < chain.length; i++) out.push({ wall: w, from: chain[i]!, to: chain[i + 1]! });
+  }
+  return out;
+}
+

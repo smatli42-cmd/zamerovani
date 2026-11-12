@@ -8,7 +8,7 @@
  * - Při změně struktury zvýšit SCHEMA_VERSION a doplnit migraci v persistence/migrate.ts.
  */
 
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 export type Id = string;
 
@@ -20,6 +20,11 @@ export interface Pt {
 /** Roh / koncový bod stěny. */
 export interface Node extends Pt {
   id: Id;
+  /**
+   * Roh leží na rovné stěně `host` (T-napojení, ne její konec): průběžná stěna se nedělí a zůstává v celku,
+   * napojená stěna ji sleduje při posunu (core/hosting.ts). Chybí = obyčejný roh.
+   */
+  host?: Id;
 }
 
 export type WallType = 'obvodova' | 'nosna' | 'pricka' | 'sdk' | 'neovereno';

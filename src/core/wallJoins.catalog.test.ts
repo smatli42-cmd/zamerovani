@@ -321,3 +321,42 @@ describe('C2/15: L-roh, obě stěny s osou uprostřed (A = 300, B = 100)', () =>
     expect(hasLineInsideUnion(f)).toBe(false);
   });
 });
+
+// --- C2/5 a C2/14 bez dělení průběžné stěny (T bez dělení, požadavek uživatele 2026-11-12) ---
+
+describe('C2/5 bez dělení: průběžná stěna A zůstane jedna, roh B je na ni napojený', () => {
+  it('A se nepřerušuje, B končí na vnitřním líci A (y = 0), mezi nimi žádná čára', () => {
+    const f = floorWith({ a: [0, 0], b: [2000, 0], m: [1000, 0], p: [1000, -1500] });
+    f.nodes.m!.host = 'A';
+    const A = createWall('a', 'b', 0, 300, 1);
+    A.id = 'A';
+    const B = createWall('m', 'p', 0, 100, -1);
+    f.walls[A.id] = A;
+    f.walls[B.id] = B;
+    const bodies = wallBodies(f);
+    // vnější líc A (y = 300) je jedna čára přes celou délku
+    expect(hasEdge(f, 0, 300, 2000, 300)).toBe(true);
+    // B končí na y = 0 a vnitřní líc A je v místě B přerušený (žádná čára mezi A a B)
+    expect(Math.max(...bodies.get(B.id)!.edges.flat().map(p => p.y))).toBeCloseTo(0, 2);
+    expect(hasLineInsideUnion(f)).toBe(false);
+  });
+});
+
+describe('C2/14 bez dělení: napojení středem na střed jiné stěny', () => {
+  it('B končí na líci A, A je jedna stěna, mezi nimi žádná čára', () => {
+    const f = floorWith({ a: [0, 0], b: [2000, 0], m: [1000, 0], p: [1000, -1500] });
+    f.nodes.m!.host = 'A';
+    const A = createWall('a', 'b', 0, 300, 1);
+    A.id = 'A';
+    A.axis = 'center';
+    const B = createWall('m', 'p', 0, 100, -1);
+    B.axis = 'center';
+    f.walls[A.id] = A;
+    f.walls[B.id] = B;
+    const bp = wallBodies(f).get(B.id)!.edges.flat();
+    expect(Math.max(...bp.map(p => p.y))).toBeCloseTo(-150, 2);
+    expect(Math.min(...bp.map(p => p.x))).toBeCloseTo(950, 2);
+    expect(hasEdge(f, 0, 150, 2000, 150)).toBe(true); // druhý líc A celý
+    expect(hasLineInsideUnion(f)).toBe(false);
+  });
+});

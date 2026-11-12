@@ -87,7 +87,10 @@ export function WallPanel({ floor, wall }: { floor: Floor; wall: Wall }) {
         const node = end === 'a' ? wall.a : wall.b;
         const off = end === 'a' ? !!wall.noJoinA : !!wall.noJoinB;
         // přepínač se nabízí jen tam, kde se stýká další stěna s tloušťkou (nebo už je vypnutý)
-        const shared = Object.values(floor.walls).some(o => o.id !== wall.id && o.thickness > 0 && (o.a === node || o.b === node));
+        const host = floor.nodes[node]?.host;
+        const shared =
+          Object.values(floor.walls).some(o => o.id !== wall.id && o.thickness > 0 && (o.a === node || o.b === node)) ||
+          (!!host && (floor.walls[host]?.thickness ?? 0) > 0); // konec napojený doprostřed jiné stěny
         if (!shared && !off) return null;
         return (
           <div class="field field-inline" key={end}>

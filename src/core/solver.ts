@@ -10,7 +10,7 @@
  */
 import type { Floor, Id, Node } from '../model/types';
 import { dist, dot, unit } from './geometry';
-import { otherEnd, wallsAtNode } from './floorQueries';
+import { otherEnd, wallsAtNode, wallSegments } from './floorQueries';
 
 /** Který roh se posune: konkrétní roh stěny, nebo oba (od středu). */
 export type MoveTarget = { nodeId: Id } | 'both';
@@ -62,11 +62,12 @@ export function setWallLength(floor: Floor, wallId: Id, length: number, target: 
 export function reachableWithout(floor: Floor, startId: Id, blockedId: Id): Set<Id> {
   const visited = new Set<Id>([startId]);
   const queue: Id[] = [startId];
-  const walls = Object.values(floor.walls);
+  // úseky stěn: napojený roh (T bez dělení) je spojený s průběžnou stěnou
+  const segs = wallSegments(floor);
   while (queue.length > 0) {
     const cur = queue.shift()!;
-    for (const w of walls) {
-      const next = w.a === cur ? w.b : w.b === cur ? w.a : null;
+    for (const w of segs) {
+      const next = w.from === cur ? w.to : w.to === cur ? w.from : null;
       if (next && next !== blockedId && !visited.has(next)) {
         visited.add(next);
         queue.push(next);

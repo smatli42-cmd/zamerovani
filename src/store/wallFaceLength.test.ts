@@ -74,16 +74,17 @@ describe('2b: okrajové případy (nálezy revieweru)', () => {
     expect(faceLength(store.floor()!, A, 1)).toBeCloseTo(3900, 0);
   });
 
-  it('rozdělená stěna (příčka): posune se bod napojení, konec celé stěny zůstane', () => {
+  // změněno 2026-11-12 na pokyn uživatele: příčka stěnu nedělí, líc se měří přes celou průběžnou stěnu
+  it('průběžná stěna s příčkou (T bez dělení): líc celé stěny, příčka zůstane na místě', () => {
     store.openProject(createProject({ name: 't' }));
     addWall({ x: 0, y: 0 }, null, { x: 3000, y: 0 }, null, false, C);
-    addWall({ x: 1000, y: 0 }, null, { x: 1000, y: -1500 }, null, false, { thickness: 100, axis: 'center' });
-    const A1 = wallAt(0, 0);
-    expect(faceLength(store.floor()!, A1, 0)).toBeCloseTo(950, 1);
-    expect(applyNumpadValue({ kind: 'wall-face-length', wallId: A1, face: 0 }, 1500)).toBe(true);
+    const P = addWall({ x: 1000, y: 0 }, null, { x: 1000, y: -1500 }, null, false, { thickness: 100, axis: 'center' })!;
+    const A = wallAt(0, 0);
+    expect(faceLength(store.floor()!, A, 0)).toBeCloseTo(3000, 1);
+    expect(applyNumpadValue({ kind: 'wall-face-length', wallId: A, face: 0 }, 3500)).toBe(true);
     const f = store.floor()!;
-    expect(faceLength(f, A1, 0)).toBeCloseTo(1500, 0);
-    expect(Object.values(f.nodes).some(n => Math.abs(n.x - 3000) < 0.5 && Math.abs(n.y) < 0.5)).toBe(true);
+    expect(faceLength(f, A, 0)).toBeCloseTo(3500, 0);
+    expect(f.nodes[f.walls[P]!.a]).toMatchObject({ x: 1000, y: 0, host: A });
   });
 
   it('odmítne stěnu s osou na líci a obloukovou stěnu', () => {

@@ -98,16 +98,25 @@ export function splitWallsAtNode(floor: Floor, nodeId: Id): void {
  * Sloučí stěnu `wallId` se stěnou, na jejíž volný konec v rohu `nodeId` rovně navazuje (stejná tloušťka).
  * Zůstane původní stěna (její strana těla, popisek, otvory na svém místě), prodloužená o novou;
  * roh mezi nimi zanikne (smaže ho úklid volajícího). Vrací ID výsledné stěny.
+ * `throughT` (migrace starých rozdělených stěn): slučuje i přes roh, kde se napojují další stěny – pak tam
+ * zůstane roh napojený na sloučenou stěnu (T bez dělení, core/hosting.ts); musí sedět i strana těla a styl.
  */
-export function mergeStraightAt(floor: Floor, wallId: Id, nodeId: Id): Id {
+export function mergeStraightAt(floor: Floor, wallId: Id, nodeId: Id, throughT = false): Id {
   const w = floor.walls[wallId];
   const node = floor.nodes[nodeId];
   if (!w || !node || w.sagitta || (w.a !== nodeId && w.b !== nodeId)) return wallId;
   const wFarId = w.a === nodeId ? w.b : w.a;
   const wFar = floor.nodes[wFarId];
   if (!wFar) return wallId;
-  const o = straightContinuation(floor, nodeId, node, wFar, w.thickness, w.id);
+  const o = straightContinuation(floor, nodeId, node, wFar, w.thickness, w.id, throughT);
   if (!o || o.axis !== w.axis) return wallId; // různá osa = dvě stěny
+  if (throughT) {
+    // stejný směr řetězu (a→roh→b) = stejná strana; obrácený = opačná
+    const sameDir = (o.b === nodeId && w.a === nodeId) || (o.a === nodeId && w.b === nodeId);
+    const noJoinAt = (x: typeof w) => (x.a === nodeId && x.noJoinA) || (x.b === nodeId && x.noJoinB);
+    if ((sameDir ? o.side !== w.side : o.side === w.side) || (o.style ?? 'solid') !== (w.style ?? 'solid') || noJoinAt(o) || noJoinAt(w)) return wallId;
+  }
+  const measuredSum = o.measured !== null && w.measured !== null ? o.measured + w.measured : null;
   const oldLen = wallLength(floor, o);
   const added = dist(node, wFar);
   const starts = Object.values(floor.openings)
@@ -135,8 +144,12 @@ export function mergeStraightAt(floor: Floor, wallId: Id, nodeId: Id): Id {
     if (wFarNoJoin) o.noJoinB = true;
     else delete o.noJoinB;
   }
-  o.measured = null;
+  // obě části změřené → součet (sloučení starých rozdělených stěn); jinak náčrt
+  o.measured = measuredSum;
   delete floor.walls[w.id];
+  // rohy napojené na slučovanou část teď leží na sloučené stěně; přes T zůstává roh napojený
+  for (const n of Object.values(floor.nodes)) if (n.host === w.id) n.host = o.id;
+  if (throughT && Object.values(floor.walls).some(x => x.a === nodeId || x.b === nodeId)) node.host = o.id;
   const newLen = oldLen + added;
   for (const { op, start } of starts) {
     const s = Math.max(0, Math.round(start));

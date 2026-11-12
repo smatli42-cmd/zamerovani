@@ -5,7 +5,7 @@
  */
 import { arcGeometry } from '../core/arc';
 import { arcChain } from '../core/arcChain';
-import { openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
+import { openingsOnWall, wallLength, wallNodes, wallSegments } from '../core/floorQueries';
 import { add, centroid, dist, dot, lerp, normal, scale, sub, unit } from '../core/geometry';
 import { OPENING_DEFAULTS } from '../model/factory';
 import type { Floor, Id, Pt } from '../model/types';
@@ -20,9 +20,10 @@ import { openingStartFromA } from '../core/floorQueries';
 function componentCentroids(floor: Floor): Map<Id, Pt> {
   const result = new Map<Id, Pt>();
   const adj = new Map<Id, Id[]>();
-  for (const w of Object.values(floor.walls)) {
-    (adj.get(w.a) ?? adj.set(w.a, []).get(w.a)!).push(w.b);
-    (adj.get(w.b) ?? adj.set(w.b, []).get(w.b)!).push(w.a);
+  // úseky stěn: napojený roh (T bez dělení) patří do skupiny průběžné stěny
+  for (const { from, to } of wallSegments(floor)) {
+    (adj.get(from) ?? adj.set(from, []).get(from)!).push(to);
+    (adj.get(to) ?? adj.set(to, []).get(to)!).push(from);
   }
   const seen = new Set<Id>();
   for (const start of adj.keys()) {

@@ -10,6 +10,7 @@
 import type { Floor, Id, Pt, Wall } from '../model/types';
 import { arcGeometry } from './arc';
 import { add, centroid, dist, dot, normal, scale, sub, unit } from './geometry';
+import { wallSegments } from './floorQueries';
 
 /** Má stěna tělo? (rovné i obloukové stěny s tloušťkou; kruhy a čáry bez tloušťky ne) */
 export const hasBody = (w: Wall): boolean => w.thickness > 0 && w.radius === undefined && w.a !== w.b;
@@ -119,6 +120,8 @@ interface End {
   loPt?: Pt;
   hiPt?: Pt;
   free?: boolean;
+  /** Virtuální konec průběžné stěny v napojeném rohu (T bez dělení, core/hosting.ts). */
+  virtual?: boolean;
 }
 
 /** Hranice těla u konce: přímka (rovná stěna) nebo kružnice (oblouková). */
@@ -201,6 +204,26 @@ export function wallBodies(floor: Floor): Map<Id, WallBody> {
     for (const [id, e] of [[w.a, eA], [w.b, eB]] as const) (byNode.get(id) ?? byNode.set(id, []).get(id)!).push(e);
   }
 
+  // T bez dělení: v napojeném rohu dostane průběžná rovná stěna dva virtuální konce (k a, k b) – napojení
+  // se spočítá stejně jako u stěny rozdělené v tom místě, ale stěna zůstane jedna (líce se jen přeruší)
+  const virtualByHost = new Map<Id, { t: number; toA: End; toB: End }[]>();
+  for (const node of Object.values(floor.nodes)) {
+    const h = node.host ? floor.walls[node.host] : undefined;
+    if (!h || !hasBody(h) || h.sagitta || h.a === node.id || h.b === node.id) continue;
+    const a = floor.nodes[h.a];
+    const b = floor.nodes[h.b];
+    if (!a || !b || dist(a, b) < 1) continue;
+    const u = unit(a, b);
+    const [r0, r1] = bodyRange(h);
+    const toB: End = { wall: h, atA: true, node, d: u, n: normal(u), lo: r0, hi: r1, ang: Math.atan2(u.y, u.x), virtual: true };
+    const mu = scale(u, -1);
+    const toA: End = { wall: h, atA: false, node, d: mu, n: normal(mu), lo: -r1, hi: -r0, ang: Math.atan2(mu.y, mu.x), virtual: true };
+    const t = dot(sub(node, a), u) / dist(a, b);
+    (virtualByHost.get(h.id) ?? virtualByHost.set(h.id, []).get(h.id)!).push({ t, toA, toB });
+    (byNode.get(node.id) ?? byNode.set(node.id, []).get(node.id)!).push(toA, toB);
+  }
+  for (const list of virtualByHost.values()) list.sort((p, q) => p.t - q.t);
+
   for (const all of byNode.values()) {
     const node = all[0]!.node;
     const closeFree = (e: End) => {
@@ -209,7 +232,7 @@ export function wallBodies(floor: Floor): Map<Id, WallBody> {
       e.free = true;
     };
     // „nespojovat konec“: takový konec má vlastní čelo a do napojení ostatních nevstupuje
-    const ends = all.filter(e => !(e.atA ? e.wall.noJoinA : e.wall.noJoinB));
+    const ends = all.filter(e => e.virtual || !(e.atA ? e.wall.noJoinA : e.wall.noJoinB));
     for (const e of all) if (!ends.includes(e)) closeFree(e);
     if (ends.length === 0) continue;
     if (ends.length === 1) {
@@ -258,7 +281,32 @@ export function wallBodies(floor: Floor): Map<Id, WallBody> {
     const loLine = [A.lo, ...curve(eA.lo, A.lo, B.hi), B.hi];
     const hiLine = [B.lo, ...curve(eA.hi, A.hi, B.lo).reverse(), A.hi];
     const edges: [Pt, Pt][] = [];
-    for (const line of [loLine, hiLine]) for (let i = 0; i + 1 < line.length; i++) edges.push([line[i]!, line[i + 1]!]);
+    const virt = virtualByHost.get(eA.wall.id);
+    if (virt?.length) {
+      // průběžná stěna s napojenými rohy: líce se v místě napojení přeruší (mezi stěnami žádná čára)
+      // líc lo (směr a→b): A.lo → toA.hi | toB.lo → … → B.hi; líc hi: A.hi → toA.lo | toB.hi → … → B.lo
+      const lo: Pt[] = [A.lo];
+      const hi: Pt[] = [A.hi];
+      // líc se přeruší jen tam, kde vznikla mezera (na straně napojené stěny); jinak pokračuje jednou čarou
+      let loStart = A.lo;
+      let hiStart = A.hi;
+      for (const v of virt) {
+        if (dist(v.toA.hiPt!, v.toB.loPt!) > 1e-6) {
+          edges.push([loStart, v.toA.hiPt!]);
+          loStart = v.toB.loPt!;
+        }
+        if (dist(v.toA.loPt!, v.toB.hiPt!) > 1e-6) {
+          edges.push([hiStart, v.toA.loPt!]);
+          hiStart = v.toB.hiPt!;
+        }
+        lo.push(v.toA.hiPt!, v.toB.loPt!);
+        hi.push(v.toA.loPt!, v.toB.hiPt!);
+      }
+      edges.push([loStart, B.hi], [hiStart, B.lo]);
+      loLine.splice(0, loLine.length, ...lo, B.hi);
+    } else for (const line of [loLine, hiLine]) for (let i = 0; i + 1 < line.length; i++) edges.push([line[i]!, line[i + 1]!]);
+    // nulové úseky (napojení bez přerušení líce) se nekreslí
+    for (let i = edges.length - 1; i >= 0; i--) if (dist(edges[i]![0], edges[i]![1]) < 1e-6) edges.splice(i, 1);
     if (eA.free) edges.push([A.hi, A.lo]);
     if (eB.free) edges.push([B.hi, B.lo]);
     // u napojeného konce vede obrys přes roh – jinak by u T zůstal mezi šikmým řezem a příčkou nevyplněný klín
@@ -361,10 +409,11 @@ export function orientLoopOutward(floor: Floor, wallId: Id): boolean {
   const start = floor.walls[wallId];
   if (!start || !hasBody(start)) return false;
   const adj = new Map<Id, { wall: Wall; to: Id }[]>();
-  for (const w of Object.values(floor.walls)) {
+  // průběžné stěny s napojenými rohy (T bez dělení) se v grafu rozdělí virtuálně
+  for (const { wall: w, from, to } of wallSegments(floor)) {
     if (w.id === wallId || !hasBody(w)) continue;
-    (adj.get(w.a) ?? adj.set(w.a, []).get(w.a)!).push({ wall: w, to: w.b });
-    (adj.get(w.b) ?? adj.set(w.b, []).get(w.b)!).push({ wall: w, to: w.a });
+    (adj.get(from) ?? adj.set(from, []).get(from)!).push({ wall: w, to });
+    (adj.get(to) ?? adj.set(to, []).get(to)!).push({ wall: w, to: from });
   }
   // nejkratší cesta b → a (bez nové stěny)
   const prev = new Map<Id, { from: Id; wall: Wall }>();
@@ -390,7 +439,7 @@ export function orientLoopOutward(floor: Floor, wallId: Id): boolean {
   }
   const poly = polyIds.map(id => floor.nodes[id]!).filter(Boolean);
   if (poly.length < 3) return false;
-  for (const w of loopWalls) {
+  for (const w of new Set(loopWalls)) {
     // ručně zvolená strana se nemění; u osy uprostřed se strana jen pamatuje pro návrat na líc (B4) – také ne
     if (w.sideLocked || w.axis === 'center') continue;
     const a = floor.nodes[w.a];
@@ -421,16 +470,21 @@ export function sideFromPen(start: Pt, end: Pt, pen: Pt, threshold: number, curr
  * Navazuje kreslená stěna `from`→`to` rovně na volný konec existující stěny se stejnou tloušťkou
  * v rohu `nodeId` (pokračování stejným směrem)? Vrací tu stěnu – kreslená se s ní sloučí do jedné.
  */
-export function straightContinuation(floor: Floor, nodeId: Id | null, from: Pt, to: Pt, thickness: number, excludeWallId?: Id): Wall | null {
+export function straightContinuation(floor: Floor, nodeId: Id | null, from: Pt, to: Pt, thickness: number, excludeWallId?: Id, throughT = false): Wall | null {
   if (!nodeId || thickness <= 0 || dist(from, to) < 1) return null;
+  // roh napojený doprostřed jiné stěny (T bez dělení) není volný konec
+  if (!throughT && floor.nodes[nodeId]?.host) return null;
   const at = Object.values(floor.walls).filter(w => w.id !== excludeWallId && (w.a === nodeId || w.b === nodeId));
-  if (at.length !== 1) return null;
-  const o = at[0]!;
-  if (!hasBody(o) || o.thickness !== thickness || o.sagitta) return null;
-  const far = floor.nodes[o.a === nodeId ? o.b : o.a];
-  if (!far) return null;
+  if (!throughT && at.length !== 1) return null;
   const d1 = unit(from, to);
-  const d2 = unit(from, far);
-  // opačné směry od rohu = rovné pokračování
-  return d1.x * d2.y - d1.y * d2.x < 0.002 && d1.x * d2.y - d1.y * d2.x > -0.002 && dot(d1, d2) < -0.999 ? o : null;
+  for (const o of at) {
+    if (!hasBody(o) || o.thickness !== thickness || o.sagitta) continue;
+    const far = floor.nodes[o.a === nodeId ? o.b : o.a];
+    if (!far) continue;
+    const d2 = unit(from, far);
+    const cross = d1.x * d2.y - d1.y * d2.x;
+    // opačné směry od rohu = rovné pokračování
+    if (cross < 0.002 && cross > -0.002 && dot(d1, d2) < -0.999) return o;
+  }
+  return null;
 }
