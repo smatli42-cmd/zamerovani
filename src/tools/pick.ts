@@ -1,7 +1,7 @@
 /**
  * Hledání prvku pod perem/prstem (společné pro více nástrojů).
  */
-import { chooseNodeAt, findWallNear, isCurved, openingsOnWall, wallLength, wallNodes, type WallHit } from '../core/floorQueries';
+import { chooseNodeAt, findWallNear, isCurved, openingsOnWall, wallLength, wallNodes, type NodePrefer, type WallHit } from '../core/floorQueries';
 import { textBoxPx } from '../canvas/textBox';
 import { dot, projectToSegment, sub } from '../core/geometry';
 import { bodyNormal, bodyStart, findBodyAt, hasBody } from '../core/wallBody';
@@ -70,13 +70,18 @@ export function pickText(floor: Floor, p: Pt, cam: Camera): string | null {
   return null;
 }
 
+/** Předvolba pro překrývající se rohy podle výběru (jeden prvek i skupina). */
+export function nodePrefer(current: Selection): NodePrefer {
+  const items = !current ? [] : current.kind === 'multi' ? current.items : [current];
+  return { nodeIds: items.filter(i => i.kind === 'node').map(i => i.id), wallIds: items.filter(i => i.kind === 'wall').map(i => i.id) };
+}
+
 /**
  * Prvek pod bodem v pořadí priority: roh, otvor, text, místnost, stěna.
  * `current` = aktuální výběr: u překrývajících se rohů má přednost konec vybrané stěny / vybraný roh (D14).
  */
 export function pickAny(floor: Floor, p: Pt, cam: Camera, current: Selection = null): Selection {
-  const prefer = current?.kind === 'wall' ? { wallId: current.id } : current?.kind === 'node' ? { nodeId: current.id } : {};
-  const node = chooseNodeAt(floor, p, HIT_PX.node / cam.zoom, prefer);
+  const node = chooseNodeAt(floor, p, HIT_PX.node / cam.zoom, nodePrefer(current));
   if (node) return { kind: 'node', id: node.id };
   const op = pickOpening(floor, p, cam);
   if (op) return { kind: 'opening', id: op };

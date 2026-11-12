@@ -10,7 +10,8 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ### 2026-11-12 (večer) – výběr konce u rozpojeného rohu (D14)
 - **Co se změnilo:** Uživatel potvrdil, že osy fungují. Opravena nahlášená chyba u rozpojeného rohu: ťuknutí na roh teď bere v úvahu, co je vybrané (`chooseNodeAt`, `nextNodeAt` v `core/floorQueries.ts`, `pickAny(..., current)`).
 - **Viditelně v aplikaci:** u rozpojeného rohu se po výběru stěny ťuknutím na roh vybere konec **té** stěny; další ťuknutí na stejné místo přepne na konec druhé stěny; tažením se hýbe jen vybraným koncem.
-- **Rozhodnuto samostatně:** vybraný roh se při dalším dotyku drží (aby šel táhnout), na druhý konec se přepne až po ťuknutí bez tažení.
+- **Rozhodnuto samostatně:** vybraný roh se při dalším dotyku drží (aby šel táhnout), na druhý konec se přepne až po ťuknutí bez tažení. Přepínání ťuknutím jen v nástroji Vybrat (v nástrojích Stěna/tvary ťuknutí jen vybírá).
+- **Po kontrole revieweru doplněno:** přednost konce vybrané stěny platí i při otevřeném NumPadu délky stěny (ťuknutí na roh = který konec se posune), u výběru skupiny (tažení za roh táhne skupinu) a v nástrojích tvarů; testy `tools/selectTool.d14.test.ts`.
 - **Otevřené:** zbytek kroku „tažení a posun jako blok“ (D2, D11, D12, D13, C2/16).
 - **Chyby od uživatele:** „U rozpojených stěn šel vybrat koncový bod jen u stěny, u které se rozpojení nastavilo; u druhé se vybrala zase ta první.“ Příčina: dva rohy na stejném místě a výběr bral vždy ten naposled vytvořený. Opraveno podle katalogu D14 (přednost konce vybrané stěny + přepínání opakovaným ťuknutím), testy `core/nodePick.test.ts`, ověřeno v prohlížeči.
 
@@ -33,7 +34,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Rozhodnuto samostatně
 (Rozhodnutí mimo katalog, udělaná bez uživatele – nejnovější nahoře. Uživatel je může kdykoli změnit.)
-- 2026-11-12: D14 – už vybraný roh se při dalším dotyku drží (kvůli tažení); na překrývající se roh se přepne až ťuknutím bez tažení.
+- 2026-11-12: D14 – už vybraný roh se při dalším dotyku drží (kvůli tažení); na překrývající se roh se přepne až ťuknutím bez tažení, a to jen v nástroji Vybrat.
 - 2026-11-12: Stěna s osou uprostřed se při uzavření místnosti neotáčí „ven“ (`orientLoopOutward`) – strana se jen pamatuje, aby se po návratu na líc vrátila ta původní.
 - 2026-11-12: Přichycení u B10 = na čáru / střed čáry cílové stěny (u osy uprostřed je to přímo osa). Zvláštní bod „střed těla“ u cílové stěny s osou na líci se nepřidal (stávající přichycení na střed čela volného konce zůstává).
 - 2026-11-12: Kóty líců (2b) jen u vybrané stěny a jen u rovné; oblouk s osou uprostřed má jen kótu po ose.

@@ -31,14 +31,14 @@ describe('D14: překrývající se koncové body', () => {
 
   it('(1) konec vybrané stěny má přednost – pro obě stěny', () => {
     const { f, A, B } = split();
-    expect(chooseNodeAt(f, tap, 20, { wallId: A })?.id).toBe('c');
-    expect(chooseNodeAt(f, tap, 20, { wallId: B })?.id).toBe('c2');
+    expect(chooseNodeAt(f, tap, 20, { wallIds: [A] })?.id).toBe('c');
+    expect(chooseNodeAt(f, tap, 20, { wallIds: [B] })?.id).toBe('c2');
   });
 
   it('vybraný uzel zůstane vybraný při dalším dotyku (aby šel táhnout)', () => {
     const { f } = split();
-    expect(chooseNodeAt(f, tap, 20, { nodeId: 'c' })?.id).toBe('c');
-    expect(chooseNodeAt(f, tap, 20, { nodeId: 'c2' })?.id).toBe('c2');
+    expect(chooseNodeAt(f, tap, 20, { nodeIds: ['c'] })?.id).toBe('c');
+    expect(chooseNodeAt(f, tap, 20, { nodeIds: ['c2'] })?.id).toBe('c2');
   });
 
   it('(2) opakované ťuknutí přepíná mezi překrývajícími se konci', () => {

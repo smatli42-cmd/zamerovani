@@ -90,7 +90,7 @@ function makeTool(opts: {
       if (s && e && dist(s, e) >= MIN_SIZE) opts.commit(s, e);
       else if (tap) {
         const floor = store.floor();
-        if (floor) store.set({ selection: pickAny(floor, tap, store.get().camera) });
+        if (floor) store.set({ selection: pickAny(floor, tap, store.get().camera, store.get().selection) });
       }
       requestRender();
     },

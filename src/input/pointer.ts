@@ -9,7 +9,7 @@
  */
 import { hitTest } from '../canvas/hitTargets';
 import { toWorld, zoomAt } from '../canvas/view';
-import { findNodeNear } from '../core/floorQueries';
+import { chooseNodeAt, findNodeNear } from '../core/floorQueries';
 import type { Pt } from '../model/types';
 import { openTarget, setMoveTarget } from '../store/numpadController';
 import { flipWallSide } from '../store/actions';
@@ -68,7 +68,7 @@ function handleOverlayTap(p: PointerInput): boolean {
   const np = state.numpad;
   if (np?.target.kind === 'wall-length') {
     const wall = floor.walls[np.target.wallId];
-    const node = findNodeNear(floor, p.world, HIT_PX.node / state.camera.zoom);
+    const node = chooseNodeAt(floor, p.world, HIT_PX.node / state.camera.zoom, { wallIds: [np.target.wallId] }); // D14: konec této stěny má přednost
     if (wall && node && (node.id === wall.a || node.id === wall.b)) {
       setMoveTarget({ nodeId: node.id });
       return true;

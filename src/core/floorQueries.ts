@@ -71,14 +71,19 @@ export function nodesAt(floor: Floor, p: Pt, maxDist: number): Node[] {
  * Uzel pod perem s ohledem na výběr (D14): už vybraný uzel zůstává (aby šel táhnout), jinak má přednost
  * konec vybrané stěny; bez výběru nejbližší uzel jako dřív.
  */
-export function chooseNodeAt(floor: Floor, p: Pt, maxDist: number, prefer: { wallId?: Id; nodeId?: Id }): Node | null {
+export function chooseNodeAt(floor: Floor, p: Pt, maxDist: number, prefer: NodePrefer): Node | null {
   const cands = nodesAt(floor, p, maxDist);
   if (cands.length < 2) return cands[0] ?? null;
-  const keep = cands.find(n => n.id === prefer.nodeId);
+  const keep = cands.find(n => prefer.nodeIds?.includes(n.id));
   if (keep) return keep;
-  const w = prefer.wallId ? floor.walls[prefer.wallId] : undefined;
-  const end = w && cands.find(n => n.id === w.a || n.id === w.b);
-  return end ?? findNodeNear(floor, p, maxDist);
+  const ends = new Set((prefer.wallIds ?? []).flatMap(id => (floor.walls[id] ? [floor.walls[id]!.a, floor.walls[id]!.b] : [])));
+  return cands.find(n => ends.has(n.id)) ?? findNodeNear(floor, p, maxDist);
+}
+
+/** Čemu dát přednost u překrývajících se rohů: vybrané rohy, konce vybraných stěn (D14). */
+export interface NodePrefer {
+  nodeIds?: Id[];
+  wallIds?: Id[];
 }
 
 /** Opakované ťuknutí na překrývající se konce (D14): další uzel po `currentId`; null = na místě je jen jeden. */
