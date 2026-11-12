@@ -204,21 +204,29 @@ export function wallBodies(floor: Floor): Map<Id, WallBody> {
     for (const [id, e] of [[w.a, eA], [w.b, eB]] as const) (byNode.get(id) ?? byNode.set(id, []).get(id)!).push(e);
   }
 
-  // T bez dělení: v napojeném rohu dostane průběžná rovná stěna dva virtuální konce (k a, k b) – napojení
+  // T bez dělení: v napojeném rohu dostane průběžná stěna (rovná i oblouk) dva virtuální konce (k a, k b) – napojení
   // se spočítá stejně jako u stěny rozdělené v tom místě, ale stěna zůstane jedna (líce se jen přeruší)
   const virtualByHost = new Map<Id, { t: number; toA: End; toB: End }[]>();
   for (const node of Object.values(floor.nodes)) {
     const h = node.host ? floor.walls[node.host] : undefined;
-    if (!h || !hasBody(h) || h.sagitta || h.a === node.id || h.b === node.id) continue;
+    if (!h || !hasBody(h) || h.a === node.id || h.b === node.id) continue;
     const a = floor.nodes[h.a];
     const b = floor.nodes[h.b];
     if (!a || !b || dist(a, b) < 1) continue;
-    const u = unit(a, b);
+    // směr stěny v rohu: u rovné a→b, u oblouku tečna (hranice těla jsou soustředné kružnice)
+    const g = arcGeometry(a, b, h.sagitta ?? 0);
+    let u = unit(a, b);
+    if (g) {
+      const ang = Math.atan2(node.y - g.center.y, node.x - g.center.x);
+      const sgn = Math.sign(g.sweep) || 1;
+      u = { x: -Math.sin(ang) * sgn, y: Math.cos(ang) * sgn };
+    }
+    const c = g ? { center: g.center } : {};
     const [r0, r1] = bodyRange(h);
-    const toB: End = { wall: h, atA: true, node, d: u, n: normal(u), lo: r0, hi: r1, ang: Math.atan2(u.y, u.x), virtual: true };
+    const toB: End = { wall: h, atA: true, node, d: u, n: normal(u), lo: r0, hi: r1, ang: Math.atan2(u.y, u.x), virtual: true, ...c };
     const mu = scale(u, -1);
-    const toA: End = { wall: h, atA: false, node, d: mu, n: normal(mu), lo: -r1, hi: -r0, ang: Math.atan2(mu.y, mu.x), virtual: true };
-    const t = dot(sub(node, a), u) / dist(a, b);
+    const toA: End = { wall: h, atA: false, node, d: mu, n: normal(mu), lo: -r1, hi: -r0, ang: Math.atan2(mu.y, mu.x), virtual: true, ...c };
+    const t = g ? (paramOnArc(a, b, h.sagitta ?? 0)?.(node) ?? 0) : dot(sub(node, a), u) / dist(a, b);
     (virtualByHost.get(h.id) ?? virtualByHost.set(h.id, []).get(h.id)!).push({ t, toA, toB });
     (byNode.get(node.id) ?? byNode.set(node.id, []).get(node.id)!).push(toA, toB);
   }
@@ -282,26 +290,29 @@ export function wallBodies(floor: Floor): Map<Id, WallBody> {
     const hiLine = [B.lo, ...curve(eA.hi, A.hi, B.lo).reverse(), A.hi];
     const edges: [Pt, Pt][] = [];
     const virt = virtualByHost.get(eA.wall.id);
+    let faceLo = loLine;
     if (virt?.length) {
-      // průběžná stěna s napojenými rohy: líce se v místě napojení přeruší (mezi stěnami žádná čára)
+      // průběžná stěna s napojenými rohy (rovná i oblouk): líce se v místě napojení přeruší jen tam,
+      // kde vznikla mezera (na straně napojené stěny); jinak pokračují jednou čarou.
       // líc lo (směr a→b): A.lo → toA.hi | toB.lo → … → B.hi; líc hi: A.hi → toA.lo | toB.hi → … → B.lo
-      const lo: Pt[] = [A.lo];
-      // líc se přeruší jen tam, kde vznikla mezera (na straně napojené stěny); jinak pokračuje jednou čarou
-      let loStart = A.lo;
-      let hiStart = A.hi;
-      for (const v of virt) {
-        if (dist(v.toA.hiPt!, v.toB.loPt!) > 1e-6) {
-          edges.push([loStart, v.toA.hiPt!]);
-          loStart = v.toB.loPt!;
+      const pieces = (off: number, starts: Pt[], ends: Pt[]): Pt[][] => {
+        const out: Pt[][] = [];
+        for (let i = 0; i < starts.length; i++) {
+          const seg = [starts[i]!, ...curve(off, starts[i]!, ends[i]!), ends[i]!];
+          const last = out[out.length - 1];
+          if (last && dist(last[last.length - 1]!, starts[i]!) < 1e-6) {
+            // bez mezery pokračuje líc dál; u rovné stěny jednou úsečkou (bod napojení vypadne)
+            if (!eA.wall.sagitta) last.pop();
+            last.push(...seg.slice(1));
+          }
+          else out.push(seg);
         }
-        if (dist(v.toA.loPt!, v.toB.hiPt!) > 1e-6) {
-          edges.push([hiStart, v.toA.loPt!]);
-          hiStart = v.toB.hiPt!;
-        }
-        lo.push(v.toA.hiPt!, v.toB.loPt!);
-      }
-      edges.push([loStart, B.hi], [hiStart, B.lo]);
-      loLine.splice(0, loLine.length, ...lo, B.hi);
+        return out;
+      };
+      const loP = pieces(eA.lo, [A.lo, ...virt.map(v => v.toB.loPt!)], [...virt.map(v => v.toA.hiPt!), B.hi]);
+      const hiP = pieces(eA.hi, [A.hi, ...virt.map(v => v.toB.hiPt!)], [...virt.map(v => v.toA.loPt!), B.lo]);
+      for (const line of [...loP, ...hiP]) for (let i = 0; i + 1 < line.length; i++) edges.push([line[i]!, line[i + 1]!]);
+      faceLo = loP.flat();
     } else for (const line of [loLine, hiLine]) for (let i = 0; i + 1 < line.length; i++) edges.push([line[i]!, line[i + 1]!]);
     // nulové úseky (napojení bez přerušení líce) se nekreslí
     for (let i = edges.length - 1; i >= 0; i--) if (dist(edges[i]![0], edges[i]![1]) < 1e-6) edges.splice(i, 1);
@@ -318,7 +329,7 @@ export function wallBodies(floor: Floor): Map<Id, WallBody> {
       if (e.free) snaps.push({ x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 });
     }
     // líc „lo“ (od konce A) leží na straně, kam míří normal(a→b) × znaménko lo; lo ≤ hi, takže lo = záporná strana
-    out.set(eA.wall.id, { wallId: eA.wall.id, poly, edges, snaps, faces: [loLine, [...hiLine].reverse()] });
+    out.set(eA.wall.id, { wallId: eA.wall.id, poly, edges, snaps, faces: [faceLo, [...hiLine].reverse()] });
   }
   return out;
 }

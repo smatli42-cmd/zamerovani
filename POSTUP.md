@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-12 (noc, 4) – oblouky se při napojení také nedělí
+- **Co se změnilo:** Napojení na oblouk funguje stejně jako na rovnou stěnu: roh má `Node.host`, oblouk zůstane jedna stěna. `wallBodies` počítá virtuální konce oblouku (tečna, soustředné kružnice), líce se přeruší jen u napojené stěny; při změně vzepětí roh sleduje oblouk (průsečík napojené stěny s kružnicí). Migrace spojí i staré rozdělené oblouky (`mergeArcAt`). `attachOrSplitAtNode` přejmenováno na `attachAtNode` (už nic nedělí).
+- **Viditelně v aplikaci:** oblouk s napojenou příčkou je jeden (jedna kóta, jeden úchyt vzepětí, vybírá se celý); prohloubení oblouku příčku prodlouží a nechá napojenou. Staré výkresy: rozdělené oblouky se po načtení spojí.
+- **Rozhodnuto samostatně:** spojený starý oblouk má délku jako náčrt (změřené tětivy částí se nesčítají – součet tětiv není délka tětivy celku).
+- **Otevřené:** začátek nové stěny přesně ve vrcholu oblouku chytí úchyt vzepětí (známé) – napojit se dá kousek vedle vrcholu nebo kreslením směrem k oblouku; kóta polohy napojení (viz níže).
+- **Chyby od uživatele:** „Oblouky také nerozděluj, je to zbytečné.“ Hotovo, testy v `store/hosting.test.ts` (napojení na oblouk, změna vzepětí, migrace rozděleného oblouku); test z minulého kroku, který hlídal dělení oblouku, přepsán na pokyn uživatele.
+
 ### 2026-11-12 (noc, 3) – změna rozměru hýbe upravovaným objektem, ne zbytkem výkresu
 - **Co se změnilo:** Řešič délek („gumička“, `core/solver.ts`) posouval jako „volnou větev“ vše, k čemu se nedalo dojít od pevného rohu – tedy i samostatné místnosti. Teď posouvá jen to, co je napojené na posouvaný roh.
 - **Viditelně v aplikaci:** při zadání rozměru se mění jen upravovaná místnost / stěna; jiné samostatné místnosti a stěny zůstanou na místě.

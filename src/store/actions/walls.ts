@@ -7,7 +7,7 @@ import { setChainSagitta } from '../../core/arcChain';
 import { dist } from '../../core/geometry';
 import { setWallLength, type MoveTarget } from '../../core/solver';
 import { mergeStraightAt } from '../../core/topology';
-import { attachOrSplitAtNode } from '../../core/hosting';
+import { attachAtNode } from '../../core/hosting';
 import { hasBody, initialSide, orientLoopOutward } from '../../core/wallBody';
 import { store } from '../store';
 import { cleanup, getOrCreateNode, MERGE_TOL, nodeHasNoJoin } from './shared';
@@ -55,8 +55,8 @@ export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: I
       } else wall.side = initialSide(floor, wall);
     }
     // Konec na jiné stěně → rozdělit ji v místě napojení
-    attachOrSplitAtNode(floor, a);
-    attachOrSplitAtNode(floor, b);
+    attachAtNode(floor, a);
+    attachAtNode(floor, b);
     if (isNew && hasBody(wall)) {
       // rovné pokračování stěny se stejnou tloušťkou = jedna stěna (nelze pak překlopit každou část zvlášť)
       let id = mergeStraightAt(floor, wall.id, a);
@@ -81,7 +81,7 @@ export function addRectWalls(p: Pt, q: Pt, style: LineStyle): void {
     ].map(c => getOrCreateNode(floor, c, null));
     if (new Set(ids).size < 4) return;
     for (let i = 0; i < 4; i++) linkWall(floor, ids[i]!, ids[(i + 1) % 4]!, 0, style);
-    for (const id of ids) attachOrSplitAtNode(floor, id);
+    for (const id of ids) attachAtNode(floor, id);
   });
 }
 
@@ -215,7 +215,7 @@ export function setWallNoJoin(wallId: Id, end: 'a' | 'b', noJoin: boolean): void
       const other = Object.values(floor.nodes).find(n => n.id !== nodeId && dist(n, node) < MERGE_TOL && !nodeHasNoJoin(floor, n.id));
       if (other) setNode(other.id);
       // konec ležící uprostřed jiné stěny se na ni znovu napojí (T bez dělení)
-      else attachOrSplitAtNode(floor, nodeId);
+      else attachAtNode(floor, nodeId);
       cleanup(floor);
     }
   });
@@ -305,7 +305,7 @@ export function mergeNodeIfCoincident(nodeId: Id): void {
     const other = movedFlagged ? undefined : Object.values(floor.nodes).find(n => n.id !== nodeId && dist(n, moved) < MERGE_TOL && !nodeHasNoJoin(floor, n.id));
     if (!other) {
       // Roh přetažený na stěnu ji rozdělí
-      attachOrSplitAtNode(floor, nodeId);
+      attachAtNode(floor, nodeId);
       return;
     }
     for (const w of Object.values(floor.walls)) {

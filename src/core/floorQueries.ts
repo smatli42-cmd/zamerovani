@@ -177,7 +177,7 @@ export function nextWallInChain(floor: Floor, wallId: Id, fromNodeId: Id): { wal
   return { wall: w, nodeId: otherEnd(w, fromNodeId) };
 }
 
-/** Napojené rohy na stěně seřazené od konce a, s polohou t. */
+/** Napojené rohy na stěně seřazené od konce a, s polohou t (u oblouku podél oblouku). */
 export function hostedOn(floor: Floor, wallId: Id): { id: Id; t: number }[] {
   const w = floor.walls[wallId];
   const a = w && floor.nodes[w.a];
@@ -187,7 +187,7 @@ export function hostedOn(floor: Floor, wallId: Id): { id: Id; t: number }[] {
   const len2 = e.x * e.x + e.y * e.y || 1;
   return Object.values(floor.nodes)
     .filter(n => n.host === wallId && n.id !== w.a && n.id !== w.b)
-    .map(n => ({ id: n.id, t: ((n.x - a.x) * e.x + (n.y - a.y) * e.y) / len2 }))
+    .map(n => ({ id: n.id, t: w.sagitta ? nearestOnArc(n, a, b, w.sagitta).t : ((n.x - a.x) * e.x + (n.y - a.y) * e.y) / len2 }))
     .sort((p, q) => p.t - q.t);
 }
 
@@ -209,7 +209,7 @@ export function wallSegments(floor: Floor): { wall: Wall; from: Id; to: Id }[] {
       const e = { x: b.x - a.x, y: b.y - a.y };
       mids = list
         .filter(n => n.id !== w.a && n.id !== w.b)
-        .map(n => ({ id: n.id, t: (n.x - a.x) * e.x + (n.y - a.y) * e.y }))
+        .map(n => ({ id: n.id, t: w.sagitta ? nearestOnArc(n, a, b, w.sagitta).t : (n.x - a.x) * e.x + (n.y - a.y) * e.y }))
         .sort((p, q) => p.t - q.t)
         .map(h => h.id);
     }

@@ -4,7 +4,7 @@
  */
 import { createCircleWall, createWall, DEFAULT_WALL_THICKNESS, newId } from '../model/factory';
 import { hasBody, orientLoopOutward } from '../core/wallBody';
-import { mergeStraightAt } from '../core/topology';
+import { mergeArcAt, mergeStraightAt } from '../core/topology';
 import { SCHEMA_VERSION, type Floor, type LineStyle, type Project, type Pt } from '../model/types';
 
 export function migrateProject(raw: unknown): Project {
@@ -161,6 +161,10 @@ export function joinSplitWalls(floor: Floor): Floor {
   while (changed) {
     changed = false;
     for (const node of Object.values(f.nodes)) {
+      if (mergeArcAt(f, node.id)) {
+        changed = true;
+        break;
+      }
       const at = Object.values(f.walls).filter(w => w.a === node.id || w.b === node.id);
       for (const w of at) {
         const same = at.find(o => o.id !== w.id && JSON.stringify(o.label) === JSON.stringify(w.label));

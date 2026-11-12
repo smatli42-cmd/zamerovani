@@ -6,7 +6,8 @@
 import { describe, expect, it } from 'vitest';
 import { createFloor, createProject, createWall } from '../model/factory';
 import { componentNodes } from '../core/components';
-import { bodyNormal } from '../core/wallBody';
+import { bodyNormal, wallBodies } from '../core/wallBody';
+import { nearestOnArc, splitArcSagittas } from '../core/arc';
 import { joinSplitWalls, migrateProject } from '../persistence/migrate';
 import { addWall, applyWallLength, deleteSelection, duplicateSelection, moveGroup, groupOrigin, moveNode, mergeNodeIfCoincident, rotateSelection, setWallNoJoin, setWallSagitta } from './actions';
 import { store } from './store';
@@ -179,16 +180,38 @@ describe('T bez dělení – nálezy revieweru', () => {
     expect(g.nodes[g.walls[bottom]!.b]!.y).toBeCloseTo(3500, 3);
   });
 
-  it('průběžná stěna změněná na oblouk se v napojených rozích rozdělí a rohy leží na oblouku', () => {
+  // změněno 2026-11-12 na pokyn uživatele: oblouky se také nedělí
+  it('průběžná stěna změněná na oblouk zůstane jedna, napojené rohy leží na oblouku a příčky drží směr', () => {
     const { A, B } = tee();
-    addWall({ x: 3000, y: 0 }, null, { x: 3000, y: -2000 }, null, false, { thickness: 100, side: -1 });
-    setWallSagitta(A, 500);
+    const C = addWall({ x: 3000, y: 0 }, null, { x: 3000, y: -2000 }, null, false, { thickness: 100, side: -1 })!;
+    setWallSagitta(A, -500);
     const g = f();
-    expect(Object.values(g.nodes).some(n => n.host)).toBe(false);
-    const arcs = Object.values(g.walls).filter(w => w.sagitta);
-    expect(arcs).toHaveLength(3); // oblouk rozdělený ve dvou rozích
-    const mB = g.nodes[g.walls[B]!.a]!;
-    expect(arcs.some(w => w.a === mB.id || w.b === mB.id)).toBe(true);
+    expect(Object.keys(g.walls)).toHaveLength(3);
+    const w = g.walls[A]!;
+    for (const id of [B, C]) {
+      const n = g.nodes[g.walls[id]!.a]!;
+      expect(n.host).toBe(A);
+      expect(nearestOnArc(n, g.nodes[w.a]!, g.nodes[w.b]!, w.sagitta!).distance).toBeLessThan(0.01);
+    }
+    expect(g.nodes[g.walls[B]!.a]!.x).toBeCloseTo(1000, 6); // příčka B zůstala svislá
+  });
+
+  it('napojení na oblouk: oblouk se nerozdělí a při změně vzepětí roh sleduje oblouk', () => {
+    store.openProject(createProject({ name: 't' }));
+    const R = addWall({ x: 0, y: 0 }, null, { x: 4000, y: 0 }, null, false, { thickness: 300, side: 1, sagitta: -800 })!;
+    const apex = { x: 2000, y: -800 };
+    const P = addWall(apex, null, { x: 2000, y: -3000 }, null, false, { thickness: 100, side: -1 })!;
+    let g = f();
+    expect(Object.keys(g.walls)).toHaveLength(2);
+    expect(g.nodes[g.walls[P]!.a]!.host).toBe(R);
+    // příčka (tl. 100, x 1900–2000) končí na líci oblouku: r = 2900, hrana x = 1900 protne kružnici
+    // o 2900 − √(2900² − 100²) ≈ 1,72 mm níž než vrchol (y = −800); nezasahuje do těla oblouku
+    expect(Math.max(...wallBodies(g).get(P)!.edges.flat().map(p => p.y))).toBeCloseTo(-800 + (2900 - Math.sqrt(2900 ** 2 - 100 ** 2)), 3);
+    setWallSagitta(R, -1200);
+    g = f();
+    expect(g.nodes[g.walls[P]!.a]).toMatchObject({ host: R });
+    expect(g.nodes[g.walls[P]!.a]!.x).toBeCloseTo(2000, 3);
+    expect(g.nodes[g.walls[P]!.a]!.y).toBeCloseTo(-1200, 3);
   });
 
   it('otočení výběru (T celé) o 30°: napojení zůstane', () => {
@@ -225,5 +248,26 @@ describe('migrace 7 → 8 – nálezy revieweru', () => {
     const g = joinSplitWalls(fl);
     expect(Object.keys(g.walls)).toHaveLength(2);
     expect(g.nodes.m!.host).toBeDefined();
+  });
+});
+
+describe('migrace 7 → 8 – rozdělený oblouk', () => {
+  it('dvě části oblouku na téže kružnici + příčka ve vrcholu → jeden oblouk, roh napojený, vzepětí celku', () => {
+    const fl = createFloor('t');
+    for (const [id, x, y] of [['a', 0, 0], ['m', 2000, -800], ['b', 4000, 0], ['p', 2000, -3000]] as const) fl.nodes[id] = { id, x, y };
+    const [s1, s2] = splitArcSagittas({ x: 0, y: 0 }, { x: 4000, y: 0 }, -800, { x: 2000, y: -800 })!;
+    const A1 = createWall('a', 'm', s1, 300, 1);
+    const A2 = createWall('m', 'b', s2, 300, 1);
+    const P = createWall('m', 'p', 0, 100, -1);
+    for (const w of [A1, A2, P]) fl.walls[w.id] = w;
+    const g = joinSplitWalls(fl);
+    expect(Object.keys(g.walls)).toHaveLength(2);
+    const R = Object.values(g.walls).find(w => w.sagitta)!;
+    expect([g.nodes[R.a]!.x, g.nodes[R.b]!.x].sort((x, y) => x - y)).toEqual([0, 4000]);
+    // vrchol celého oblouku ve vzdálenosti 800 od tětivy na straně rohu m (y < 0)
+    const apexY = (g.nodes[R.a]!.y + g.nodes[R.b]!.y) / 2 + (g.nodes[R.a]!.x < g.nodes[R.b]!.x ? 1 : -1) * R.sagitta!;
+    expect(apexY).toBeCloseTo(-800, 3);
+    expect(g.nodes.m!.host).toBe(R.id);
+    expect(JSON.stringify(joinSplitWalls(g))).toBe(JSON.stringify(g));
   });
 });

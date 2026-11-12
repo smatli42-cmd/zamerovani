@@ -6,7 +6,7 @@
  */
 import { newId } from '../model/factory';
 import type { Floor, Id, Wall } from '../model/types';
-import { nearestOnArc, splitArcSagittas } from './arc';
+import { arcGeometry, nearestOnArc, splitArcSagittas } from './arc';
 import { dist } from './geometry';
 import { openingSpan, openingStartFromA, wallLength, wallNodes } from './floorQueries';
 import { straightContinuation } from './wallBody';
@@ -159,4 +159,57 @@ export function mergeStraightAt(floor: Floor, wallId: Id, nodeId: Id, throughT =
     op.offset = op.ref === 'a' ? s : Math.max(0, Math.round(newLen - s - openingSpan(op)));
   }
   return o.id;
+}
+
+/**
+ * Migrace (T bez dělení i u oblouků, 2026-11-12): dvě části oblouku na téže kružnici, které se potkávají
+ * v rohu `nodeId`, se spojí do jednoho oblouku (stejná tloušťka, osa, styl, popisek, strana těla; bez
+ * rozpojeného konce). Zbudou-li v rohu další stěny, roh se na spojený oblouk napojí. Vrací true, když spojil.
+ */
+export function mergeArcAt(floor: Floor, nodeId: Id): boolean {
+  const node = floor.nodes[nodeId];
+  if (!node || node.host) return false;
+  const at = Object.values(floor.walls).filter(w => (w.a === nodeId || w.b === nodeId) && w.sagitta && w.radius === undefined && w.a !== w.b);
+  for (const w1 of at) {
+    for (const w2 of at) {
+      if (w1 === w2) continue;
+      const p = floor.nodes[w1.a === nodeId ? w1.b : w1.a];
+      const q = floor.nodes[w2.a === nodeId ? w2.b : w2.a];
+      const g1 = wallNodes(floor, w1) && arcGeometry(floor.nodes[w1.a]!, floor.nodes[w1.b]!, w1.sagitta!);
+      const g2 = wallNodes(floor, w2) && arcGeometry(floor.nodes[w2.a]!, floor.nodes[w2.b]!, w2.sagitta!);
+      if (!p || !q || p.id === q.id || !g1 || !g2) continue;
+      if (dist(g1.center, g2.center) > 0.5 || Math.abs(g1.r - g2.r) > 0.5) continue;
+      if (w1.thickness !== w2.thickness || w1.axis !== w2.axis || (w1.style ?? 'solid') !== (w2.style ?? 'solid')) continue;
+      if (JSON.stringify(w1.label) !== JSON.stringify(w2.label)) continue;
+      const noJoinAt = (x: Wall) => (x.a === nodeId && x.noJoinA) || (x.b === nodeId && x.noJoinB);
+      if (noJoinAt(w1) || noJoinAt(w2)) continue;
+      // strana těla vůči směru řetězu p → roh → q
+      const s1 = w1.b === nodeId ? w1.side : -w1.side;
+      const s2 = w2.a === nodeId ? w2.side : -w2.side;
+      if (w1.thickness > 0 && s1 !== s2) continue;
+      // vzepětí oblouku p → q procházejícího rohem: vrchol na straně rohu od tětivy
+      const m = { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
+      const len = dist(p, q);
+      const n = { x: -(q.y - p.y) / len, y: (q.x - p.x) / len };
+      const side = Math.sign((node.x - m.x) * n.x + (node.y - m.y) * n.y) || 1;
+      const dc = (g1.center.x - m.x) * n.x + (g1.center.y - m.y) * n.y;
+      const sagitta = dc + side * g1.r;
+      const farNoJoin1 = w1.a === nodeId ? w1.noJoinB : w1.noJoinA;
+      const farNoJoin2 = w2.a === nodeId ? w2.noJoinB : w2.noJoinA;
+      w1.a = p.id;
+      w1.b = q.id;
+      w1.side = s1 as 1 | -1;
+      w1.sagitta = sagitta;
+      w1.measured = null;
+      if (farNoJoin1) w1.noJoinA = true;
+      else delete w1.noJoinA;
+      if (farNoJoin2) w1.noJoinB = true;
+      else delete w1.noJoinB;
+      delete floor.walls[w2.id];
+      for (const x of Object.values(floor.nodes)) if (x.host === w2.id) x.host = w1.id;
+      if (Object.values(floor.walls).some(x => x.a === nodeId || x.b === nodeId)) node.host = w1.id;
+      return true;
+    }
+  }
+  return false;
 }

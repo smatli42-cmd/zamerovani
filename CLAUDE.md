@@ -33,6 +33,7 @@ Uživatel střídá dva počítače (projekt je na OneDrive). **Na začátku sez
 ## Pravidla
 - Vývojový server běží z OneDrive: když hromadná úprava souborů (skript) neprojde do prohlížeče, Vite ji nezachytil – restartovat `npm run dev` (a ověřit, co server posílá).
 - Data projektu měnit jen přes `store.edit()` / `store/actions/`, nikdy přímo.
+- **Napojení stěny doprostřed jiné stěny (rovné i oblouku) ji nedělí:** roh má `Node.host` (`core/hosting.ts`), průběžná stěna zůstává jedna; graf skupin/místností přes `wallSegments`, `syncHosted` v `store.edit` drží roh na stěně.
 - Při změně struktury dat zvýšit `SCHEMA_VERSION` a doplnit migraci v `persistence/migrate.ts`.
 - Všechny tvary (obdélník, kruh, oblouk) jsou běžné stěny (kruh = jedna stěna `Wall.radius` s a === b = střed) (`Wall`); oblouk = `Wall.sagitta` (vzepětí se znaménkem), styl čáry = `Wall.style`. Žádné samostatné „tvary“ v modelu nejsou. Otvory (dveře, okna) jdou zatím jen na rovné stěny. Příčka = stěna s malou tloušťkou (nástroje Příčka a Dvojčára byly zrušeny).
 - Texty v aplikaci česky. **Tloušťka stěn se kreslí vždy**: stěna = čára líce (`Wall.a/b`) + tělo `Wall.thickness` na straně `Wall.side` (geometrie těla a napojení v `core/wallBody.ts`). `thickness = 0` = čára bez tloušťky (tvary: obdélník, kruh, oblouk). Oblouková stěna = stěna s tloušťkou a `sagitta` (kreslí se z menu Stěny: Rovná / Oblouková + výška oblouku); nástroj Oblouk mezi tvary kreslí jen čáru.
