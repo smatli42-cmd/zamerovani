@@ -149,10 +149,12 @@ describe('migrace 7 → 8: rozdělená stěna se spojí zpět', () => {
     expect(Object.keys(joinSplitWalls(fl).walls)).toHaveLength(3);
   });
 
-  it('migrateProject ze schématu 7 spojí, ze schématu 8 nechá být', () => {
+  // verze 9 (2026-11-12): spojování se opakuje i pro verzi 8, která ještě dělila oblouky
+  it('migrateProject ze schématu 7 i 8 spojí, ze schématu 9 nechá být', () => {
     const { fl } = oldFloor();
     expect(Object.keys(migrateProject({ schema: 7, id: 'p', floors: [fl] }).floors[0]!.walls)).toHaveLength(2);
-    expect(Object.keys(migrateProject({ schema: 8, id: 'p', floors: [fl] }).floors[0]!.walls)).toHaveLength(3);
+    expect(Object.keys(migrateProject({ schema: 8, id: 'p', floors: [fl] }).floors[0]!.walls)).toHaveLength(2);
+    expect(Object.keys(migrateProject({ schema: 9, id: 'p', floors: [fl] }).floors[0]!.walls)).toHaveLength(3);
   });
 });
 
@@ -269,5 +271,53 @@ describe('migrace 7 → 8 – rozdělený oblouk', () => {
     expect(apexY).toBeCloseTo(-800, 3);
     expect(g.nodes.m!.host).toBe(R.id);
     expect(JSON.stringify(joinSplitWalls(g))).toBe(JSON.stringify(g));
+  });
+});
+
+describe('oblouky – nálezy revieweru', () => {
+  it('délka příčky napojené na hluboký oblouk: oblouk se posune s ní, příčka zůstane napojená', () => {
+    store.openProject(createProject({ name: 't' }));
+    // místnost: oblouk dole (vrchol y = 800 – vyklenutí ven), nahoře rovná stěna, příčka z vrcholu nahoru
+    const R = addWall({ x: 0, y: 0 }, null, { x: 4000, y: 0 }, null, false, { thickness: 300, side: -1, sagitta: 800 })!;
+    addWall({ x: 0, y: -3000 }, null, { x: 4000, y: -3000 }, null, false, { thickness: 200 });
+    addWall({ x: 0, y: 0 }, null, { x: 0, y: -3000 }, null, false, { thickness: 200 });
+    addWall({ x: 4000, y: 0 }, null, { x: 4000, y: -3000 }, null, false, { thickness: 200 });
+    const P = addWall({ x: 2000, y: -3000 }, null, { x: 2000, y: 800 }, null, false, { thickness: 100 })!;
+    const pb = f().walls[P]!.b;
+    expect(f().nodes[pb]!.host).toBe(R);
+    expect(applyWallLength(P, 4300, { nodeId: pb })).toBe(true);
+    const g = f();
+    expect(g.nodes[pb]).toMatchObject({ host: R });
+    expect(g.nodes[pb]!.y).toBeCloseTo(1300, 3);
+    const w = g.walls[R]!;
+    expect(nearestOnArc(g.nodes[pb]!, g.nodes[w.a]!, g.nodes[w.b]!, w.sagitta!).distance).toBeLessThan(0.5);
+  });
+
+  it('migrace: dva překrývající se oblouky na téže kružnici se nespojí', () => {
+    // kružnice oblouku 0→4000 se vzepětím −800: r = 2900, střed (2000, 2100); roh m = vrchol (2000, −800)
+    const c = { x: 2000, y: 2100 };
+    const r = 2900;
+    const at = (ang: number) => ({ x: c.x + r * Math.cos(ang), y: c.y + r * Math.sin(ang) });
+    const angM = -Math.PI / 2;
+    const angA = Math.atan2(-2100, -2000);
+    const pA = at(angA);
+    const pC = at(angA + 0.2); // mezi a a m – druhá část vede z m stejným směrem jako první
+    const fl = createFloor('t');
+    fl.nodes.a = { id: 'a', ...pA };
+    fl.nodes.m = { id: 'm', ...at(angM) };
+    fl.nodes.c = { id: 'c', ...pC };
+    const sag = (p: { x: number; y: number }, q: { x: number; y: number }, mid: number) => {
+      // vzepětí oblouku p→q přes bod kružnice v úhlu mid
+      const m = { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
+      const len = Math.hypot(q.x - p.x, q.y - p.y);
+      const n = { x: -(q.y - p.y) / len, y: (q.x - p.x) / len };
+      const apex = at(mid);
+      return (apex.x - m.x) * n.x + (apex.y - m.y) * n.y;
+    };
+    const A1 = createWall('a', 'm', sag(pA, at(angM), (angA + angM) / 2), 300, 1);
+    const A2 = createWall('m', 'c', sag(at(angM), pC, (angM + angA + 0.2) / 2), 300, 1); // strana sedí – rozhoduje jen překryv
+    fl.walls[A1.id] = A1;
+    fl.walls[A2.id] = A2;
+    expect(Object.keys(joinSplitWalls(fl).walls)).toHaveLength(2);
   });
 });

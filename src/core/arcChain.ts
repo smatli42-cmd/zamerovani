@@ -1,6 +1,6 @@
 /**
- * Řetěz oblouků na téže kružnici. Když se oblouk rozdělí (napojení příčky, přichycení), zůstanou
- * jeho části napojené na stejné kružnici. Pro uživatele je to pořád jeden oblouk, proto se vzepětí
+ * Řetěz oblouků na téže kružnici (např. dvě navazující části nakreslené zvlášť; napojení příčky oblouk
+ * už nedělí – core/hosting.ts). Části zůstávají napojené na stejné kružnici. Pro uživatele je to pořád jeden oblouk, proto se vzepětí
  * mění pro celý řetěz najednou (části i uzly mezi nimi se přepočtou).
  */
 import type { Floor, Id, Pt, Wall } from '../model/types';

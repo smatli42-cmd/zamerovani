@@ -20,11 +20,12 @@ export function migrateProject(raw: unknown): Project {
   // 5 → 6: stěny mají tloušťku a stranu těla (Wall.thickness, Wall.side), tloušťka zmizela z popisku
   // 6 → 7: zrušena spárovaná příčka a dvojčára (Wall.part) – jejich čáry zůstanou obyčejnými čarami
   // 7 → 8: T bez dělení – průběžné stěny rozdělené napojením se spojí zpět, roh se na ně napojí (Node.host)
+  // 8 → 9: totéž i pro oblouky (verze 8 je ještě dělila) – joinSplitWalls je opakovatelná beze změny výsledku
   const old = p.schema ?? 1;
   const floors = p.floors.map(f => {
     const j = joinSemicircles(convertShapesToWalls(f));
     const r = removePairing(addWallThickness({ ...j, texts: j.texts ?? {} }));
-    return old < 8 ? joinSplitWalls(r) : r;
+    return old < 9 ? joinSplitWalls(r) : r;
   });
   return { ...p, floors, schema: SCHEMA_VERSION };
 }
@@ -151,7 +152,7 @@ function removePairing(floor: Floor): Floor {
 }
 
 /**
- * 7 → 8: stěny rozdělené napojením jiné stěny (dřívější T, i po odpojení) se spojí zpět do jedné:
+ * 7 → 8 a 8 → 9: stěny (i oblouky) rozdělené napojením jiné stěny (dřívější T, i po odpojení) se spojí zpět do jedné:
  * dvě rovně navazující části se stejnou tloušťkou, stranou, osou, stylem a popiskem; roh, kde se napojují
  * další stěny, zůstane napojený na spojenou stěnu (Node.host). Změřené délky se sečtou.
  */

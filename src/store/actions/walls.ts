@@ -33,7 +33,7 @@ function linkWall(floor: Floor, a: Id, b: Id, sagitta = 0, style?: LineStyle, th
 }
 
 /**
- * Nová stěna; `sagitta` ≠ 0 = oblouková stěna. Konce na jiných stěnách je rozdělí.
+ * Nová stěna; `sagitta` ≠ 0 = oblouková stěna. Konec na jiné stěně se na ni napojí (stěna se nedělí, core/hosting.ts).
  * `thickness` > 0 = stěna s tělem (strana těla navazuje na tah, uzavřená místnost se natočí ven); 0 = čára (tvar).
  */
 export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, select = true, opts: { sagitta?: number; style?: LineStyle; thickness?: number; side?: 1 | -1; axis?: 'center' } = {}): Id | null {
@@ -54,7 +54,7 @@ export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: I
         wall.sideLocked = true;
       } else wall.side = initialSide(floor, wall);
     }
-    // Konec na jiné stěně → rozdělit ji v místě napojení
+    // Konec na jiné stěně → napojí se na ni (stěna zůstane v celku)
     attachAtNode(floor, a);
     attachAtNode(floor, b);
     if (isNew && hasBody(wall)) {
@@ -70,7 +70,7 @@ export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: I
   return createdId;
 }
 
-/** Obdélník ze čtyř stěn (např. sloup, komín); rohy na jiných stěnách je rozdělí. */
+/** Obdélník ze čtyř stěn (např. sloup, komín); rohy na jiných stěnách se na ně napojí. */
 export function addRectWalls(p: Pt, q: Pt, style: LineStyle): void {
   store.edit(floor => {
     const ids = [
@@ -304,7 +304,7 @@ export function mergeNodeIfCoincident(nodeId: Id): void {
     const movedFlagged = nodeHasNoJoin(floor, nodeId);
     const other = movedFlagged ? undefined : Object.values(floor.nodes).find(n => n.id !== nodeId && dist(n, moved) < MERGE_TOL && !nodeHasNoJoin(floor, n.id));
     if (!other) {
-      // Roh přetažený na stěnu ji rozdělí
+      // Roh přetažený na stěnu se na ni napojí (stěna se nedělí)
       attachAtNode(floor, nodeId);
       return;
     }

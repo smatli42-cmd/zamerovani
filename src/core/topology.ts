@@ -1,8 +1,6 @@
 /**
- * Změny propojení stěn: rozdělení stěny v místě, kam se napojí jiná stěna.
- *
- * Napojená stěna (např. příčka) rozdělí původní stěnu na dvě samostatné stěny.
- * Každá část má vlastní kótu a dá se samostatně vybrat a smazat.
+ * Změny propojení stěn: rozdělení stěny v rohu (dnes jen nástroj / testy – napojení stěnu nedělí, viz
+ * core/hosting.ts), sloučení rovného pokračování a migrace starých rozdělených stěn a oblouků.
  */
 import { newId } from '../model/factory';
 import type { Floor, Id, Wall } from '../model/types';
@@ -194,6 +192,9 @@ export function mergeArcAt(floor: Floor, nodeId: Id): boolean {
       const side = Math.sign((node.x - m.x) * n.x + (node.y - m.y) * n.y) || 1;
       const dc = (g1.center.x - m.x) * n.x + (g1.center.y - m.y) * n.y;
       const sagitta = dc + side * g1.r;
+      // části musí z rohu pokračovat na opačné strany (výseče se nepřekrývají): součet výsečí = výseč celku
+      const whole = arcGeometry(p, q, sagitta);
+      if (!whole || Math.abs(Math.abs(g1.sweep) + Math.abs(g2.sweep) - Math.abs(whole.sweep)) > 1e-3) continue;
       const farNoJoin1 = w1.a === nodeId ? w1.noJoinB : w1.noJoinA;
       const farNoJoin2 = w2.a === nodeId ? w2.noJoinB : w2.noJoinA;
       w1.a = p.id;

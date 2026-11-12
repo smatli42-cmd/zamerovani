@@ -9,7 +9,8 @@
  * Pracuje přímo nad (měnitelnou) kopií podlaží – volá se uvnitř store.edit().
  */
 import type { Floor, Id, Node } from '../model/types';
-import { dist, dot, unit } from './geometry';
+import { dist, dot, normal, unit } from './geometry';
+import { arcGeometry } from './arc';
 import { otherEnd, wallsAtNode, wallSegments } from './floorQueries';
 
 /** Který roh se posune: konkrétní roh stěny, nebo oba (od středu). */
@@ -114,11 +115,17 @@ export function moveNodeWithRubberBand(floor: Floor, moving: Node, fixed: Node, 
     // roh napojený doprostřed průběžné stěny (T bez dělení): kolmý posun posune celou průběžnou stěnu
     // (dřív ji tvořily dvě kolmé části v tomto rohu)
     const host = moving.host ? floor.walls[moving.host] : undefined;
-    if (host) {
-      for (const endId of [host.a, host.b]) {
-        const end = floor.nodes[endId];
-        if (!end || end.id === fixed.id || toMove.has(end.id) || dist(moving, end) < 1) continue;
-        if (Math.abs(dot(dir, unit(moving, end))) < PERPENDICULAR_DOT && !hasMeasuredWallAlong(floor, end, host.id, dir)) toMove.add(end.id);
+    const ha = host && floor.nodes[host.a];
+    const hb = host && floor.nodes[host.b];
+    if (host && ha && hb) {
+      // směr průběžné stěny v rohu: u rovné a→b, u oblouku tečna (ne spojnice ke koncům)
+      const g = arcGeometry(ha, hb, host.sagitta ?? 0);
+      const tan = g ? normal(unit(g.center, moving)) : unit(ha, hb);
+      if (Math.abs(dot(dir, tan)) < PERPENDICULAR_DOT) {
+        for (const end of [ha, hb]) {
+          if (end.id === fixed.id || toMove.has(end.id) || dist(moving, end) < 1) continue;
+          if (!hasMeasuredWallAlong(floor, end, host.id, dir)) toMove.add(end.id);
+        }
       }
     }
   }
