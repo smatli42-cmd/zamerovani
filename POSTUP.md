@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-12 (noc, 3) – změna rozměru hýbe upravovaným objektem, ne zbytkem výkresu
+- **Co se změnilo:** Řešič délek („gumička“, `core/solver.ts`) posouval jako „volnou větev“ vše, k čemu se nedalo dojít od pevného rohu – tedy i samostatné místnosti. Teď posouvá jen to, co je napojené na posouvaný roh.
+- **Viditelně v aplikaci:** při zadání rozměru se mění jen upravovaná místnost / stěna; jiné samostatné místnosti a stěny zůstanou na místě.
+- **Rozhodnuto samostatně:** nic.
+- **Otevřené:** —
+- **Chyby od uživatele:** „Když změním rozměr, upravovaný objekt zůstane na místě a pohybuje se vše ostatní (druhá samostatná místnost se posune).“ Opraveno, test `core/solver.groups.test.ts`.
+
 ### 2026-11-12 (noc, 2) – T-napojení bez dělení průběžné stěny
 - **Co se změnilo:** Na požadavek uživatele se stěna při kolmém napojení jiné stěny už **nedělí**. Napojený roh nese `Node.host` (ID průběžné stěny, `core/hosting.ts`); tělo v místě napojení počítá `wallBodies` virtuálními konci, graf skupin / místností / řešiče `wallSegments`. Po každé úpravě `syncHosted` (v `store.edit`) drží napojený roh na průběžné stěně. SCHEMA_VERSION 8, migrace `joinSplitWalls` spojí staré rozdělené stěny zpět.
 - **Viditelně v aplikaci:** průběžná stěna s napojenou příčkou je jedna (jedna kóta, jde vybrat, posunout a smazat celá); při posunu ji napojená stěna sleduje (prodlouží / zkrátí se), při posunu podél sebe napojení zůstane na místě. Staré výkresy: rozdělené stěny se po načtení spojí (změřené délky se sečtou).

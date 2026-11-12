@@ -91,8 +91,10 @@ export function moveNodeWithRubberBand(floor: Floor, moving: Node, fixed: Node, 
   const toMove = new Set<Id>([moving.id]);
 
   // 1) Volné větve: uzly, ke kterým se od pevného rohu nedá dojít jinak než přes posouvaný roh.
+  // Jen to, co visí na posouvaném rohu – samostatné skupiny stěn (jiná místnost) se nehýbou
+  // (chyba nahlášená uživatelem 2026-11-12: dřív se posunulo vše, k čemu se nedalo dojít od pevného rohu).
   const reachable = reachableWithout(floor, fixed.id, moving.id);
-  for (const id of Object.keys(floor.nodes)) {
+  for (const id of reachableWithout(floor, moving.id, fixed.id)) {
     if (!reachable.has(id)) toMove.add(id);
   }
 
