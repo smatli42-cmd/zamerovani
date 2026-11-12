@@ -81,7 +81,8 @@ function armHold(p: PointerInput): void {
   if (holdTimer) clearTimeout(holdTimer);
   holdTimer = setTimeout(() => {
     holdTimer = null;
-    if (!drag || !dragging || !lock || !lastInput) return;
+    // jen pro tažení rohu / stěny, které časovač spustilo (jiné gesto ho nesmí převzít)
+    if (!drag || (drag.kind !== 'node' && drag.kind !== 'wall') || !dragging || !lock || !lastInput) return;
     holdFreeAt = lastInput.world;
     lock = null;
     selectTool.drag?.(lastInput);
@@ -139,6 +140,7 @@ export const selectTool: Tool = {
   down(p: PointerInput) {
     const floor = store.floor();
     if (!floor) return;
+    resetGuides(); // žádný časovač ani zámek z minulého gesta
     if (grabArcHandle(p) || grabLeaderHandle(p)) return;
     const cam = store.get().camera;
     const before = store.get().selection;
@@ -168,7 +170,9 @@ export const selectTool: Tool = {
     // pomocné čáry se počítají při uchopení (původní směr = poloha před tažením)
     if (hit.kind === 'node') drag = { kind: 'node', id: hit.id, lines: nodeDragLines(floor, hit.id) };
     // D12: tažení už vybrané stěny ji posune celou (sousední stěny se protáhnou)
-    if (hit.kind === 'wall' && before?.kind === 'wall' && before.id === hit.id && floor.walls[hit.id]?.radius === undefined) {
+    // kruh a část rozděleného oblouku (řetěz se tvaruje jako celek) se takto neposouvají
+    const chain = hit.kind === 'wall' ? arcChain(floor, hit.id) : null;
+    if (hit.kind === 'wall' && before?.kind === 'wall' && before.id === hit.id && floor.walls[hit.id]?.radius === undefined && !(chain && chain.pieces.length > 1)) {
       drag = { kind: 'wall', id: hit.id, origin: groupOrigin(floor, [hit]), grab: p.world, lines: wallMoveLines(floor, hit.id, p.world) };
     }
     if (hit.kind === 'room') {
@@ -231,7 +235,8 @@ export const selectTool: Tool = {
         }
         const w = findWallNear(floor, p.world, tol * 0.7);
         const own = w && (w.wall.a === drag.id || w.wall.b === drag.id);
-        target = w && !own ? w.point : { x: roundTo(p.world.x, 10), y: roundTo(p.world.y, 10) };
+        // po uvolnění prodlevou platí přesná poloha pod perem (bod 8 návrhu), jinak krok 10 mm
+        target = holdFreeAt ? p.world : w && !own ? w.point : { x: roundTo(p.world.x, 10), y: roundTo(p.world.y, 10) };
       }
       moveNode(drag.id, target);
     } else if (drag.kind === 'wall') {
@@ -338,6 +343,7 @@ export const selectTool: Tool = {
   },
 
   cancel() {
+    resetGuides();
     band = null;
     if (dragging) store.endGesture();
     drag = null;
