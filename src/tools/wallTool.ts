@@ -54,6 +54,16 @@ function guidedEnd(floor: Floor, d: Drawing, p: PointerInput): SnapResult {
   if (!r.line) return base;
   let pt = r.point;
   if (!(r.line.stops ?? []).some(s => dist(s, pt) < 1e-6)) {
+    // pero u stěny: konec na průsečík pomocné čáry se stěnou (do tolerance rohu), jinak přednost napojení na stěnu
+    const tol = HIT_PX.snapNode / camera.zoom;
+    const near = (r.line.stops ?? []).filter(s => dist(s, pt) <= tol).sort((p, q) => dist(p, pt) - dist(q, pt))[0];
+    if (near) pt = near;
+    else if (base.wallHit) {
+      d.lock = null;
+      return base;
+    }
+  }
+  if (!(r.line.stops ?? []).some(s => dist(s, pt) < 1e-6)) {
     const len = Math.round(dot(sub(pt, r.line.origin), r.line.dir) / 10) * 10;
     pt = add(r.line.origin, scale(r.line.dir, len));
   }
@@ -73,6 +83,7 @@ export function snapOptions(startNodeId?: string) {
   return {
     // kreslí se libovolným směrem; vodorovně / svisle pomáhají pomocné čáry (dřív přepínač Pravé úhly)
     ortho: false,
+    axisSnap: false,
     snap: settings.snap,
     nodeTol: HIT_PX.snapNode / camera.zoom,
     alignTol: HIT_PX.snapAlign / camera.zoom,

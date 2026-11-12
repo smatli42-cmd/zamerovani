@@ -10,7 +10,7 @@
 import type { Floor, Id, Pt, Wall } from '../model/types';
 import { arcGeometry } from './arc';
 import { add, centroid, dist, dot, normal, scale, sub, unit } from './geometry';
-import { wallCrossings, wallSegments } from './floorQueries';
+import { junctionPoints, wallSegments } from './floorQueries';
 
 /** Má stěna tělo? (rovné i obloukové stěny s tloušťkou; kruhy a čáry bez tloušťky ne) */
 export const hasBody = (w: Wall): boolean => w.thickness > 0 && w.radius === undefined && w.a !== w.b;
@@ -177,7 +177,19 @@ function intersectBoundaries(b1: Boundary, b2: Boundary, near: Pt): Pt | null {
 }
 
 /** Obrysy těl všech stěn s tloušťkou. */
+/** Mezipaměť pro hotové (zmrazené) výkresy – tělo se za snímek čte mnohokrát (kreslení, zásah perem, kóty). */
+const bodiesCache = new WeakMap<Floor, Map<Id, WallBody>>();
+
 export function wallBodies(floor: Floor): Map<Id, WallBody> {
+  const frozen = Object.isFrozen(floor);
+  const cached = frozen ? bodiesCache.get(floor) : undefined;
+  if (cached) return cached;
+  const result = computeWallBodies(floor);
+  if (frozen) bodiesCache.set(floor, result);
+  return result;
+}
+
+function computeWallBodies(floor: Floor): Map<Id, WallBody> {
   const byNode = new Map<Id, End[]>();
   const items: { eA: End; eB: End; path: { pts: Pt[]; tans: Pt[] } }[] = [];
   for (const w of Object.values(floor.walls)) {
@@ -208,9 +220,9 @@ export function wallBodies(floor: Floor): Map<Id, WallBody> {
   // se spočítá stejně jako u stěny rozdělené v tom místě, ale stěna zůstane jedna (líce se jen přeruší)
   const virtualByHost = new Map<Id, { t: number; toA: End; toB: End }[]>();
   // body uprostřed stěny: napojené rohy (T bez dělení) a křížení dvou stěn (C1.5, počítá se z geometrie)
+  // body ve stejném místě jsou sloučené (tři stěny v bodě, T na kříži = jeden spoj)
   const junctions: { key: Id; node: Pt; wallId: Id }[] = [];
-  for (const n of Object.values(floor.nodes)) if (n.host) junctions.push({ key: n.id, node: n, wallId: n.host });
-  for (const c of wallCrossings(floor)) for (const wid of c.walls) junctions.push({ key: c.id, node: c.pt, wallId: wid });
+  for (const j of junctionPoints(floor)) for (const wid of j.walls) junctions.push({ key: j.key, node: j.pt, wallId: wid });
   for (const { key, node, wallId } of junctions) {
     const h = floor.walls[wallId];
     if (!h || !hasBody(h) || h.a === key || h.b === key) continue;
@@ -252,7 +264,8 @@ export function wallBodies(floor: Floor): Map<Id, WallBody> {
       continue;
     }
     ends.sort((p, q) => p.ang - q.ang);
-    const limit = 4 * Math.max(...ends.map(e => e.wall.thickness));
+    // u spoje uprostřed stěn (křížení, T bez dělení) se líce protnou vždy – i ostré křížení bez čar uvnitř
+    const limit = ends.some(e => e.virtual) ? Infinity : 4 * Math.max(...ends.map(e => e.wall.thickness));
     for (let i = 0; i < ends.length; i++) {
       const e = ends[i]!;
       const next = ends[(i + 1) % ends.length]!;
@@ -335,7 +348,80 @@ export function wallBodies(floor: Floor): Map<Id, WallBody> {
     // líc „lo“ (od konce A) leží na straně, kam míří normal(a→b) × znaménko lo; lo ≤ hi, takže lo = záporná strana
     out.set(eA.wall.id, { wallId: eA.wall.id, poly, edges, snaps, faces: [faceLo, [...hiLine].reverse()] });
   }
+  // Spoje uprostřed stěn (křížení, T bez dělení, 3+ stěny v bodě, ostré úhly, oblouk protnutý dvakrát):
+  // napojení podle sousedních konců nemusí stačit – kreslené hrany zúčastněných stěn se ořežou o těla
+  // ostatních stěn, zůstane jen to, co má aspoň jednu stranu venku (žádná čára uvnitř, C1.5).
+  const involved = new Set<Id>();
+  for (const j of junctions) {
+    involved.add(j.wallId);
+    for (const e of byNode.get(j.key) ?? []) involved.add(e.wall.id);
+  }
+  if (involved.size) clipInsideEdges(out, involved);
   return out;
+}
+
+type Box = { minX: number; minY: number; maxX: number; maxY: number };
+const boxOf = (pts: readonly Pt[]): Box => ({
+  minX: Math.min(...pts.map(p => p.x)),
+  minY: Math.min(...pts.map(p => p.y)),
+  maxX: Math.max(...pts.map(p => p.x)),
+  maxY: Math.max(...pts.map(p => p.y))
+});
+const boxesOverlap = (a: Box, b: Box, pad: number) => a.minX - pad <= b.maxX && b.minX - pad <= a.maxX && a.minY - pad <= b.maxY && b.minY - pad <= a.maxY;
+
+/** Ořízne hrany stěn `ids` o těla ostatních stěn (kusy, které mají obě strany uvnitř těl, se nekreslí). */
+function clipInsideEdges(bodies: Map<Id, WallBody>, ids: Set<Id>): void {
+  const polys = [...bodies.values()].map(b => ({ id: b.wallId, poly: b.poly, box: boxOf(b.poly) }));
+  const insideAny = (p: Pt, cands: typeof polys) => cands.some(c => p.x >= c.box.minX && p.x <= c.box.maxX && p.y >= c.box.minY && p.y <= c.box.maxY && pointInPolygon(p, c.poly));
+  for (const id of ids) {
+    const body = bodies.get(id);
+    if (!body) continue;
+    const kept: [Pt, Pt][] = [];
+    for (const [p, q] of body.edges) {
+      const eb = boxOf([p, q]);
+      const near = polys.filter(c => boxesOverlap(eb, c.box, 1));
+      if (near.length < 2) {
+        kept.push([p, q]); // jen vlastní tělo – nic k ořezu
+        continue;
+      }
+      const d = sub(q, p);
+      const len = Math.hypot(d.x, d.y);
+      if (len < 1e-6) continue;
+      // body, kde hrana protíná obrysy okolních těl
+      const ts = [0, 1];
+      for (const c of near) {
+        if (c.id === id) continue;
+        for (let i = 0; i < c.poly.length; i++) {
+          const a = c.poly[i]!;
+          const b = c.poly[(i + 1) % c.poly.length]!;
+          const e = sub(b, a);
+          const den = d.x * e.y - d.y * e.x;
+          if (Math.abs(den) < 1e-12) continue;
+          const w = sub(a, p);
+          const t = (w.x * e.y - w.y * e.x) / den;
+          const s = (w.x * d.y - w.y * d.x) / den;
+          if (t > 1e-9 && t < 1 - 1e-9 && s >= -1e-9 && s <= 1 + 1e-9) ts.push(t);
+        }
+      }
+      ts.sort((x, y) => x - y);
+      const n = { x: -d.y / len, y: d.x / len };
+      for (let i = 0; i + 1 < ts.length; i++) {
+        const t0 = ts[i]!;
+        const t1 = ts[i + 1]!;
+        if ((t1 - t0) * len < 0.01) continue;
+        const m = add(p, scale(d, (t0 + t1) / 2));
+        const both = insideAny(add(m, scale(n, 0.5)), near) && insideAny(add(m, scale(n, -0.5)), near);
+        if (both) continue;
+        const a = add(p, scale(d, t0));
+        const b = add(p, scale(d, t1));
+        // navazující kusy spojit do jedné úsečky
+        const last = kept[kept.length - 1];
+        if (last && t0 > 0 && dist(last[1], a) < 1e-6) last[1] = b;
+        else kept.push([a, b]);
+      }
+    }
+    body.edges = kept;
+  }
 }
 
 /** Poloha bodu podél oblouku a→b (0 = a, 1 = b) podle úhlu; null u rovné stěny. */
@@ -421,48 +507,69 @@ export function initialSideAt(floor: Floor, a: Pt, b: Pt, aId: Id | null, bId: I
 export function orientLoopOutward(floor: Floor, wallId: Id): boolean {
   const start = floor.walls[wallId];
   if (!start || !hasBody(start)) return false;
-  const adj = new Map<Id, { wall: Wall; to: Id }[]>();
+  const adj = new Map<Id, { wall: Wall; to: Id; fromPt: Pt; toPt: Pt }[]>();
   // průběžné stěny s napojenými rohy (T bez dělení) a kříženími se v grafu rozdělí virtuálně
   const pts = new Map<Id, Pt>();
+  const own: Id[] = [];
   for (const { wall: w, from, to, fromPt, toPt } of wallSegments(floor)) {
     pts.set(from, fromPt);
     pts.set(to, toPt);
-    if (w.id === wallId || !hasBody(w)) continue;
-    (adj.get(from) ?? adj.set(from, []).get(from)!).push({ wall: w, to });
-    (adj.get(to) ?? adj.set(to, []).get(to)!).push({ wall: w, to: from });
-  }
-  // nejkratší cesta b → a (bez nové stěny)
-  const prev = new Map<Id, { from: Id; wall: Wall }>();
-  const queue = [start.b];
-  const seen = new Set([start.b]);
-  while (queue.length && !seen.has(start.a)) {
-    const id = queue.shift()!;
-    for (const e of adj.get(id) ?? []) {
-      if (seen.has(e.to)) continue;
-      seen.add(e.to);
-      prev.set(e.to, { from: id, wall: e.wall });
-      queue.push(e.to);
+    if (w.id === wallId) {
+      // body na nové stěně (rohy i křížení) – místnost se hledá mezi kterýmikoli dvěma z nich
+      if (!own.includes(from)) own.push(from);
+      if (!own.includes(to)) own.push(to);
+      continue;
     }
+    if (!hasBody(w)) continue;
+    (adj.get(from) ?? adj.set(from, []).get(from)!).push({ wall: w, to, fromPt, toPt });
+    (adj.get(to) ?? adj.set(to, []).get(to)!).push({ wall: w, to: from, fromPt: toPt, toPt: fromPt });
   }
-  if (!seen.has(start.a)) return false;
-  const loopWalls: Wall[] = [start];
-  const polyIds: Id[] = [start.a];
-  for (let id = start.a; id !== start.b; ) {
-    const p = prev.get(id)!;
-    loopWalls.push(p.wall);
+  // nejkratší cesta mezi dvěma body nové stěny (bez ní); přesahující konce nové stěny do místnosti nepatří
+  let found: { src: Id; dst: Id; prev: Map<Id, { from: Id; wall: Wall; mid: Pt }> } | null = null;
+  for (const src of own) {
+    const prev = new Map<Id, { from: Id; wall: Wall; mid: Pt }>();
+    const queue = [src];
+    const seen = new Set([src]);
+    let dst: Id | null = null;
+    while (queue.length && !dst) {
+      const id = queue.shift()!;
+      for (const e of adj.get(id) ?? []) {
+        if (seen.has(e.to)) continue;
+        seen.add(e.to);
+        prev.set(e.to, { from: id, wall: e.wall, mid: { x: (e.fromPt.x + e.toPt.x) / 2, y: (e.fromPt.y + e.toPt.y) / 2 } });
+        if (own.includes(e.to)) {
+          dst = e.to;
+          break;
+        }
+        queue.push(e.to);
+      }
+    }
+    if (dst && (!found || prev.size < found.prev.size)) found = { src, dst, prev };
+  }
+  if (!found) return false;
+  // stěna smyčky → bod uprostřed jejího úseku ve smyčce (u přesahující stěny ne střed celé stěny)
+  const sp = pts.get(found.src)!;
+  const dp = pts.get(found.dst)!;
+  const loop = new Map<Wall, Pt>([[start, { x: (sp.x + dp.x) / 2, y: (sp.y + dp.y) / 2 }]]);
+  const polyIds: Id[] = [found.dst];
+  for (let id = found.dst; id !== found.src; ) {
+    const p = found.prev.get(id)!;
+    if (!loop.has(p.wall)) loop.set(p.wall, p.mid);
     polyIds.push(p.from);
     id = p.from;
   }
   const poly = polyIds.map(id => floor.nodes[id] ?? pts.get(id)).filter((p): p is Pt => !!p);
   if (poly.length < 3) return false;
-  for (const w of new Set(loopWalls)) {
+  for (const [w, segMid] of loop) {
     // ručně zvolená strana se nemění; u osy uprostřed se strana jen pamatuje pro návrat na líc (B4) – také ne
     if (w.sideLocked || w.axis === 'center') continue;
     const a = floor.nodes[w.a];
     const b = floor.nodes[w.b];
     const bn = bodyNormal(floor, w);
     if (!a || !b || !bn) continue;
-    const probe = add({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, bn);
+    // oblouk: střed tětivy celé stěny (jako dřív); rovná stěna: střed úseku ve smyčce
+    const base = w.sagitta ? { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } : segMid;
+    const probe = add(base, bn);
     if (pointInPolygon(probe, poly)) {
       w.side = w.side === 1 ? -1 : 1;
       if (w.sagitta) w.sagitta = -w.sagitta;

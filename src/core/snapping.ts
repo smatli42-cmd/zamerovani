@@ -13,6 +13,8 @@ export interface SnapOptions {
   nodeTol: number;
   /** Tolerance zarovnání s jiným rohem (mm). */
   alignTol: number;
+  /** false = bez tichého srovnání do os pod 4° (nástroj Stěna má pomocné čáry). */
+  axisSnap?: boolean;
   /** Roh, ze kterého se kreslí (nepřichytávat sám na sebe). */
   startNodeId?: string;
 }
@@ -69,7 +71,7 @@ export function snapEnd(floor: Floor, start: Pt, raw: Pt, o: SnapOptions): SnapR
   let pt: Pt;
   const angle = Math.atan2(dy, dx);
   const toAxis = Math.abs(((angle + Math.PI / 4) % (Math.PI / 2)) - Math.PI / 4);
-  if (o.ortho || toAxis < (4 * Math.PI) / 180) {
+  if (o.ortho || (o.axisSnap !== false && toAxis < (4 * Math.PI) / 180)) {
     pt = Math.abs(dx) >= Math.abs(dy) ? { x: start.x + roundTo(dx, 10), y: start.y } : { x: start.x, y: start.y + roundTo(dy, 10) };
   } else {
     const len = roundTo(Math.hypot(dx, dy), 10);

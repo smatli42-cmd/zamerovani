@@ -57,3 +57,23 @@ describe('kreslení nové stěny libovolným směrem', () => {
     expect(Object.values(f.walls).filter(x => x.sagitta)).toHaveLength(1);
   });
 });
+
+describe('kreslení – nálezy revieweru', () => {
+  it('3° od vodorovné daleko od počátku: stěna zůstane šikmá (žádné tiché srovnání)', () => {
+    open();
+    const a = (3 * Math.PI) / 180;
+    draw([[0, 0], [3000 * Math.cos(a), 3000 * Math.sin(a)], [6000 * Math.cos(a), 6000 * Math.sin(a)]]);
+    const { a: p, b: q } = lastWall();
+    expect(Math.atan2(q.y - p.y, q.x - p.x) * (180 / Math.PI)).toBeCloseTo(3, 0);
+  });
+
+  it('vodorovně k šikmé stěně (30°): konec se napojí na stěnu, i když je zachycená vodorovná čára', () => {
+    open();
+    const S = addWall({ x: 2000, y: -1000 }, null, { x: 2000 + 4000 * Math.cos(Math.PI / 3), y: -1000 + 4000 * Math.sin(Math.PI / 3) }, null, false, { thickness: 0 })!;
+    // šikmá stěna protíná y = 0 v x = 2000 + 1000 / tan 60° ≈ 2577,35
+    draw([[0, 0], [1500, 30], [2560, 40]]);
+    const f = store.floor()!;
+    const { w } = lastWall();
+    expect(f.nodes[w.b]!.host).toBe(S);
+  });
+});

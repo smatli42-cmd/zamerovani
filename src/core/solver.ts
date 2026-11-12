@@ -64,7 +64,8 @@ export function reachableWithout(floor: Floor, startId: Id, blockedId: Id): Set<
   const visited = new Set<Id>([startId]);
   const queue: Id[] = [startId];
   // úseky stěn: napojený roh (T bez dělení) je spojený s průběžnou stěnou
-  const segs = wallSegments(floor);
+  // jen rohy a napojené rohy (T) – křížení samostatné stěny nespojuje (ta se nesmí posunout s větví)
+  const segs = wallSegments(floor, []);
   while (queue.length > 0) {
     const cur = queue.shift()!;
     for (const w of segs) {

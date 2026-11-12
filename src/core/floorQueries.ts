@@ -219,6 +219,8 @@ function segCircle(p: Pt, q: Pt, c: Pt, r: number): Pt[] {
  * od jejich konců (konec na stěně je T-napojení – Node.host). Spoj se počítá z geometrie, stěny se nedělí.
  */
 export function wallCrossings(floor: Floor): Crossing[] {
+  const cached = Object.isFrozen(floor) ? crossingCache.get(floor) : undefined;
+  if (cached) return cached;
   const items: { w: Wall; a: Pt; b: Pt; g: ReturnType<typeof arcGeometry> }[] = [];
   for (const w of Object.values(floor.walls)) {
     if (!crossable(w)) continue;
@@ -262,11 +264,49 @@ export function wallCrossings(floor: Floor): Crossing[] {
         pts = [1, -1].map(k => ({ x: base.x - u.y * h * k, y: base.y + u.x * h * k })).filter(p => onArc(p, P) && onArc(p, Q));
       }
       pts.forEach((pt, k) => {
-        if ([P.a, P.b, Q.a, Q.b].some(e => dist(e, pt) <= 5)) return;
+        // konec přímo v průsečíku, nebo konec napojený na druhou stěnu (T) = napojení, ne křížení
+        if ([P.a, P.b, Q.a, Q.b].some(e => dist(e, pt) <= 0.5)) return;
+        const hostedTo = (ends: Node[], other: Id) => ends.some(e => e.host === other && dist(e, pt) <= 5);
+        if (hostedTo([P.a as Node, P.b as Node], Q.w.id) || hostedTo([Q.a as Node, Q.b as Node], P.w.id)) return;
         out.push({ id: `x:${P.w.id}|${Q.w.id}|${k}`, pt, walls: [P.w.id, Q.w.id] });
       });
     }
   }
+  if (Object.isFrozen(floor)) crossingCache.set(floor, out);
+  return out;
+}
+
+/** Mezipaměť pro hotové (zmrazené) výkresy – výpočet se za snímek volá mnohokrát. */
+const crossingCache = new WeakMap<Floor, Crossing[]>();
+const junctionCache = new WeakMap<Floor, Junction[]>();
+
+/** Bod uprostřed stěn: napojený roh a / nebo křížení (sloučené podle polohy do 1 mm). */
+export interface Junction {
+  key: Id;
+  pt: Pt;
+  walls: Id[];
+}
+
+/**
+ * Body uprostřed stěn, kde se stěny spojují: napojené rohy (Node.host) a křížení (C1.5). Body ve stejném
+ * místě se sloučí pod jeden klíč (přednost má ID rohu), takže tři stěny v bodě nebo T na kříži tvoří jeden spoj.
+ */
+export function junctionPoints(floor: Floor, crossings?: Crossing[]): Junction[] {
+  const useCache = !crossings && Object.isFrozen(floor);
+  const cached = useCache ? junctionCache.get(floor) : undefined;
+  if (cached) return cached;
+  const out: Junction[] = [];
+  const addJ = (key: Id, pt: Pt, wallId: Id) => {
+    let j = out.find(o => dist(o.pt, pt) < 1);
+    if (!j) {
+      j = { key, pt, walls: [] };
+      out.push(j);
+    }
+    if (!j.walls.includes(wallId)) j.walls.push(wallId);
+  };
+  for (const n of Object.values(floor.nodes)) if (n.host) addJ(n.id, n, n.host);
+  for (const c of crossings ?? wallCrossings(floor)) for (const w of c.walls) addJ(c.id, c.pt, w);
+  if (useCache) junctionCache.set(floor, out);
   return out;
 }
 
@@ -290,13 +330,12 @@ export interface WallSegment {
  * Úseky stěn pro graf (skupiny, místnosti, řešič): průběžná stěna se v napojených rozích (T bez dělení)
  * a v kříženích (C1.5) rozdělí jen virtuálně. Křížení mají ID „x:…“ (nejsou v floor.nodes).
  */
-export function wallSegments(floor: Floor, crossings: Crossing[] = wallCrossings(floor)): WallSegment[] {
+export function wallSegments(floor: Floor, crossings?: Crossing[]): WallSegment[] {
   const out: WallSegment[] = [];
-  // jeden průchod rohy a kříženími: stěna → body uprostřed ní
+  // jeden průchod společnými body: stěna → body uprostřed ní (napojené rohy, křížení sloučené podle polohy)
   const mids = new Map<Id, { id: Id; pt: Pt }[]>();
   const add = (wallId: Id, id: Id, pt: Pt) => (mids.get(wallId) ?? mids.set(wallId, []).get(wallId)!).push({ id, pt });
-  for (const n of Object.values(floor.nodes)) if (n.host) add(n.host, n.id, n);
-  for (const c of crossings) for (const w of c.walls) add(w, c.id, c.pt);
+  for (const j of junctionPoints(floor, crossings)) for (const w of j.walls) add(w, j.key, j.pt);
   for (const w of Object.values(floor.walls)) {
     const a = floor.nodes[w.a];
     const b = floor.nodes[w.b];
