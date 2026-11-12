@@ -14,6 +14,19 @@ import { add, centroid, dist, dot, normal, scale, sub, unit } from './geometry';
 /** Má stěna tělo? (rovné i obloukové stěny s tloušťkou; kruhy a čáry bez tloušťky ne) */
 export const hasBody = (w: Wall): boolean => w.thickness > 0 && w.radius === undefined && w.a !== w.b;
 
+/**
+ * Rozsah těla kolmo k ose stěny jako posun podél normal(a→b): líc side 1 = [0, t], side −1 = [−t, 0],
+ * osa uprostřed = [−t/2, t/2].
+ */
+export function bodyRange(w: Wall): [number, number] {
+  const t = w.thickness;
+  if (w.axis === 'center') return [-t / 2, t / 2];
+  return w.side === 1 ? [0, t] : [-t, 0];
+}
+
+/** Kde začíná tělo měřeno od osy podél `bodyNormal` (líc = 0, osa uprostřed = −t/2); tělo je [start, start + t]. */
+export const bodyStart = (w: Wall): number => (w.axis === 'center' ? -w.thickness / 2 : 0);
+
 /** Jednotkový vektor od čáry líce směrem do těla stěny (u oblouku v jeho vrcholu = kolmo k tětivě). */
 export function bodyNormal(floor: Floor, w: Wall): Pt | null {
   const a = floor.nodes[w.a];
@@ -147,11 +160,14 @@ export function wallBodies(floor: Floor): Map<Id, WallBody> {
     const center = arcGeometry(a, b, w.sagitta ?? 0)?.center;
     const tA = path.tans[0]!;
     const tB = path.tans[path.tans.length - 1]!;
+    const [r0, r1] = bodyRange(w);
     const mk = (atA: boolean): End => {
       const d = atA ? tA : scale(tB, -1);
       const n = normal(d);
-      const off = w.thickness * w.side * (atA ? 1 : -1);
-      return { wall: w, atA, node: atA ? a : b, d, n, lo: Math.min(0, off), hi: Math.max(0, off), ang: Math.atan2(d.y, d.x), ...(center ? { center } : {}) };
+      // u konce B míří n opačně než normal(a→b)
+      const lo = atA ? r0 : -r1;
+      const hi = atA ? r1 : -r0;
+      return { wall: w, atA, node: atA ? a : b, d, n, lo, hi, ang: Math.atan2(d.y, d.x), ...(center ? { center } : {}) };
     };
     const eA = mk(true);
     const eB = mk(false);

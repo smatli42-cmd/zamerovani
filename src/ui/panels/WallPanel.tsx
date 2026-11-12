@@ -4,7 +4,7 @@
 import { arcChain } from '../../core/arcChain';
 import { wallLength } from '../../core/floorQueries';
 import type { Floor, Wall, WallType } from '../../model/types';
-import { deleteSelection, duplicateSelection, flipWallSide, setWallNoJoin, setWallThickness, updateWall, updateWallLabel } from '../../store/actions';
+import { deleteSelection, duplicateSelection, flipWallSide, setWallAxis, setWallNoJoin, setWallThickness, updateWall, updateWallLabel } from '../../store/actions';
 import { openTarget } from '../../store/numpadController';
 import { close, LINE_STYLES } from './common';
 import { NumField, Panel, Seg, TextField } from './fields';
@@ -63,11 +63,24 @@ export function WallPanel({ floor, wall }: { floor: Floor; wall: Wall }) {
       {!circle && (
         <div class="field-grid">
           <NumField label="Tloušťka" value={wall.thickness} onCommit={v => v !== null && setWallThickness(wall.id, v)} />
-          {wall.thickness > 0 && (
+          {wall.thickness > 0 && wall.axis !== 'center' && (
             <button class="btn" onClick={() => flipWallSide(wall.id)} title="Přehodí, na kterou stranu od čáry líce roste tělo stěny">
               ⇅ Strana těla
             </button>
           )}
+        </div>
+      )}
+      {!circle && wall.thickness > 0 && (
+        <div class="field field-inline">
+          <span>Osa</span>
+          <Seg
+            options={[
+              { v: 'face', label: 'Líc' },
+              { v: 'center', label: 'Střed' }
+            ]}
+            value={wall.axis ?? 'face'}
+            onChange={v => setWallAxis(wall.id, v)}
+          />
         </div>
       )}
       {!circle && wall.thickness > 0 && (['a', 'b'] as const).map(end => {

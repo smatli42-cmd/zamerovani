@@ -4,7 +4,7 @@
 import { findNodeNear, findWallNear, isCurved, openingsOnWall, wallLength, wallNodes, type WallHit } from '../core/floorQueries';
 import { textBoxPx } from '../canvas/textBox';
 import { dot, projectToSegment, sub } from '../core/geometry';
-import { bodyNormal, findBodyAt, hasBody } from '../core/wallBody';
+import { bodyNormal, bodyStart, findBodyAt, hasBody } from '../core/wallBody';
 import type { Floor, Pt } from '../model/types';
 import type { Camera, Selection } from '../store/store';
 import { HIT_PX } from './types';
@@ -21,7 +21,7 @@ export function pickOpening(floor: Floor, p: Pt, cam: Camera): string | null {
     // stěna s tloušťkou: otvor jde chytit kdekoli v tloušťce těla
     const bn = hasBody(wall) ? bodyNormal(floor, wall) : null;
     const across = bn ? dot(sub(p, n[0]), bn) : 0;
-    const inBody = !!bn && pr.t > 0 && pr.t < 1 && across >= -tol && across <= wall.thickness + tol;
+    const inBody = !!bn && pr.t > 0 && pr.t < 1 && across >= bodyStart(wall) - tol && across <= bodyStart(wall) + wall.thickness + tol;
     if (pr.distance > tol * 1.5 && !inBody) continue;
     const along = pr.t * wallLength(floor, wall);
     for (const po of openingsOnWall(floor, wall)) {

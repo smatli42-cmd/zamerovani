@@ -35,7 +35,7 @@ function linkWall(floor: Floor, a: Id, b: Id, sagitta = 0, style?: LineStyle, th
  * Nová stěna; `sagitta` ≠ 0 = oblouková stěna. Konce na jiných stěnách je rozdělí.
  * `thickness` > 0 = stěna s tělem (strana těla navazuje na tah, uzavřená místnost se natočí ven); 0 = čára (tvar).
  */
-export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, select = true, opts: { sagitta?: number; style?: LineStyle; thickness?: number; side?: 1 | -1 } = {}): Id | null {
+export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, select = true, opts: { sagitta?: number; style?: LineStyle; thickness?: number; side?: 1 | -1; axis?: 'center' } = {}): Id | null {
   let createdId: Id | null = null;
   store.edit(floor => {
     const a = getOrCreateNode(floor, start, startNodeId);
@@ -46,6 +46,7 @@ export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: I
     if (!wall) return;
     createdId = wall.id;
     if (isNew && hasBody(wall)) {
+      if (opts.axis) wall.axis = opts.axis;
       // strana zvolená při kreslení (překlopení stylusem) platí natrvalo, jinak automaticky
       if (opts.side) {
         wall.side = opts.side;
@@ -153,6 +154,19 @@ export function setWallThickness(wallId: Id, thickness: number): void {
   store.edit(floor => {
     const w = floor.walls[wallId];
     if (w) w.thickness = Math.max(0, Math.round(thickness));
+  });
+}
+
+/**
+ * Osa stěny: líc (`face`) nebo střed (`center`). Čára (osa) a rohy zůstanou, posune se jen tělo (B4);
+ * strana těla se pamatuje, takže návrat na líc vrátí původní stranu.
+ */
+export function setWallAxis(wallId: Id, axis: 'face' | 'center'): void {
+  store.edit(floor => {
+    const w = floor.walls[wallId];
+    if (!w) return;
+    if (axis === 'center') w.axis = 'center';
+    else delete w.axis;
   });
 }
 

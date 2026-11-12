@@ -80,6 +80,8 @@ export interface Settings {
   windowKind: 'window' | 'french';
   /** Nástroj Stěna: kreslí rovnou nebo obloukovou stěnu. */
   wallShape: 'straight' | 'arc';
+  /** Nástroj Stěna: osa nové stěny = líc nebo střed tloušťky (B1, B10). */
+  wallAxis: 'face' | 'center';
 }
 
 export type SaveStatus = 'saved' | 'saving' | 'dirty' | 'error';
@@ -110,7 +112,7 @@ export interface AppState {
 const SETTINGS_KEY = 'zamerovani.settings';
 
 function loadSettings(): Settings {
-  const defaults: Settings = { ortho: true, snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', windowKind: 'window', wallShape: 'straight' };
+  const defaults: Settings = { ortho: true, snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', windowKind: 'window', wallShape: 'straight', wallAxis: 'face' };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     return raw ? { ...defaults, ...JSON.parse(raw) } : defaults;

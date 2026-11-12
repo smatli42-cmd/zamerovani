@@ -243,3 +243,81 @@ describe('C2/11: křížení, A = 300 a B = 100', () => {
     expect(hasLineInsideUnion(cross())).toBe(false);
   });
 });
+
+// --- C2/12–15: osa stěny uprostřed (B1, B4, B10), přidáno 2026-11-12 ---
+
+const yRange = (pts: Pt[]) => [Math.min(...pts.map(p => p.y)), Math.max(...pts.map(p => p.y))];
+
+describe('C2/12: osa uprostřed, tloušťka 300', () => {
+  it('tělo y ∈ [−150, 150]; po změně tloušťky na 200 osa zůstane a tělo y ∈ [−100, 100]', () => {
+    const f = floorWith({ a: [0, 0], b: [3000, 0] });
+    const A = createWall('a', 'b', 0, 300, 1);
+    A.axis = 'center';
+    f.walls[A.id] = A;
+    const [lo, hi] = yRange(wallBodies(f).get(A.id)!.poly);
+    expect(lo).toBeCloseTo(-150, 2);
+    expect(hi).toBeCloseTo(150, 2);
+    f.walls[A.id]!.thickness = 200;
+    const [lo2, hi2] = yRange(wallBodies(f).get(A.id)!.poly);
+    expect(lo2).toBeCloseTo(-100, 2);
+    expect(hi2).toBeCloseTo(100, 2);
+    expect(f.nodes.a).toEqual({ id: 'a', x: 0, y: 0 });
+    expect(f.nodes.b).toEqual({ id: 'b', x: 3000, y: 0 });
+  });
+});
+
+describe('C2/13: změna osy líc → střed (B4)', () => {
+  it('osa y = 0 zůstane, tělo z [0, 300] (aplikace) na [−150, 150]; rohy se nehýbou, napojení se přepočítá', () => {
+    const { f, A, B } = corner(300, 300);
+    const nodesBefore = JSON.stringify(f.nodes);
+    const [lo0, hi0] = yRange(wallBodies(f).get(A)!.poly);
+    expect(lo0).toBeCloseTo(0, 2);
+    expect(hi0).toBeCloseTo(300, 2);
+    f.walls[A]!.axis = 'center';
+    expect(JSON.stringify(f.nodes)).toBe(nodesBefore);
+    const b = wallBodies(f);
+    const [lo, hi] = yRange(b.get(A)!.poly);
+    expect(lo).toBeCloseTo(-150, 2);
+    expect(hi).toBeCloseTo(150, 2);
+    // B se neprodloužila ani neotočila (rohy stejné), jen napojení: vnější roh B a A na y = 150
+    expect(has(b.get(A)!.poly, -300, 150) && has(b.get(B)!.poly, -300, 150)).toBe(true);
+    expect(hasLineInsideUnion(f)).toBe(false);
+  });
+});
+
+describe('C2/14: napojení středem na střed jiné stěny', () => {
+  it('B (100, osa uprostřed) ze středu osy A (300, osa uprostřed) kolmo: B končí na líci A, mezi nimi žádná čára', () => {
+    // A rozdělená v bodě napojení m (jako C2/5); B jde z m do místnosti (aplikace −y)
+    const f = floorWith({ a: [0, 0], m: [1000, 0], b: [2000, 0], p: [1000, -1500] });
+    const A1 = createWall('a', 'm', 0, 300, 1);
+    const A2 = createWall('m', 'b', 0, 300, 1);
+    const B = createWall('m', 'p', 0, 100, -1);
+    for (const w of [A1, A2, B]) {
+      w.axis = 'center';
+      f.walls[w.id] = w;
+    }
+    const bodies = wallBodies(f);
+    // A se nepřerušuje: oba líce A pokračují přes m
+    expect(has(bodies.get(A1.id)!.poly, 1000, 150) && has(bodies.get(A2.id)!.poly, 1000, 150)).toBe(true);
+    // B končí na líci A (y = −150) a její tělo je symetrické kolem osy x = 1000 (kreslené čáry B;
+    // výplň B vede přes roh m jako u C2/5, ten leží uvnitř těla A, takže nic nepřečnívá)
+    const bp = bodies.get(B.id)!.edges.flat();
+    expect(findBodyAt(f, { x: 1000, y: 0 })).not.toBeNull();
+    expect(Math.max(...bp.map(p => p.y))).toBeCloseTo(-150, 2);
+    expect(Math.min(...bp.map(p => p.x))).toBeCloseTo(950, 2);
+    expect(Math.max(...bp.map(p => p.x))).toBeCloseTo(1050, 2);
+    expect(hasLineInsideUnion(f)).toBe(false);
+  });
+});
+
+describe('C2/15: L-roh, obě stěny s osou uprostřed (A = 300, B = 100)', () => {
+  it('vnitřní roh (50, 150) a vnější (−50, −150) katalog = (50, −150) a (−50, 150) aplikace, bez čáry uvnitř', () => {
+    const { f, A, B } = corner(300, 100);
+    f.walls[A]!.axis = 'center';
+    f.walls[B]!.axis = 'center';
+    const b = wallBodies(f);
+    expect(has(b.get(A)!.poly, 50, -150) && has(b.get(B)!.poly, 50, -150)).toBe(true);
+    expect(has(b.get(A)!.poly, -50, 150) && has(b.get(B)!.poly, -50, 150)).toBe(true);
+    expect(hasLineInsideUnion(f)).toBe(false);
+  });
+});

@@ -26,6 +26,15 @@ export function ToolOptions() {
           value={settings.wallShape}
           onChange={v => store.updateSettings({ wallShape: v })}
         />
+        <span class="muted small">Osa</span>
+        <Seg
+          options={[
+            { v: 'face', label: 'Líc' },
+            { v: 'center', label: 'Střed' }
+          ]}
+          value={settings.wallAxis}
+          onChange={v => store.updateSettings({ wallAxis: v })}
+        />
         {settings.wallShape === 'arc' && (
           <NumField label="Výška oblouku" value={activeWallArcHeight(project)} min={10} onCommit={v => v !== null && setWallArcHeight(v)} />
         )}

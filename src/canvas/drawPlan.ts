@@ -10,7 +10,7 @@ import { isWindowKind } from '../model/factory';
 import type { Floor, LineStyle, Opening, Pt, Wall } from '../model/types';
 import { isSelected, type Camera, type Selection, type SingleSelection } from '../store/store';
 import { toScreen } from './view';
-import { bodyNormal, facePointAt, hasBody, wallBodies } from '../core/wallBody';
+import { bodyNormal, bodyStart, facePointAt, hasBody, wallBodies } from '../core/wallBody';
 import { addHitBox } from './hitTargets';
 
 export const COLORS = {
@@ -94,6 +94,19 @@ export function drawWalls(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
     ctx.stroke();
     ctx.setLineDash([]);
   }
+  // osa uprostřed se kreslí jen u vybrané stěny (čerchovaně modře); osa na líci splývá s čárou líce
+  for (const body of bodies.values()) {
+    const wall = floor.walls[body.wallId]!;
+    const n = wall.axis === 'center' && isSel(selection, 'wall', wall.id) ? wallNodes(floor, wall) : null;
+    if (!n) continue;
+    ctx.strokeStyle = COLORS.selected;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash(LINE_DASH.dashdot);
+    ctx.lineCap = 'butt';
+    pathWall(ctx, wall, toScreen(n[0], cam), toScreen(n[1], cam), n, cam);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
   ctx.lineCap = 'round';
 
   for (const wall of Object.values(floor.walls)) {
@@ -131,7 +144,8 @@ export function drawFlipArrow(ctx: CanvasRenderingContext2D, floor: Floor, cam: 
   if (selection?.kind !== 'wall') return;
   const wall = floor.walls[selection.id];
   // u obloukové stěny mimo vrchol (tam je úchyt pro tažení vzepětí)
-  const fp = wall && hasBody(wall) ? facePointAt(floor, wall, wall.sagitta ? 0.7 : 0.5) : null;
+  // u osy uprostřed strana těla nemá viditelný účinek (jen se pamatuje pro návrat na líc) → bez šipky
+  const fp = wall && hasBody(wall) && wall.axis !== 'center' ? facePointAt(floor, wall, wall.sagitta ? 0.7 : 0.5) : null;
   if (!wall || !fp) return;
   const bn = fp.into;
   const mid = toScreen(add(fp.pt, scale(bn, wall.thickness / 2)), cam);
@@ -204,12 +218,13 @@ export function drawOpenings(ctx: CanvasRenderingContext2D, floor: Floor, cam: C
     if (!n) continue;
     const len = wallLength(floor, wall);
     if (len < 1) continue;
+    // stěna s tloušťkou: otvor skrz celé tělo (od líce A k líci B); u osy uprostřed začíná líc A půl tloušťky od osy
+    const bn = hasBody(wall) ? bodyNormal(floor, wall) : null;
+    const faceA = bn ? scale(bn, bodyStart(wall)) : { x: 0, y: 0 };
     for (const po of openingsOnWall(floor, wall)) {
-      const p1 = toScreen(lerp(n[0], n[1], po.start / len), cam);
-      const p2 = toScreen(lerp(n[0], n[1], po.end / len), cam);
+      const p1 = toScreen(add(lerp(n[0], n[1], po.start / len), faceA), cam);
+      const p2 = toScreen(add(lerp(n[0], n[1], po.end / len), faceA), cam);
       const color = isSel(selection, 'opening', po.op.id) ? COLORS.selected : isSel(hover, 'opening', po.op.id) ? '#3b82f6' : COLORS.opening;
-      // stěna s tloušťkou: otvor skrz celé tělo (od líce A = čáry stěny k líci B)
-      const bn = hasBody(wall) ? bodyNormal(floor, wall) : null;
       const off = bn ? scale(bn, wall.thickness * cam.zoom) : null;
       if (po.op.kind === 'niche') {
         if (off && bn) drawNicheInBody(ctx, p1, p2, po.op, cam, color, off, bn);

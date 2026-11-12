@@ -9,7 +9,7 @@ import { toScreen } from '../canvas/view';
 import { add, dist, normal, scale } from '../core/geometry';
 import { snapEnd, snapPoint, type SnapResult } from '../core/snapping';
 import { facePath, initialSideAt, sideFromPen, straightContinuation } from '../core/wallBody';
-import type { Pt } from '../model/types';
+import type { Pt, Wall } from '../model/types';
 import { addWall } from '../store/actions';
 import { activeWallArcHeight, activeWallThickness } from '../model/factory';
 import { store, type Camera } from '../store/store';
@@ -82,10 +82,13 @@ export const wallTool: Tool = {
     drawing.end = end;
     // u přichycení na roh / stěnu se strana už nemění (aby se stěna na poslední chvíli nepřeklopila)
     const T = activeWallThickness(store.get().project);
+    const { wallShape, wallAxis } = store.get().settings;
+    // sloučí se jen se stěnou se stejnou osou (mergeStraightAt)
+    const sameAxis = (w: Wall | null) => !!w && (w.axis ?? 'face') === wallAxis;
     const continues =
-      store.get().settings.wallShape === 'straight' &&
-      (straightContinuation(floor, drawing.start.node?.id ?? null, drawing.start.pt, end.pt, T) ||
-        straightContinuation(floor, end.node?.id ?? null, end.pt, drawing.start.pt, T));
+      wallShape === 'straight' &&
+      (sameAxis(straightContinuation(floor, drawing.start.node?.id ?? null, drawing.start.pt, end.pt, T)) ||
+        sameAxis(straightContinuation(floor, end.node?.id ?? null, end.pt, drawing.start.pt, T)));
     if (continues) drawing.side = null; // sloučí se s navazující stěnou → její strana
     else if (!end.node && !end.wallHit && !end.special) {
       drawing.side = sideFromPen(drawing.start.pt, end.pt, p.world, FLIP_PX / store.get().camera.zoom, drawing.side);
@@ -108,7 +111,8 @@ export const wallTool: Tool = {
       addWall(d.start.pt, d.start.node?.id ?? null, d.end.pt, d.end.node?.id ?? null, false, {
         thickness: activeWallThickness(store.get().project),
         ...(d.side ? { side: d.side } : {}),
-        ...(sagitta ? { sagitta } : {})
+        ...(sagitta ? { sagitta } : {}),
+        ...(store.get().settings.wallAxis === 'center' ? { axis: 'center' as const } : {})
       });
     } else {
       // Ťuknutí bez tažení = výběr prvku pod perem (otevře jeho vlastnosti)
@@ -160,8 +164,10 @@ export const wallTool: Tool = {
     const path = facePath(drawing.start.pt, drawing.end.pt, drawingSagitta(drawing));
     if (T > 0 && dist(drawing.start.pt, drawing.end.pt) >= 1) {
       const side = drawingSide(drawing);
-      const outer = path.pts.map((p, i) => add(p, scale(normal(path.tans[i]!), side * T)));
-      const q = [...path.pts, ...outer.reverse()].map(p => toScreen(p, cam));
+      // osa uprostřed: tělo na obě strany po polovině, jinak od líce na stranu těla
+      const s0 = store.get().settings.wallAxis === 'center' ? -T / 2 : 0;
+      const off = (k: number) => path.pts.map((p, i) => add(p, scale(normal(path.tans[i]!), side * k)));
+      const q = [...off(s0), ...off(s0 + T).reverse()].map(p => toScreen(p, cam));
       ctx.save();
       ctx.fillStyle = 'rgba(161,161,170,0.55)';
       ctx.strokeStyle = '#71717a';

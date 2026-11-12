@@ -6,13 +6,13 @@
 import { arcGeometry } from '../core/arc';
 import { arcChain } from '../core/arcChain';
 import { openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
-import { centroid, dist, dot, lerp, normal, scale, sub, unit } from '../core/geometry';
+import { add, centroid, dist, dot, lerp, normal, scale, sub, unit } from '../core/geometry';
 import { OPENING_DEFAULTS } from '../model/factory';
 import type { Floor, Id, Pt } from '../model/types';
 import type { Camera, NumPadTarget, Selection } from '../store/store';
 import { addHitBox, type HitAction } from './hitTargets';
 import { toScreen } from './view';
-import { bodyNormal, facePointAt, hasBody } from '../core/wallBody';
+import { bodyNormal, bodyStart, facePointAt, hasBody } from '../core/wallBody';
 import { doorLayout } from '../core/doorLayout';
 import { openingStartFromA } from '../core/floorQueries';
 
@@ -94,7 +94,8 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
     let offset = 26 * s;
     // tělo stěny na straně kót → kóty se vynesou až za vnější líc
     const bn = hasBody(wall) ? bodyNormal(floor, wall) : null;
-    if (bn && dot(bn, out) > 0) offset += wall.thickness * cam.zoom;
+    // (u osy uprostřed přečnívá tělo na obě strany o polovinu)
+    if (bn) offset += (dot(bn, out) > 0 ? bodyStart(wall) + wall.thickness : -bodyStart(wall)) * cam.zoom;
     // Nika vystupuje do strany (swing); pokud míří ke kótám, kóty se posunou za ni
     const nicheSide = normal(u);
     // Oblouková stěna: kóta tětivy se odsune za vyklenutí, pokud míří ke kótám
@@ -156,7 +157,10 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
           ? { color: '#b91c1c', bg: '#fef2f2', bold: true }
           : { color: '#0f172a', bg: '#ffffff', bold: true };
     if (selected) style.bg = '#dbeafe';
-    drawDimLine(ctx, a, b, out, offset, text, mismatch ? `výkres ${geomLen}` : undefined, style, s, {
+    // 2a: u osy uprostřed se měří uzel–uzel po ose (příznak „osa“)
+    const axisNote = wall.axis === 'center' && hasBody(wall) ? 'osa' : null;
+    const subText = mismatch ? (axisNote ? `osa · výkres ${geomLen}` : `výkres ${geomLen}`) : (axisNote ?? undefined);
+    drawDimLine(ctx, a, b, out, offset, text, subText, style, s, {
       type: 'numpad',
       target: { kind: 'wall-length', wallId: wall.id, move: { nodeId: wall.b } },
       wallId: wall.id
@@ -292,7 +296,7 @@ export function drawBodyDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: C
     // tloušťka ve čtvrtině stěny (uprostřed je dvojitá šipka); u oblouku kolmo k oblouku
     const fp = facePointAt(floor, wall, 0.25);
     if (!fp) return ctx.restore();
-    const m = fp.pt;
+    const m = add(fp.pt, scale(fp.into, bodyStart(wall)));
     const q = { x: m.x + fp.into.x * wall.thickness, y: m.y + fp.into.y * wall.thickness };
     drawDimLine(ctx, toScreen(m, cam), toScreen(q, cam), normal(fp.into), 0, String(wall.thickness), 'tloušťka', style, dimScale, {
       type: 'numpad',
@@ -303,7 +307,8 @@ export function drawBodyDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: C
     const lay = doorLayout(op, wall.thickness);
     const start = openingStartFromA(op, len);
     const base = lerp(n[0], n[1], start / len);
-    const at = (y: number) => toScreen({ x: base.x + bn.x * y, y: base.y + bn.y * y }, cam);
+    const y0 = bodyStart(wall);
+    const at = (y: number) => toScreen({ x: base.x + bn.x * (y0 + y), y: base.y + bn.y * (y0 + y) }, cam);
     const back = scale(u, -1);
     if (lay.dA > 0)
       drawDimLine(ctx, at(0), at(lay.dA), back, 16 * dimScale, String(Math.round(lay.dA)), undefined, style, dimScale, {

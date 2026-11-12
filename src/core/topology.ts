@@ -54,6 +54,7 @@ export function splitWallAt(floor: Floor, wallId: Id, nodeId: Id): [Id, Id] | nu
     if (partSag) w.sagitta = partSag;
     if (wall.style) w.style = wall.style;
     if (wall.sideLocked) w.sideLocked = true;
+    if (wall.axis) w.axis = wall.axis;
     return w;
   };
   const wA = part(wall.a, nodeId, lenA, sagParts ? sagParts[0] : null);
@@ -106,7 +107,7 @@ export function mergeStraightAt(floor: Floor, wallId: Id, nodeId: Id): Id {
   const wFar = floor.nodes[wFarId];
   if (!wFar) return wallId;
   const o = straightContinuation(floor, nodeId, node, wFar, w.thickness, w.id);
-  if (!o) return wallId;
+  if (!o || o.axis !== w.axis) return wallId; // různá osa = dvě stěny
   const oldLen = wallLength(floor, o);
   const added = dist(node, wFar);
   const starts = Object.values(floor.openings)

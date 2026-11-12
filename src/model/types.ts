@@ -42,6 +42,11 @@ export interface Wall {
   side: 1 | -1;
   /** Strana byla přehozena ručně – automatické natočení „ven od místnosti“ ji už nemění. */
   sideLocked?: true;
+  /**
+   * Osa (referenční čára a→b): chybí = líc (tělo na straně `side`), 'center' = střed tloušťky
+   * (tělo na obě strany po polovině; `side` se pamatuje pro návrat na líc). B1, B4, B10.
+   */
+  axis?: 'center';
   /** Konec A / B se nenapojuje na ostatní stěny v rohu (má vlastní čelo); chybí = napojuje se. */
   noJoinA?: true;
   noJoinB?: true;
