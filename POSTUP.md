@@ -89,6 +89,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Fronta zbývajících kroků (stav 2026-11-12):**
 1. ~~**Tažení a posun jako blok**~~ (D2, D11, D12, D13, C2/16, D14 – **hotovo 2026-11-12**, čeká na vyzkoušení; zbývá použít `resolveDragPoint` i v nástroji Stěna) – nejdřív plán společné funkce `resolveDragPoint` podle `KRESLENI-EDITACE-KONCU.md`. D12 posun celé stěny (i jedné samostatné), D11 držení směru při tažení konce, D13 přichycení kolmice s ikonou ⊥, D14 výběr z překrývajících se koncových bodů (konec vybrané stěny má přednost; opakované ťuknutí přepíná).
+1b. **Výstupek / vybrání stěny** (nová funkce od 2026-11-12, návrh v `KRESLENI-VYSTUPKU.md`, schváleno uživatelem v chatu, nenaprogramováno): obrys nakreslený nástrojem Čára s oběma konci na líci stěny se sám uzavře a připojí (výstupek ven, vybrání do těla), stěna zůstává celistvá, vlastní kóty, model `Floor.protrusions` s výškou a materiálem, export-ready. Nejdřív návrh do repa + sekce „I. Výstupek a vybrání“ v `KATALOG-STEN.md` s příklady, **pak se zastavit a nechat uživatele schválit**. Zařadit po dokončení kroku 1, před F4.
 2. **F4** (otvory při dělení stěny).
 3. **D3** (samostatný nástroj zkrátit/prodloužit do rohu).
 4. **C1.11** (hrana odskoku; test C2/6 je `it.fails`; u středových os odskok symetricky).

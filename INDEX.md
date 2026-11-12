@@ -9,6 +9,7 @@
 | `ZADANI-AUDIT-STEN.md` | Zadání auditu stěn |
 | `KRESLENI-STEN-NAVRH.md` | Návrh stěn s tloušťkou a rozhodnutí uživatele |
 | `KRESLENI-EDITACE-KONCU.md` | Návrh editace konců stěn (tažení, posun, `resolveDragPoint`) |
+| `KRESLENI-VYSTUPKU.md` | Návrh výstupku / vybrání stěny (přizdívka, pilastr), kreslí se nástrojem Čára |
 | `ZADANI-OKNA-DVERE.md` | Zadání oken, dveří, ostění a dalších fází |
 | `POZADAVKY.md` | Celkové požadavky a plán po fázích |
 | `PREPNUTI-POCITACE.md` | Postup přepnutí mezi počítači pro uživatele |
