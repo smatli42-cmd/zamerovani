@@ -270,9 +270,10 @@ export function groupOrigin(floor: Floor, items: readonly { kind: string; id: Id
 }
 
 /** Posune skupinu o (dx, dy) od výchozích poloh (po 10 mm). */
-export function moveGroup(origin: GroupOrigin, dx: number, dy: number): void {
-  const mx = Math.round(dx / 10) * 10;
-  const my = Math.round(dy / 10) * 10;
+/** Posun skupiny o (dx, dy) zaokrouhlený na `step` mm (výchozí 10; při přichycení na pomocnou čáru 1). */
+export function moveGroup(origin: GroupOrigin, dx: number, dy: number, step = 10): void {
+  const mx = Math.round(dx / step) * step;
+  const my = Math.round(dy / step) * step;
   store.edit(floor => {
     for (const [id, p] of Object.entries(origin.nodes)) if (floor.nodes[id]) Object.assign(floor.nodes[id]!, { x: p.x + mx, y: p.y + my });
     for (const [id, p] of Object.entries(origin.rooms)) if (floor.rooms[id]) Object.assign(floor.rooms[id]!, { x: p.x + mx, y: p.y + my });

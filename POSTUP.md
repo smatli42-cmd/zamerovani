@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-12 (noc) – tažení s držením směru, posun stěny, kolmice (D11, D12, D13, C2/16)
+- **Co se změnilo:** Uživatel potvrdil opravu D14. Nová čistá funkce `resolveDragPoint` (`core/dragResolve.ts`): zachycení na pomocné čáře, držení s hysterezí, uvolnění, zarážky na průsečících se stěnami; použitá v nástroji Vybrat pro tažení rohu a posun celé stěny.
+- **Viditelně v aplikaci:** při tažení konce stěny se ukáže fialová čárkovaná pomocná čára původního směru (u rohu více stěn jedna pro každou stěnu); konec se na ni „lepí“, zachycená čára je tučná; v pravém úhlu k blízké stěně se přichytí a ukáže ikona ⊥, konec dosedne přesně na stěnu (a rozdělí ji). Podržení pera 0,7 s na místě zachycení uvolní. **Vybranou** stěnu jde tažením za tělo posunout celou (přichytí se ke směru stěny nebo kolmo na něj).
+- **Rozhodnuto samostatně:** posun celé stěny jen u už vybrané stěny (ochrana proti nechtěnému posunu na tabletu); u rohu více stěn se ostatní stěny otáčejí kolem svých vzdálených konců (otevřená otázka v `KRESLENI-EDITACE-KONCU.md`, zvolen návrh); „magnet“ = stávající vypínač Přichytávat v nastavení (vypne i pomocné čáry); rovnoběžnost s blízkými stěnami se nenabízí (jen kolmice, jak říká D13).
+- **Otevřené:** použít `resolveDragPoint` i při kreslení nové stěny (nástroj Stěna má zatím vlastní přichytávání); naladit poloměry na tabletu (10 px pero, 16 px prst, uvolnění 2×, prodleva 0,7 s).
+- **Chyby od uživatele:** žádné. (Při ověření v prohlížeči nalezena a opravena chyba: kolmice ke dvěma rovnoběžným stěnám splývaly a nabízela se jen ta ke vzdálené – test v `core/dragResolve.test.ts`.)
+
 ### 2026-11-12 (večer) – výběr konce u rozpojeného rohu (D14)
 - **Co se změnilo:** Uživatel potvrdil, že osy fungují. Opravena nahlášená chyba u rozpojeného rohu: ťuknutí na roh teď bere v úvahu, co je vybrané (`chooseNodeAt`, `nextNodeAt` v `core/floorQueries.ts`, `pickAny(..., current)`).
 - **Viditelně v aplikaci:** u rozpojeného rohu se po výběru stěny ťuknutím na roh vybere konec **té** stěny; další ťuknutí na stejné místo přepne na konec druhé stěny; tažením se hýbe jen vybraným koncem.
@@ -34,6 +41,9 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Rozhodnuto samostatně
 (Rozhodnutí mimo katalog, udělaná bez uživatele – nejnovější nahoře. Uživatel je může kdykoli změnit.)
+- 2026-11-12: D12 – celou stěnu jde tažením posunout jen, když je už vybraná (ochrana proti nechtěnému posunu).
+- 2026-11-12: D11 – u rohu více stěn se při tažení po čáře jedné stěny ostatní otáčejí kolem svých vzdálených konců.
+- 2026-11-12: Vypnutí pomocných čar = stávající vypínač Přichytávat (nastavení), žádné nové tlačítko magnetu; rovnoběžnost s okolními stěnami se nenabízí.
 - 2026-11-12: D14 – už vybraný roh se při dalším dotyku drží (kvůli tažení); na překrývající se roh se přepne až ťuknutím bez tažení, a to jen v nástroji Vybrat.
 - 2026-11-12: Stěna s osou uprostřed se při uzavření místnosti neotáčí „ven“ (`orientLoopOutward`) – strana se jen pamatuje, aby se po návratu na líc vrátila ta původní.
 - 2026-11-12: Přichycení u B10 = na čáru / střed čáry cílové stěny (u osy uprostřed je to přímo osa). Zvláštní bod „střed těla“ u cílové stěny s osou na líci se nepřidal (stávající přichycení na střed čela volného konce zůstává).
@@ -44,7 +54,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - 2026-11-12: `CLAUDE.md` existoval – nepřepsán, jen doplněn o cíl, nasazení a pracovní postup.
 
 **Fronta zbývajících kroků (stav 2026-11-12):**
-1. **Tažení a posun jako blok** (D2, D11, D12, D13, C2/16; **D14 hotovo 2026-11-12**) – nejdřív plán společné funkce `resolveDragPoint` podle `KRESLENI-EDITACE-KONCU.md`. D12 posun celé stěny (i jedné samostatné), D11 držení směru při tažení konce, D13 přichycení kolmice s ikonou ⊥, D14 výběr z překrývajících se koncových bodů (konec vybrané stěny má přednost; opakované ťuknutí přepíná).
+1. ~~**Tažení a posun jako blok**~~ (D2, D11, D12, D13, C2/16, D14 – **hotovo 2026-11-12**, čeká na vyzkoušení; zbývá použít `resolveDragPoint` i v nástroji Stěna) – nejdřív plán společné funkce `resolveDragPoint` podle `KRESLENI-EDITACE-KONCU.md`. D12 posun celé stěny (i jedné samostatné), D11 držení směru při tažení konce, D13 přichycení kolmice s ikonou ⊥, D14 výběr z překrývajících se koncových bodů (konec vybrané stěny má přednost; opakované ťuknutí přepíná).
 2. **F4** (otvory při dělení stěny).
 3. **D3** (samostatný nástroj zkrátit/prodloužit do rohu).
 4. **C1.11** (hrana odskoku; test C2/6 je `it.fails`; u středových os odskok symetricky).

@@ -9,12 +9,14 @@ import { findNodeNear, findWallNear, nextNodeAt, openingStartFromA, wallLength, 
 import { dist, projectToSegment, roundTo } from '../core/geometry';
 import type { Id, Pt } from '../model/types';
 import { selectInRect, normRect } from '../core/rectSelect';
+import { dragParams, linesNear, nodeDragLines, resolveDragPoint, wallMoveLines, type DragLine } from '../core/dragResolve';
+import type { Camera } from '../store/store';
 import { groupOrigin, type GroupOrigin, mergeNodeIfCoincident, moveGroup, moveNode, moveOpeningTo, moveRoom, moveText, updateText, setCircleRadius, setWallSagitta } from '../store/actions';
 import { store } from '../store/store';
 import { pickAny } from './pick';
 import { HIT_PX, type PointerInput, type Tool } from './types';
 
-type DragKind = { kind: 'node'; id: Id } | { kind: 'opening'; id: Id; grabOffset: number } | { kind: 'room'; id: Id; dx: number; dy: number }
+type DragKind = { kind: 'node'; id: Id; lines: DragLine[] } | { kind: 'wall'; id: Id; origin: GroupOrigin; grab: Pt; lines: DragLine[] } | { kind: 'opening'; id: Id; grabOffset: number } | { kind: 'room'; id: Id; dx: number; dy: number }
   | { kind: 'text'; id: Id; dx: number; dy: number }
   | { kind: 'handle'; id: Id }
   | { kind: 'leader'; id: Id }
@@ -28,6 +30,63 @@ let downScreen: Pt | null = null;
 /** Místo ťuknutí na už vybraný roh – po zvednutí bez tažení se přepne na překrývající se roh (D14). */
 let cycleAt: Pt | null = null;
 let dragging = false;
+
+// --- tažení s držením směru (D11, D12, D13; KRESLENI-EDITACE-KONCU.md) ---
+/** Zachycená pomocná čára (hystereze mezi kroky tažení). */
+let lock: string | null = null;
+/** Co se kreslí během tažení: zachycená čára, původní směry, bod. */
+let shown: { line: DragLine | null; point: Pt; lines: DragLine[] } | null = null;
+/** Prodleva: pero drží na místě → zachycení se uvolní a platí přesná poloha pod perem. */
+let holdAnchor: Pt | null = null;
+let holdTimer: ReturnType<typeof setTimeout> | null = null;
+let holdFreeAt: Pt | null = null;
+let lastInput: PointerInput | null = null;
+/** Poloměr zachycení (px) podle zařízení; kolmice se nabízí ke stěnám do NEAR_PX od pera. */
+const capturePx = (p: PointerInput) => (p.device === 'touch' ? 16 : 10);
+const NEAR_PX = 60;
+const HOLD_MS = 700;
+
+function resetGuides(): void {
+  lock = null;
+  shown = null;
+  holdAnchor = null;
+  holdFreeAt = null;
+  lastInput = null;
+  if (holdTimer) clearTimeout(holdTimer);
+  holdTimer = null;
+}
+
+/** Přichycení podle pomocných čar; null = volně (bez přichycení, po prodlevě nebo mimo čáry). */
+function guided(p: PointerInput, lines: readonly DragLine[], zoom: number): Pt | null {
+  shown = null;
+  if (!store.get().settings.snap) return null;
+  const params = dragParams(capturePx(p), zoom);
+  if (holdFreeAt && dist(holdFreeAt, p.world) <= params.release) {
+    lock = null;
+    return null;
+  }
+  holdFreeAt = null;
+  const ls = linesNear(lines, p.world, NEAR_PX / zoom);
+  const r = resolveDragPoint(p.world, ls, lock, params);
+  lock = r.line?.id ?? null;
+  shown = { line: r.line, point: r.point, lines: ls.filter(l => l.id.startsWith('orig:')) };
+  return r.line ? r.point : null;
+}
+
+/** Hlídá prodlevu: když se pero 0,7 s nepohne (o víc než 3 px), zachycení se uvolní. */
+function armHold(p: PointerInput): void {
+  lastInput = p;
+  if (holdAnchor && dist(holdAnchor, p.screen) <= 3) return;
+  holdAnchor = p.screen;
+  if (holdTimer) clearTimeout(holdTimer);
+  holdTimer = setTimeout(() => {
+    holdTimer = null;
+    if (!drag || !dragging || !lock || !lastInput) return;
+    holdFreeAt = lastInput.world;
+    lock = null;
+    selectTool.drag?.(lastInput);
+  }, HOLD_MS);
+}
 
 /** Poloměr zásahu středového bodu oblouku (px). */
 const HANDLE_PX = 18;
@@ -105,7 +164,13 @@ export const selectTool: Tool = {
       }
     }
     store.set({ selection: hit, numpad: null });
-    if (hit.kind === 'node') drag = { kind: 'node', id: hit.id };
+    resetGuides();
+    // pomocné čáry se počítají při uchopení (původní směr = poloha před tažením)
+    if (hit.kind === 'node') drag = { kind: 'node', id: hit.id, lines: nodeDragLines(floor, hit.id) };
+    // D12: tažení už vybrané stěny ji posune celou (sousední stěny se protáhnou)
+    if (hit.kind === 'wall' && before?.kind === 'wall' && before.id === hit.id && floor.walls[hit.id]?.radius === undefined) {
+      drag = { kind: 'wall', id: hit.id, origin: groupOrigin(floor, [hit]), grab: p.world, lines: wallMoveLines(floor, hit.id, p.world) };
+    }
     if (hit.kind === 'room') {
       const r = floor.rooms[hit.id]!;
       drag = { kind: 'room', id: hit.id, dx: p.world.x - r.x, dy: p.world.y - r.y };
@@ -152,13 +217,30 @@ export const selectTool: Tool = {
       const tol = HIT_PX.snapNode / cam.zoom;
       const other = findNodeNear(floor, p.world, tol, drag.id);
       let target: Pt;
-      if (other) target = other;
-      else {
+      if (other) {
+        target = other;
+        lock = null;
+        shown = null;
+      } else {
+        armHold(p);
+        const g = guided(p, drag.lines, cam.zoom);
+        if (g) {
+          moveNode(drag.id, g);
+          requestRender();
+          return;
+        }
         const w = findWallNear(floor, p.world, tol * 0.7);
         const own = w && (w.wall.a === drag.id || w.wall.b === drag.id);
         target = w && !own ? w.point : { x: roundTo(p.world.x, 10), y: roundTo(p.world.y, 10) };
       }
       moveNode(drag.id, target);
+    } else if (drag.kind === 'wall') {
+      armHold(p);
+      const g = guided(p, drag.lines, cam.zoom);
+      const to = g ?? p.world;
+      // na pomocné čáře přesně (krok 1 mm), volně po 10 mm
+      moveGroup(drag.origin, to.x - drag.grab.x, to.y - drag.grab.y, g ? 1 : 10);
+      requestRender();
     } else if (drag.kind === 'opening') {
       const op = floor.openings[drag.id];
       const wall = op && floor.walls[op.wallId];
@@ -208,6 +290,7 @@ export const selectTool: Tool = {
     }
     if (drag && dragging) {
       if (drag.kind === 'node') mergeNodeIfCoincident(drag.id);
+      if (drag.kind === 'wall') for (const id of Object.keys(drag.origin.nodes)) mergeNodeIfCoincident(id);
       store.endGesture();
     } else if (drag?.kind === 'handle') {
       // ťuknutí na úchyt oblouku bez tažení = výběr stěny
@@ -219,6 +302,7 @@ export const selectTool: Tool = {
       if (next) store.set({ selection: { kind: 'node', id: next.id } });
     }
     cycleAt = null;
+    resetGuides();
     drag = null;
     dragging = false;
     downScreen = null;
@@ -236,6 +320,7 @@ export const selectTool: Tool = {
   },
 
   drawOverlay(ctx) {
+    if (shown && drag && dragging) drawGuides(ctx, shown, store.get().camera);
     if (!band) return;
     const x = Math.min(band.startScreen.x, band.endScreen.x);
     const y = Math.min(band.startScreen.y, band.endScreen.y);
@@ -259,3 +344,51 @@ export const selectTool: Tool = {
     dragging = false;
   }
 };
+
+/** Pomocné čáry tažení: původní směry tence čárkovaně, zachycená čára tučně; ikona ⊥ u kolmice (D13). */
+function drawGuides(ctx: CanvasRenderingContext2D, g: NonNullable<typeof shown>, cam: Camera): void {
+  const L = 100000; // mm – čára přes celé plátno
+  const seg = (l: DragLine) => [toScreen({ x: l.origin.x - l.dir.x * L, y: l.origin.y - l.dir.y * L }, cam), toScreen({ x: l.origin.x + l.dir.x * L, y: l.origin.y + l.dir.y * L }, cam)] as const;
+  ctx.save();
+  ctx.setLineDash([6, 5]);
+  ctx.strokeStyle = '#a855f7';
+  for (const l of g.lines) {
+    if (l.id === g.line?.id) continue;
+    const [a, b] = seg(l);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+  if (g.line) {
+    const [a, b] = seg(g.line);
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+    if (g.line.perpTo) {
+      // ikona kolmice ⊥ vedle bodu
+      const p = toScreen(g.point, cam);
+      const x = p.x + 14;
+      const y = p.y - 14;
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#7c3aed';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(x - 2, y - 16, 20, 18, 3);
+      ctx.fill();
+      ctx.stroke();
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x + 2, y - 2);
+      ctx.lineTo(x + 14, y - 2);
+      ctx.moveTo(x + 8, y - 2);
+      ctx.lineTo(x + 8, y - 13);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
