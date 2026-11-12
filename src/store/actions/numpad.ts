@@ -20,16 +20,27 @@ import { faceLength, hasBody } from '../../core/wallBody';
 function setFaceLength(floor: Floor, wallId: string, face: 0 | 1, value: number): boolean {
   const w = floor.walls[wallId];
   if (!w || !hasBody(w) || w.axis !== 'center' || w.sagitta || value < 10) return false;
-  for (let i = 0; i < 6; i++) {
+  const start = faceLength(floor, wallId, face);
+  if (start === null || start <= 0) return false; // líc „přetočený“ napojením – nejde kótovat
+  // při neúspěchu (i v pozdějším kroku dorovnání) se výkres vrátí do původního stavu
+  const snapshot = JSON.parse(JSON.stringify({ nodes: floor.nodes, walls: floor.walls, openings: floor.openings })) as Pick<Floor, 'nodes' | 'walls' | 'openings'>;
+  const fail = () => {
+    floor.nodes = snapshot.nodes;
+    floor.walls = snapshot.walls;
+    floor.openings = snapshot.openings;
+    return false;
+  };
+  for (let i = 0; i < 8; i++) {
     const cur = faceLength(floor, wallId, face);
     const a = floor.nodes[w.a];
     const b = floor.nodes[w.b];
-    if (cur === null || !a || !b) return false;
+    if (cur === null || cur <= 0 || !a || !b) return fail();
     const diff = value - cur;
-    if (Math.abs(diff) < 0.05) break;
-    if (!setWallLength(floor, wallId, Math.hypot(b.x - a.x, b.y - a.y) + diff, { nodeId: w.b })) return false;
+    if (Math.abs(diff) < 0.05) return true;
+    if (!setWallLength(floor, wallId, Math.hypot(b.x - a.x, b.y - a.y) + diff, { nodeId: w.b })) return fail();
   }
-  return true;
+  const end = faceLength(floor, wallId, face);
+  return end !== null && Math.abs(end - value) < 0.5 ? true : fail();
 }
 
 /** Výchozí hodnota zobrazená v NumPadu pro daný cíl. */

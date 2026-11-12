@@ -12,7 +12,7 @@ import type { Floor, Id, Pt } from '../model/types';
 import type { Camera, NumPadTarget, Selection } from '../store/store';
 import { addHitBox, type HitAction } from './hitTargets';
 import { toScreen } from './view';
-import { bodyNormal, bodyStart, facePointAt, hasBody, polylineLength, wallBodies } from '../core/wallBody';
+import { bodyNormal, bodyStart, facePointAt, faceSpan, hasBody, wallBodies } from '../core/wallBody';
 import { doorLayout } from '../core/doorLayout';
 import { openingStartFromA } from '../core/floorQueries';
 
@@ -177,7 +177,8 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
       const half = (wall.thickness / 2) * cam.zoom;
       for (const face of [0, 1] as const) {
         const pts = faces[face];
-        if (pts.length < 2) continue;
+        const span = pts.length < 2 ? 0 : faceSpan(wall, n[0], n[1], pts);
+        if (span < 1) continue; // líc přetočený napojením se nekótuje
         const isOut = face === outFace;
         drawDimLine(
           ctx,
@@ -185,7 +186,7 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
           toScreen(pts[pts.length - 1]!, cam),
           isOut ? out : scale(out, -1),
           isOut ? offset + rowGap - half : 26 * s,
-          String(Math.round(polylineLength(pts))),
+          String(Math.round(span)),
           'líc',
           { color: '#334155', bg: '#dbeafe', bold: false },
           s,

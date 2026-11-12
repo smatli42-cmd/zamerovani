@@ -84,10 +84,22 @@ export interface WallBody {
 /** Délka lomené čáry. */
 export const polylineLength = (pts: readonly Pt[]): number => pts.reduce((s, p, i) => (i ? s + dist(pts[i - 1]!, p) : 0), 0);
 
-/** Délka líce stěny (face 0 / 1 jako ve `WallBody.faces`); null = stěna bez těla. */
+/**
+ * Délka líce ve směru a→b: u rovné stěny se znaménkem (průmět na osu) – líc „přetočený“ napojením
+ * (sousední stěny ho celý překryjí) vyjde ≤ 0; u oblouku délka lomené čáry.
+ */
+export function faceSpan(w: Wall, a: Pt, b: Pt, pts: readonly Pt[]): number {
+  if (w.sagitta || pts.length < 2) return polylineLength(pts);
+  return dot(sub(pts[pts.length - 1]!, pts[0]!), unit(a, b));
+}
+
+/** Délka líce stěny (face 0 / 1 jako ve `WallBody.faces`, viz `faceSpan`); null = stěna bez těla. */
 export function faceLength(floor: Floor, wallId: Id, face: 0 | 1): number | null {
+  const w = floor.walls[wallId];
   const body = wallBodies(floor).get(wallId);
-  return body ? polylineLength(body.faces[face]) : null;
+  const a = w && floor.nodes[w.a];
+  const b = w && floor.nodes[w.b];
+  return body && w && a && b ? faceSpan(w, a, b, body.faces[face]) : null;
 }
 
 interface End {
