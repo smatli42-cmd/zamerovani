@@ -197,8 +197,23 @@ export function hostedOn(floor: Floor, wallId: Id): { id: Id; t: number }[] {
  */
 export function wallSegments(floor: Floor): { wall: Wall; from: Id; to: Id }[] {
   const out: { wall: Wall; from: Id; to: Id }[] = [];
+  // jeden průchod rohy: stěna → napojené rohy (místo hledání pro každou stěnu zvlášť)
+  const byHost = new Map<Id, Node[]>();
+  for (const n of Object.values(floor.nodes)) if (n.host) (byHost.get(n.host) ?? byHost.set(n.host, []).get(n.host)!).push(n);
   for (const w of Object.values(floor.walls)) {
-    const chain = [w.a, ...hostedOn(floor, w.id).map(h => h.id), w.b];
+    const list = byHost.get(w.id);
+    const a = floor.nodes[w.a];
+    const b = floor.nodes[w.b];
+    let mids: Id[] = [];
+    if (list && a && b) {
+      const e = { x: b.x - a.x, y: b.y - a.y };
+      mids = list
+        .filter(n => n.id !== w.a && n.id !== w.b)
+        .map(n => ({ id: n.id, t: (n.x - a.x) * e.x + (n.y - a.y) * e.y }))
+        .sort((p, q) => p.t - q.t)
+        .map(h => h.id);
+    }
+    const chain = [w.a, ...mids, w.b];
     for (let i = 0; i + 1 < chain.length; i++) out.push({ wall: w, from: chain[i]!, to: chain[i + 1]! });
   }
   return out;

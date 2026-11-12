@@ -12,6 +12,7 @@ import { add, dist, dot, scale, sub, unit } from './geometry';
 import { isCurved } from './floorQueries';
 export { hostedOn, wallSegments } from './floorQueries';
 import { splitWallsAtNode } from './topology';
+import { nearestOnArc } from './arc';
 
 /** Jak blízko (mm) musí roh ležet u stěny, aby se na ni napojil / zůstal napojený. */
 export const ON_HOST_TOL = 1;
@@ -58,11 +59,36 @@ export function attachOrSplitAtNode(floor: Floor, nodeId: Id): void {
  * - roh se pohnul sám (tažení) → zůstane napojený, jen když leží na stěně; jinak se odpojí.
  */
 export function syncHosted(before: Floor | undefined, floor: Floor): void {
-  for (const node of Object.values(floor.nodes)) {
+  // pořadí: nejdřív rohy na stěnách, jejichž konce samy nejsou napojené (řetěz C na B, B na A)
+  const depth = new Map<Id, number>();
+  const depthOf = (id: Id, guard = 0): number => {
+    const known = depth.get(id);
+    if (known !== undefined) return known;
+    const n = floor.nodes[id];
+    const h = n?.host ? floor.walls[n.host] : undefined;
+    const d = !h || guard > 20 ? 0 : 1 + Math.max(depthOf(h.a, guard + 1), depthOf(h.b, guard + 1));
+    depth.set(id, d);
+    return d;
+  };
+  const hosted = Object.values(floor.nodes).filter(n => n.host).sort((p, q) => depthOf(p.id) - depthOf(q.id));
+  for (const node of hosted) {
     if (!node.host) continue;
     const h = floor.walls[node.host];
     const a = h && floor.nodes[h.a];
     const b = h && floor.nodes[h.b];
+    if (h && a && b && h.radius === undefined && isCurved(h) && h.a !== node.id && h.b !== node.id) {
+      // průběžná stěna se změnila na oblouk: roh se přesune na oblouk a oblouk se v něm rozdělí (jako dřív)
+      // všechny rohy této stěny najednou (rozdělení stěnu nahradí částmi)
+      const group = Object.values(floor.nodes).filter(n => n.host === h.id);
+      for (const n of group) {
+        const pr = nearestOnArc(n, a, b, h.sagitta ?? 0);
+        n.x = pr.point.x;
+        n.y = pr.point.y;
+        delete n.host;
+      }
+      for (const n of group) splitWallsAtNode(floor, n.id);
+      continue;
+    }
     if (!canHost(h) || !a || !b || h.a === node.id || h.b === node.id) {
       delete node.host;
       continue;
@@ -94,7 +120,9 @@ export function syncHosted(before: Floor | undefined, floor: Floor): void {
     }
     const r = along(node, a, b);
     const len = dist(a, b);
-    if (r.off <= ON_HOST_TOL && r.t * len >= 5 && (1 - r.t) * len >= 5) {
+    // pohnulo-li se obojí (posun / otočení výběru), konce i roh se zaokrouhlily každý zvlášť → větší tolerance
+    const tol = nodeMoved && hostMoved ? 5 : ON_HOST_TOL;
+    if (r.off <= tol && r.t * len >= 5 && (1 - r.t) * len >= 5) {
       node.x = r.foot.x;
       node.y = r.foot.y;
     } else delete node.host; // mimo stěnu (odtažený roh, zkrácená stěna) → samostatný roh

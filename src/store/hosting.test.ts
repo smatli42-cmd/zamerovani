@@ -8,7 +8,7 @@ import { createFloor, createProject, createWall } from '../model/factory';
 import { componentNodes } from '../core/components';
 import { bodyNormal } from '../core/wallBody';
 import { joinSplitWalls, migrateProject } from '../persistence/migrate';
-import { addWall, deleteSelection, duplicateSelection, moveGroup, groupOrigin, moveNode, mergeNodeIfCoincident, setWallNoJoin } from './actions';
+import { addWall, applyWallLength, deleteSelection, duplicateSelection, moveGroup, groupOrigin, moveNode, mergeNodeIfCoincident, rotateSelection, setWallNoJoin, setWallSagitta } from './actions';
 import { store } from './store';
 
 function tee() {
@@ -152,5 +152,78 @@ describe('migrace 7 → 8: rozdělená stěna se spojí zpět', () => {
     const { fl } = oldFloor();
     expect(Object.keys(migrateProject({ schema: 7, id: 'p', floors: [fl] }).floors[0]!.walls)).toHaveLength(2);
     expect(Object.keys(migrateProject({ schema: 8, id: 'p', floors: [fl] }).floors[0]!.walls)).toHaveLength(3);
+  });
+});
+
+describe('T bez dělení – nálezy revieweru', () => {
+  it('Zpět a Vpřed po posunu průběžné stěny vrátí i napojený roh', () => {
+    const { A, m } = tee();
+    moveWall(A, 0, 500);
+    store.undo();
+    expect(f().nodes[m]).toMatchObject({ x: 1000, y: 0, host: A });
+    store.redo();
+    expect(f().nodes[m]).toMatchObject({ x: 1000, y: 500, host: A });
+  });
+
+  it('délka příčky mezi dvěma stěnami: protější průběžná stěna se posune, příčka zůstane napojená', () => {
+    store.openProject(createProject({ name: 't' }));
+    addWall({ x: 0, y: 0 }, null, { x: 4000, y: 0 }, null, false, { thickness: 200 });
+    const bottom = addWall({ x: 0, y: 3000 }, null, { x: 4000, y: 3000 }, null, false, { thickness: 200 })!;
+    const P = addWall({ x: 2000, y: 0 }, null, { x: 2000, y: 3000 }, null, false, { thickness: 100 })!;
+    const pb = f().walls[P]!.b;
+    expect(f().nodes[pb]!.host).toBe(bottom);
+    expect(applyWallLength(P, 3500, { nodeId: pb })).toBe(true);
+    const g = f();
+    expect(g.nodes[pb]).toMatchObject({ x: 2000, y: 3500, host: bottom });
+    expect(g.nodes[g.walls[bottom]!.a]!.y).toBeCloseTo(3500, 3);
+    expect(g.nodes[g.walls[bottom]!.b]!.y).toBeCloseTo(3500, 3);
+  });
+
+  it('průběžná stěna změněná na oblouk se v napojených rozích rozdělí a rohy leží na oblouku', () => {
+    const { A, B } = tee();
+    addWall({ x: 3000, y: 0 }, null, { x: 3000, y: -2000 }, null, false, { thickness: 100, side: -1 });
+    setWallSagitta(A, 500);
+    const g = f();
+    expect(Object.values(g.nodes).some(n => n.host)).toBe(false);
+    const arcs = Object.values(g.walls).filter(w => w.sagitta);
+    expect(arcs).toHaveLength(3); // oblouk rozdělený ve dvou rozích
+    const mB = g.nodes[g.walls[B]!.a]!;
+    expect(arcs.some(w => w.a === mB.id || w.b === mB.id)).toBe(true);
+  });
+
+  it('otočení výběru (T celé) o 30°: napojení zůstane', () => {
+    const { A, B, m } = tee();
+    store.set({ selection: { kind: 'multi', items: [{ kind: 'wall', id: A }, { kind: 'wall', id: B }] } });
+    rotateSelection(30);
+    expect(f().nodes[m]!.host).toBe(A);
+  });
+});
+
+describe('migrace 7 → 8 – nálezy revieweru', () => {
+  it('staré křížení „+“ (4 části) → 3 stěny, společný roh napojený na jednu průběžnou', () => {
+    const fl = createFloor('t');
+    for (const [id, x, y] of [['a', 0, 0], ['m', 1000, 0], ['b', 2000, 0], ['p', 1000, -1000], ['q', 1000, 1000]] as const) fl.nodes[id] = { id, x, y };
+    for (const [s, e] of [['a', 'm'], ['m', 'b'], ['p', 'm'], ['m', 'q']] as const) {
+      const w = createWall(s, e, 0, 200, 1);
+      fl.walls[w.id] = w;
+    }
+    const g = joinSplitWalls(fl);
+    expect(Object.keys(g.walls)).toHaveLength(3);
+    expect(g.nodes.m!.host).toBeDefined();
+    expect(Object.values(g.walls).filter(w => w.a === 'm' || w.b === 'm')).toHaveLength(2);
+    // opakovaná migrace nic nemění
+    expect(JSON.stringify(joinSplitWalls(g))).toBe(JSON.stringify(g));
+  });
+
+  it('rozdělená čára bez tloušťky se spojí také', () => {
+    const fl = createFloor('t');
+    for (const [id, x, y] of [['a', 0, 0], ['m', 1000, 0], ['b', 2000, 0], ['p', 1000, -1000]] as const) fl.nodes[id] = { id, x, y };
+    for (const [s, e] of [['a', 'm'], ['m', 'b'], ['m', 'p']] as const) {
+      const w = createWall(s, e, 0, 0, 1);
+      fl.walls[w.id] = w;
+    }
+    const g = joinSplitWalls(fl);
+    expect(Object.keys(g.walls)).toHaveLength(2);
+    expect(g.nodes.m!.host).toBeDefined();
   });
 });

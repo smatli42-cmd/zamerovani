@@ -109,6 +109,16 @@ export function moveNodeWithRubberBand(floor: Floor, moving: Node, fixed: Node, 
         toMove.add(neighbor.id);
       }
     }
+    // roh napojený doprostřed průběžné stěny (T bez dělení): kolmý posun posune celou průběžnou stěnu
+    // (dřív ji tvořily dvě kolmé části v tomto rohu)
+    const host = moving.host ? floor.walls[moving.host] : undefined;
+    if (host) {
+      for (const endId of [host.a, host.b]) {
+        const end = floor.nodes[endId];
+        if (!end || end.id === fixed.id || toMove.has(end.id) || dist(moving, end) < 1) continue;
+        if (Math.abs(dot(dir, unit(moving, end))) < PERPENDICULAR_DOT && !hasMeasuredWallAlong(floor, end, host.id, dir)) toMove.add(end.id);
+      }
+    }
   }
 
   for (const id of toMove) {

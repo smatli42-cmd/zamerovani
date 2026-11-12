@@ -111,10 +111,13 @@ export function mergeStraightAt(floor: Floor, wallId: Id, nodeId: Id, throughT =
   const o = straightContinuation(floor, nodeId, node, wFar, w.thickness, w.id, throughT);
   if (!o || o.axis !== w.axis) return wallId; // různá osa = dvě stěny
   if (throughT) {
-    // stejný směr řetězu (a→roh→b) = stejná strana; obrácený = opačná
+    // roh už nese jinou průběžnou stěnu (staré křížení „+“): slučuje se jen jedna průběžná dvojice
+    if (node.host) return wallId;
+    // stejný směr řetězu (a→roh→b) = stejná strana; obrácený = opačná (u čar bez tloušťky na straně nezáleží)
     const sameDir = (o.b === nodeId && w.a === nodeId) || (o.a === nodeId && w.b === nodeId);
     const noJoinAt = (x: typeof w) => (x.a === nodeId && x.noJoinA) || (x.b === nodeId && x.noJoinB);
-    if ((sameDir ? o.side !== w.side : o.side === w.side) || (o.style ?? 'solid') !== (w.style ?? 'solid') || noJoinAt(o) || noJoinAt(w)) return wallId;
+    const sideOk = w.thickness === 0 || (sameDir ? o.side === w.side : o.side !== w.side);
+    if (!sideOk || (o.style ?? 'solid') !== (w.style ?? 'solid') || noJoinAt(o) || noJoinAt(w)) return wallId;
   }
   const measuredSum = o.measured !== null && w.measured !== null ? o.measured + w.measured : null;
   const oldLen = wallLength(floor, o);

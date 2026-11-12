@@ -286,7 +286,6 @@ export function wallBodies(floor: Floor): Map<Id, WallBody> {
       // průběžná stěna s napojenými rohy: líce se v místě napojení přeruší (mezi stěnami žádná čára)
       // líc lo (směr a→b): A.lo → toA.hi | toB.lo → … → B.hi; líc hi: A.hi → toA.lo | toB.hi → … → B.lo
       const lo: Pt[] = [A.lo];
-      const hi: Pt[] = [A.hi];
       // líc se přeruší jen tam, kde vznikla mezera (na straně napojené stěny); jinak pokračuje jednou čarou
       let loStart = A.lo;
       let hiStart = A.hi;
@@ -300,7 +299,6 @@ export function wallBodies(floor: Floor): Map<Id, WallBody> {
           hiStart = v.toB.hiPt!;
         }
         lo.push(v.toA.hiPt!, v.toB.loPt!);
-        hi.push(v.toA.loPt!, v.toB.hiPt!);
       }
       edges.push([loStart, B.hi], [hiStart, B.lo]);
       loLine.splice(0, loLine.length, ...lo, B.hi);
@@ -471,14 +469,15 @@ export function sideFromPen(start: Pt, end: Pt, pen: Pt, threshold: number, curr
  * v rohu `nodeId` (pokračování stejným směrem)? Vrací tu stěnu – kreslená se s ní sloučí do jedné.
  */
 export function straightContinuation(floor: Floor, nodeId: Id | null, from: Pt, to: Pt, thickness: number, excludeWallId?: Id, throughT = false): Wall | null {
-  if (!nodeId || thickness <= 0 || dist(from, to) < 1) return null;
+  // throughT (migrace): i čáry bez tloušťky
+  if (!nodeId || (thickness <= 0 && !throughT) || dist(from, to) < 1) return null;
   // roh napojený doprostřed jiné stěny (T bez dělení) není volný konec
   if (!throughT && floor.nodes[nodeId]?.host) return null;
   const at = Object.values(floor.walls).filter(w => w.id !== excludeWallId && (w.a === nodeId || w.b === nodeId));
   if (!throughT && at.length !== 1) return null;
   const d1 = unit(from, to);
   for (const o of at) {
-    if (!hasBody(o) || o.thickness !== thickness || o.sagitta) continue;
+    if ((!throughT && !hasBody(o)) || o.thickness !== thickness || o.sagitta || o.radius !== undefined || o.a === o.b) continue;
     const far = floor.nodes[o.a === nodeId ? o.b : o.a];
     if (!far) continue;
     const d2 = unit(from, far);
