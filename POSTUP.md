@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-13 (8) – výstupek na vypouklém líci oblouku
+- **Co se změnilo:** Konec čáry tažené po pomocné čáře (vodorovně / svisle) se na líc oblouku přichytí do skutečného průsečíku (`lineFaceCrossing` v `tools/wallTool.ts`, dřív průsečík s přímkou tětivy). Když zarovnání s rohem odtáhne konec do těla, líc se hledá podle polohy pera a má přednost.
+- **Viditelně v aplikaci:** výstupek jde nakreslit i na vypouklém líci obloukové stěny (protější k čáře stěny s rohy), i s vodorovnými / svislými čarami.
+- **Rozhodnuto samostatně:** přichycení na líc má přednost před zarovnáním s rohem (když pomocná čára líc v okolí neprotne, konec padne kolmo na líc a opustí pomocnou čáru).
+- **Otevřené:** ověřit na tabletu.
+- **Chyby od uživatele:** „Funguje to jen z jedné strany“ (obrázek: oblouk, výstupek na vypouklém líci zůstal čarami – levý dolní roh skončil uvnitř stěny). Opraveno, test `tools/arcPicture.test.ts` (bez opravy selže).
+
 ### 2026-11-13 (7) – výstupek kreslený od čáry stěny přes celou tloušťku
 - **Co se změnilo:** Obrys, který začne i skončí na jednom líci (typicky na čáře stěny s rohy) a vyjde ven za protější líc, se ořízne na protějším líci a vznikne výstupek tam (`throughBody` v `core/protrusion.ts`). Části uvnitř těla se zahodí.
 - **Viditelně v aplikaci:** výstupek ven jde kreslit i od vnitřní čáry stěny přes celou tloušťku (rovná i oblouková stěna) – dřív zůstaly čáry.

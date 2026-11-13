@@ -16,7 +16,7 @@ import { snapEnd, snapPoint, type SnapResult } from '../core/snapping';
 import { facePath, initialSideAt, sideFromPen, straightContinuation } from '../core/wallBody';
 import type { Floor, Pt, Wall } from '../model/types';
 import { addLine, addWall, lineChain } from '../store/actions';
-import { findFaceNear, profileFromPolyline, profileToWorld, takesProtrusion, wallFrame, worldToProfile } from '../core/protrusion';
+import { findFaceNear, profileFromPolyline, profileToWorld, takesProtrusion, wallFrame, worldToProfile, type FaceHit, type Frame } from '../core/protrusion';
 import { activeWallArcHeight, activeWallThickness } from '../model/factory';
 import { store, type Camera } from '../store/store';
 import { pickAny } from './pick';
@@ -57,7 +57,8 @@ function snapToFace(floor: Floor, r: SnapResult, raw: Pt, line: DragLine | null,
   const { settings, camera } = store.get();
   if (!settings.snap || r.node) return r;
   const tol = HIT_PX.snapNode / camera.zoom;
-  const hit = findFaceNear(floor, line ? r.pt : raw, tol);
+  // u pomocné čáry poloha na ní; když ji zarovnání s rohem odtáhlo od líce, rozhoduje poloha pera
+  const hit = (line ? findFaceNear(floor, r.pt, tol) : null) ?? findFaceNear(floor, raw, tol);
   if (!hit) return r;
   // konec čáry se na líc přichytí, jen když se k němu čára vrací (začátek je od líce dál) – jinak by se
   // mělký výstupek „přilepil“ zpět na líc (chyba od uživatele 2026-11-13)
@@ -71,18 +72,43 @@ function snapToFace(floor: Floor, r: SnapResult, raw: Pt, line: DragLine | null,
   }
   let pt = hit.point;
   if (line) {
-    const a = floor.nodes[hit.wall.a]!;
-    const b = floor.nodes[hit.wall.b]!;
-    const fd = sub(b, a);
-    const den = line.dir.x * fd.y - line.dir.y * fd.x;
-    if (Math.abs(den) > 1e-9) {
-      const w = sub(hit.point, line.origin);
-      const t = (w.x * fd.y - w.y * fd.x) / den;
-      const x = add(line.origin, scale(line.dir, t));
-      if (dist(x, r.pt) <= tol) pt = x;
-    }
+    // průsečík pomocné čáry s lícem (rovným i obloukovým – u oblouku líc není přímka, chyba od uživatele
+    // 2026-11-13: konec na vypouklém líci skončil vedle něj): hledá se na čáře poblíž pera změnou znaménka
+    const f = wallFrame(floor, hit.wall);
+    const x = f ? (lineFaceCrossing(f, hit, line, r.pt, tol) ?? lineFaceCrossing(f, hit, line, raw, tol)) : null;
+    if (x) pt = x;
   }
   return { pt, node: null, wallHit: null, guides: [], special: true };
+}
+
+/** Bod na pomocné čáře nejblíž `near` (do 2× tol), kde čára protíná líc `hit` (posun v = 0); null = neprotíná. */
+function lineFaceCrossing(f: Frame, hit: FaceHit, line: DragLine, near: Pt, tol: number): Pt | null {
+  const P = (t: number) => add(line.origin, scale(line.dir, t));
+  const v = (t: number) => worldToProfile(f, hit.wall, hit.side, P(t)).v;
+  const t0 = dot(sub(near, line.origin), line.dir);
+  const N = 40;
+  let best: number | null = null;
+  for (let i = -N; i < N; i++) {
+    let lo = t0 + (i * 2 * tol) / N;
+    let hi = t0 + ((i + 1) * 2 * tol) / N;
+    let vlo = v(lo);
+    if (vlo === 0) {
+      best = best === null || Math.abs(lo - t0) < Math.abs(best - t0) ? lo : best;
+      continue;
+    }
+    if (Math.sign(vlo) === Math.sign(v(hi))) continue;
+    for (let k = 0; k < 40; k++) {
+      const m = (lo + hi) / 2;
+      const vm = v(m);
+      if (Math.sign(vm) === Math.sign(vlo)) {
+        lo = m;
+        vlo = vm;
+      } else hi = m;
+    }
+    const t = (lo + hi) / 2;
+    if (best === null || Math.abs(t - t0) < Math.abs(best - t0)) best = t;
+  }
+  return best === null ? null : P(best);
 }
 
 function guidedEndBase(floor: Floor, d: Drawing, p: PointerInput): SnapResult {
