@@ -7,6 +7,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-13 (2) – oprava: výstupek ven, zarovnání s rohem při kreslení
+- **Co se změnilo:** Nástroj Čára přichytí konec úseku na líc stěny jen, když se k líci vrací; na samotnou čáru stěny se nepřichytává (jen na líce). Při kreslení po pomocné čáře (stěna i čára) se konec zase zarovná svisle / vodorovně s jiným rohem (fialové vodítko).
+- **Viditelně v aplikaci:** výstupek ven od stěny vznikne i mělký (dřív se úsek „přilepil“ zpět na líc); čtverec – konec třetí stěny se srovná pod začátek první.
+- **Rozhodnuto samostatně:** přichycení na líc platí pro konec úseku, jehož začátek je od líce aspoň 2× dál než konec; zarovnání s rohy má přednost před zaokrouhlením délky na 10 mm.
+- **Po kontrole revieweru opraveno:** Čára se dál napojuje na oblouky a kruhy (na líce přichytává jen u rovných stěn s tloušťkou); úsek začínající na líci nekončí na protějším líci téže stěny (hluboké vybrání neprojde celou tloušťkou).
+- **Otevřené:** ověřit na tabletu.
+- **Chyby od uživatele:** „Přidání (výstupek) nefunguje – tvar zůstane samostatný bez výplně.“ Příčina: u mělkého výstupku (pod tolerancí přichycení) se konce úseků přichytily zpět na líc / čáru stěny. „Zmizelo přichycení ke koncovému bodu – třetí čára čtverce se nesrovná se začátkem první.“ Příčina: od kreslení s pomocnými čarami (C1.5) se na zachycené čáře nepočítalo zarovnání s rohy. Obojí opraveno, testy `tools/lineTool.test.ts`.
+
 ### 2026-11-13 – výstupek / vybrání stěny a nástroj Čára (sekce I)
 - **Co se změnilo:** Uživatel schválil sekci I katalogu celou („Schvaluji vše“). Nový prvek `Protrusion` (`Floor.protrusions`, SCHEMA_VERSION 10) s obrysem v souřadnicích stěny (`core/protrusion.ts`); tělo stěny ho zahrne (`applyProtrusions` ve `wallBody.ts`: líc se v šířce nekreslí, výstupek se vyplní, vybrání vyřízne). Nový nástroj Čára (`wallTool` v režimu čáry, `addLine` v `store/actions/protrusions.ts`). Výstupek se přenáší při sloučení / rozdělení stěny a kopíruje se se stěnou.
 - **Viditelně v aplikaci:** v liště nástroj **Čára**. Čára z líce stěny zpět na týž líc (i vnější, u osy uprostřed jen líc těla) se po posledním úseku sama změní na výstupek (ven) nebo vybrání (do těla) – při kreslení šedý náhled a čárkovaná uzavírací čára. Vybraný výstupek je modrý, má kóty (odstup před, šířka, odstup za, hloubka; ťuknutím NumPad) a panel (šířka, hloubka, výška, název, materiál, poznámka, Smazat).
@@ -87,7 +95,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Hotové (uživatel vše vyzkoušel na PC a potvrdil „vše funguje“; na tabletu neověřeno):** osa stěny líc / střed a kóty po líci (B1, B4, B10, 2a, 2b); výběr konce u rozpojeného rohu (D14); tažení s držením směru, posun vybrané stěny, kolmice ⊥ (D11, D12, D13, C2/16); T-napojení bez dělení průběžné stěny i oblouku (`Node.host`, `core/hosting.ts`, migrace na schéma 9); řešič délek nehýbe jinými skupinami; kreslení nové stěny libovolným směrem s pomocnými čarami; křížení stěn bez dělení (C1.5, `wallCrossings`, `junctionPoints`, ořez hran). Podrobnosti v Deníku změn. Testy 186 + 1 `it.fails` (C2/6), typecheck a build OK.
 
-**Rozpracované:** výstupek / vybrání a nástroj Čára hotové (2026-11-13), **čeká na vyzkoušení uživatelem**; chybí oblouk v obrysu (I1.10).
+**Rozpracované:** výstupek / vybrání a nástroj Čára hotové, opraveno přidání výstupku a zarovnání s rohem (2026-11-13), **čeká na vyzkoušení uživatelem**; chybí oblouk v obrysu (I1.10).
 
 **Fronta kroků (pořadí):**
 1. **Oblouk v obrysu výstupku** (I1.10): úchyt vzepětí na úseku obrysu vybraného výstupku (`ProfilePt` + vzepětí úseku, vykreslení, kóta).

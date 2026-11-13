@@ -1,7 +1,7 @@
 /**
  * Přichytávání při kreslení stěn: na rohy, do pravých úhlů, zarovnání s jinými rohy.
  */
-import type { Floor, Node, Pt } from '../model/types';
+import type { Floor, Node, Pt, Wall } from '../model/types';
 import { dist, roundTo } from './geometry';
 import { findSpecialNear } from './specialPoints';
 import { findNodeNear, findWallNear, isCurved, type WallHit } from './floorQueries';
@@ -15,6 +15,8 @@ export interface SnapOptions {
   alignTol: number;
   /** false = bez tichého srovnání do os pod 4° (nástroj Stěna má pomocné čáry). */
   axisSnap?: boolean;
+  /** Stěny, na jejichž čáru se konec nepřichytí (nástroj Čára: rovné stěny s tloušťkou – přichytává na jejich líce). */
+  skipWall?: (w: Wall) => boolean;
   /** Roh, ze kterého se kreslí (nepřichytávat sám na sebe). */
   startNodeId?: string;
 }
@@ -101,7 +103,8 @@ export function snapEnd(floor: Floor, start: Pt, raw: Pt, o: SnapOptions): SnapR
   }
 
   // 4) Konec na hraně jiné stěny (napojení příčky) – dotáhnout přesně na stěnu ve směru kreslení.
-  const wallHit = o.snap ? findWallNear(floor, pt, o.nodeTol * 0.6) : null;
+  const near = o.snap ? findWallNear(floor, pt, o.nodeTol * 0.6) : null;
+  const wallHit = near && !o.skipWall?.(near.wall) ? near : null;
   if (wallHit) {
     const wa = floor.nodes[wallHit.wall.a];
     const wb = floor.nodes[wallHit.wall.b];

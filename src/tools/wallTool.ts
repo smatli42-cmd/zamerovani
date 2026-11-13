@@ -16,7 +16,7 @@ import { snapEnd, snapPoint, type SnapResult } from '../core/snapping';
 import { facePath, initialSideAt, sideFromPen, straightContinuation } from '../core/wallBody';
 import type { Floor, Pt, Wall } from '../model/types';
 import { addLine, addWall, lineChain } from '../store/actions';
-import { findFaceNear, profileFromPolyline } from '../core/protrusion';
+import { findFaceNear, profileFromPolyline, takesProtrusion, wallFrame, worldToProfile } from '../core/protrusion';
 import { activeWallArcHeight, activeWallThickness } from '../model/factory';
 import { store, type Camera } from '../store/store';
 import { pickAny } from './pick';
@@ -46,19 +46,29 @@ const NEAR_PX = 60;
  */
 function guidedEnd(floor: Floor, d: Drawing, p: PointerInput): SnapResult {
   const r = guidedEndBase(floor, d, p);
-  return lineMode ? snapToFace(floor, r, p.world, d.guide?.line ?? null) : r;
+  return lineMode ? snapToFace(floor, r, p.world, d.guide?.line ?? null, d.start.pt) : r;
 }
 
 /**
  * Nástroj Čára: konec u líce stěny (i protějšího, i u osy uprostřed) se přichytí přesně na líc;
  * je-li zachycená pomocná čára, na její průsečík s lícem. Roh a zvláštní bod mají přednost.
  */
-function snapToFace(floor: Floor, r: SnapResult, raw: Pt, line: DragLine | null): SnapResult {
+function snapToFace(floor: Floor, r: SnapResult, raw: Pt, line: DragLine | null, from: Pt | null): SnapResult {
   const { settings, camera } = store.get();
   if (!settings.snap || r.node) return r;
   const tol = HIT_PX.snapNode / camera.zoom;
   const hit = findFaceNear(floor, line ? r.pt : raw, tol);
   if (!hit) return r;
+  // konec čáry se na líc přichytí, jen když se k němu čára vrací (začátek je od líce dál) – jinak by se
+  // mělký výstupek „přilepil“ zpět na líc (chyba od uživatele 2026-11-13)
+  if (from) {
+    // úsek začínající na líci stěny nekončí na protějším líci téže stěny (hluboké vybrání by prošlo celou tloušťkou)
+    const fromFace = findFaceNear(floor, from, 1, hit.wall.id);
+    if (fromFace && fromFace.side !== hit.side) return r;
+    const f = wallFrame(floor, hit.wall);
+    const startDist = f ? Math.abs(worldToProfile(f, hit.wall, hit.side, from).v) : 0;
+    if (hit.distance >= startDist * 0.5) return r;
+  }
   let pt = hit.point;
   if (line) {
     const a = floor.nodes[hit.wall.a]!;
@@ -77,7 +87,8 @@ function snapToFace(floor: Floor, r: SnapResult, raw: Pt, line: DragLine | null)
 
 function guidedEndBase(floor: Floor, d: Drawing, p: PointerInput): SnapResult {
   const { settings, camera } = store.get();
-  const base = snapEnd(floor, d.start.pt, p.world, snapOptions(d.start.node?.id));
+  // nástroj Čára: na stěnu se přichytává po lících (snapToFace), ne na čáru stěny
+  const base = snapEnd(floor, d.start.pt, p.world, { ...snapOptions(d.start.node?.id), ...(lineMode ? { skipWall: takesProtrusion } : {}) });
   d.guide = null;
   if (!settings.snap || base.node || base.special) {
     d.lock = null;
@@ -98,13 +109,35 @@ function guidedEndBase(floor: Floor, d: Drawing, p: PointerInput): SnapResult {
       return base;
     }
   }
+  let align: { from: Pt; to: Pt } | null = null;
   if (!(r.line.stops ?? []).some(s => dist(s, pt) < 1e-6)) {
     const len = Math.round(dot(sub(pt, r.line.origin), r.line.dir) / 10) * 10;
     pt = add(r.line.origin, scale(r.line.dir, len));
+    // zarovnání s jiným rohem (svisle / vodorovně) – např. čtverec: konec třetí stěny pod začátkem první
+    align = alignOnLine(floor, r.line, pt, HIT_PX.snapAlign / camera.zoom, d.start.node?.id);
+    if (align) pt = align.to;
   }
   d.guide = { line: r.line, point: pt, lines: [] };
-  const hit = findWallNear(floor, pt, 1.5);
-  return { pt, node: null, wallHit: hit ? { ...hit, point: pt } : null, guides: [] };
+  const near = findWallNear(floor, pt, 1.5);
+  const hit = near && !(lineMode && takesProtrusion(near.wall)) ? near : null;
+  return { pt, node: null, wallHit: hit ? { ...hit, point: pt } : null, guides: align ? [align] : [] };
+}
+
+/** Bod na pomocné čáře se stejným x nebo y jako některý roh (do `tol` od `pt`); nejbližší. */
+function alignOnLine(floor: Floor, line: DragLine, pt: Pt, tol: number, excludeId?: string): { from: Pt; to: Pt } | null {
+  let best: { from: Pt; to: Pt; d: number } | null = null;
+  for (const n of Object.values(floor.nodes)) {
+    if (n.id === excludeId) continue;
+    for (const axis of ['x', 'y'] as const) {
+      const k = line.dir[axis];
+      if (Math.abs(k) < 0.1) continue; // čára rovnoběžná s touto osou
+      const t = (n[axis] - line.origin[axis]) / k;
+      const q = add(line.origin, scale(line.dir, t));
+      const dd = dist(q, pt);
+      if (dd <= tol && dist(q, n) > 1 && (!best || dd < best.d)) best = { from: { x: n.x, y: n.y }, to: { x: Math.round(q.x * 1000) / 1000, y: Math.round(q.y * 1000) / 1000 }, d: dd };
+    }
+  }
+  return best ? { from: best.from, to: best.to } : null;
 }
 
 /** O kolik px se musí pero odchýlit od čáry, aby se tělo překlopilo. */
@@ -118,7 +151,7 @@ let lineMode = false;
 /** Začátek: u nástroje Čára i líc stěny. */
 function startSnap(floor: Floor, raw: Pt): SnapResult {
   const s = snapPoint(floor, raw, snapOptions());
-  return lineMode ? snapToFace(floor, s, raw, null) : s;
+  return lineMode ? snapToFace(floor, s, raw, null, null) : s;
 }
 
 /**
