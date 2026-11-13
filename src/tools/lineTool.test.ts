@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { createProject } from '../model/factory';
-import { addWall } from '../store/actions';
+import { addRectWalls, addWall } from '../store/actions';
 import { store } from '../store/store';
 import { wallTool } from './wallTool';
 import type { PointerInput } from './types';
@@ -123,5 +123,72 @@ describe('výstupek kreslený nástrojem Čára', () => {
     const R = addWall({ x: 0, y: 0 }, null, { x: 5000, y: 0 }, null, false, { thickness: 300, side: -1, sagitta: 500 })!;
     draw([[1100, -2000], [1100, -1000], [1100, 380]]);
     expect(lastWall().b.host).toBe(R);
+  });
+
+  it('uzavřený tvar čtyřmi čarami přiložený k vnitřnímu líci = výstupek (chyba od uživatele, obrázek)', () => {
+    open('wall');
+    room();
+    store.set({ tool: 'line' });
+    draw([[1000, 0], [1300, 0], [1530, 0]]); // nejdřív strana po líci
+    draw([[1530, 0], [1530, 200], [1530, 400]]);
+    draw([[1530, 400], [1300, 400], [1000, 400]]);
+    expect(prots()).toHaveLength(0);
+    draw([[1000, 400], [1000, 200], [1000, 0]]); // uzavření
+    expect(prots()).toHaveLength(1);
+    expect(prots()[0]!.pts.map(q => [Math.round(q.u), Math.round(q.v)]).sort((p, q) => p[0]! - q[0]! || p[1]! - q[1]!)).toEqual([[1000, 0], [1000, 400], [1530, 0], [1530, 400]]);
+    expect(Object.values(f().walls).every(w => w.thickness > 0)).toBe(true);
+  });
+
+  it('obdélník (nástroj Obdélník) přiložený k vnějšímu líci = výstupek; čárkovaný zůstane čarami', () => {
+    open('wall');
+    room();
+    addRectWalls({ x: 2000, y: -300 }, { x: 2500, y: -770 }, 'solid');
+    expect(prots()).toHaveLength(1);
+    const top = Object.values(f().walls).find(w => f().nodes[w.a]!.y === 0 && f().nodes[w.b]!.y === 0)!;
+    expect(prots()[0]).toMatchObject({ mode: 'add', wallId: top.id });
+    expect(Math.max(...prots()[0]!.pts.map(q => q.v))).toBe(470);
+    addRectWalls({ x: 3000, y: -300 }, { x: 3400, y: -700 }, 'dashed');
+    expect(prots()).toHaveLength(1);
+  });
+
+  it('obdélník volně v místnosti zůstane obdélníkem', () => {
+    open('wall');
+    room();
+    addRectWalls({ x: 1000, y: 1000 }, { x: 1500, y: 1500 }, 'solid');
+    expect(prots()).toHaveLength(0);
+    expect(Object.values(f().walls).filter(w => w.thickness === 0)).toHaveLength(4);
+  });
+
+  it('obdélník uvnitř těla stranou na líci = vybrání; Zpět jedním krokem', () => {
+    open('wall');
+    room();
+    addRectWalls({ x: 1000, y: 0 }, { x: 1500, y: -150 }, 'solid');
+    expect(prots()).toHaveLength(1);
+    expect(prots()[0]).toMatchObject({ mode: 'subtract' });
+    store.undo();
+    expect(prots()).toHaveLength(0);
+    expect(Object.values(f().walls).filter(w => w.thickness === 0)).toHaveLength(0);
+  });
+
+  it('obdélník dotýkající se líce jen rohem zůstane čarami', () => {
+    open('wall');
+    room();
+    addRectWalls({ x: 1000, y: 0 }, { x: 1500, y: 500 }, 'solid'); // strana po líci → výstupek
+    expect(prots()).toHaveLength(1);
+    addRectWalls({ x: 2500, y: 600 }, { x: 3000, y: 1000 }, 'solid'); // volně
+    addRectWalls({ x: 3500, y: -300 }, { x: 3900, y: -800 }, 'solid'); // u vnějšího líce
+    expect(prots()).toHaveLength(2);
+  });
+
+  it('tvar uzavřený čtvrtou čarou po líci (výstupek vznikl už po třech) – čtvrtá čára nezůstane navíc', () => {
+    open('wall');
+    room();
+    store.set({ tool: 'line' });
+    draw([[1000, 0], [1000, 200], [1000, 400]]);
+    draw([[1000, 400], [1300, 400], [1530, 400]]);
+    draw([[1530, 400], [1530, 200], [1530, 0]]);
+    draw([[1530, 0], [1300, 0], [1000, 0]]);
+    expect(prots()).toHaveLength(1);
+    expect(Object.values(f().walls).filter(w => w.thickness === 0)).toHaveLength(0);
   });
 });

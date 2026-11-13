@@ -11,6 +11,7 @@ import { attachAtNode } from '../../core/hosting';
 import { hasBody, initialSide, orientLoopOutward } from '../../core/wallBody';
 import { store } from '../store';
 import { cleanup, getOrCreateNode, MERGE_TOL, nodeHasNoJoin } from './shared';
+import { convertChain } from './protrusions';
 
 /** Je tu už stejná stěna (stejné rohy a stejný tvar)? Dvě půlkružnice mezi týmiž rohy jsou různé stěny. */
 function findSameWall(floor: Floor, a: Id, b: Id, sagitta: number): Wall | undefined {
@@ -83,6 +84,7 @@ export function insertWall(floor: Floor, start: Pt, startNodeId: Id | null, end:
 
 /** Obdélník ze čtyř stěn (např. sloup, komín); rohy na jiných stěnách se na ně napojí. */
 export function addRectWalls(p: Pt, q: Pt, style: LineStyle): void {
+  let prot: Id | null = null;
   store.edit(floor => {
     const ids = [
       { x: p.x, y: p.y },
@@ -91,9 +93,16 @@ export function addRectWalls(p: Pt, q: Pt, style: LineStyle): void {
       { x: p.x, y: q.y }
     ].map(c => getOrCreateNode(floor, c, null));
     if (new Set(ids).size < 4) return;
-    for (let i = 0; i < 4; i++) linkWall(floor, ids[i]!, ids[(i + 1) % 4]!, 0, style);
+    const sides: Id[] = [];
+    for (let i = 0; i < 4; i++) {
+      const w = linkWall(floor, ids[i]!, ids[(i + 1) % 4]!, 0, style);
+      if (w && w.thickness === 0) sides.push(w.id);
+    }
     for (const id of ids) attachAtNode(floor, id);
+    // plný obdélník přiložený stranou k líci stěny = výstupek / vybrání (čárkovaný překlad zůstane čarami)
+    if (sides[0] && style === 'solid') prot = convertChain(floor, sides[0]);
   });
+  if (prot) store.set({ selection: { kind: 'protrusion', id: prot } });
 }
 
 /** Kruh: jedna stěna se středovým rohem a poloměrem. */
