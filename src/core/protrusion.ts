@@ -2,18 +2,21 @@
  * Výstupek / vybrání stěny (KATALOG-STEN.md, sekce I): geometrie v souřadnicích stěny, rozpoznání obrysu
  * nakresleného čarou s oběma konci na líci, kóty (šířka, hloubka, odstupy) a jejich změna.
  *
- * Souřadnice obrysu: u = mm podél osy stěny od rohu A, v = mm kolmo od líce (kladně ven od těla).
- * Líc `side` leží na posunu `faceOffset` podél normal(a→b) (stejně jako `bodyRange`).
+ * Souřadnice obrysu: u = mm podél osy stěny od rohu A (u oblouku délka po oblouku osy), v = mm kolmo od líce
+ * (kladně ven od těla; u oblouku radiálně). Líc `side` leží na posunu `faceOffset` podél normal(tečny)
+ * (stejně jako `bodyRange`). Rohy obrysu se do výkresu převádějí těmito souřadnicemi, úseky mezi nimi jsou
+ * ve výkresu rovné (nebo oblouky se vzepětím `s`) – i na obloukové stěně zůstane nakreslená čára rovná.
  */
 import type { Floor, Id, ProfilePt, Protrusion, Pt, Wall } from '../model/types';
 import { add, dist, dot, normal, scale, sub, unit } from './geometry';
+import { arcGeometry } from './arc';
 import { bodyRange, facePath, hasBody } from './wallBody';
 
 /** Výstupky podlaží (pole chybí u starších dat v testech). */
 export const protrusionsOf = (floor: Floor): Protrusion[] => Object.values(floor.protrusions ?? {});
 
-/** Stěna, na kterou jde výstupek: rovná s tělem. */
-export const takesProtrusion = (w: Wall | undefined): w is Wall => !!w && hasBody(w) && !w.sagitta;
+/** Stěna, na kterou jde výstupek: s tělem (rovná i oblouková). */
+export const takesProtrusion = (w: Wall | undefined): w is Wall => !!w && hasBody(w);
 
 /** Posun líce `side` od osy podél normal(a→b). */
 export function faceOffset(w: Wall, side: 1 | -1): number {
@@ -21,40 +24,99 @@ export function faceOffset(w: Wall, side: 1 | -1): number {
   return side === 1 ? r1 : r0;
 }
 
-interface Frame {
-  a: Pt;
-  d: Pt;
-  n: Pt;
+/** Souřadnice podél osy stěny (rovné i obloukové). */
+export interface Frame {
+  /** Délka osy (u ∈ [0, len]). */
   len: number;
+  /** Bod na ose v poloze u, tečna a normal(tečny). */
+  at(u: number): { p: Pt; t: Pt; n: Pt };
+  /** Poloha u a posun podél normal(tečny) bodu výkresu. */
+  project(p: Pt): { u: number; across: number };
+  /** Kolikrát je délka po líci (posun `off` od osy) delší než po ose: rovná stěna 1, oblouk poměr poloměrů. */
+  faceScale(off: number): number;
 }
 
 export function wallFrame(floor: Floor, w: Wall): Frame | null {
   const a = floor.nodes[w.a];
   const b = floor.nodes[w.b];
-  if (!a || !b) return null;
-  const len = dist(a, b);
-  if (len < 1) return null;
-  const d = unit(a, b);
-  return { a, d, n: normal(d), len };
+  if (!a || !b || dist(a, b) < 1) return null;
+  const g = arcGeometry(a, b, w.sagitta ?? 0);
+  if (!g) {
+    const d = unit(a, b);
+    const n = normal(d);
+    return {
+      len: dist(a, b),
+      at: u => ({ p: add(a, scale(d, u)), t: d, n }),
+      project: p => ({ u: dot(sub(p, a), d), across: dot(sub(p, a), n) }),
+      faceScale: () => 1
+    };
+  }
+  const sgn = Math.sign(g.sweep) || 1;
+  const span = Math.abs(g.sweep);
+  const TWO_PI = Math.PI * 2;
+  return {
+    len: g.r * span,
+    at: u => {
+      const ang = g.start + (sgn * u) / g.r;
+      const t = { x: -Math.sin(ang) * sgn, y: Math.cos(ang) * sgn };
+      return { p: { x: g.center.x + g.r * Math.cos(ang), y: g.center.y + g.r * Math.sin(ang) }, t, n: normal(t) };
+    },
+    project: p => {
+      const ang = Math.atan2(p.y - g.center.y, p.x - g.center.x);
+      let rel = ((((ang - g.start) * sgn) % TWO_PI) + TWO_PI) % TWO_PI;
+      if (rel > span + (TWO_PI - span) / 2) rel -= TWO_PI; // kousek před začátkem = záporně
+      // normal(tečny) míří radiálně −sgn
+      return { u: rel * g.r, across: -sgn * (dist(p, g.center) - g.r) };
+    },
+    faceScale: off => Math.max(0.01, (g.r - sgn * off) / g.r)
+  };
 }
 
 /** Bod obrysu → souřadnice výkresu. */
 export function profileToWorld(f: Frame, w: Wall, side: 1 | -1, q: ProfilePt): Pt {
-  return add(add(f.a, scale(f.d, q.u)), scale(f.n, faceOffset(w, side) + side * q.v));
+  const o = f.at(q.u);
+  return add(o.p, scale(o.n, faceOffset(w, side) + side * q.v));
 }
 
 /** Bod výkresu → souřadnice stěny vůči líci `side`. */
 export function worldToProfile(f: Frame, w: Wall, side: 1 | -1, p: Pt): ProfilePt {
-  const r = sub(p, f.a);
-  return { u: dot(r, f.d), v: side * (dot(r, f.n) - faceOffset(w, side)) };
+  const r = f.project(p);
+  return { u: r.u, v: side * (r.across - faceOffset(w, side)) };
+}
+
+/** Rohy obrysu ve výkresu. */
+function cornersOf(floor: Floor, p: Protrusion): { f: Frame; w: Wall; pts: Pt[] } | null {
+  const w = floor.walls[p.wallId];
+  const f = takesProtrusion(w) ? wallFrame(floor, w) : null;
+  return w && f ? { f, w, pts: p.pts.map(q => profileToWorld(f, w, p.side, q)) } : null;
 }
 
 /** Obrys výstupku ve výkresu (otevřená lomená čára; uzavírá se po líci). null = stěna chybí nebo nejde. */
 export function protrusionOutline(floor: Floor, p: Protrusion): Pt[] | null {
-  const w = floor.walls[p.wallId];
-  if (!takesProtrusion(w)) return null;
-  const f = wallFrame(floor, w);
-  return f ? profilePolyline(p).map(q => profileToWorld(f, w, p.side, q)) : null;
+  const c = cornersOf(floor, p);
+  if (!c) return null;
+  // úseky rovné ve výkresu, oblouky podle vzepětí (znaménko se zrcadlí s lícem jako u souřadnic u, v)
+  const out: Pt[] = [c.pts[0]!];
+  for (let i = 0; i + 1 < c.pts.length; i++) {
+    const s = p.pts[i]!.s;
+    if (!s) out.push(c.pts[i + 1]!);
+    else out.push(...facePath(c.pts[i]!, c.pts[i + 1]!, s * p.side, 24).pts.slice(1));
+  }
+  return out;
+}
+
+/** Uzavřená plocha výstupku: obrys a zpět po líci (u obloukové stěny po oblouku líce, u rovné rovně). */
+export function protrusionPolygon(floor: Floor, p: Protrusion): Pt[] | null {
+  const outline = protrusionOutline(floor, p);
+  const c = cornersOf(floor, p);
+  if (!outline || !c) return null;
+  if (!c.w.sagitta) return outline;
+  const ua = p.pts[p.pts.length - 1]!.u;
+  const ub = p.pts[0]!.u;
+  const steps = Math.max(2, Math.ceil(Math.abs(ub - ua) / 50));
+  const back: Pt[] = [];
+  for (let i = 1; i < steps; i++) back.push(profileToWorld(c.f, c.w, p.side, { u: ua + ((ub - ua) * i) / steps, v: 0 }));
+  return [...outline, ...back];
 }
 
 /** Obrys v souřadnicích stěny s rozloženými oblouky (úseky s `s`) na lomenou čáru. */
@@ -75,35 +137,28 @@ export function profilePolyline(p: Protrusion, steps = 24): ProfilePt[] {
 
 /** Úchyty vzepětí: vrchol (střed) každého úseku obrysu, který neleží na líci; `seg` = index úseku. */
 export function protrusionArcHandles(floor: Floor, p: Protrusion): { seg: number; at: Pt; chordMid: Pt }[] {
-  const w = floor.walls[p.wallId];
-  const f = takesProtrusion(w) ? wallFrame(floor, w) : null;
-  if (!w || !f) return [];
+  const c = cornersOf(floor, p);
+  if (!c) return [];
   const out: { seg: number; at: Pt; chordMid: Pt }[] = [];
   for (let i = 0; i + 1 < p.pts.length; i++) {
-    const a = p.pts[i]!;
-    const b = p.pts[i + 1]!;
-    if (Math.abs(a.v) < 0.5 && Math.abs(b.v) < 0.5) continue; // úsek po líci
-    const len = Math.hypot(b.u - a.u, b.v - a.v);
-    if (len < 1) continue;
-    const mid = { u: (a.u + b.u) / 2, v: (a.v + b.v) / 2 };
-    const nu = -(b.v - a.v) / len;
-    const nv = (b.u - a.u) / len;
-    const s = a.s ?? 0;
-    out.push({ seg: i, at: profileToWorld(f, w, p.side, { u: mid.u + nu * s, v: mid.v + nv * s }), chordMid: profileToWorld(f, w, p.side, mid) });
+    if (Math.abs(p.pts[i]!.v) < 0.5 && Math.abs(p.pts[i + 1]!.v) < 0.5) continue; // úsek po líci
+    const A = c.pts[i]!;
+    const B = c.pts[i + 1]!;
+    if (dist(A, B) < 1) continue;
+    const mid = scale(add(A, B), 0.5);
+    out.push({ seg: i, at: add(mid, scale(normal(unit(A, B)), (p.pts[i]!.s ?? 0) * p.side)), chordMid: mid });
   }
   return out;
 }
 
 /** Vzepětí úseku `seg` podle bodu výkresu (vzdálenost od tětivy se znaménkem, po 10 mm; < 10 mm = rovný). */
 export function sagittaFromPoint(floor: Floor, p: Protrusion, seg: number, at: Pt): number | null {
-  const w = floor.walls[p.wallId];
-  const f = takesProtrusion(w) ? wallFrame(floor, w) : null;
-  const a = p.pts[seg];
-  const b = p.pts[seg + 1];
-  if (!w || !f || !a || !b) return null;
-  const q = worldToProfile(f, w, p.side, at);
-  const len = Math.hypot(b.u - a.u, b.v - a.v) || 1;
-  const h = ((q.u - (a.u + b.u) / 2) * -(b.v - a.v) + (q.v - (a.v + b.v) / 2) * (b.u - a.u)) / len;
+  const c = cornersOf(floor, p);
+  const A = c?.pts[seg];
+  const B = c?.pts[seg + 1];
+  if (!c || !A || !B) return null;
+  const len = dist(A, B) || 1;
+  const h = dot(sub(at, scale(add(A, B), 0.5)), normal(unit(A, B))) * p.side;
   const r = Math.round(h / 10) * 10;
   // nejvýš půlkruh
   return Math.max(-len / 2, Math.min(len / 2, r));
@@ -116,7 +171,8 @@ export function setProtrusionSagitta(floor: Floor, id: Id, seg: number, s: numbe
   const b = p?.pts[seg + 1];
   if (!p || !a || !b || !Number.isFinite(s)) return false;
   if (Math.abs(a.v) < 0.5 && Math.abs(b.v) < 0.5) return false;
-  const half = Math.hypot(b.u - a.u, b.v - a.v) / 2;
+  const c = cornersOf(floor, p);
+  const half = c ? dist(c.pts[seg]!, c.pts[seg + 1]!) / 2 : Math.hypot(b.u - a.u, b.v - a.v) / 2;
   if (Math.abs(s) > half + 0.5) return false;
   const old = a.s;
   if (Math.abs(s) < 1) delete a.s;
@@ -145,16 +201,15 @@ export function findFaceNear(floor: Floor, p: Pt, tol: number, onlyWall?: Id): F
     if ((onlyWall && w.id !== onlyWall) || !takesProtrusion(w)) continue;
     const f = wallFrame(floor, w);
     if (!f) continue;
-    const r = sub(p, f.a);
-    const u = dot(r, f.d);
+    const { u, across } = f.project(p);
     if (u < -tol || u > f.len + tol) continue;
-    const across = dot(r, f.n);
     for (const side of [1, -1] as const) {
       const off = faceOffset(w, side);
       const distance = Math.abs(across - off);
       if (distance > tol || (best && distance >= best.distance)) continue;
       const uc = Math.max(0, Math.min(f.len, u));
-      best = { wall: w, side, u: uc, point: add(add(f.a, scale(f.d, uc)), scale(f.n, off)), distance };
+      const o = f.at(uc);
+      best = { wall: w, side, u: uc, point: add(o.p, scale(o.n, off)), distance };
     }
   }
   return best;
@@ -225,7 +280,9 @@ export function protrusionDims(floor: Floor, p: Protrusion): Record<ProtrusionDi
   const nb = protrusionNeighbors(floor, p);
   const start = nb.before ? protrusionExtent(nb.before).u1 : 0;
   const end = nb.after ? protrusionExtent(nb.after).u0 : f.len;
-  return { width: u1 - u0, depth, before: u0 - start, after: end - u1 };
+  // šířka a odstupy po líci, ke kterému výstupek patří (I1.8; u oblouku jiná délka než po ose)
+  const k = f.faceScale(faceOffset(w, p.side));
+  return { width: (u1 - u0) * k, depth, before: (u0 - start) * k, after: (end - u1) * k };
 }
 
 /**
@@ -239,10 +296,12 @@ export function setProtrusionDim(floor: Floor, id: Id, dim: ProtrusionDim, value
   if (!p || !w || !cur || !Number.isFinite(value)) return false;
   const { u0, depth } = protrusionExtent(p);
   const before = p.pts;
+  // zadané míry po líci → souřadnice u po ose
+  const k = wallFrame(floor, w)?.faceScale(faceOffset(w, p.side)) ?? 1;
   if (dim === 'width') {
     if (value < 10 || cur.width < 1e-6) return false;
-    const k = value / cur.width;
-    p.pts = rescaleArcs(before, before.map(q => ({ ...q, u: r1(u0 + (q.u - u0) * k) })));
+    const kw = value / cur.width;
+    p.pts = rescaleArcs(before, before.map(q => ({ ...q, u: r1(u0 + (q.u - u0) * kw) })));
   } else if (dim === 'depth') {
     if (value < 1 || depth < 1e-6 || (p.mode === 'subtract' && value > w.thickness)) return false;
     // body se zvětší úměrně; oblouky se mění s délkou své tětivy – hloubka i s vyklenutím se dorovná na zadanou
@@ -256,7 +315,7 @@ export function setProtrusionDim(floor: Floor, id: Id, dim: ProtrusionDim, value
     p.pts = p.pts.map(q => ({ ...q, v: r1(q.v) }));
   } else {
     if (value < 0) return false;
-    const shift = dim === 'before' ? value - cur.before : cur.after - value;
+    const shift = (dim === 'before' ? value - cur.before : cur.after - value) / k;
     p.pts = before.map(q => ({ ...q, u: r1(q.u + shift) }));
   }
   if (!protrusionFits(floor, p)) {
@@ -319,4 +378,24 @@ export function defaultArcSign(floor: Floor, id: Id, seg: number): 1 | -1 {
   const cv = p.pts.reduce((s, q) => s + q.v, 0) / p.pts.length;
   const h = ((a.u + b.u) / 2 - cu) * -(b.v - a.v) + ((a.v + b.v) / 2 - cv) * (b.u - a.u);
   return h >= 0 ? 1 : -1;
+}
+
+/**
+ * Po změně vzepětí stěny (oblouk ↔ rovná, jiné vzepětí) se délka osy změní – polohy výstupků podél stěny se
+ * přepočítají v poměru délek, aby zůstaly na stejném místě stěny (volá store.edit po každé úpravě).
+ */
+export function syncProtrusions(before: Floor | undefined, floor: Floor): void {
+  if (!before) return;
+  for (const p of protrusionsOf(floor)) {
+    const w = floor.walls[p.wallId];
+    const wb = before.walls[p.wallId];
+    if (!w || !wb || (w.sagitta ?? 0) === (wb.sagitta ?? 0)) continue;
+    if (before.protrusions?.[p.id] !== undefined && JSON.stringify(before.protrusions[p.id]!.pts) !== JSON.stringify(p.pts)) continue;
+    const f0 = wallFrame(before, wb);
+    const f1 = wallFrame(floor, w);
+    if (!f0 || !f1 || f0.len < 1) continue;
+    const k = f1.len / f0.len;
+    if (Math.abs(k - 1) < 1e-9) continue;
+    p.pts = p.pts.map(q => ({ ...q, u: r1(q.u * k) }));
+  }
 }

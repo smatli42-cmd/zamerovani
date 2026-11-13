@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { createProject } from '../model/factory';
 import { addRectWalls, addWall } from '../store/actions';
+import { profileToWorld, wallFrame } from '../core/protrusion';
 import { store } from '../store/store';
 import { wallTool } from './wallTool';
 import type { PointerInput } from './types';
@@ -190,5 +191,22 @@ describe('výstupek kreslený nástrojem Čára', () => {
     draw([[1530, 0], [1300, 0], [1000, 0]]);
     expect(prots()).toHaveLength(1);
     expect(Object.values(f().walls).filter(w => w.thickness === 0)).toHaveLength(0);
+  });
+
+  it('perem na obloukové stěně (konce kousek vedle líce se přichytí)', () => {
+    open('wall');
+    const W = addWall({ x: 0, y: 0 }, null, { x: 4000, y: 0 }, null, false, { thickness: 300, side: 1, sagitta: 1000 })!;
+    store.set({ tool: 'line' });
+    const w = f().walls[W]!;
+    const at = (u: number, v: number) => {
+      const q = profileToWorld(wallFrame(f(), w)!, w, -1, { u, v });
+      return [q.x, q.y] as [number, number];
+    };
+    const off = (p: [number, number], dx: number): [number, number] => [p[0] + dx, p[1] + dx];
+    draw([off(at(2000, 0), 30), at(2000, 200), at(2000, 400)]);
+    draw([at(2000, 400), at(2250, 400), at(2500, 400)]);
+    draw([at(2500, 400), at(2500, 200), off(at(2500, 0), -30)]);
+    expect(prots()).toHaveLength(1);
+    expect(prots()[0]).toMatchObject({ wallId: W, mode: 'add' });
   });
 });

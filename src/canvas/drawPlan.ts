@@ -12,7 +12,7 @@ import { isSelected, type Camera, type Selection, type SingleSelection } from '.
 import { toScreen } from './view';
 import { bodyNormal, bodyStart, facePointAt, hasBody, wallBodies } from '../core/wallBody';
 import { addHitBox } from './hitTargets';
-import { protrusionArcHandles, protrusionOutline, protrusionsOf } from '../core/protrusion';
+import { protrusionArcHandles, protrusionPolygon, protrusionsOf } from '../core/protrusion';
 
 export const COLORS = {
   wall: '#0f172a',
@@ -88,7 +88,7 @@ export function drawWalls(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
   for (const p of protrusionsOf(floor)) {
     const sel = isSel(selection, 'protrusion', p.id);
     const hov = isSel(hover, 'protrusion', p.id);
-    const outline = (sel || hov) && protrusionOutline(floor, p);
+    const outline = (sel || hov) && protrusionPolygon(floor, p);
     if (!outline) continue;
     ctx.fillStyle = sel ? 'rgba(37,99,235,0.35)' : 'rgba(147,197,253,0.4)';
     path(outline);

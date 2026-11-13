@@ -11,7 +11,7 @@ import type { Floor, Id, Pt, Wall } from '../model/types';
 import { arcGeometry } from './arc';
 import { add, centroid, dist, dot, normal, scale, sub, unit } from './geometry';
 import { junctionPoints, wallSegments } from './floorQueries';
-import { faceOffset, protrusionExtent, protrusionOutline, protrusionsOf, wallFrame } from './protrusion';
+import { faceOffset, protrusionExtent, protrusionOutline, protrusionPolygon, protrusionsOf, wallFrame, type Frame } from './protrusion';
 
 /** Má stěna tělo? (rovné i obloukové stěny s tloušťkou; kruhy a čáry bez tloušťky ne) */
 export const hasBody = (w: Wall): boolean => w.thickness > 0 && w.radius === undefined && w.a !== w.b;
@@ -374,36 +374,46 @@ function applyProtrusions(floor: Floor, bodies: Map<Id, WallBody>): void {
     const body = bodies.get(p.wallId);
     const w = floor.walls[p.wallId];
     const outline = protrusionOutline(floor, p);
+    const area = protrusionPolygon(floor, p);
     const f = w && wallFrame(floor, w);
-    if (!body || !w || !outline || !f) continue;
-    const origin = add(f.a, scale(f.n, faceOffset(w, p.side)));
+    if (!body || !w || !outline || !area || !f) continue;
     const { u0, u1 } = protrusionExtent(p);
-    body.edges = cutAlongLine(body.edges, origin, f.d, u0, u1);
+    body.edges = cutAlongFace(body.edges, f, faceOffset(w, p.side), u0, u1);
     for (let i = 0; i + 1 < outline.length; i++) body.edges.push([outline[i]!, outline[i + 1]!]);
-    (p.mode === 'add' ? body.adds : body.holes).push(outline);
+    (p.mode === 'add' ? body.adds : body.holes).push(area);
     for (const q of outline) body.snaps.push(q);
   }
 }
 
-/** Z hran ležících na přímce origin + u·d vyřízne úsek (u0, u1); ostatní hrany beze změny. */
-function cutAlongLine(edges: [Pt, Pt][], origin: Pt, d: Pt, u0: number, u1: number): [Pt, Pt][] {
-  const n = normal(d);
+/**
+ * Z hran ležících na líci (posun `off` od osy stěny – rovné i oblouku) vyřízne úsek (u0, u1); ostatní hrany
+ * beze změny. U oblouku jsou hrany líce krátké tětivy – poloha uvnitř hrany se dopočítá lineárně.
+ */
+function cutAlongFace(edges: [Pt, Pt][], f: Frame, off: number, u0: number, u1: number): [Pt, Pt][] {
   const out: [Pt, Pt][] = [];
-  const at = (u: number) => add(origin, scale(d, u));
   for (const e of edges) {
     const [p, q] = e;
-    if (Math.abs(dot(sub(p, origin), n)) > 0.5 || Math.abs(dot(sub(q, origin), n)) > 0.5) {
+    const pp = f.project(p);
+    const pq = f.project(q);
+    // u oblouku jsou hrany líce tětivy – kontrolují se jen jejich konce (leží na kružnici líce)
+    if (Math.abs(pp.across - off) > 0.5 || Math.abs(pq.across - off) > 0.5) {
       out.push(e);
       continue;
     }
-    const lo = Math.min(dot(sub(p, origin), d), dot(sub(q, origin), d));
-    const hi = Math.max(dot(sub(p, origin), d), dot(sub(q, origin), d));
-    if (hi <= u0 + 1e-6 || lo >= u1 - 1e-6) {
+    const lo = Math.min(pp.u, pq.u);
+    const hi = Math.max(pp.u, pq.u);
+    if (hi <= u0 + 1e-6 || lo >= u1 - 1e-6 || hi - lo < 1e-9) {
       out.push(e);
       continue;
     }
-    if (u0 - lo > 0.01) out.push([at(lo), at(u0)]);
-    if (hi - u1 > 0.01) out.push([at(u1), at(hi)]);
+    const [from, to] = pp.u <= pq.u ? [p, q] : [q, p];
+    // bod řezu přesně na líci (u oblouku na kružnici, ne na tětivě hrany)
+    const at = (u: number) => {
+      const o = f.at(u);
+      return add(o.p, scale(o.n, off));
+    };
+    if (u0 - lo > 0.01) out.push([from, at(u0)]);
+    if (hi - u1 > 0.01) out.push([at(u1), to]);
   }
   return out;
 }

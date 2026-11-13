@@ -15,6 +15,7 @@ import type { LineStyle } from '../model/types';
 import type { Side } from '../core/components';
 import type { ProtrusionDim } from '../core/protrusion';
 import { syncHosted } from '../core/hosting';
+import { syncProtrusions } from '../core/protrusion';
 
 export type ToolId = 'select' | 'wall' | 'line' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'text' | 'leader' | 'paste' | 'pan';
 
@@ -247,6 +248,8 @@ class Store {
       recipe(f, p);
       // napojené rohy (T bez dělení) sledují svou průběžnou stěnu
       syncHosted(before, f);
+      // výstupky drží místo na stěně i při změně jejího vzepětí
+      syncProtrusions(before, f);
     }, extra);
   }
 

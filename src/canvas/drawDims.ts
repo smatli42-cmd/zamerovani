@@ -389,7 +389,7 @@ export function drawProtrusionDims(ctx: CanvasRenderingContext2D, floor: Floor, 
   const style: DimStyle = { color: '#334155', bg: '#ffffff', bold: false };
   const { u0, u1, depth } = protrusionExtent(p);
   const at = (u: number, v: number) => toScreen(profileToWorld(f, w, p.side, { u, v }), cam);
-  const out = scale(f.n, p.side);
+  const out = scale(f.at((u0 + u1) / 2).n, p.side);
   const reach = (p.mode === 'add' ? depth * cam.zoom : 0) + 22 * dimScale;
   const act = (dim: ProtrusionDim): HitAction => ({ type: 'numpad', target: { kind: 'protrusion-dim', protrusionId: p.id, dim } });
   ctx.save();
@@ -403,7 +403,7 @@ export function drawProtrusionDims(ctx: CanvasRenderingContext2D, floor: Floor, 
     drawDimLine(ctx, at(a, 0), at(b, 0), out, reach, String(Math.round(b - a)), dim === 'width' ? 'šířka' : undefined, style, dimScale, act(dim));
   }
   const sign = p.mode === 'add' ? 1 : -1;
-  drawDimLine(ctx, at(u1, 0), at(u1, sign * depth), f.d, 16 * dimScale, String(Math.round(depth)), 'hloubka', style, dimScale, act('depth'));
+  drawDimLine(ctx, at(u1, 0), at(u1, sign * depth), f.at(u1).t, 16 * dimScale, String(Math.round(depth)), 'hloubka', style, dimScale, act('depth'));
   // vzepětí oblouků v obrysu (od středu tětivy k vrcholu)
   for (const h of protrusionArcHandles(floor, p)) {
     const s = p.pts[h.seg]?.s;

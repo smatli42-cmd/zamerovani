@@ -7,6 +7,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-13 (6) – výstupek a vybrání na obloukové stěně
+- **Co se změnilo:** Souřadnice výstupku (u, v) fungují i na oblouku: u = délka po oblouku osy od rohu A, v radiálně od líce (`Frame` s `at` / `project` v `core/protrusion.ts`). Řez líce po oblouku (`cutAlongFace`), plocha uzavřená po oblouku líce (`protrusionPolygon`). Katalog: nový řádek I1.15 (přesunuto z I1.11 „později“ na požadavek uživatele).
+- **Viditelně v aplikaci:** nástrojem Čára jde nakreslit výstupek i vybrání na vnější i vnitřní líc obloukové stěny – konce se přichytí na líc oblouku, tvar zešedne a patří stěně; kóty a úchyty vzepětí jako u rovné stěny.
+- **Rozhodnuto samostatně:** nakreslené rovné čáry zůstanou ve výkresu rovné (neohýbají se podle oblouku); poloha se ukládá po oblouku osy (při změně tloušťky se výstupek neposune podél stěny), kóty šířky a odstupů ukazují délku po líci výstupku (I1.8); při změně vzepětí stěny se poloha přepočítá v poměru délek (oblouk → rovná nepřečnívá); konce čar se na obloukovou stěnu s tloušťkou přichytávají na líce (jako u rovné).
+- **Po kontrole revieweru opraveno:** rozdělení obloukové stěny výstupky nepřenášelo (ztratily by se); změna vzepětí stěny nechávala výstupek za koncem; kóty ukazovaly délku po ose místo po líci; řez líce přesně na oblouku. Testy dělení, vzepětí, Zpět, smazání, kopie, záporného vzepětí a osy uprostřed.
+- **Otevřené:** ověřit na tabletu; nástroj Obdélník u oblouku výstupek neudělá (rovná strana obdélníku neleží na zakřiveném líci) – na oblouk kreslit Čárou; konce obyčejných čar se na obloukovou stěnu s tloušťkou napojují jen na líc (bez napojení rohu, jako u rovné).
+- **Chyby od uživatele:** „Přidání a vybrání k obloukové stěně nefunguje“ (obrázek). Doplněno, testy `store/protrusionArc.test.ts`, `tools/lineTool.test.ts`.
+
 ### 2026-11-13 (5) – kóta polohy napojení na průběžné stěně
 - **Co se změnilo:** Průběžná stěna s T-napojenými příčkami má řetězovou kótu polohy napojení (`hostedChain`, `setHostedGap` v `core/hosting.ts`, NumPad cíl `junction-gap`).
 - **Viditelně v aplikaci:** u stěny, na kterou dosedají příčky, je nad celkovou délkou řada kót: roh A → příčka → … → roh B. Ťuknutím se otevře NumPad; zadáním se příčka posune podél stěny (Další přejde na další úsek řetězu).
@@ -127,6 +135,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 3. **F4** (otvory při dělení stěny – napojení už nedělí, dělí se jen výslovně).
 4. **C1.11** (hrana odskoku; test C2/6 je `it.fails`; u středových os odskok symetricky).
 5. Z auditu: F7, D4, A2 / A10 / B6. Dále doladit okna (ostění / rám).
+6. **Výstupek při přehození strany stěny** (nález revieweru): ověřit / rozhodnout, zda má výstupek při přehození strany (ručně i automaticky po uzavření místnosti, u oblouku se tím mění i vzepětí) zůstat na svém líci ve výkresu.
 
 **Známé drobnosti:** začátek nové stěny přesně ve vrcholu oblouku chytí úchyt vzepětí; změna průměru kruhu posune i cizí roh ležící přesně na obvodu (`resizeCircle`); sloupec „Stav“ v katalogu (B1/B4/B10, C1.5) je zastaralý – katalog se bez pokynu uživatele nemění; Vite z OneDrive občas pošle starý soubor → restart vývojového serveru.
 

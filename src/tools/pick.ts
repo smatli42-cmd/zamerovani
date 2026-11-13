@@ -5,7 +5,7 @@ import { chooseNodeAt, findWallNear, isCurved, openingsOnWall, wallLength, wallN
 import { textBoxPx } from '../canvas/textBox';
 import { dot, projectToSegment, sub } from '../core/geometry';
 import { bodyNormal, bodyStart, findBodyAt, hasBody, pointInPolygon } from '../core/wallBody';
-import { protrusionOutline, protrusionsOf } from '../core/protrusion';
+import { protrusionOutline, protrusionPolygon, protrusionsOf } from '../core/protrusion';
 import type { Floor, Pt } from '../model/types';
 import type { Camera, Selection } from '../store/store';
 import { HIT_PX } from './types';
@@ -76,8 +76,9 @@ export function pickProtrusion(floor: Floor, p: Pt, cam: Camera): string | null 
   const tol = (HIT_PX.wall * 0.6) / cam.zoom;
   for (const pr of protrusionsOf(floor)) {
     const outline = protrusionOutline(floor, pr);
-    if (!outline) continue;
-    if (pointInPolygon(p, outline)) return pr.id;
+    const area = protrusionPolygon(floor, pr);
+    if (!outline || !area) continue;
+    if (pointInPolygon(p, area)) return pr.id;
     for (let i = 0; i + 1 < outline.length; i++) if (projectToSegment(p, outline[i]!, outline[i + 1]!).distance <= tol) return pr.id;
   }
   return null;

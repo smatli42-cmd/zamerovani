@@ -8,7 +8,7 @@ import { arcGeometry, nearestOnArc, splitArcSagittas } from './arc';
 import { dist } from './geometry';
 import { openingSpan, openingStartFromA, wallLength, wallNodes } from './floorQueries';
 import { straightContinuation } from './wallBody';
-import { moveProtrusions, protrusionExtent } from './protrusion';
+import { moveProtrusions, protrusionExtent, wallFrame } from './protrusion';
 
 /** Jak blízko (mm) musí roh ležet u stěny, aby ji rozdělil. */
 const ON_WALL_TOL = 1;
@@ -78,14 +78,14 @@ export function splitWallAt(floor: Floor, wallId: Id, nodeId: Id): [Id, Id] | nu
     op.offset = Math.max(0, Math.round(op.ref === 'a' ? startInPart : partLen - startInPart - openingSpan(op)));
   }
   // výstupky na část, na které leží větší část jejich šířky (I1.13); u B se měří od nového rohu
-  if (!sag) {
-    const inA = (p: Parameters<typeof protrusionExtent>[0]) => {
-      const { u0, u1 } = protrusionExtent(p);
-      return (u0 + u1) / 2 <= at;
-    };
-    moveProtrusions(floor, wallId, wA.id, u => u, false, inA);
-    moveProtrusions(floor, wallId, wB.id, u => u - at);
-  }
+  // (u oblouku po oblouku osy – obě části leží na stejné kružnici)
+  const uAt = sag ? (wallFrame(floor, wall)?.project(pr.point).u ?? at) : at;
+  const inA = (p: Parameters<typeof protrusionExtent>[0]) => {
+    const { u0, u1 } = protrusionExtent(p);
+    return (u0 + u1) / 2 <= uAt;
+  };
+  moveProtrusions(floor, wallId, wA.id, u => u, false, inA);
+  moveProtrusions(floor, wallId, wB.id, u => u - uAt);
   return [wA.id, wB.id];
 }
 
