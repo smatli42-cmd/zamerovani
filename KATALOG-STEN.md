@@ -172,6 +172,45 @@ Souřadnice v mm. Vnitřní roh místnosti = (0, 0), místnost leží v kladném
 5. **Výběr z překrývajících se koncových bodů** (D14): přednost má konec vybrané stěny, opakované ťuknutí přepíná.
 6. **Automatické vytváření a počítání místností není potřeba** (rozhodnuto dříve, potvrzeno 2026-11-11). Detekce uzavřených smyček pro natočení těl ven se proto nesmí na oddělených rozích zlomit, ale plocha ani obvod místností se neřeší.
 
+## I. Výstupek a vybrání (přizdívka, pilastr, podpěra, výklenek)
+
+Podklad: `KRESLENI-VYSTUPKU.md` (schváleno uživatelem v chatu 2026-11-12). Sekce doplněna 2026-11-13, **čeká na schválení uživatelem** (řádky označené ? jsou návrh asistenta).
+
+### I1. Pravidla
+
+| # | Chování | Revit | Archicad | Návrh | Stav | Rozhodnutí |
+|---|---|---|---|---|---|---|
+| I1.1 | Výstupek / vybrání je **samostatný prvek s odkazem na stěnu**; stěna zůstává jedna celistvá (jedna kóta, jedna tloušťka) | přizdívka / Edit Profile | Custom Profile, Wall Accessory | ano | chybí | ✔ (vy) |
+| I1.2 | Kreslí se nástrojem **Čára**: otevřená lomená čára, jejíž oba konce leží na **stejném líci téže stěny**, se po dokončení sama uzavře po líci | – | – | ano; konce mimo stěnu = obyčejná čára | chybí; **nástroj Čára v aplikaci zatím není** (jsou jen Obdélník / Kruh / Oblouk) | ✔ (vy) / ? viz I1.10 |
+| I1.3 | Obrys ven od těla = **výstupek (přidá)**, obrys do těla = **vybrání (ubere)** | – | – | rozpozná se samo podle strany líce | chybí | ✔ (vy) |
+| I1.4 | Připojení z kterékoli strany stěny (zevnitř i zvenku místnosti) | – | – | ano | chybí | ✔ (vy) |
+| I1.5 | Vykreslení: výplň jako tělo stěny, **čára líce v šířce výstupku se nekreslí** (jeden obrys); u vybrání se tělo ubere a kreslí se nový obrys | sloučí se | sloučí se | ano | chybí | ✔ (vy) |
+| I1.6 | Posun, otočení, prodloužení a zkrácení stěny **nese výstupek s sebou** (poloha = odstup od konce A po líci + hloubka od líce, jako u otvorů F3) | ano | ano | ano | chybí | ✔ (vy) |
+| I1.7 | Změna tloušťky / strany / osy stěny: výstupek zůstane přilepený ke **svému líci** (na protějším líci těla se s lícem posune) | – | – | ? | chybí | ? (já) |
+| I1.8 | Kóty (jen u vybraného výstupku, klikací, NumPad): šířka po líci, hloubka kolmo na líc, odstup od konce stěny a od sousedního výstupku na stejném líci. Změna kóty mění **jen výstupek**, ne stěnu | – | – | ano; u nepravoúhlého tvaru obalový obdélník | chybí | ✔ (vy) |
+| I1.9 | Vlastnosti: výška (mm, výchozí = bez zadání), název / materiál / poznámka jako u stěny (jen v panelu) | ano | ano | ano | chybí | ✔ (vy) |
+| I1.10 | **Nástroj Čára (nový):** lomená čára tloušťky 0 řetězem bodů (ťuknutí / tažení jako u stěny, ukončení ťuknutím na poslední bod nebo tlačítkem Hotovo); přichytávání a pomocné čáry jako u nástroje Stěna; úseky obrysu rovné, **oblouk v obrysu až dodatečně úchytem vzepětí** | Line | Line / Polyline | ? | chybí | ? (já) |
+| I1.11 | Výstupek přes roh / konec stěny, na obloukové stěně, kopírování v řadě | – | – | později (obrys zůstane obyčejnou čárou) | – | ↷ (vy) |
+| I1.12 | Smazání stěny smaže i její výstupky; smazání výstupku vrátí stěnu do původního stavu | ano | ano | ano | chybí | ✔ |
+| I1.13 | Dělení stěny (D4): výstupek přejde na úsek, na kterém leží; leží-li přes dělicí bod, zůstane u úseku s větším překrytím | – | – | ano | chybí | ✔ (vy) |
+| I1.14 | Výstupek / vybrání, které zasahuje do otvoru, se nezakazuje (upozornění později) | – | – | ? | – | ? (já) |
+
+### I2. Příklady „vstup → očekávaný výsledek“ (podklad pro testy)
+
+Souřadnice v mm jako v C2 (osa Y nahoru; v aplikaci dolů). Výchozí stěna **S**: rovná, od A = (0, 0) do B = (5000, 0), tloušťka 300, osa na líci y = 0, tělo y ∈ [−300, 0] (líc „místnost“ y = 0, vnější líc y = −300).
+
+1. **Obdélníkový výstupek uprostřed.** Čára (2350, 0) → (2350, 200) → (2650, 200) → (2650, 0). Konce leží na líci y = 0, obrys je mimo tělo → výstupek **add**, šířka 300, hloubka 200, odstup od A 2350. Výkres: jeden obrys těla stěny s „zubem“ [2350, 2650] × [0, 200], čára líce y = 0 v úseku (2350, 2650) se nekreslí. Stěna S má dál jednu celkovou kótu 5000.
+2. **Dva výstupky vedle sebe.** Jako 1 a další (3650, 0) → (3650, 200) → (3950, 200) → (3950, 0). Dva samostatné prvky; u vybraného druhého je kóta odstupu od prvního = 1000 (3650 − 2650) a od konce B = 1050.
+3. **Vybrání do těla.** Čára (1000, 0) → (1000, −150) → (1600, −150) → (1600, 0). Obrys leží v těle → **subtract**: tělo má výklenek [1000, 1600] × [−150, 0], na líci y = 0 je v tomto úseku mezera, kreslí se tři hrany výklenku. Vnější líc y = −300 beze změny.
+4. **Výstupek zvenku.** Čára (500, −300) → (500, −600) → (900, −600) → (900, −300). Konce na vnějším líci y = −300, obrys mimo tělo → add na vnějším líci; vnitřní líc y = 0 beze změny.
+5. **Konce na různých stěnách nebo jen jeden na stěně.** Čára (2350, 0) → (2350, 200) → (2800, 400). Zůstane obyčejná čára, výstupek nevznikne.
+6. **Posun stěny nese výstupek.** Příklad 1, stěna S posunuta o (0, 1000): výstupek leží na [2350, 2650] × [1000, 1200]. Prodloužení konce B na (6000, 0): výstupek beze změny (odstup od A 2350). Posun konce A na (−1000, 0): odstup od A se drží (jako u otvorů, F3), výstupek se posune na [1350, 1650] ve výkresu. (? (já), k potvrzení – alternativa: výstupek zůstane na místě ve výkresu.)
+7. **Smazání výstupku** z příkladu 1 vrátí tělo S přesně na obdélník [0, 5000] × [−300, 0]; Zpět ho vrátí.
+8. **Změna tloušťky S na 200.** Výstupek z příkladu 1 (líc y = 0) beze změny. Výstupek z příkladu 4 (vnější líc) se posune s lícem: [500, 900] × [−500, −200].
+9. **Osa uprostřed.** Stěna S s osou uprostřed (y = 0, tělo y ∈ [−150, 150]). Čára s konci na y = 0 (osa) výstupek **nevytvoří** – konce se přichytí k líci těla y = 150 nebo y = −150; výstupek z příkladu 1 nakreslený od y = 150 je [2350, 2650] × [150, 350].
+10. **Kóta hloubky.** Vybraný výstupek z příkladu 1, kóta hloubky 200 → NumPad 250: obrys [2350, 2650] × [0, 250]; stěna S ani její kóta se nemění. Jeden krok Zpět.
+11. **Uložení a načtení.** Výkres s výstupky se uloží a po načtení (i po migraci ze starší verze bez výstupků) je stejný.
+
 ## Zdroje
 - Revit, napojení stěn: [Change the Configuration of a Wall Join](https://help.autodesk.com/cloudhelp/2022/ENU/RevitLT-ArchDes/files/GUID-19EAF7A9-331F-4271-94CC-43B76B13011E.htm), [Modify Wall Joins](https://help.autodesk.com/cloudhelp/2023/ENU/Revit-ArchDesign/files/GUID-7AFCACAC-9ED2-44A4-A30E-7D7ED16E01E5.htm), [Revit Pure: wall joins tips](https://bimpure.com/blog/8-tips-to-understand-revit-wall-joins)
 - Revit, Location Line a kreslení: [About the Wall Location Line](https://help.autodesk.com/cloudhelp/2020/ENU/Revit-Model/files/GUID-F26DB6DA-A0EC-424D-B656-3BDF47607F4F.htm), [Placing Walls](https://help.autodesk.com/cloudhelp/2014/ENU/Revit/files/GUID-05BAFEAA-5186-484E-80F4-8D900C454748.htm)

@@ -1,6 +1,6 @@
 # Výstupek / vybrání stěny (přizdívka, pilastr, podpěra, výklenek) – návrh (2026-11-12)
 
-Stav: **návrh schválený uživatelem v chatu, nenaprogramováno.** Kopie dokumentu z projektu v Claude (`kresleni-vystupku-navrh.md`). Po prvním kroku (návrh v repu) doplnit do `KATALOG-STEN.md` jako sekci „I. Výstupek a vybrání“.
+Stav: **návrh schválený uživatelem v chatu, nenaprogramováno. Pravidla a příklady v `KATALOG-STEN.md`, sekce I (2026-11-13, čeká na schválení).** Kopie dokumentu z projektu v Claude (`kresleni-vystupku-navrh.md`). Po prvním kroku (návrh v repu) doplnit do `KATALOG-STEN.md` jako sekci „I. Výstupek a vybrání“.
 
 ## Problém (od uživatele)
 V Revitu se musí dlouhá stěna s několika výstupky (podpěry, přizdívky) dělit na úseky a kreslit po kouscích (300 mm, 500 mm, …). Má to jít rychle a intuitivně perem: nakreslit stěnu, vzít nástroj Čára a nakreslit výstupek libovolného tvaru. Ve výkresu se výstupek přidá ke stěně.

@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-13 – výstupek / vybrání: pravidla a příklady do katalogu (jen dokumentace)
+- **Co se změnilo:** Do `KATALOG-STEN.md` přidána sekce „I. Výstupek a vybrání“ (pravidla I1.1–I1.14, příklady I2/1–11) podle `KRESLENI-VYSTUPKU.md`. Čeká na schválení uživatelem, pak testy a implementace.
+- **Viditelně v aplikaci:** nic.
+- **Rozhodnuto samostatně (návrhy k potvrzení, v katalogu označené ?):** nový nástroj Čára (v aplikaci chybí) jako lomená čára tloušťky 0, oblouky v obrysu až dodatečně úchytem vzepětí (I1.10); výstupek drží odstup od konce A jako otvory (I2/6); výstupek na protějším líci se posouvá se změnou tloušťky (I1.7); zásah do otvoru se nezakazuje (I1.14); data jako `Floor.protrusions` v souřadnicích stěny (odstup po líci + hloubka) se zvýšením SCHEMA_VERSION.
+- **Otevřené:** schválení sekce I uživatelem.
+- **Chyby od uživatele:** žádné.
+
 ### 2026-11-12 (konec sezení)
 - **Co se změnilo:** Uživatel potvrdil, že vše funguje, a ukončil sezení. Aktualizován Poslední stav a fronta kroků (výstupek z jiného sezení zařazen jako první, kóta polohy napojení, D3, líce).
 - **Viditelně v aplikaci:** nic nového (souhrn sezení viz záznamy níže).
@@ -72,7 +79,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Hotové (uživatel vše vyzkoušel na PC a potvrdil „vše funguje“; na tabletu neověřeno):** osa stěny líc / střed a kóty po líci (B1, B4, B10, 2a, 2b); výběr konce u rozpojeného rohu (D14); tažení s držením směru, posun vybrané stěny, kolmice ⊥ (D11, D12, D13, C2/16); T-napojení bez dělení průběžné stěny i oblouku (`Node.host`, `core/hosting.ts`, migrace na schéma 9); řešič délek nehýbe jinými skupinami; kreslení nové stěny libovolným směrem s pomocnými čarami; křížení stěn bez dělení (C1.5, `wallCrossings`, `junctionPoints`, ořez hran). Podrobnosti v Deníku změn. Testy 186 + 1 `it.fails` (C2/6), typecheck a build OK.
 
-**Rozpracované:** nic.
+**Rozpracované:** výstupek – sekce I v `KATALOG-STEN.md` napsaná (2026-11-13), **čeká na schválení uživatelem** (body ? v I1.7, I1.10, I1.14, I2/6).
 
 **Fronta kroků (pořadí):**
 1. **Výstupek / vybrání stěny** (návrh v `KRESLENI-VYSTUPKU.md` z jiného sezení, schváleno uživatelem v chatu, nenaprogramováno): obrys nakreslený nástrojem Čára s oběma konci na líci stěny se sám uzavře a připojí (výstupek ven, vybrání do těla), stěna zůstává celistvá, vlastní kóty, model `Floor.protrusions` s výškou a materiálem. Nejdřív návrh do repa + sekce „I. Výstupek a vybrání“ v `KATALOG-STEN.md` s příklady, **pak se zastavit a nechat uživatele schválit**.
