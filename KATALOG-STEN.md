@@ -212,7 +212,7 @@ Souřadnice v mm jako v C2 (osa Y nahoru; v aplikaci dolů). Výchozí stěna **
 10. **Kóta hloubky.** Vybraný výstupek z příkladu 1, kóta hloubky 200 → NumPad 250: obrys [2350, 2650] × [0, 250]; stěna S ani její kóta se nemění. Jeden krok Zpět.
 12. **Uzavřený tvar u líce.** Plný obdélník (2350, 0) – (2650, 200) nástrojem Obdélník (nebo čtyři čáry včetně strany po líci y = 0): výsledek jako příklad 1, strana po líci zmizí. Čárkovaný obdélník tamtéž zůstane čtyřmi čarami; obdélník dotýkající se líce jen rohem zůstane čarami.
 13. **Obrys přes celou tloušťku.** Čára (1000, 0) → (1000, −400) → (1600, −400) → (1600, 0) kreslená od líce y = 0 přes celé tělo: výstupek na vnějším líci y = −300, šířka 600, hloubka 100 (část v těle zmizí). Obrys jen do y = −305 (méně než 10 mm za lícem) = vybrání přes celou tloušťku.
-14. **Uzavřený tvar přes líc.** Plný obdélník (2000, 100) – (2500, −400) zvenku přes vnější líc y = −300 (zasahuje 100 mm do těla): výstupek 500 × 100 na líci y = −300, část v těle zmizí. Obdélník (2000, 10) – (2500, −290) (10 mm venku, 290 v těle) zůstane čarami. Obdélník ve vnitřním rohu dvou stěn přes obě těla zůstane čarami.
+14. **Uzavřený tvar přes líc.** Plný obdélník (2000, −200) – (2500, −700) zvenku přes vnější líc y = −300 (zasahuje 100 mm do těla): výstupek 500 × 400 na líci y = −300, část v těle zmizí. Obdélník (2000, 10) – (2500, −290) (10 mm venku, 290 v těle) zůstane čarami. Obdélník ve vnitřním rohu dvou stěn přes obě těla zůstane čarami.
 11. **Uložení a načtení.** Výkres s výstupky se uloží a po načtení (i po migraci ze starší verze bez výstupků) je stejný.
 
 ## Zdroje
