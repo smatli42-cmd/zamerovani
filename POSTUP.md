@@ -13,7 +13,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Rozhodnuto samostatně:** plný obdélník překrývající stěnu je teď také výstupek (sloup přiložený ke stěně / do ní); tvar přes celou tloušťku stěny (obě strany venku) zůstane čarami; při více možnostech se vezme nejhlubší výstupek.
 - **Po kontrole revieweru opraveno:** tvar ve vnitřním rohu dvou stěn zůstane čarami (výstupek by zapadl do sousední stěny); tvar převážně v těle (jen kousek přes líc) není výstupek; testy ořezu v líci, rohu a Zpět.
 - **Otevřené:** průsečíky tvaru s lícem oblouku se hledají jen mezi rohy tvaru – velmi dlouhá rovná strana, která oblouk protne dvakrát, se ořízne nepřesně (vzácné).
-- **Otevřené:** ověřit na tabletu; doplnit katalog I1.2 / I1.3 (uzavřený tvar přes líc, obrys přes celou tloušťku) – po schválení uživatelem.
+- **Otevřené:** ověřit na tabletu; katalog I1.3 a příklady I2/13–14 doplněny na pokyn uživatele.
 - **Chyby od uživatele:** „Tvar, který protíná oblouk, se nevytvoří (s třemi čarami to funguje), může to mást“ (obrázek). Doplněno, testy `tools/arcPicture.test.ts`.
 
 ### 2026-11-13 (8) – výstupek na vypouklém líci oblouku
@@ -27,7 +27,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Co se změnilo:** Obrys, který začne i skončí na jednom líci (typicky na čáře stěny s rohy) a vyjde ven za protější líc, se ořízne na protějším líci a vznikne výstupek tam (`throughBody` v `core/protrusion.ts`). Části uvnitř těla se zahodí.
 - **Viditelně v aplikaci:** výstupek ven jde kreslit i od vnitřní čáry stěny přes celou tloušťku (rovná i oblouková stěna) – dřív zůstaly čáry.
 - **Rozhodnuto samostatně:** test „vybrání hlouběji než tloušťka nevznikne“ (můj dřívější odhad, ne pravidlo katalogu) přepsán na nové chování podle obrázku od uživatele.
-- **Po kontrole revieweru opraveno:** obrys jen do 10 mm za protějším lícem = vybrání přes celou tloušťku (ne tenký výstupek); výstupek se nepřiřadí cizí stěně u rohu; náhled při kreslení ukazuje to, co opravdu vznikne. Katalog I1.3 o obrysu přes celou tloušťku zatím nemluví (doplnit s uživatelem).
+- **Po kontrole revieweru opraveno:** obrys jen do 10 mm za protějším lícem = vybrání přes celou tloušťku (ne tenký výstupek); výstupek se nepřiřadí cizí stěně u rohu; náhled při kreslení ukazuje to, co opravdu vznikne.
 - **Otevřené:** ověřit na tabletu (pozor na starou verzi v mezipaměti – aplikaci zavřít a otevřít, případně dvakrát načíst).
 - **Chyby od uživatele:** „Nic se nezměnilo“ (obrázek: oblouková stěna, tvary kreslené od vnitřní čáry). Horní tvar procházel celou tloušťkou → dřív nesmyslné vybrání, teď výstupek na vnějším líci. Dolní tvar (vybrání) v nové verzi funguje (test `tools/arcPicture.test.ts`) – u uživatele nejspíš běžela stará verze z mezipaměti.
 
