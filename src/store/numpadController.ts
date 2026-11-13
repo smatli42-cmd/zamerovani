@@ -1,6 +1,7 @@
 /**
  * Logika číselné klávesnice (nezávislá na vzhledu) – používá ji panel NumPad i fyzická klávesnice.
  */
+import { hostedChain } from '../core/hosting';
 import { evaluateExpression } from '../core/geometry';
 import { nextWallInChain, openingsOnWall } from '../core/floorQueries';
 import { componentGap } from '../core/components';
@@ -24,7 +25,8 @@ export function openTarget(target: NumPadTarget): void {
   const selection =
     target.kind === 'protrusion-dim' || target.kind === 'protrusion-sagitta'
       ? ({ kind: 'protrusion', id: target.protrusionId } as const)
-      : target.kind === 'wall-length' || target.kind === 'wall-sagitta' || target.kind === 'circle-diameter' || target.kind === 'wall-thickness' || target.kind === 'wall-face-length' || target.kind === 'comp-gap'
+      : target.kind === 'junction-gap' ||
+          target.kind === 'wall-length' || target.kind === 'wall-sagitta' || target.kind === 'circle-diameter' || target.kind === 'wall-thickness' || target.kind === 'wall-face-length' || target.kind === 'comp-gap'
       ? ({ kind: 'wall', id: target.wallId } as const)
       : ({ kind: 'opening', id: target.kind === 'opening-gap' ? target.secondId : target.openingId } as const);
   store.set({ numpad: { target, buffer: v === null ? '' : String(v), fresh: true }, selection });
@@ -127,6 +129,17 @@ function commitAndNext(): void {
   }
 
   if (t.kind === 'protrusion-sagitta') return store.set({ numpad: null });
+
+  // Poloha napojení: další úsek řetězu (poslední k rohu B), pak konec
+  if (t.kind === 'junction-gap') {
+    const chain = hostedChain(floor, t.wallId);
+    const i = chain.findIndex(c => c.nodeId === t.nodeId);
+    if (t.to === 'prev' && i >= 0) {
+      const next = chain[i + 1];
+      return openTarget(next ? { ...t, nodeId: next.nodeId } : { ...t, to: 'next' });
+    }
+    return store.set({ numpad: null });
+  }
 
   if (t.kind === 'wall-sagitta' || t.kind === 'circle-diameter' || t.kind === 'wall-thickness' || t.kind === 'wall-face-length' || t.kind === 'opening-reveal') return store.set({ numpad: null });
 

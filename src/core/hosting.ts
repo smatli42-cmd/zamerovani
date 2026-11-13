@@ -11,6 +11,7 @@ import type { Floor, Id, Pt, Wall } from '../model/types';
 import { add, dist, dot, scale, sub, unit } from './geometry';
 import { arcGeometry, nearestOnArc } from './arc';
 export { hostedOn, wallSegments } from './floorQueries';
+import { openingsOnWall } from './floorQueries';
 
 /** Jak blízko (mm) musí roh ležet u stěny, aby se na ni napojil / zůstal napojený. */
 export const ON_HOST_TOL = 1;
@@ -125,4 +126,80 @@ export function syncHosted(before: Floor | undefined, floor: Floor): void {
       node.y = r.foot.y;
     } else delete node.host; // mimo stěnu (odtažený roh, zkrácená stěna) → samostatný roh
   }
+}
+
+/**
+ * Napojené rohy (T bez dělení) na rovné stěně seřazené podél ní; `at` = vzdálenost od rohu A po ose (mm).
+ * Pro řetězovou kótu polohy napojení (od zrušení dělení ji už nedávají kóty částí stěny).
+ */
+export function hostedChain(floor: Floor, wallId: Id): { nodeId: Id; at: number }[] {
+  const h = floor.walls[wallId];
+  const a = h && floor.nodes[h.a];
+  const b = h && floor.nodes[h.b];
+  if (!canHost(h) || h.sagitta || !a || !b || dist(a, b) < 1) return [];
+  const u = unit(a, b);
+  return Object.values(floor.nodes)
+    .filter(n => n.host === wallId && n.id !== h.a && n.id !== h.b)
+    .map(n => ({ nodeId: n.id, at: dot(sub(n, a), u) }))
+    .sort((p, q) => p.at - q.at);
+}
+
+/**
+ * Posune napojení podél průběžné stěny o `delta` mm: roh i napojená stěna se posunou rovnoběžně (vzdálený konec,
+ * který je volný nebo napojený na jinou stěnu, jde s nimi; konec v rohu dalších stěn zůstane – stěna se natočí).
+ */
+function shiftHosted(floor: Floor, nodeId: Id, delta: number): void {
+  const node = floor.nodes[nodeId];
+  const h = node?.host ? floor.walls[node.host] : undefined;
+  const a = h && floor.nodes[h.a];
+  const b = h && floor.nodes[h.b];
+  if (!node || !h || !a || !b) return;
+  const v = scale(unit(a, b), delta);
+  const moveNode = (n: Pt) => {
+    n.x += v.x;
+    n.y += v.y;
+  };
+  const from = { x: node.x, y: node.y };
+  moveNode(node);
+  for (const w of Object.values(floor.walls)) {
+    if (w.id === h.id || (w.a !== nodeId && w.b !== nodeId) || w.radius !== undefined) continue;
+    const farId = w.a === nodeId ? w.b : w.a;
+    const far = floor.nodes[farId];
+    if (!far || farId === nodeId) continue;
+    const others = Object.values(floor.walls).filter(o => o.id !== w.id && (o.a === farId || o.b === farId));
+    const fh = far.host ? floor.walls[far.host] : undefined;
+    const fa = fh && floor.nodes[fh.a];
+    const fb = fh && floor.nodes[fh.b];
+    if (fh && fa && fb && canHost(fh)) {
+      // konec napojený na jinou stěnu (i šikmou / oblouk): průsečík přímky příčky z posunutého rohu s tou stěnou
+      const moved = add(far, v);
+      const p = dist(far, from) > 1 ? lineWithHost(node, unit(from, far), fh, fa, fb, moved) : null;
+      Object.assign(far, p ?? onHost(moved, fh, fa, fb).foot);
+    } else if (others.length === 0) moveNode(far);
+    // příčka se natočila (vzdálený konec zůstal v rohu dalších stěn) – změřená délka už neplatí
+    else if (w.measured !== null) w.measured = null;
+  }
+}
+
+/**
+ * Zadání kóty polohy napojení: `to` = 'prev' – vzdálenost od předchozího napojení (nebo rohu A) k rohu `nodeId`;
+ * 'next' – od rohu `nodeId` k dalšímu napojení (nebo rohu B). Pořadí napojení se nemění. Vrací false u nesmyslné hodnoty.
+ */
+export function setHostedGap(floor: Floor, wallId: Id, nodeId: Id, to: 'prev' | 'next', value: number): boolean {
+  const h = floor.walls[wallId];
+  const a = h && floor.nodes[h.a];
+  const b = h && floor.nodes[h.b];
+  const chain = hostedChain(floor, wallId);
+  const i = chain.findIndex(c => c.nodeId === nodeId);
+  if (!h || !a || !b || i < 0 || !Number.isFinite(value) || value < 0) return false;
+  const len = dist(a, b);
+  const lo = i > 0 ? chain[i - 1]!.at : 0;
+  const hi = i + 1 < chain.length ? chain[i + 1]!.at : len;
+  const target = to === 'prev' ? lo + value : hi - value;
+  if (target <= lo + 1 || target >= hi - 1) return false;
+  // příčka nesmí dosednout do otvoru (dveře, okno) v průběžné stěně
+  const half = Math.max(0, ...Object.values(floor.walls).filter(w => w.id !== wallId && (w.a === nodeId || w.b === nodeId)).map(w => w.thickness / 2));
+  if (openingsOnWall(floor, h).some(po => target + half > po.start && target - half < po.end)) return false;
+  shiftHosted(floor, nodeId, target - chain[i]!.at);
+  return true;
 }

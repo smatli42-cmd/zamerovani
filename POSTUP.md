@@ -7,6 +7,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-13 (5) – kóta polohy napojení na průběžné stěně
+- **Co se změnilo:** Průběžná stěna s T-napojenými příčkami má řetězovou kótu polohy napojení (`hostedChain`, `setHostedGap` v `core/hosting.ts`, NumPad cíl `junction-gap`).
+- **Viditelně v aplikaci:** u stěny, na kterou dosedají příčky, je nad celkovou délkou řada kót: roh A → příčka → … → roh B. Ťuknutím se otevře NumPad; zadáním se příčka posune podél stěny (Další přejde na další úsek řetězu).
+- **Rozhodnuto samostatně:** měří se po ose průběžné stěny (jako celková délka); příčka se posouvá rovnoběžně – její vzdálený konec jde s ní, je-li volný nebo napojený na jinou stěnu, konec v rohu dalších stěn zůstane (příčka se natočí); napojení se nesmí přeskočit (pořadí zůstává) ani dostat za roh; křížení a oblouky se zatím nekótují; kóty se ukazují vždy (jako dřív kóty částí rozdělené stěny).
+- **Po kontrole revieweru opraveno:** konec příčky napojený na jinou (i šikmou / obloukovou) stěnu na ní zůstane – nový průsečík ve směru příčky; natočená příčka ztratí změřenou délku (jinak by kóta hlásila nesoulad); příčku nejde číslem posunout do otvoru v průběžné stěně; testy pořadí Další a oblouku.
+- **Otevřené:** ověřit na tabletu; kóta k líci příčky / po líci průběžné stěny (zatím osa – osa).
+- **Chyby od uživatele:** žádné.
+
 ### 2026-11-13 (4) – oblouk v obrysu výstupku (I1.10)
 - **Co se změnilo:** Bod obrysu výstupku má nepovinné vzepětí úseku `ProfilePt.s` (SCHEMA_VERSION 11, bez převodu dat). Obrys, plocha, hrany i hloubka počítají s obloukem (`profilePolyline`); úchyty a nastavení vzepětí v `core/protrusion.ts`.
 - **Viditelně v aplikaci:** u vybraného výstupku je uprostřed každé strany (mimo líc) modrý kulatý úchyt. Tažením se strana vyklene do oblouku (po 10 mm, nejvýš půlkruh, zpět k tětivě = rovná). Ťuknutím na úchyt nebo na kótu „vzepětí“ se otevře NumPad.
@@ -114,12 +122,11 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 **Rozpracované:** výstupek / vybrání a nástroj Čára hotové, opraveno přidání výstupku a zarovnání s rohem (2026-11-13), **čeká na vyzkoušení uživatelem**, oblouk v obrysu (I1.10) hotový – vše **čeká na vyzkoušení uživatelem**.
 
 **Fronta kroků (pořadí):**
-1. **Kóta polohy napojení na průběžné stěně** (od zrušení dělení se poloha příčky na stěně nekótuje) – řetězová kóta s NumPadem.
-2. **D3** – samostatný nástroj zkrátit / prodloužit do rohu (vyčnívající konce po křížení).
-3. **Přichytávání k oběma lícům stěny** (připomínka uživatele) – zároveň vyřešit polohu napojeného rohu mimo osu; souvisí s D3 a okny.
-4. **F4** (otvory při dělení stěny – napojení už nedělí, dělí se jen výslovně).
-5. **C1.11** (hrana odskoku; test C2/6 je `it.fails`; u středových os odskok symetricky).
-6. Z auditu: F7, D4, A2 / A10 / B6. Dále doladit okna (ostění / rám).
+1. **D3** – samostatný nástroj zkrátit / prodloužit do rohu (vyčnívající konce po křížení).
+2. **Přichytávání k oběma lícům stěny** (připomínka uživatele) – zároveň vyřešit polohu napojeného rohu mimo osu; souvisí s D3 a okny.
+3. **F4** (otvory při dělení stěny – napojení už nedělí, dělí se jen výslovně).
+4. **C1.11** (hrana odskoku; test C2/6 je `it.fails`; u středových os odskok symetricky).
+5. Z auditu: F7, D4, A2 / A10 / B6. Dále doladit okna (ostění / rám).
 
 **Známé drobnosti:** začátek nové stěny přesně ve vrcholu oblouku chytí úchyt vzepětí; změna průměru kruhu posune i cizí roh ležící přesně na obvodu (`resizeCircle`); sloupec „Stav“ v katalogu (B1/B4/B10, C1.5) je zastaralý – katalog se bez pokynu uživatele nemění; Vite z OneDrive občas pošle starý soubor → restart vývojového serveru.
 

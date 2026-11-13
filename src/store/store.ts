@@ -57,6 +57,8 @@ export type NumPadTarget =
   | { kind: 'comp-gap'; wallId: Id; side: Side }
   /** Kóta výstupku: šířka, hloubka, odstup před / za (od souseda nebo konce stěny). */
   | { kind: 'protrusion-dim'; protrusionId: Id; dim: ProtrusionDim }
+  /** Poloha napojení na průběžné stěně: od předchozího napojení / rohu A ('prev') nebo k rohu B ('next'). */
+  | { kind: 'junction-gap'; wallId: Id; nodeId: Id; to: 'prev' | 'next' }
   /** Vzepětí oblouku v obrysu výstupku (úsek `seg`). */
   | { kind: 'protrusion-sagitta'; protrusionId: Id; seg: number };
 

@@ -11,6 +11,7 @@ import { setGap, setOpeningWidth, setReveal, setStartFromA } from './openings';
 import { applyWallLength, resizeCircle } from './walls';
 import { setWallLength } from '../../core/solver';
 import { faceLength, hasBody } from '../../core/wallBody';
+import { hostedChain, setHostedGap } from '../../core/hosting';
 import { defaultArcSign, protrusionDims, setProtrusionSagitta } from '../../core/protrusion';
 import { applyProtrusionDim } from './protrusions';
 
@@ -90,6 +91,16 @@ export function numpadInitialValue(floor: Floor, t: NumPadTarget): number | null
       const d = p && protrusionDims(floor, p);
       return d ? Math.round(d[t.dim]) : null;
     }
+    case 'junction-gap': {
+      const w = floor.walls[t.wallId];
+      const a = w && floor.nodes[w.a];
+      const b = w && floor.nodes[w.b];
+      const chain = hostedChain(floor, t.wallId);
+      const i = chain.findIndex(c => c.nodeId === t.nodeId);
+      if (!a || !b || i < 0) return null;
+      const at = chain[i]!.at;
+      return Math.round(t.to === 'prev' ? at - (chain[i - 1]?.at ?? 0) : (chain[i + 1]?.at ?? Math.hypot(b.x - a.x, b.y - a.y)) - at);
+    }
     case 'protrusion-sagitta': {
       const s = floor.protrusions?.[t.protrusionId]?.pts[t.seg]?.s;
       return s === undefined ? 0 : Math.round(Math.abs(s));
@@ -148,6 +159,8 @@ export function applyNumpadValue(t: NumPadTarget, value: number): boolean {
     } else if (t.kind === 'circle-diameter') {
       if (value < 10) return;
       ok = resizeCircle(floor, t.wallId, value / 2);
+    } else if (t.kind === 'junction-gap') {
+      ok = setHostedGap(floor, t.wallId, t.nodeId, t.to, value);
     } else if (t.kind === 'protrusion-sagitta') {
       // znaménko (strana vyklenutí) zůstává; u rovného úseku ven od výstupku (+ = vlevo od směru obrysu)
       const cur = floor.protrusions?.[t.protrusionId]?.pts[t.seg]?.s ?? 0;

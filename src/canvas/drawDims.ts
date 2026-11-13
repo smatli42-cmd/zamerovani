@@ -16,6 +16,7 @@ import { toScreen } from './view';
 import { bodyNormal, bodyStart, facePointAt, faceSpan, hasBody, wallBodies } from '../core/wallBody';
 import { doorLayout } from '../core/doorLayout';
 import { openingStartFromA } from '../core/floorQueries';
+import { hostedChain } from '../core/hosting';
 
 /** Těžiště každé souvislé skupiny stěn (pro určení strany „ven“). */
 function componentCentroids(floor: Floor): Map<Id, Pt> {
@@ -150,6 +151,23 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
       offset += rowGap + (placed.length ? 8 * s : 0);
     }
 
+
+    // řada polohy napojení (T bez dělení): A → napojení → … → B, klikací (posune napojenou stěnu)
+    const chain = hostedChain(floor, wall.id);
+    if (chain.length > 0) {
+      const stops = [0, ...chain.map(c => c.at), len];
+      for (let i = 0; i + 1 < stops.length; i++) {
+        const from = stops[i]!;
+        const to = stops[i + 1]!;
+        if (to - from < 1) continue;
+        const last = i === stops.length - 2;
+        const target: NumPadTarget = last
+          ? { kind: 'junction-gap', wallId: wall.id, nodeId: chain[chain.length - 1]!.nodeId, to: 'next' }
+          : { kind: 'junction-gap', wallId: wall.id, nodeId: chain[i]!.nodeId, to: 'prev' };
+        drawDimLine(ctx, lerp(a, b, from / len), lerp(a, b, to / len), out, offset, String(Math.round(to - from)), undefined, { color: '#334155', bg: '#ffffff', bold: false }, s, { type: 'numpad', target, wallId: wall.id });
+      }
+      offset += rowGap;
+    }
 
     // 2. řada: celková délka stěny
     const measured = wall.measured;
