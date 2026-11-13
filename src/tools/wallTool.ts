@@ -16,7 +16,7 @@ import { snapEnd, snapPoint, type SnapResult } from '../core/snapping';
 import { facePath, initialSideAt, sideFromPen, straightContinuation } from '../core/wallBody';
 import type { Floor, Pt, Wall } from '../model/types';
 import { addLine, addWall, lineChain } from '../store/actions';
-import { findFaceNear, profileFromPolyline, takesProtrusion, wallFrame, worldToProfile } from '../core/protrusion';
+import { findFaceNear, profileFromPolyline, profileToWorld, takesProtrusion, wallFrame, worldToProfile } from '../core/protrusion';
 import { activeWallArcHeight, activeWallThickness } from '../model/factory';
 import { store, type Camera } from '../store/store';
 import { pickAny } from './pick';
@@ -169,7 +169,11 @@ function closurePreview(floor: Floor, d: Drawing): Pt[] | null {
     }
   }
   const all = [...pts, d.end.pt];
-  return profileFromPolyline(floor, all) ? all : null;
+  // náhled toho, co opravdu vznikne (u obrysu přes celou tloušťku jen část za protějším lícem)
+  const prof = profileFromPolyline(floor, all);
+  const w = prof && floor.walls[prof.wallId];
+  const f = w && wallFrame(floor, w);
+  return prof && w && f ? prof.pts.map(q => profileToWorld(f, w, prof.side, q)) : null;
 }
 
 export function snapOptions(startNodeId?: string) {

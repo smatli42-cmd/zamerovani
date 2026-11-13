@@ -169,10 +169,15 @@ describe('I2 výstupek a vybrání', () => {
     expect(protrusionDims(f(), prots()[0]!)).toMatchObject({ before: 2350, width: 500 });
   });
 
-  it('vybrání hlouběji než tloušťka stěny nevznikne', () => {
-    wallS();
-    polyline(tooth(1000, 1600, 400));
-    expect(prots()).toHaveLength(0);
+  // Dříve: „vybrání hlouběji než tloušťka stěny nevznikne“. Změněno podle obrázku od uživatele 2026-11-13 (3):
+  // obrys od líce přes celou tloušťku ven = výstupek na protějším líci (části v těle se zahodí).
+  it('obrys od líce přes celou tloušťku ven = výstupek na protějším líci (hloubka jen část za lícem)', () => {
+    const S = wallS();
+    polyline(tooth(1000, 1600, 400)); // od líce y = 0 přes tělo (y 0–300) až na y = 400
+    expect(prots()).toHaveLength(1);
+    expect(prots()[0]).toMatchObject({ wallId: S, mode: 'add', side: 1 });
+    expect(protrusionDims(f(), prots()[0]!)).toMatchObject({ width: 600, depth: 100 });
+    expect(Object.keys(f().walls)).toEqual([S]);
   });
 
   it('11: uložení a načtení – výstupek se zachová; starší data bez výstupků dostanou prázdný seznam', () => {
@@ -364,5 +369,18 @@ describe('I2 výstupek a vybrání', () => {
     const after = protrusionOutline(f(), prots()[0]!)!;
     const near = (p: { x: number; y: number }) => after.some(q => Math.hypot(q.x - p.x, q.y - p.y) < 0.6);
     expect(before.every(near)).toBe(true);
+  });
+
+  it('obrys jen pár mm za protějším lícem = vybrání přes celou tloušťku (ne 2mm výstupek); návrat do těla = čáry', () => {
+    wallS();
+    polyline(tooth(1000, 1600, 302));
+    expect(prots()).toHaveLength(1);
+    expect(prots()[0]).toMatchObject({ mode: 'subtract' });
+    expect(protrusionDims(f(), prots()[0]!)!.depth).toBe(300);
+    store.openProject(createProject({ name: 't' }));
+    wallS();
+    // venku za protějším lícem, mezi tím zpět do těla
+    polyline([{ x: 2000, y: 0 }, { x: 2000, y: 400 }, { x: 2200, y: 150 }, { x: 2400, y: 400 }, { x: 2400, y: 0 }]);
+    expect(prots()).toHaveLength(0);
   });
 });

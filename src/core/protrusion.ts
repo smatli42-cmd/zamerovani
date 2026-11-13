@@ -240,11 +240,51 @@ export function profileFromPolyline(floor: Floor, pts: readonly Pt[], tol = 1.5)
   const min = Math.min(...inner);
   let mode: Protrusion['mode'];
   if (min >= -tol && max > tol) mode = 'add';
-  else if (max <= tol && min < -tol && min >= -w.thickness - tol) mode = 'subtract';
+  else if (max <= tol && min < -tol && min >= -w.thickness - THROUGH_MIN) mode = 'subtract'; // těsně za protějším lícem = vybrání přes celou tloušťku
+  else if (max <= tol && min < -w.thickness - THROUGH_MIN) return throughBody(floor, pts, w, s.side, tol);
   else return null;
   // body těsně u líce na líc (v = 0), vybrání nejvýš přes celou tloušťku
   const clean = prof.map(q => ({ u: r1(q.u), v: r1(mode === 'add' ? Math.max(0, q.v) : Math.max(-w.thickness, Math.min(0, q.v))) }));
   return { wallId: w.id, side: s.side, mode, pts: clean };
+}
+
+/**
+ * Obrys začíná i končí na líci, prochází celou tloušťkou a vychází za protější líc (uživatel kreslí od čáry
+ * stěny, i když výstupek patří na druhou stranu – obrázek 2026-11-13): ořízne se v místě, kde poprvé a naposledy
+ * protne protější líc, a zbytek je výstupek na protějším líci. Části uvnitř těla se zahodí.
+ */
+/** Jak daleko (mm) za protějším lícem musí obrys vyjít, aby to byl výstupek na protějším líci (ne vybrání přes celou tloušťku). */
+const THROUGH_MIN = 10;
+
+function throughBody(floor: Floor, pts: readonly Pt[], w: Wall, side: 1 | -1, tol: number): ReturnType<typeof profileFromPolyline> {
+  const f = wallFrame(floor, w);
+  if (!f) return null;
+  // v vůči protějšímu líci: kladně = venku za ním
+  const other: 1 | -1 = side === 1 ? -1 : 1;
+  const vOf = (p: Pt) => worldToProfile(f, w, other, p).v;
+  const cross = (p: Pt, q: Pt): Pt => {
+    // průsečík úseku p→q s protějším lícem (p uvnitř, q venku) půlením – platí pro rovnou i obloukovou stěnu
+    let lo = 0;
+    let hi = 1;
+    for (let i = 0; i < 40; i++) {
+      const m = (lo + hi) / 2;
+      if (vOf(add(p, scale(sub(q, p), m))) > 0) hi = m;
+      else lo = m;
+    }
+    return add(p, scale(sub(q, p), (lo + hi) / 2));
+  };
+  const first = pts.findIndex(p => vOf(p) > tol);
+  let last = -1;
+  for (let i = pts.length - 1; i >= 0; i--) if (vOf(pts[i]!) > tol) {
+    last = i;
+    break;
+  }
+  if (first <= 0 || last >= pts.length - 1 || last < first) return null;
+  // mezi prvním a posledním bodem venku se obrys nesmí vrátit do těla
+  if (pts.slice(first, last + 1).some(p => vOf(p) < -tol)) return null;
+  const clipped = [cross(pts[first - 1]!, pts[first]!), ...pts.slice(first, last + 1), cross(pts[last + 1]!, pts[last]!)];
+  const r = profileFromPolyline(floor, clipped, tol);
+  return r && r.wallId === w.id && r.side === other && r.mode === 'add' ? r : null;
 }
 
 /** Rozsah výstupku: u0 < u1 podél stěny (konce na líci), hloubka = největší |v|. */

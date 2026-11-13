@@ -7,6 +7,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-13 (7) – výstupek kreslený od čáry stěny přes celou tloušťku
+- **Co se změnilo:** Obrys, který začne i skončí na jednom líci (typicky na čáře stěny s rohy) a vyjde ven za protější líc, se ořízne na protějším líci a vznikne výstupek tam (`throughBody` v `core/protrusion.ts`). Části uvnitř těla se zahodí.
+- **Viditelně v aplikaci:** výstupek ven jde kreslit i od vnitřní čáry stěny přes celou tloušťku (rovná i oblouková stěna) – dřív zůstaly čáry.
+- **Rozhodnuto samostatně:** test „vybrání hlouběji než tloušťka nevznikne“ (můj dřívější odhad, ne pravidlo katalogu) přepsán na nové chování podle obrázku od uživatele.
+- **Po kontrole revieweru opraveno:** obrys jen do 10 mm za protějším lícem = vybrání přes celou tloušťku (ne tenký výstupek); výstupek se nepřiřadí cizí stěně u rohu; náhled při kreslení ukazuje to, co opravdu vznikne. Katalog I1.3 o obrysu přes celou tloušťku zatím nemluví (doplnit s uživatelem).
+- **Otevřené:** ověřit na tabletu (pozor na starou verzi v mezipaměti – aplikaci zavřít a otevřít, případně dvakrát načíst).
+- **Chyby od uživatele:** „Nic se nezměnilo“ (obrázek: oblouková stěna, tvary kreslené od vnitřní čáry). Horní tvar procházel celou tloušťkou → dřív nesmyslné vybrání, teď výstupek na vnějším líci. Dolní tvar (vybrání) v nové verzi funguje (test `tools/arcPicture.test.ts`) – u uživatele nejspíš běžela stará verze z mezipaměti.
+
 ### 2026-11-13 (6) – výstupek a vybrání na obloukové stěně
 - **Co se změnilo:** Souřadnice výstupku (u, v) fungují i na oblouku: u = délka po oblouku osy od rohu A, v radiálně od líce (`Frame` s `at` / `project` v `core/protrusion.ts`). Řez líce po oblouku (`cutAlongFace`), plocha uzavřená po oblouku líce (`protrusionPolygon`). Katalog: nový řádek I1.15 (přesunuto z I1.11 „později“ na požadavek uživatele).
 - **Viditelně v aplikaci:** nástrojem Čára jde nakreslit výstupek i vybrání na vnější i vnitřní líc obloukové stěny – konce se přichytí na líc oblouku, tvar zešedne a patří stěně; kóty a úchyty vzepětí jako u rovné stěny.
