@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-13 (konec sezení)
+- **Co se změnilo:** Sezení ukončeno. Za den: výstupky a vybrání stěn (nástroj Čára, obdélník, uzavřené tvary, tvary přes líc a přes celou tloušťku, obloukové stěny, oblouk v obrysu), zarovnání s rohem při kreslení, kóta polohy napojení; katalog doplněn (I1.2, I1.3, I1.15, příklady I2/12–14) se souhlasem uživatele.
+- **Viditelně v aplikaci:** viz záznamy níže (2026-11-13, 1–9).
+- **Rozhodnuto samostatně:** pořadí fronty – nejdřív D3, pak přichytávání k lícům u stěn, pak chování výstupku při přehození strany.
+- **Otevřené:** vyzkoušet vše na tabletu (s novou verzí PWA).
+- **Chyby od uživatele:** všechny nahlášené dnes opraveny (popis v záznamech níže).
+
 ### 2026-11-13 (9) – uzavřený tvar přes líc stěny
 - **Co se změnilo:** Uzavřený tvar (čáry nebo plný obdélník), který líc stěny protíná ve dvou bodech (část zasahuje do těla), se v líci ořízne a venkovní část je výstupek (`profileFromLoop` v `core/protrusion.ts`). Platí pro rovné i obloukové stěny.
 - **Viditelně v aplikaci:** výstupek vznikne i z „kompletního obrazce“ nakresleného přes líc stěny (strana tvaru nemusí ležet přesně na líci); část uvnitř stěny zmizí.
@@ -147,7 +154,25 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Otevřené:** vyzkoušet na tabletu; další krok tažení a posun jako blok (D2, D11–D14).
 - **Chyby od uživatele:** zatím žádné.
 
-## Poslední stav (2026-11-12, konec sezení)
+## Poslední stav (2026-11-13, konec sezení)
+
+**Hotové (vše na webu; uživatel zkoušel průběžně na PC, na tabletu neověřeno):** výstupek / vybrání stěny jako samostatný prvek (`Floor.protrusions`, schéma 11, katalog sekce I) – nástroj **Čára**, převod otevřené čáry, uzavřeného tvaru i plného obdélníku u líce / přes líc, obrys přes celou tloušťku = výstupek na protějším líci, rovné i obloukové stěny (I1.15), oblouk v obrysu (úchyt vzepětí, I1.10), kóty a panel; zarovnání konce s rohem na pomocné čáře; kóta polohy T-napojení na průběžné stěně (posun příčky číslem). Testy 260 + 1 `it.fails` (C2/6), typecheck a build OK.
+
+**Rozpracované:** nic.
+
+**Čeká na vyzkoušení uživatelem (tablet):** výstupky na rovné i obloukové stěně (oba líce, tvar přes líc, obdélník), oblouk v obrysu, kóta polohy napojení. Pozor na starou verzi PWA v mezipaměti (zavřít a otevřít aplikaci, případně načíst dvakrát).
+
+**Fronta kroků (pořadí):**
+1. **D3** – samostatný nástroj zkrátit / prodloužit do rohu (vyčnívající konce po křížení).
+2. **Přichytávání k oběma lícům stěny** u nástroje Stěna (připomínka uživatele) – zároveň poloha napojeného rohu mimo osu; souvisí s D3 a okny.
+3. **Výstupek při přehození strany stěny** (nález revieweru): rozhodnout, zda má výstupek při přehození strany (ručně i automaticky po uzavření místnosti, u oblouku se mění i vzepětí) zůstat na svém líci ve výkresu.
+4. **F4** (otvory při dělení stěny).
+5. **C1.11** (hrana odskoku; test C2/6 je `it.fails`).
+6. Z auditu: F7, D4, A2 / A10 / B6. Doladit okna (ostění / rám). Výstupek přes roh / kopie v řadě (I1.11).
+
+**Známé drobnosti:** začátek nové stěny přesně ve vrcholu oblouku chytí úchyt vzepětí; `resizeCircle` posune cizí roh přesně na obvodu; dlouhá rovná strana tvaru, která protne líc oblouku dvakrát, se ořízne nepřesně; nástroj Obdélník u oblouku výstupek udělá jen přes líc (strana nemůže ležet na zakřiveném líci); kóty výstupku na straně kót stěny se mohou překrývat; Vite z OneDrive občas pošle starý soubor → restart vývojového serveru.
+
+## Předchozí stav (2026-11-12, konec sezení)
 
 **Hotové (uživatel vše vyzkoušel na PC a potvrdil „vše funguje“; na tabletu neověřeno):** osa stěny líc / střed a kóty po líci (B1, B4, B10, 2a, 2b); výběr konce u rozpojeného rohu (D14); tažení s držením směru, posun vybrané stěny, kolmice ⊥ (D11, D12, D13, C2/16); T-napojení bez dělení průběžné stěny i oblouku (`Node.host`, `core/hosting.ts`, migrace na schéma 9); řešič délek nehýbe jinými skupinami; kreslení nové stěny libovolným směrem s pomocnými čarami; křížení stěn bez dělení (C1.5, `wallCrossings`, `junctionPoints`, ořez hran). Podrobnosti v Deníku změn. Testy 186 + 1 `it.fails` (C2/6), typecheck a build OK.
 
