@@ -7,6 +7,15 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-13 (9) – uzavřený tvar přes líc stěny
+- **Co se změnilo:** Uzavřený tvar (čáry nebo plný obdélník), který líc stěny protíná ve dvou bodech (část zasahuje do těla), se v líci ořízne a venkovní část je výstupek (`profileFromLoop` v `core/protrusion.ts`). Platí pro rovné i obloukové stěny.
+- **Viditelně v aplikaci:** výstupek vznikne i z „kompletního obrazce“ nakresleného přes líc stěny (strana tvaru nemusí ležet přesně na líci); část uvnitř stěny zmizí.
+- **Rozhodnuto samostatně:** plný obdélník překrývající stěnu je teď také výstupek (sloup přiložený ke stěně / do ní); tvar přes celou tloušťku stěny (obě strany venku) zůstane čarami; při více možnostech se vezme nejhlubší výstupek.
+- **Po kontrole revieweru opraveno:** tvar ve vnitřním rohu dvou stěn zůstane čarami (výstupek by zapadl do sousední stěny); tvar převážně v těle (jen kousek přes líc) není výstupek; testy ořezu v líci, rohu a Zpět.
+- **Otevřené:** průsečíky tvaru s lícem oblouku se hledají jen mezi rohy tvaru – velmi dlouhá rovná strana, která oblouk protne dvakrát, se ořízne nepřesně (vzácné).
+- **Otevřené:** ověřit na tabletu; doplnit katalog I1.2 / I1.3 (uzavřený tvar přes líc, obrys přes celou tloušťku) – po schválení uživatelem.
+- **Chyby od uživatele:** „Tvar, který protíná oblouk, se nevytvoří (s třemi čarami to funguje), může to mást“ (obrázek). Doplněno, testy `tools/arcPicture.test.ts`.
+
 ### 2026-11-13 (8) – výstupek na vypouklém líci oblouku
 - **Co se změnilo:** Konec čáry tažené po pomocné čáře (vodorovně / svisle) se na líc oblouku přichytí do skutečného průsečíku (`lineFaceCrossing` v `tools/wallTool.ts`, dřív průsečík s přímkou tětivy). Když zarovnání s rohem odtáhne konec do těla, líc se hledá podle polohy pera a má přednost.
 - **Viditelně v aplikaci:** výstupek jde nakreslit i na vypouklém líci obloukové stěny (protější k čáře stěny s rohy), i s vodorovnými / svislými čarami.

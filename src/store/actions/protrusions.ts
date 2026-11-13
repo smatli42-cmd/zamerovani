@@ -5,7 +5,7 @@
  */
 import { newId } from '../../model/factory';
 import type { Floor, Id, Protrusion, Pt, Wall } from '../../model/types';
-import { findFaceNear, profileFromPolyline, setProtrusionDim, setProtrusionSagitta, type ProtrusionDim } from '../../core/protrusion';
+import { findFaceNear, profileFromLoop, profileFromPolyline, setProtrusionDim, setProtrusionSagitta, type ProtrusionDim } from '../../core/protrusion';
 import { store } from '../store';
 import { cleanup } from './shared';
 import { insertWall } from './walls';
@@ -104,10 +104,20 @@ export function convertChain(floor: Floor, wallId: Id): Id | null {
     const loop = lineLoop(floor, wallId);
     const open = loop && openLoopOnFace(floor, loop);
     if (loop && open) chain = { pts: open, walls: loop.walls };
+    // uzavřený tvar, který líc protíná (část zasahuje do těla): ořízne se v líci (obrázek od uživatele 2026-11-13)
+    else if (loop) {
+      const prof = profileFromLoop(floor, loop.pts);
+      if (prof) return addProtrusion(floor, prof, loop.walls);
+    }
   }
   const prof = chain && profileFromPolyline(floor, chain.pts);
   if (!chain || !prof) return null;
-  for (const id of chain.walls) delete floor.walls[id];
+  return addProtrusion(floor, prof, chain.walls);
+}
+
+/** Čáry `lines` nahradí výstupkem `prof` (vybere se). */
+function addProtrusion(floor: Floor, prof: NonNullable<ReturnType<typeof profileFromPolyline>>, lines: Id[]): Id {
+  for (const id of lines) delete floor.walls[id];
   const p: Protrusion = { id: newId('pr'), ...prof, name: '', material: '', note: '' };
   (floor.protrusions ??= {})[p.id] = p;
   cleanup(floor);

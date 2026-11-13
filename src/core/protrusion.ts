@@ -10,7 +10,7 @@
 import type { Floor, Id, ProfilePt, Protrusion, Pt, Wall } from '../model/types';
 import { add, dist, dot, normal, scale, sub, unit } from './geometry';
 import { arcGeometry } from './arc';
-import { bodyRange, facePath, hasBody } from './wallBody';
+import { bodyRange, facePath, findBodyAt, hasBody } from './wallBody';
 
 /** Výstupky podlaží (pole chybí u starších dat v testech). */
 export const protrusionsOf = (floor: Floor): Protrusion[] => Object.values(floor.protrusions ?? {});
@@ -438,4 +438,71 @@ export function syncProtrusions(before: Floor | undefined, floor: Floor): void {
     if (Math.abs(k - 1) < 1e-9) continue;
     p.pts = p.pts.map(q => ({ ...q, u: r1(q.u * k) }));
   }
+}
+
+/**
+ * Uzavřený tvar (obvod jako body), který protíná líc stěny právě ve dvou bodech (část tvaru zasahuje do těla):
+ * ořízne se v líci a část venku je výstupek (obrázek od uživatele 2026-11-13 – „kompletní obrazec“ přes stěnu).
+ * Zkouší se líce všech stěn s tělem; když se hodí víc, vezme se ten s nejhlubším výstupkem.
+ */
+export function profileFromLoop(floor: Floor, loop: readonly Pt[], tol = 1.5): ReturnType<typeof profileFromPolyline> {
+  const n = loop.length;
+  if (n < 3) return null;
+  let best: ReturnType<typeof profileFromPolyline> = null;
+  let bestDepth = 0;
+  for (const w of Object.values(floor.walls)) {
+    if (!takesProtrusion(w)) continue;
+    const f = wallFrame(floor, w);
+    if (!f) continue;
+    for (const side of [1, -1] as const) {
+      const vOf = (p: Pt) => worldToProfile(f, w, side, p).v;
+      const vs = loop.map(vOf);
+      // hrany, které líc protínají (změna znaménka v)
+      const cuts: { i: number; pt: Pt }[] = [];
+      for (let i = 0; i < n; i++) {
+        const j = (i + 1) % n;
+        if ((vs[i]! > tol) === (vs[j]! > tol)) continue;
+        let lo = 0;
+        let hi = 1;
+        const p = loop[i]!;
+        const q = loop[j]!;
+        const outLo = vs[i]! > tol;
+        for (let k = 0; k < 40; k++) {
+          const m = (lo + hi) / 2;
+          if (vOf(add(p, scale(sub(q, p), m))) > 0 === outLo) lo = m;
+          else hi = m;
+        }
+        cuts.push({ i, pt: add(p, scale(sub(q, p), (lo + hi) / 2)) });
+      }
+      if (cuts.length !== 2) continue;
+      // venkovní řetěz: od průsečíku, za kterým jde obvod ven, přes body venku k druhému průsečíku
+      const [c1, c2] = vs[(cuts[0]!.i + 1) % n]! > tol ? [cuts[0]!, cuts[1]!] : [cuts[1]!, cuts[0]!];
+      const chain: Pt[] = [c1.pt];
+      for (let k = (c1.i + 1) % n; ; k = (k + 1) % n) {
+        chain.push(loop[k]!);
+        if (k === c2.i) break;
+      }
+      chain.push(c2.pt);
+      // vnitřní část nesmí projít za protější líc (tvar přes celou stěnu se neřeší)
+      const inside = loop.filter((_, k) => vs[k]! <= tol);
+      if (inside.some(p => worldToProfile(f, w, side, p).v < -w.thickness - tol)) continue;
+      const r = profileFromPolyline(floor, chain, tol);
+      if (!r || r.wallId !== w.id || r.side !== side || r.mode !== 'add') continue;
+      const depth = Math.max(...r.pts.map(q => q.v));
+      // převažuje část v těle (kreslené vybrání jen kousek přetažené přes líc) → nejde o výstupek
+      const inDepth = Math.max(0, ...inside.map(p => -worldToProfile(f, w, side, p).v));
+      if (depth < THROUGH_MIN || inDepth > depth) continue;
+      // venkovní část nesmí zasahovat do těla jiné stěny (vnitřní roh – výstupek přes roh je až I1.11)
+      const probes = chain.slice(1, -1).concat(chain.slice(0, -1).map((p, k) => scale(add(p, chain[k + 1]!), 0.5)));
+      if (probes.some(p => {
+        const hit = findBodyAt(floor, p);
+        return !!hit && hit.id !== w.id;
+      })) continue;
+      if (depth > bestDepth) {
+        best = r;
+        bestDepth = depth;
+      }
+    }
+  }
+  return best;
 }

@@ -5,9 +5,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import { createProject } from '../model/factory';
-import { addWall } from '../store/actions';
+import { addRectWalls, addWall } from '../store/actions';
 import { store } from '../store/store';
-import { faceOffset, profileToWorld, wallFrame } from '../core/protrusion';
+import { faceOffset, profileToWorld, protrusionDims, wallFrame } from '../core/protrusion';
 import { bodyRange } from '../core/wallBody';
 import { wallTool } from './wallTool';
 import type { PointerInput } from './types';
@@ -134,5 +134,125 @@ describe('obrázek: tvary od vnitřní čáry obloukové stěny', () => {
     const end = profileToWorld(wallFrame(f(), f().walls[W]!)!, f().walls[W]!, prots()[0]!.side, last[last.length - 1]!);
     expect(end.x).toBeCloseTo(800, 0);
     expect(end.y).toBeCloseTo(2400, 0);
+  });
+
+  for (const order of ['zakladna-prvni', 'zakladna-posledni'] as const) {
+    for (const face of ['vypoukly', 'vyduty'] as const) {
+      it(`obrázek 5: uzavřený tvar ze 4 čar na oblouku (${face} líc, ${order})`, () => {
+        const z = 0.6; // přiblížení, při kterém šikmé čáry nechytí vodorovné / svislé pomocné čáry
+        store.openProject(createProject({ name: 't' }));
+        store.set({ camera: { x: 0, y: 0, zoom: z }, selection: null, tool: 'wall' });
+        const W = addWall({ x: 0, y: 0 }, null, { x: 0, y: 5610 }, null, false, { thickness: 300, side: 1, sagitta: -700 })!;
+        const w = f().walls[W]!;
+        const fr = wallFrame(f(), w)!;
+        const conv: 1 | -1 = profileToWorld(fr, w, 1, { u: 2800, v: 0 }).x > profileToWorld(fr, w, -1, { u: 2800, v: 0 }).x ? 1 : -1;
+        const side: 1 | -1 = face === 'vypoukly' ? conv : conv === 1 ? -1 : 1;
+        store.set({ tool: 'line' });
+        const P = (u: number, v: number): [number, number] => {
+          const q = profileToWorld(fr, w, side, { u, v });
+          return [q.x, q.y];
+        };
+        const pen = (x: number, y: number): PointerInput => ({ world: { x, y }, screen: { x: x * z, y: y * z }, device: 'pen' });
+        const stroke = (p: [number, number], q: [number, number]) => {
+          wallTool.down!(pen(...p));
+          wallTool.drag!(pen((p[0] * 2 + q[0]) / 3, (p[1] * 2 + q[1]) / 3));
+          wallTool.drag!(pen(...q));
+          wallTool.up!(pen(...q));
+        };
+        const A = P(1500, 0);
+        const B = P(1500, 700);
+        const C = P(2300, 700);
+        const D = P(2300, 0);
+        if (order === 'zakladna-prvni') {
+          stroke(D, A);
+          stroke(A, B);
+          stroke(B, C);
+          stroke(C, D);
+        } else {
+          stroke(A, B);
+          stroke(B, C);
+          stroke(C, D);
+          stroke(D, A);
+        }
+        expect(prots()).toHaveLength(1);
+        expect(prots()[0]).toMatchObject({ wallId: W, side, mode: 'add' });
+        expect(Object.keys(f().walls)).toEqual([W]);
+      });
+    }
+  }
+
+  for (const face of ['vypoukly', 'vyduty'] as const) {
+    it(`obrázek 5: uzavřený tvar přes líc (část zasahuje do těla) – venkovní část je výstupek (${face})`, () => {
+      const z = 0.6;
+      store.openProject(createProject({ name: 't' }));
+      store.set({ camera: { x: 0, y: 0, zoom: z }, selection: null, tool: 'wall' });
+      const W = addWall({ x: 0, y: 0 }, null, { x: 0, y: 5610 }, null, false, { thickness: 300, side: 1, sagitta: -700 })!;
+      const w = f().walls[W]!;
+      const fr = wallFrame(f(), w)!;
+      const conv: 1 | -1 = profileToWorld(fr, w, 1, { u: 2800, v: 0 }).x > profileToWorld(fr, w, -1, { u: 2800, v: 0 }).x ? 1 : -1;
+      const side: 1 | -1 = face === 'vypoukly' ? conv : conv === 1 ? -1 : 1;
+      store.set({ tool: 'line' });
+      const P = (u: number, v: number): [number, number] => {
+        const q = profileToWorld(fr, w, side, { u, v });
+        return [q.x, q.y];
+      };
+      const pen = (x: number, y: number): PointerInput => ({ world: { x, y }, screen: { x: x * z, y: y * z }, device: 'pen' });
+      const stroke = (p: [number, number], q: [number, number]) => {
+        wallTool.down!(pen(...p));
+        wallTool.drag!(pen((p[0] * 2 + q[0]) / 3, (p[1] * 2 + q[1]) / 3));
+        wallTool.drag!(pen(...q));
+        wallTool.up!(pen(...q));
+      };
+      // základna 120 mm uvnitř těla (ne na líci), tvar ven
+      const A = P(1500, -120);
+      const B = P(1500, 700);
+      const C = P(2300, 700);
+      const D = P(2300, -120);
+      stroke(A, B);
+      stroke(B, C);
+      stroke(C, D);
+      stroke(D, A);
+      expect(prots()).toHaveLength(1);
+      expect(prots()[0]).toMatchObject({ wallId: W, side, mode: 'add' });
+      expect(Object.keys(f().walls)).toEqual([W]);
+      const d = protrusionDims(f(), prots()[0]!)!;
+      expect(d.depth).toBeGreaterThan(690);
+      expect(d.depth).toBeLessThan(705); // oříznuto v líci (bez části v těle)
+      const pts = prots()[0]!.pts;
+      expect(pts[0]!.v).toBe(0);
+      expect(pts[pts.length - 1]!.v).toBe(0);
+    });
+  }
+
+  it('obdélník přes rovnou stěnu (překrývá líc) = výstupek z venkovní části', () => {
+    store.openProject(createProject({ name: 't' }));
+    const W = addWall({ x: 0, y: 0 }, null, { x: 5000, y: 0 }, null, false, { thickness: 300, side: 1 })!; // tělo y 0–300
+    addRectWalls({ x: 2000, y: -400 }, { x: 2500, y: 100 }, 'solid'); // přesahuje líc y = 0 o 100 do těla
+    expect(prots()).toHaveLength(1);
+    expect(prots()[0]).toMatchObject({ wallId: W, mode: 'add' });
+    expect(protrusionDims(f(), prots()[0]!)).toMatchObject({ width: 500, depth: 400 });
+  });
+
+  it('obdélník ve vnitřním rohu dvou stěn zůstane čarami (nezapadne do sousední stěny); tvar skoro celý v těle není výstupek', () => {
+    store.openProject(createProject({ name: 't' }));
+    addWall({ x: 0, y: 0 }, null, { x: 5000, y: 0 }, null, false, { thickness: 300, side: 1 }); // tělo y 0–300
+    addWall({ x: 0, y: 0 }, null, { x: 0, y: 5000 }, null, false, { thickness: 300, side: -1 }); // tělo x 0–300
+    addRectWalls({ x: 100, y: 100 }, { x: 600, y: 700 }, 'solid');
+    expect(prots()).toHaveLength(0);
+    store.openProject(createProject({ name: 't' }));
+    addWall({ x: 0, y: 0 }, null, { x: 5000, y: 0 }, null, false, { thickness: 300, side: 1 });
+    addRectWalls({ x: 2000, y: -10 }, { x: 2500, y: 290 }, 'solid'); // 10 mm venku, 290 v těle
+    expect(prots()).toHaveLength(0);
+  });
+
+  it('obdélník přes líc: jeden krok Zpět vrátí čáry i stěnu', () => {
+    store.openProject(createProject({ name: 't' }));
+    const W = addWall({ x: 0, y: 0 }, null, { x: 5000, y: 0 }, null, false, { thickness: 300, side: 1 })!;
+    const before = JSON.stringify(f());
+    addRectWalls({ x: 2000, y: -400 }, { x: 2500, y: 100 }, 'solid');
+    expect(prots()).toHaveLength(1);
+    store.undo();
+    expect(JSON.stringify(f())).toBe(before);
+    expect(Object.keys(f().walls)).toEqual([W]);
   });
 });
