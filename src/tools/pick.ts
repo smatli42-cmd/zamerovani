@@ -4,7 +4,8 @@
 import { chooseNodeAt, findWallNear, isCurved, openingsOnWall, wallLength, wallNodes, type NodePrefer, type WallHit } from '../core/floorQueries';
 import { textBoxPx } from '../canvas/textBox';
 import { dot, projectToSegment, sub } from '../core/geometry';
-import { bodyNormal, bodyStart, findBodyAt, hasBody } from '../core/wallBody';
+import { bodyNormal, bodyStart, findBodyAt, hasBody, pointInPolygon } from '../core/wallBody';
+import { protrusionOutline, protrusionsOf } from '../core/protrusion';
 import type { Floor, Pt } from '../model/types';
 import type { Camera, Selection } from '../store/store';
 import { HIT_PX } from './types';
@@ -70,6 +71,18 @@ export function pickText(floor: Floor, p: Pt, cam: Camera): string | null {
   return null;
 }
 
+/** Výstupek / vybrání pod bodem: uvnitř jeho plochy nebo u jeho obrysu. */
+export function pickProtrusion(floor: Floor, p: Pt, cam: Camera): string | null {
+  const tol = (HIT_PX.wall * 0.6) / cam.zoom;
+  for (const pr of protrusionsOf(floor)) {
+    const outline = protrusionOutline(floor, pr);
+    if (!outline) continue;
+    if (pointInPolygon(p, outline)) return pr.id;
+    for (let i = 0; i + 1 < outline.length; i++) if (projectToSegment(p, outline[i]!, outline[i + 1]!).distance <= tol) return pr.id;
+  }
+  return null;
+}
+
 /** Předvolba pro překrývající se rohy podle výběru (jeden prvek i skupina). */
 export function nodePrefer(current: Selection): NodePrefer {
   const items = !current ? [] : current.kind === 'multi' ? current.items : [current];
@@ -89,6 +102,8 @@ export function pickAny(floor: Floor, p: Pt, cam: Camera, current: Selection = n
   if (text) return { kind: 'text', id: text };
   const room = pickRoom(floor, p, cam);
   if (room) return { kind: 'room', id: room };
+  const prot = pickProtrusion(floor, p, cam);
+  if (prot) return { kind: 'protrusion', id: prot };
   const wall = findWallNear(floor, p, HIT_PX.wall / cam.zoom);
   if (wall) return { kind: 'wall', id: wall.wall.id };
   // ťuknutí do těla stěny s tloušťkou

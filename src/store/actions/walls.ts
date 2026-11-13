@@ -36,15 +36,27 @@ function linkWall(floor: Floor, a: Id, b: Id, sagitta = 0, style?: LineStyle, th
  * Nová stěna; `sagitta` ≠ 0 = oblouková stěna. Konec na jiné stěně se na ni napojí (stěna se nedělí, core/hosting.ts).
  * `thickness` > 0 = stěna s tělem (strana těla navazuje na tah, uzavřená místnost se natočí ven); 0 = čára (tvar).
  */
-export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, select = true, opts: { sagitta?: number; style?: LineStyle; thickness?: number; side?: 1 | -1; axis?: 'center' } = {}): Id | null {
+export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, select = true, opts: WallOpts = {}): Id | null {
   let createdId: Id | null = null;
   store.edit(floor => {
+    createdId = insertWall(floor, start, startNodeId, end, endNodeId, opts);
+  });
+  if (createdId && select) store.set({ selection: { kind: 'wall', id: createdId } });
+  return createdId;
+}
+
+export type WallOpts = { sagitta?: number; style?: LineStyle; thickness?: number; side?: 1 | -1; axis?: 'center' };
+
+/** Vloží stěnu uvnitř `store.edit` (viz addWall); vrací její ID (po případném sloučení s pokračováním). */
+export function insertWall(floor: Floor, start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, opts: WallOpts = {}): Id | null {
+  let createdId: Id | null = null;
+  {
     const a = getOrCreateNode(floor, start, startNodeId);
     const b = getOrCreateNode(floor, end, endNodeId);
-    if (a === b) return;
+    if (a === b) return null;
     const isNew = !findSameWall(floor, a, b, opts.sagitta ?? 0);
     const wall = linkWall(floor, a, b, opts.sagitta ?? 0, opts.style, opts.thickness ?? 0);
-    if (!wall) return;
+    if (!wall) return null;
     createdId = wall.id;
     if (isNew && hasBody(wall)) {
       if (opts.axis) wall.axis = opts.axis;
@@ -65,8 +77,7 @@ export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: I
       cleanup(floor);
       orientLoopOutward(floor, id);
     }
-  });
-  if (createdId && select) store.set({ selection: { kind: 'wall', id: createdId } });
+  }
   return createdId;
 }
 

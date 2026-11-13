@@ -11,6 +11,7 @@ import type { Floor, Id, Pt, Wall } from '../model/types';
 import { arcGeometry } from './arc';
 import { add, centroid, dist, dot, normal, scale, sub, unit } from './geometry';
 import { junctionPoints, wallSegments } from './floorQueries';
+import { faceOffset, protrusionExtent, protrusionOutline, protrusionsOf, wallFrame } from './protrusion';
 
 /** Má stěna tělo? (rovné i obloukové stěny s tloušťkou; kruhy a čáry bez tloušťky ne) */
 export const hasBody = (w: Wall): boolean => w.thickness > 0 && w.radius === undefined && w.a !== w.b;
@@ -80,6 +81,9 @@ export interface WallBody {
    * [1] = na kladné straně. Pro kóty líc–líc u osy uprostřed (2b).
    */
   faces: [Pt[], Pt[]];
+  /** Výstupky (přidané plochy) a vybrání (odebrané plochy) – uzavřené obrysy (sekce I katalogu). */
+  adds: Pt[][];
+  holes: Pt[][];
 }
 
 /** Délka lomené čáry. */
@@ -346,7 +350,7 @@ function computeWallBodies(floor: Floor): Map<Id, WallBody> {
       if (e.free) snaps.push({ x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 });
     }
     // líc „lo“ (od konce A) leží na straně, kam míří normal(a→b) × znaménko lo; lo ≤ hi, takže lo = záporná strana
-    out.set(eA.wall.id, { wallId: eA.wall.id, poly, edges, snaps, faces: [faceLo, [...hiLine].reverse()] });
+    out.set(eA.wall.id, { wallId: eA.wall.id, poly, edges, snaps, faces: [faceLo, [...hiLine].reverse()], adds: [], holes: [] });
   }
   // Spoje uprostřed stěn (křížení, T bez dělení, 3+ stěny v bodě, ostré úhly, oblouk protnutý dvakrát):
   // napojení podle sousedních konců nemusí stačit – kreslené hrany zúčastněných stěn se ořežou o těla
@@ -357,6 +361,50 @@ function computeWallBodies(floor: Floor): Map<Id, WallBody> {
     for (const e of byNode.get(j.key) ?? []) involved.add(e.wall.id);
   }
   if (involved.size) clipInsideEdges(out, involved);
+  applyProtrusions(floor, out);
+  return out;
+}
+
+/**
+ * Výstupky a vybrání: líc se v jejich šířce nekreslí, přidá se jejich obrys; plochy se vyplní (výstupek)
+ * nebo vyříznou (vybrání) při kreslení. Stěna zůstává jedna (I1.1, I1.5).
+ */
+function applyProtrusions(floor: Floor, bodies: Map<Id, WallBody>): void {
+  for (const p of protrusionsOf(floor)) {
+    const body = bodies.get(p.wallId);
+    const w = floor.walls[p.wallId];
+    const outline = protrusionOutline(floor, p);
+    const f = w && wallFrame(floor, w);
+    if (!body || !w || !outline || !f) continue;
+    const origin = add(f.a, scale(f.n, faceOffset(w, p.side)));
+    const { u0, u1 } = protrusionExtent(p);
+    body.edges = cutAlongLine(body.edges, origin, f.d, u0, u1);
+    for (let i = 0; i + 1 < outline.length; i++) body.edges.push([outline[i]!, outline[i + 1]!]);
+    (p.mode === 'add' ? body.adds : body.holes).push(outline);
+    for (const q of outline) body.snaps.push(q);
+  }
+}
+
+/** Z hran ležících na přímce origin + u·d vyřízne úsek (u0, u1); ostatní hrany beze změny. */
+function cutAlongLine(edges: [Pt, Pt][], origin: Pt, d: Pt, u0: number, u1: number): [Pt, Pt][] {
+  const n = normal(d);
+  const out: [Pt, Pt][] = [];
+  const at = (u: number) => add(origin, scale(d, u));
+  for (const e of edges) {
+    const [p, q] = e;
+    if (Math.abs(dot(sub(p, origin), n)) > 0.5 || Math.abs(dot(sub(q, origin), n)) > 0.5) {
+      out.push(e);
+      continue;
+    }
+    const lo = Math.min(dot(sub(p, origin), d), dot(sub(q, origin), d));
+    const hi = Math.max(dot(sub(p, origin), d), dot(sub(q, origin), d));
+    if (hi <= u0 + 1e-6 || lo >= u1 - 1e-6) {
+      out.push(e);
+      continue;
+    }
+    if (u0 - lo > 0.01) out.push([at(lo), at(u0)]);
+    if (hi - u1 > 0.01) out.push([at(u1), at(hi)]);
+  }
   return out;
 }
 
@@ -453,7 +501,8 @@ export function pointInPolygon(p: Pt, poly: readonly Pt[]): boolean {
 /** Stěna, do jejíhož těla padne bod (null = žádná). */
 export function findBodyAt(floor: Floor, p: Pt): Wall | null {
   for (const body of wallBodies(floor).values()) {
-    if (pointInPolygon(p, body.poly)) return floor.walls[body.wallId] ?? null;
+    const inBody = pointInPolygon(p, body.poly) && !body.holes.some(h => pointInPolygon(p, h));
+    if (inBody || body.adds.some(a => pointInPolygon(p, a))) return floor.walls[body.wallId] ?? null;
   }
   return null;
 }

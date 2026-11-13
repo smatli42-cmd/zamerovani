@@ -98,6 +98,13 @@ export function duplicateSelection(): void {
       floor.openings[no.id] = no;
       created.push({ kind: 'opening', id: no.id });
     }
+    // výstupky se kopírují se svou stěnou (souřadnice jsou vůči stěně)
+    for (const pr of Object.values(floor.protrusions ?? {})) {
+      const target = wallMap.get(pr.wallId);
+      if (!target) continue;
+      const np = { ...clone(pr), id: newId('pr'), wallId: target };
+      floor.protrusions![np.id] = np;
+    }
     for (const it of items) {
       if (it.kind === 'room' && floor.rooms[it.id]) {
         const r = { ...clone(floor.rooms[it.id]!), id: newId('rm') };

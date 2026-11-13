@@ -21,11 +21,13 @@ export function migrateProject(raw: unknown): Project {
   // 6 → 7: zrušena spárovaná příčka a dvojčára (Wall.part) – jejich čáry zůstanou obyčejnými čarami
   // 7 → 8: T bez dělení – průběžné stěny rozdělené napojením se spojí zpět, roh se na ně napojí (Node.host)
   // 8 → 9: totéž i pro oblouky (verze 8 je ještě dělila) – joinSplitWalls je opakovatelná beze změny výsledku
+  // 9 → 10: výstupky a vybrání stěn (floor.protrusions)
   const old = p.schema ?? 1;
   const floors = p.floors.map(f => {
     const j = joinSemicircles(convertShapesToWalls(f));
     const r = removePairing(addWallThickness({ ...j, texts: j.texts ?? {} }));
-    return old < 9 ? joinSplitWalls(r) : r;
+    const out = old < 9 ? joinSplitWalls(r) : r;
+    return { ...out, protrusions: out.protrusions ?? {} };
   });
   return { ...p, floors, schema: SCHEMA_VERSION };
 }

@@ -11,6 +11,8 @@ import { setGap, setOpeningWidth, setReveal, setStartFromA } from './openings';
 import { applyWallLength, resizeCircle } from './walls';
 import { setWallLength } from '../../core/solver';
 import { faceLength, hasBody } from '../../core/wallBody';
+import { protrusionDims } from '../../core/protrusion';
+import { applyProtrusionDim } from './protrusions';
 
 /**
  * Míra líce u stěny s osou uprostřed (2b): délka osy se upraví tak, aby měl líc zadanou délku
@@ -83,6 +85,11 @@ export function numpadInitialValue(floor: Floor, t: NumPadTarget): number | null
       const g = componentGap(floor, t.wallId, t.side);
       return g ? Math.round(g.value) : null;
     }
+    case 'protrusion-dim': {
+      const p = floor.protrusions?.[t.protrusionId];
+      const d = p && protrusionDims(floor, p);
+      return d ? Math.round(d[t.dim]) : null;
+    }
     case 'opening-gap': {
       const a = floor.openings[t.firstId];
       const b = floor.openings[t.secondId];
@@ -137,6 +144,8 @@ export function applyNumpadValue(t: NumPadTarget, value: number): boolean {
     } else if (t.kind === 'circle-diameter') {
       if (value < 10) return;
       ok = resizeCircle(floor, t.wallId, value / 2);
+    } else if (t.kind === 'protrusion-dim') {
+      ok = applyProtrusionDim(floor, t.protrusionId, t.dim, value);
     } else if (t.kind === 'comp-gap') {
       ok = setComponentGap(floor, t.wallId, t.side, value);
     }

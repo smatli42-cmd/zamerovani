@@ -8,7 +8,7 @@
  * - Při změně struktury zvýšit SCHEMA_VERSION a doplnit migraci v persistence/migrate.ts.
  */
 
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 
 export type Id = string;
 
@@ -141,6 +141,33 @@ export interface TextNote {
   leader?: Pt;
 }
 
+/** Bod obrysu výstupku v souřadnicích stěny: `u` = mm podél stěny od rohu A, `v` = mm kolmo od líce (kladně ven od těla). */
+export interface ProfilePt {
+  u: number;
+  v: number;
+}
+
+/**
+ * Výstupek / vybrání stěny (přizdívka, pilastr, výklenek – KATALOG-STEN.md, sekce I). Samostatný prvek s odkazem
+ * na rovnou stěnu s tloušťkou; stěna zůstává celá. Obrys je v souřadnicích stěny, takže se stěnou cestuje
+ * (posun, otočení, prodloužení) a u protějšího líce sleduje změnu tloušťky.
+ */
+export interface Protrusion {
+  id: Id;
+  wallId: Id;
+  /** Líc, ke kterému patří: 1 = líc na straně normal(a→b), −1 = na opačné straně (jako `bodyRange`). */
+  side: 1 | -1;
+  /** `add` = výstupek (ven od těla), `subtract` = vybrání (do těla). */
+  mode: 'add' | 'subtract';
+  /** Otevřený obrys od jednoho konce na líci k druhému (první a poslední bod mají v = 0). */
+  pts: ProfilePt[];
+  /** Výška (mm); chybí = neurčeno (jako stěna). */
+  height?: number;
+  name: string;
+  material: string;
+  note: string;
+}
+
 /** Podlaží = jeden půdorys. */
 export interface Floor {
   id: Id;
@@ -150,6 +177,8 @@ export interface Floor {
   openings: Record<Id, Opening>;
   rooms: Record<Id, Room>;
   texts: Record<Id, TextNote>;
+  /** Výstupky a vybrání stěn (od verze 10; chybí = žádné). */
+  protrusions?: Record<Id, Protrusion>;
 }
 
 /** Projekt = jedna zakázka (budova). */

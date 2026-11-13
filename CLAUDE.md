@@ -23,7 +23,7 @@ Uživatel střídá dva počítače (projekt je na OneDrive). **Na začátku sez
 ## Struktura `src/`
 - `model/` – datové typy (`types.ts`) a vytváření prvků. Rozměry v mm, prvky v objektech podle ID.
 - `core/` – čistá geometrie, dotazy nad půdorysem, řešič délek, přichytávání. Bez DOM, testovatelné.
-- `store/` – `store.ts` (stav + historie Zpět/Vpřed přes immer), `actions/` (JEDINÉ místo, kde se mění výkres; rozdělené podle oblastí – `walls`, `copy`, `delete`, `openings`, `rooms`, `texts`, `floors`, `numpad`, společné `shared`; veřejné rozhraní přes `actions/index.ts`), `numpadController.ts`.
+- `store/` – `store.ts` (stav + historie Zpět/Vpřed přes immer), `actions/` (JEDINÉ místo, kde se mění výkres; rozdělené podle oblastí – `walls`, `copy`, `delete`, `openings`, `rooms`, `texts`, `floors`, `numpad`, `protrusions`, společné `shared`; veřejné rozhraní přes `actions/index.ts`), `numpadController.ts`.
 - `persistence/` – IndexedDB (`db.ts`), automatické ukládání, záloha do souboru, migrace dat.
 - `canvas/` – vykreslování (jen při změně), klikací kóty (`hitTargets.ts`).
 - `tools/` – nástroje (rozhraní `Tool`), registr v `registry.ts`.
@@ -35,5 +35,5 @@ Uživatel střídá dva počítače (projekt je na OneDrive). **Na začátku sez
 - Data projektu měnit jen přes `store.edit()` / `store/actions/`, nikdy přímo.
 - **Napojení stěny doprostřed jiné stěny (rovné i oblouku) ji nedělí:** roh má `Node.host` (`core/hosting.ts`), průběžná stěna zůstává jedna; graf skupin/místností přes `wallSegments`, `syncHosted` v `store.edit` drží roh na stěně.
 - Při změně struktury dat zvýšit `SCHEMA_VERSION` a doplnit migraci v `persistence/migrate.ts`.
-- Všechny tvary (obdélník, kruh, oblouk) jsou běžné stěny (kruh = jedna stěna `Wall.radius` s a === b = střed) (`Wall`); oblouk = `Wall.sagitta` (vzepětí se znaménkem), styl čáry = `Wall.style`. Žádné samostatné „tvary“ v modelu nejsou. Otvory (dveře, okna) jdou zatím jen na rovné stěny. Příčka = stěna s malou tloušťkou (nástroje Příčka a Dvojčára byly zrušeny).
+- Všechny tvary (obdélník, kruh, oblouk) jsou běžné stěny (kruh = jedna stěna `Wall.radius` s a === b = střed) (`Wall`); oblouk = `Wall.sagitta` (vzepětí se znaménkem), styl čáry = `Wall.style`. Žádné samostatné „tvary“ v modelu nejsou. Otvory (dveře, okna) jdou zatím jen na rovné stěny. **Výstupek / vybrání** = samostatný prvek `Floor.protrusions` s obrysem v souřadnicích stěny (u od rohu A, v od líce; `core/protrusion.ts`), stěna zůstává celá; vzniká nástrojem Čára (čára bez tloušťky) s oběma konci na stejném líci. Příčka = stěna s malou tloušťkou (nástroje Příčka a Dvojčára byly zrušeny).
 - Texty v aplikaci česky. **Tloušťka stěn se kreslí vždy**: stěna = čára líce (`Wall.a/b`) + tělo `Wall.thickness` na straně `Wall.side` (geometrie těla a napojení v `core/wallBody.ts`). `thickness = 0` = čára bez tloušťky (tvary: obdélník, kruh, oblouk). Oblouková stěna = stěna s tloušťkou a `sagitta` (kreslí se z menu Stěny: Rovná / Oblouková + výška oblouku); nástroj Oblouk mezi tvary kreslí jen čáru.

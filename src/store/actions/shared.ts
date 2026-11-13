@@ -31,4 +31,6 @@ export function cleanup(floor: Floor): void {
   }
   for (const id of Object.keys(floor.nodes)) if (!used.has(id)) delete floor.nodes[id];
   for (const op of Object.values(floor.openings)) if (!floor.walls[op.wallId]) delete floor.openings[op.id];
+  // výstupek smazané stěny zmizí (I1.12); na stěně bez tloušťky / oblouku se jen nekreslí (vrátí se s tloušťkou)
+  for (const p of Object.values(floor.protrusions ?? {})) if (!floor.walls[p.wallId]) delete floor.protrusions![p.id];
 }

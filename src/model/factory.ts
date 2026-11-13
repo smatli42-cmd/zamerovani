@@ -31,7 +31,7 @@ export function todayIso(): string {
 }
 
 export function createFloor(name: string): Floor {
-  return { id: newId('fl'), name, nodes: {}, walls: {}, openings: {}, rooms: {}, texts: {} };
+  return { id: newId('fl'), name, nodes: {}, walls: {}, openings: {}, rooms: {}, texts: {}, protrusions: {} };
 }
 
 export function createProject(fields: Partial<Pick<Project, 'name' | 'address' | 'surveyor' | 'surveyDate' | 'note'>> = {}): Project {

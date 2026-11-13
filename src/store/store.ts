@@ -13,16 +13,19 @@ import type { MoveTarget } from '../core/solver';
 import type { RevealPart } from '../core/doorLayout';
 import type { LineStyle } from '../model/types';
 import type { Side } from '../core/components';
+import type { ProtrusionDim } from '../core/protrusion';
 import { syncHosted } from '../core/hosting';
 
-export type ToolId = 'select' | 'wall' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'text' | 'leader' | 'paste' | 'pan';
+export type ToolId = 'select' | 'wall' | 'line' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'text' | 'leader' | 'paste' | 'pan';
 
 export type SingleSelection =
   | { kind: 'wall'; id: Id }
   | { kind: 'node'; id: Id }
   | { kind: 'opening'; id: Id }
   | { kind: 'room'; id: Id }
-  | { kind: 'text'; id: Id };
+  | { kind: 'text'; id: Id }
+  /** Výstupek / vybrání stěny (KATALOG-STEN.md, sekce I). */
+  | { kind: 'protrusion'; id: Id };
 
 /** Výběr: jeden prvek, skupina prvků (výběr obdélníkem) nebo nic. */
 export type Selection = SingleSelection | { kind: 'multi'; items: SingleSelection[] } | null;
@@ -51,7 +54,9 @@ export type NumPadTarget =
   /** Míra líce stěny s osou uprostřed (face 0/1 = `WallBody.faces`); délka osy se dopočítá (2b). */
   | { kind: 'wall-face-length'; wallId: Id; face: 0 | 1 }
   /** Odstup skupiny stěn (např. sloupu) od nejbližší stěny mimo skupinu; zadáním se skupina posune. */
-  | { kind: 'comp-gap'; wallId: Id; side: Side };
+  | { kind: 'comp-gap'; wallId: Id; side: Side }
+  /** Kóta výstupku: šířka, hloubka, odstup před / za (od souseda nebo konce stěny). */
+  | { kind: 'protrusion-dim'; protrusionId: Id; dim: ProtrusionDim };
 
 export interface NumPadState {
   target: NumPadTarget;

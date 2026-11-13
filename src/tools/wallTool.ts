@@ -3,6 +3,9 @@
  * rovná nebo oblouková (menu Stěny; oblouk se vyklene o „výšku oblouku“ na stranu těla, tj. ven).
  * Začátek i konec se přichytávají na rohy, směr do 90°, zarovnání s rohy.
  * Odchýlením pera na jednu nebo druhou stranu od čáry se tělo překlopí (zvolená strana se zapamatuje).
+ *
+ * Nástroj „Čára“ (`lineTool`) je tentýž nástroj bez tloušťky: konce se navíc přichytí na oba líce stěn
+ * a lomená čára s oběma konci na stejném líci se sama změní na výstupek / vybrání (KATALOG-STEN.md, I1.2, I1.10).
  */
 import { requestRender } from '../canvas/invalidate';
 import { toScreen } from '../canvas/view';
@@ -12,7 +15,8 @@ import { findWallNear } from '../core/floorQueries';
 import { snapEnd, snapPoint, type SnapResult } from '../core/snapping';
 import { facePath, initialSideAt, sideFromPen, straightContinuation } from '../core/wallBody';
 import type { Floor, Pt, Wall } from '../model/types';
-import { addWall } from '../store/actions';
+import { addLine, addWall, lineChain } from '../store/actions';
+import { findFaceNear, profileFromPolyline } from '../core/protrusion';
 import { activeWallArcHeight, activeWallThickness } from '../model/factory';
 import { store, type Camera } from '../store/store';
 import { pickAny } from './pick';
@@ -41,6 +45,37 @@ const NEAR_PX = 60;
  * se stěnou přesně, konec na stěně se na ni napojí); jinak libovolný směr (D11/D13 i pro kreslení).
  */
 function guidedEnd(floor: Floor, d: Drawing, p: PointerInput): SnapResult {
+  const r = guidedEndBase(floor, d, p);
+  return lineMode ? snapToFace(floor, r, p.world, d.guide?.line ?? null) : r;
+}
+
+/**
+ * Nástroj Čára: konec u líce stěny (i protějšího, i u osy uprostřed) se přichytí přesně na líc;
+ * je-li zachycená pomocná čára, na její průsečík s lícem. Roh a zvláštní bod mají přednost.
+ */
+function snapToFace(floor: Floor, r: SnapResult, raw: Pt, line: DragLine | null): SnapResult {
+  const { settings, camera } = store.get();
+  if (!settings.snap || r.node) return r;
+  const tol = HIT_PX.snapNode / camera.zoom;
+  const hit = findFaceNear(floor, line ? r.pt : raw, tol);
+  if (!hit) return r;
+  let pt = hit.point;
+  if (line) {
+    const a = floor.nodes[hit.wall.a]!;
+    const b = floor.nodes[hit.wall.b]!;
+    const fd = sub(b, a);
+    const den = line.dir.x * fd.y - line.dir.y * fd.x;
+    if (Math.abs(den) > 1e-9) {
+      const w = sub(hit.point, line.origin);
+      const t = (w.x * fd.y - w.y * fd.x) / den;
+      const x = add(line.origin, scale(line.dir, t));
+      if (dist(x, r.pt) <= tol) pt = x;
+    }
+  }
+  return { pt, node: null, wallHit: null, guides: [], special: true };
+}
+
+function guidedEndBase(floor: Floor, d: Drawing, p: PointerInput): SnapResult {
   const { settings, camera } = store.get();
   const base = snapEnd(floor, d.start.pt, p.world, snapOptions(d.start.node?.id));
   d.guide = null;
@@ -77,6 +112,32 @@ const FLIP_PX = 10;
 
 let drawing: Drawing | null = null;
 let hoverSnap: SnapResult | null = null;
+/** Kreslí se čára bez tloušťky (nástroj Čára), ne stěna. */
+let lineMode = false;
+
+/** Začátek: u nástroje Čára i líc stěny. */
+function startSnap(floor: Floor, raw: Pt): SnapResult {
+  const s = snapPoint(floor, raw, snapOptions());
+  return lineMode ? snapToFace(floor, s, raw, null) : s;
+}
+
+/**
+ * Náhled výstupku: lomená čára končící v počátečním rohu + nový úsek – uzavře-li výstupek / vybrání,
+ * vrátí jeho obrys (pro čárkovanou uzavírací čáru po líci).
+ */
+function closurePreview(floor: Floor, d: Drawing): Pt[] | null {
+  const startId = d.start.node?.id;
+  let pts: Pt[] = [d.start.pt];
+  if (startId) {
+    const at = Object.values(floor.walls).filter(w => w.a === startId || w.b === startId);
+    const chain = at.length === 1 ? lineChain(floor, at[0]!.id) : null;
+    if (chain) {
+      pts = dist(chain.pts[chain.pts.length - 1]!, d.start.pt) < 1 ? chain.pts : [...chain.pts].reverse();
+    }
+  }
+  const all = [...pts, d.end.pt];
+  return profileFromPolyline(floor, all) ? all : null;
+}
 
 export function snapOptions(startNodeId?: string) {
   const { settings, camera } = store.get();
@@ -112,10 +173,11 @@ export const wallTool: Tool = {
   down(p: PointerInput) {
     const floor = store.floor();
     if (!floor) return;
+    lineMode = store.get().tool === 'line';
     // Středový bod vybraného oblouku se dá táhnout i při kreslení stěn
     handleDrag = grabArcHandle(p);
     if (handleDrag) return;
-    const start = snapPoint(floor, p.world, snapOptions());
+    const start = startSnap(floor, p.world);
     drawing = { start, end: start, downAt: p.world, side: null, lines: drawLinesFrom(floor, start.pt, start.node?.id ?? null), lock: null, guide: null };
     hoverSnap = null;
     store.set({ selection: null, numpad: null });
@@ -128,6 +190,7 @@ export const wallTool: Tool = {
     if (!floor || !drawing) return;
     const end = guidedEnd(floor, drawing, p);
     drawing.end = end;
+    if (lineMode) return requestRender();
     // u přichycení na roh / stěnu se strana už nemění (aby se stěna na poslední chvíli nepřeklopila)
     const T = activeWallThickness(store.get().project);
     const { wallShape, wallAxis } = store.get().settings;
@@ -153,7 +216,9 @@ export const wallTool: Tool = {
     const d = drawing;
     drawing = null;
     if (!d) return;
-    if (dist(d.start.pt, d.end.pt) >= 50) {
+    if (lineMode && dist(d.start.pt, d.end.pt) >= 10) {
+      addLine(d.start.pt, d.start.node?.id ?? null, d.end.pt, d.end.node?.id ?? null);
+    } else if (!lineMode && dist(d.start.pt, d.end.pt) >= 50) {
       // Při kreslení se panel vlastností neotevírá (nepřekáží v kreslení)
       const sagitta = drawingSagitta(d);
       addWall(d.start.pt, d.start.node?.id ?? null, d.end.pt, d.end.node?.id ?? null, false, {
@@ -173,7 +238,8 @@ export const wallTool: Tool = {
   hover(p: PointerInput) {
     const floor = store.floor();
     if (!floor) return;
-    const s = snapPoint(floor, p.world, snapOptions());
+    lineMode = store.get().tool === 'line';
+    const s = startSnap(floor, p.world);
     hoverSnap = s.node || s.wallHit || s.special ? s : null;
     requestRender();
   },
@@ -209,6 +275,41 @@ export const wallTool: Tool = {
       ctx.stroke();
     }
     ctx.restore();
+
+    // Nástroj Čára: tenká čára; uzavře-li výstupek, šedý náhled plochy a čárkovaná uzavírací čára po líci
+    if (lineMode) {
+      const floor = store.floor();
+      const closed = floor ? closurePreview(floor, drawing) : null;
+      ctx.save();
+      if (closed) {
+        const q = closed.map(p => toScreen(p, cam));
+        ctx.fillStyle = 'rgba(161,161,170,0.45)';
+        ctx.beginPath();
+        q.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+        ctx.closePath();
+        ctx.fill();
+        ctx.setLineDash([6, 4]);
+        ctx.strokeStyle = '#2563eb';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(q[0]!.x, q[0]!.y);
+        ctx.lineTo(q[q.length - 1]!.x, q[q.length - 1]!.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+      ctx.restore();
+      drawSnapMarker(ctx, cam, drawing.start);
+      drawSnapMarker(ctx, cam, drawing.end);
+      drawLengthBadge(ctx, a, b, Math.round(dist(drawing.start.pt, drawing.end.pt)));
+      return;
+    }
 
     // Náhled těla stěny (šedě) na zvolené / automatické straně; oblouková stěna podél oblouku
     const T = activeWallThickness(store.get().project);
@@ -250,6 +351,9 @@ export const wallTool: Tool = {
     drawLengthBadge(ctx, a, b, Math.round(dist(drawing.start.pt, drawing.end.pt)));
   }
 };
+
+/** Nástroj Čára: kreslí čáry bez tloušťky; výstupek / vybrání vznikne samo (KATALOG-STEN.md, I1.10). */
+export const lineTool: Tool = wallTool;
 
 export function drawSnapMarker(ctx: CanvasRenderingContext2D, cam: Camera, s: SnapResult): void {
   if (!s.node && !s.wallHit && !s.special) return;

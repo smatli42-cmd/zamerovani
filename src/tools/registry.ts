@@ -9,11 +9,12 @@ import { leaderTool } from './leaderTool';
 import { textTool } from './textTool';
 import { selectTool } from './selectTool';
 import type { Tool } from './types';
-import { wallTool } from './wallTool';
+import { lineTool, wallTool } from './wallTool';
 
 export const tools: Record<ToolId, Tool> = {
   select: selectTool,
   wall: wallTool,
+  line: lineTool,
   door: doorTool,
   window: windowTool,
   opening: openingTool,

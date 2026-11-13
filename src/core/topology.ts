@@ -8,6 +8,7 @@ import { arcGeometry, nearestOnArc, splitArcSagittas } from './arc';
 import { dist } from './geometry';
 import { openingSpan, openingStartFromA, wallLength, wallNodes } from './floorQueries';
 import { straightContinuation } from './wallBody';
+import { moveProtrusions, protrusionExtent } from './protrusion';
 
 /** Jak blízko (mm) musí roh ležet u stěny, aby ji rozdělil. */
 const ON_WALL_TOL = 1;
@@ -76,6 +77,15 @@ export function splitWallAt(floor: Floor, wallId: Id, nodeId: Id): [Id, Id] | nu
     op.wallId = target.id;
     op.offset = Math.max(0, Math.round(op.ref === 'a' ? startInPart : partLen - startInPart - openingSpan(op)));
   }
+  // výstupky na část, na které leží větší část jejich šířky (I1.13); u B se měří od nového rohu
+  if (!sag) {
+    const inA = (p: Parameters<typeof protrusionExtent>[0]) => {
+      const { u0, u1 } = protrusionExtent(p);
+      return (u0 + u1) / 2 <= at;
+    };
+    moveProtrusions(floor, wallId, wA.id, u => u, false, inA);
+    moveProtrusions(floor, wallId, wB.id, u => u - at);
+  }
   return [wA.id, wB.id];
 }
 
@@ -134,6 +144,12 @@ export function mergeStraightAt(floor: Floor, wallId: Id, nodeId: Id, throughT =
     starts.push({ op, start });
     op.wallId = o.id;
   }
+  // výstupky: u se měří od rohu A sloučené stěny (u o se posune, když se A přesune na vzdálený konec nové části)
+  const fromNode = (u: number) => (w.a === nodeId ? u : wLen - u);
+  if (o.a === nodeId) {
+    moveProtrusions(floor, o.id, o.id, u => u + added);
+    moveProtrusions(floor, w.id, o.id, u => added - fromNode(u), w.a === nodeId);
+  } else moveProtrusions(floor, w.id, o.id, u => oldLen + fromNode(u), w.b === nodeId);
   // vzdálený konec nové části se stává koncem sloučené stěny – přenese se i jeho příznak
   const wFarNoJoin = w.a === nodeId ? w.noJoinB : w.noJoinA;
   if (o.a === nodeId) {

@@ -3,6 +3,7 @@
  * Každé číslo je klikací (otevře NumPad). Kóty se vynáší ven z místnosti.
  * Uvnitř podél stěny se zobrazuje popisek stěny (tloušťka, materiál…).
  */
+import { profileToWorld, protrusionDims, protrusionExtent, wallFrame, type ProtrusionDim } from '../core/protrusion';
 import { arcGeometry } from '../core/arc';
 import { arcChain } from '../core/arcChain';
 import { openingsOnWall, wallLength, wallNodes, wallSegments } from '../core/floorQueries';
@@ -353,5 +354,37 @@ export function drawBodyDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: C
         wallId: wall.id
       });
   }
+  ctx.restore();
+}
+
+/**
+ * Kóty vybraného výstupku / vybrání (I1.8): řetěz po líci (odstup před, šířka, odstup za – od souseda nebo konce
+ * stěny) vně výstupku a hloubka kolmo na líc. Ťuknutím se otevře NumPad; mění se jen výstupek.
+ */
+export function drawProtrusionDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camera, dimScale: number, selection: Selection): void {
+  if (selection?.kind !== 'protrusion') return;
+  const p = floor.protrusions?.[selection.id];
+  const w = p && floor.walls[p.wallId];
+  const f = w && wallFrame(floor, w);
+  const dims = p && protrusionDims(floor, p);
+  if (!p || !w || !f || !dims) return;
+  const style: DimStyle = { color: '#334155', bg: '#ffffff', bold: false };
+  const { u0, u1, depth } = protrusionExtent(p);
+  const at = (u: number, v: number) => toScreen(profileToWorld(f, w, p.side, { u, v }), cam);
+  const out = scale(f.n, p.side);
+  const reach = (p.mode === 'add' ? depth * cam.zoom : 0) + 22 * dimScale;
+  const act = (dim: ProtrusionDim): HitAction => ({ type: 'numpad', target: { kind: 'protrusion-dim', protrusionId: p.id, dim } });
+  ctx.save();
+  const chain: [number, number, ProtrusionDim][] = [
+    [u0 - dims.before, u0, 'before'],
+    [u0, u1, 'width'],
+    [u1, u1 + dims.after, 'after']
+  ];
+  for (const [a, b, dim] of chain) {
+    if (b - a < 0.5) continue;
+    drawDimLine(ctx, at(a, 0), at(b, 0), out, reach, String(Math.round(b - a)), dim === 'width' ? 'šířka' : undefined, style, dimScale, act(dim));
+  }
+  const sign = p.mode === 'add' ? 1 : -1;
+  drawDimLine(ctx, at(u1, 0), at(u1, sign * depth), f.d, 16 * dimScale, String(Math.round(depth)), 'hloubka', style, dimScale, act('depth'));
   ctx.restore();
 }

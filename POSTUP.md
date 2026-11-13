@@ -7,6 +7,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-13 – výstupek / vybrání stěny a nástroj Čára (sekce I)
+- **Co se změnilo:** Uživatel schválil sekci I katalogu celou („Schvaluji vše“). Nový prvek `Protrusion` (`Floor.protrusions`, SCHEMA_VERSION 10) s obrysem v souřadnicích stěny (`core/protrusion.ts`); tělo stěny ho zahrne (`applyProtrusions` ve `wallBody.ts`: líc se v šířce nekreslí, výstupek se vyplní, vybrání vyřízne). Nový nástroj Čára (`wallTool` v režimu čáry, `addLine` v `store/actions/protrusions.ts`). Výstupek se přenáší při sloučení / rozdělení stěny a kopíruje se se stěnou.
+- **Viditelně v aplikaci:** v liště nástroj **Čára**. Čára z líce stěny zpět na týž líc (i vnější, u osy uprostřed jen líc těla) se po posledním úseku sama změní na výstupek (ven) nebo vybrání (do těla) – při kreslení šedý náhled a čárkovaná uzavírací čára. Vybraný výstupek je modrý, má kóty (odstup před, šířka, odstup za, hloubka; ťuknutím NumPad) a panel (šířka, hloubka, výška, název, materiál, poznámka, Smazat).
+- **Rozhodnuto samostatně:** čára se kreslí úsek po úseku tažením (žádné tlačítko Hotovo – výstupek vznikne sám po úseku, který dosedne na líc); NumPad kót výstupku jde v pořadí odstup před → šířka → odstup za → hloubka; šířka se mění od okraje u rohu A; hloubka úměrně (i u nepravoúhlého tvaru); vybrání nejvýš přes celou tloušťku; přehození strany stěny nechá výstupek na „své“ straně (posune se s tělem); výstupek nejde táhnout (jen kótami).
+- **Po kontrole revieweru opraveno:** výstupek jde začít / ukončit v rohu stěny (u0 = 0); obrys přes konec stěny zůstane čarou; kóty nepustí výstupek za konec stěny ani přes sousední výstupek; výstupek na stěně změněné na tloušťku 0 / oblouk se jen skryje (smaže se jen se stěnou); kóty výstupku se řídí vypínačem kót; testy rohu, hranic, dělení přes výstupek a přehození strany.
+- **Otevřené:** oblouk v obrysu výstupku (úchyt vzepětí na úseku obrysu, I1.10) zatím chybí – úseky jsou rovné; výstupek přes roh / na oblouku / kopie v řadě (I1.11, později); výstupek nejde vybrat obdélníkem ani kopírovat samostatně (jen se stěnou); po zkrácení stěny může výstupek přečnívat přes konec (kreslí se, ale kóta za ním je záporná).
+- **Chyby od uživatele:** žádné.
+
 ### 2026-11-13 – výstupek / vybrání: pravidla a příklady do katalogu (jen dokumentace)
 - **Co se změnilo:** Do `KATALOG-STEN.md` přidána sekce „I. Výstupek a vybrání“ (pravidla I1.1–I1.14, příklady I2/1–11) podle `KRESLENI-VYSTUPKU.md`. Čeká na schválení uživatelem, pak testy a implementace.
 - **Viditelně v aplikaci:** nic.
@@ -79,10 +87,10 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Hotové (uživatel vše vyzkoušel na PC a potvrdil „vše funguje“; na tabletu neověřeno):** osa stěny líc / střed a kóty po líci (B1, B4, B10, 2a, 2b); výběr konce u rozpojeného rohu (D14); tažení s držením směru, posun vybrané stěny, kolmice ⊥ (D11, D12, D13, C2/16); T-napojení bez dělení průběžné stěny i oblouku (`Node.host`, `core/hosting.ts`, migrace na schéma 9); řešič délek nehýbe jinými skupinami; kreslení nové stěny libovolným směrem s pomocnými čarami; křížení stěn bez dělení (C1.5, `wallCrossings`, `junctionPoints`, ořez hran). Podrobnosti v Deníku změn. Testy 186 + 1 `it.fails` (C2/6), typecheck a build OK.
 
-**Rozpracované:** výstupek – sekce I v `KATALOG-STEN.md` napsaná (2026-11-13), **čeká na schválení uživatelem** (body ? v I1.7, I1.10, I1.14, I2/6).
+**Rozpracované:** výstupek / vybrání a nástroj Čára hotové (2026-11-13), **čeká na vyzkoušení uživatelem**; chybí oblouk v obrysu (I1.10).
 
 **Fronta kroků (pořadí):**
-1. **Výstupek / vybrání stěny** (návrh v `KRESLENI-VYSTUPKU.md` z jiného sezení, schváleno uživatelem v chatu, nenaprogramováno): obrys nakreslený nástrojem Čára s oběma konci na líci stěny se sám uzavře a připojí (výstupek ven, vybrání do těla), stěna zůstává celistvá, vlastní kóty, model `Floor.protrusions` s výškou a materiálem. Nejdřív návrh do repa + sekce „I. Výstupek a vybrání“ v `KATALOG-STEN.md` s příklady, **pak se zastavit a nechat uživatele schválit**.
+1. **Oblouk v obrysu výstupku** (I1.10): úchyt vzepětí na úseku obrysu vybraného výstupku (`ProfilePt` + vzepětí úseku, vykreslení, kóta).
 2. **Kóta polohy napojení na průběžné stěně** (od zrušení dělení se poloha příčky na stěně nekótuje) – řetězová kóta s NumPadem.
 3. **D3** – samostatný nástroj zkrátit / prodloužit do rohu (vyčnívající konce po křížení).
 4. **Přichytávání k oběma lícům stěny** (připomínka uživatele) – zároveň vyřešit polohu napojeného rohu mimo osu; souvisí s D3 a okny.
@@ -104,6 +112,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Rozhodnuto samostatně
 (Rozhodnutí mimo katalog, udělaná bez uživatele – nejnovější nahoře. Uživatel je může kdykoli změnit.)
+- 2026-11-13: Výstupek – čára se kreslí tažením úsek po úseku, výstupek vznikne sám po úseku, který dosedne na líc (bez tlačítka Hotovo); NumPad kót: odstup před → šířka → odstup za → hloubka; šířka se mění od okraje u rohu A, hloubka úměrně; výstupek nejde táhnout (jen kóty); přehození strany stěny ho nechá na „své“ straně (ven od těla, posune se s tělem); na stěně bez tloušťky / oblouku se jen nekreslí.
 - 2026-11-12: D11 – „kolmo na původní směr“ a „vodorovně / svisle“ se nabízí jen u konce jediné stěny; u rohu více stěn jen jejich původní směry (přehlednost) a kolmice k blízkým stěnám.
 - 2026-11-12: D12 – kruh a část rozděleného oblouku se posunem stěny nehýbou (oblouk se tvaruje jako celek úchytem).
 - 2026-11-12: Na pomocné čáře se poloha zaokrouhlí na 1 mm v x a y (u šikmé stěny odchylka do 0,7 mm – zanedbatelné).

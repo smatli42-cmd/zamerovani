@@ -8,6 +8,7 @@ import { tools } from '../tools/registry';
 const TOOLS: { id: ToolId; icon: string; label: string; title: string }[] = [
   { id: 'select', icon: '👆', label: 'Vybrat', title: 'Vybrat prvek, posunout roh / otvor, ťuknutím na stěnu zadat délku' },
   { id: 'wall', icon: '✏️', label: 'Stěna', title: 'Kreslit stěny tažením pera' },
+  { id: 'line', icon: '╱', label: 'Čára', title: 'Kreslit čáru (bez tloušťky); čára od líce stěny zpět na týž líc vytvoří výstupek nebo vybrání' },
   { id: 'door', icon: '🚪', label: 'Dveře', title: 'Ťuknutím na stěnu vložit dveře' },
   { id: 'window', icon: '🪟', label: 'Okno', title: 'Ťuknutím na stěnu vložit okno' },
   { id: 'opening', icon: '⬜', label: 'Otvor', title: 'Ťuknutím na stěnu vložit průchod bez dveří' },

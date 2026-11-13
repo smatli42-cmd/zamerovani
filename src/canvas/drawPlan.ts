@@ -12,6 +12,7 @@ import { isSelected, type Camera, type Selection, type SingleSelection } from '.
 import { toScreen } from './view';
 import { bodyNormal, bodyStart, facePointAt, hasBody, wallBodies } from '../core/wallBody';
 import { addHitBox } from './hitTargets';
+import { protrusionOutline, protrusionsOf } from '../core/protrusion';
 
 export const COLORS = {
   wall: '#0f172a',
@@ -56,8 +57,8 @@ export function drawWalls(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
 
   // Stěny s tloušťkou: nejdřív výplně všech těl (světle šedé), pak líce a čela volných konců – spoje bez čar
   const bodies = wallBodies(floor);
-  const path = (pts: Pt[]) => {
-    ctx.beginPath();
+  const path = (pts: Pt[], keep = false) => {
+    if (!keep) ctx.beginPath();
     pts.forEach((p, i) => {
       const s = toScreen(p, cam);
       if (i === 0) ctx.moveTo(s.x, s.y);
@@ -69,12 +70,29 @@ export function drawWalls(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
     const sel = isSel(selection, 'wall', body.wallId);
     const hov = isSel(hover, 'wall', body.wallId);
     ctx.fillStyle = sel ? '#bfdbfe' : hov ? '#dbeafe' : COLORS.body;
+    // vybrání (sekce I) se z těla vyřízne (sudý-lichý), výstupky se vyplní stejně jako tělo
     path(body.poly);
-    ctx.fill();
-    // přesah výplně přes spoje (bez švů mezi sousedními těly)
+    for (const h of body.holes) path(h, true);
+    ctx.fill('evenodd');
+    // přesah výplně přes spoje (bez švů mezi sousedními těly); u vybrání jen obrys těla, ne přes výřez
     ctx.strokeStyle = ctx.fillStyle;
     ctx.lineWidth = 1;
-    ctx.stroke();
+    if (!body.holes.length) ctx.stroke();
+    for (const a of body.adds) {
+      path(a);
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+  // vybraný výstupek / vybrání: modře zvýrazněná plocha
+  for (const p of protrusionsOf(floor)) {
+    const sel = isSel(selection, 'protrusion', p.id);
+    const hov = isSel(hover, 'protrusion', p.id);
+    const outline = (sel || hov) && protrusionOutline(floor, p);
+    if (!outline) continue;
+    ctx.fillStyle = sel ? 'rgba(37,99,235,0.35)' : 'rgba(147,197,253,0.4)';
+    path(outline);
+    ctx.fill();
   }
   for (const body of bodies.values()) {
     const wall = floor.walls[body.wallId]!;

@@ -15,6 +15,7 @@
 | `PREPNUTI-POCITACE.md` | Postup přepnutí mezi počítači pro uživatele |
 | `src/` | Zdrojový kód (struktura v `CLAUDE.md`) |
 | `src/core/wallJoins.catalog.test.ts` | Testy z příkladů katalogu C2 |
+| `src/core/protrusion.ts`, `src/store/actions/protrusions.ts`, `src/store/protrusion.test.ts` | Výstupek / vybrání stěny a nástroj Čára (katalog I, testy z příkladů I2) |
 | `prototyp/` | Starý první prototyp (jen inspirace) |
 | `.claude/agents/reviewer.md` | Agent pro nezávislou kontrolu kroku |
 | `.claude/commands/` | `/pokracuji` (začátek sezení), `/konec` (konec sezení) |
