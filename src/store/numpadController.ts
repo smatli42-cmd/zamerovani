@@ -22,7 +22,7 @@ export function openTarget(target: NumPadTarget): void {
   if (target.kind === 'wall-length' && floor.walls[target.wallId]?.radius !== undefined) target = { kind: 'circle-diameter', wallId: target.wallId };
   const v = numpadInitialValue(floor, target);
   const selection =
-    target.kind === 'protrusion-dim'
+    target.kind === 'protrusion-dim' || target.kind === 'protrusion-sagitta'
       ? ({ kind: 'protrusion', id: target.protrusionId } as const)
       : target.kind === 'wall-length' || target.kind === 'wall-sagitta' || target.kind === 'circle-diameter' || target.kind === 'wall-thickness' || target.kind === 'wall-face-length' || target.kind === 'comp-gap'
       ? ({ kind: 'wall', id: target.wallId } as const)
@@ -125,6 +125,8 @@ function commitAndNext(): void {
     const next = order[order.indexOf(t.dim) + 1];
     return next && floor.protrusions?.[t.protrusionId] ? openTarget({ ...t, dim: next }) : store.set({ numpad: null });
   }
+
+  if (t.kind === 'protrusion-sagitta') return store.set({ numpad: null });
 
   if (t.kind === 'wall-sagitta' || t.kind === 'circle-diameter' || t.kind === 'wall-thickness' || t.kind === 'wall-face-length' || t.kind === 'opening-reveal') return store.set({ numpad: null });
 

@@ -11,14 +11,18 @@ import type { Id, Pt } from '../model/types';
 import { selectInRect, normRect } from '../core/rectSelect';
 import { dragParams, linesNear, nodeDragLines, resolveDragPoint, wallMoveLines, type DragLine } from '../core/dragResolve';
 import type { Camera } from '../store/store';
-import { groupOrigin, type GroupOrigin, mergeNodeIfCoincident, moveGroup, moveNode, moveOpeningTo, moveRoom, moveText, updateText, setCircleRadius, setWallSagitta } from '../store/actions';
+import { groupOrigin, type GroupOrigin, mergeNodeIfCoincident, moveGroup, moveNode, moveOpeningTo, moveRoom, moveText, updateText, setCircleRadius, setWallSagitta, setProtrusionArc } from '../store/actions';
 import { store } from '../store/store';
+import { protrusionArcHandles, sagittaFromPoint } from '../core/protrusion';
+import { openTarget } from '../store/numpadController';
 import { pickAny } from './pick';
 import { HIT_PX, type PointerInput, type Tool } from './types';
 
 type DragKind = { kind: 'node'; id: Id; lines: DragLine[] } | { kind: 'wall'; id: Id; origin: GroupOrigin; grab: Pt; lines: DragLine[] } | { kind: 'opening'; id: Id; grabOffset: number } | { kind: 'room'; id: Id; dx: number; dy: number }
   | { kind: 'text'; id: Id; dx: number; dy: number }
   | { kind: 'handle'; id: Id }
+  /** Úchyt vzepětí úseku obrysu vybraného výstupku (I1.10). */
+  | { kind: 'protArc'; id: Id; seg: number }
   | { kind: 'leader'; id: Id }
   | { kind: 'group'; origin: GroupOrigin; start: Pt };
 
@@ -127,7 +131,35 @@ export function grabLeaderHandle(p: PointerInput): boolean {
   return true;
 }
 
+/** Je pod perem úchyt oblouku stěny nebo výstupku? (má přednost před kótami) */
+export const anyHandleUnderPen = (p: PointerInput): boolean => !!protArcUnderPen(p) || !!arcUnderPen(p);
+
+/** Úchyt oblouku v obrysu vybraného výstupku pod perem. */
+export function protArcUnderPen(p: PointerInput): { id: Id; seg: number } | null {
+  const floor = store.floor();
+  const sel = store.get().selection;
+  const pr = floor && sel?.kind === 'protrusion' ? floor.protrusions?.[sel.id] : null;
+  if (!floor || !pr) return null;
+  let best: { id: Id; seg: number } | null = null;
+  let bestD = HANDLE_PX;
+  for (const h of protrusionArcHandles(floor, pr)) {
+    const d = dist(toScreen(h.at, store.get().camera), p.screen);
+    if (d <= bestD) {
+      best = { id: pr.id, seg: h.seg };
+      bestD = d;
+    }
+  }
+  return best;
+}
+
 export function grabArcHandle(p: PointerInput): boolean {
+  const ph = protArcUnderPen(p);
+  if (ph) {
+    drag = { kind: 'protArc', id: ph.id, seg: ph.seg };
+    downScreen = p.screen;
+    dragging = false;
+    return true;
+  }
   const id = arcUnderPen(p);
   if (!id) return false;
   drag = { kind: 'handle', id };
@@ -258,6 +290,10 @@ export const selectTool: Tool = {
       moveRoom(drag.id, { x: p.world.x - drag.dx, y: p.world.y - drag.dy });
     } else if (drag.kind === 'text') {
       moveText(drag.id, { x: p.world.x - drag.dx, y: p.world.y - drag.dy });
+    } else if (drag.kind === 'protArc') {
+      const pr = floor.protrusions?.[drag.id];
+      const s = pr && sagittaFromPoint(floor, pr, drag.seg, p.world);
+      if (s !== null && s !== undefined) setProtrusionArc(drag.id, drag.seg, s);
     } else if (drag.kind === 'handle') {
       const wall = floor.walls[drag.id];
       const n = wall && wallNodes(floor, wall);
@@ -297,6 +333,9 @@ export const selectTool: Tool = {
       if (drag.kind === 'node') mergeNodeIfCoincident(drag.id);
       if (drag.kind === 'wall') for (const id of Object.keys(drag.origin.nodes)) mergeNodeIfCoincident(id);
       store.endGesture();
+    } else if (drag?.kind === 'protArc') {
+      // ťuknutí na úchyt bez tažení = zadat vzepětí číslem
+      openTarget({ kind: 'protrusion-sagitta', protrusionId: drag.id, seg: drag.seg });
     } else if (drag?.kind === 'handle') {
       // ťuknutí na úchyt oblouku bez tažení = výběr stěny
       store.set({ selection: { kind: 'wall', id: drag.id } });

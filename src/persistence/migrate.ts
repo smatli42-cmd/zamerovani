@@ -21,7 +21,7 @@ export function migrateProject(raw: unknown): Project {
   // 6 → 7: zrušena spárovaná příčka a dvojčára (Wall.part) – jejich čáry zůstanou obyčejnými čarami
   // 7 → 8: T bez dělení – průběžné stěny rozdělené napojením se spojí zpět, roh se na ně napojí (Node.host)
   // 8 → 9: totéž i pro oblouky (verze 8 je ještě dělila) – joinSplitWalls je opakovatelná beze změny výsledku
-  // 9 → 10: výstupky a vybrání stěn (floor.protrusions)
+  // 9 → 10: výstupky a vybrání stěn (floor.protrusions); 10 → 11: oblouk v obrysu výstupku (ProfilePt.s) – bez převodu
   const old = p.schema ?? 1;
   const floors = p.floors.map(f => {
     const j = joinSemicircles(convertShapesToWalls(f));

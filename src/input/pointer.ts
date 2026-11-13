@@ -15,7 +15,7 @@ import { openTarget, setMoveTarget } from '../store/numpadController';
 import { flipWallSide } from '../store/actions';
 import { store } from '../store/store';
 import { tools } from '../tools/registry';
-import { arcUnderPen } from '../tools/selectTool';
+import { anyHandleUnderPen } from '../tools/selectTool';
 import { HIT_PX, type PointerInput } from '../tools/types';
 
 interface Active {
@@ -76,7 +76,7 @@ function handleOverlayTap(p: PointerInput): boolean {
   }
 
   // Středový bod vybraného oblouku má přednost před kótami, které ho mohou překrývat
-  if (arcUnderPen(p)) return false;
+  if (anyHandleUnderPen(p)) return false;
 
   // Úchyt rohu / koncového bodu má při ťuknutí přednost před klikacími kótami (ty ho mohou překrývat)
   if (findNodeNear(floor, p.world, HIT_PX.node / state.camera.zoom)) return false;

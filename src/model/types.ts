@@ -8,7 +8,7 @@
  * - Při změně struktury zvýšit SCHEMA_VERSION a doplnit migraci v persistence/migrate.ts.
  */
 
-export const SCHEMA_VERSION = 10;
+export const SCHEMA_VERSION = 11;
 
 export type Id = string;
 
@@ -145,6 +145,8 @@ export interface TextNote {
 export interface ProfilePt {
   u: number;
   v: number;
+  /** Úsek k dalšímu bodu je oblouk: vzepětí v mm (znaménko jako `Wall.sagitta`, počítáno v souřadnicích u, v); chybí = rovný. */
+  s?: number;
 }
 
 /**

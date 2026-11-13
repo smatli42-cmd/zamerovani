@@ -14,6 +14,7 @@ function title(floor: Floor | null, t: NumPadTarget): string {
   if (t.kind === 'circle-diameter') return 'Průměr kruhu';
   if (t.kind === 'wall-thickness') return 'Tloušťka stěny';
   if (t.kind === 'wall-face-length') return 'Délka stěny po líci';
+  if (t.kind === 'protrusion-sagitta') return 'Výstupek – vzepětí oblouku';
   if (t.kind === 'protrusion-dim') {
     const p = floor?.protrusions?.[t.protrusionId];
     const name = p?.mode === 'subtract' ? 'Vybrání' : 'Výstupek';

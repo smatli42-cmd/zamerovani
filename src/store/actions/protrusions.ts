@@ -5,7 +5,7 @@
  */
 import { newId } from '../../model/factory';
 import type { Floor, Id, Protrusion, Pt, Wall } from '../../model/types';
-import { findFaceNear, profileFromPolyline, setProtrusionDim, type ProtrusionDim } from '../../core/protrusion';
+import { findFaceNear, profileFromPolyline, setProtrusionDim, setProtrusionSagitta, type ProtrusionDim } from '../../core/protrusion';
 import { store } from '../store';
 import { cleanup } from './shared';
 import { insertWall } from './walls';
@@ -150,6 +150,13 @@ function dropLineOverProtrusion(floor: Floor, wallId: Id): void {
   if (!covered) return;
   delete floor.walls[wallId];
   cleanup(floor);
+}
+
+/** Vzepětí úseku `seg` obrysu výstupku (tažení úchytu; 0 = rovný úsek). */
+export function setProtrusionArc(id: Id, seg: number, s: number): void {
+  store.edit(floor => {
+    setProtrusionSagitta(floor, id, seg, s);
+  });
 }
 
 /** Vlastnosti výstupku (výška, název, materiál, poznámka). */

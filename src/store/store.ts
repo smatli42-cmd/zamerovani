@@ -56,7 +56,9 @@ export type NumPadTarget =
   /** Odstup skupiny stěn (např. sloupu) od nejbližší stěny mimo skupinu; zadáním se skupina posune. */
   | { kind: 'comp-gap'; wallId: Id; side: Side }
   /** Kóta výstupku: šířka, hloubka, odstup před / za (od souseda nebo konce stěny). */
-  | { kind: 'protrusion-dim'; protrusionId: Id; dim: ProtrusionDim };
+  | { kind: 'protrusion-dim'; protrusionId: Id; dim: ProtrusionDim }
+  /** Vzepětí oblouku v obrysu výstupku (úsek `seg`). */
+  | { kind: 'protrusion-sagitta'; protrusionId: Id; seg: number };
 
 export interface NumPadState {
   target: NumPadTarget;

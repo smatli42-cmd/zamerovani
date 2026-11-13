@@ -3,7 +3,7 @@
  * Každé číslo je klikací (otevře NumPad). Kóty se vynáší ven z místnosti.
  * Uvnitř podél stěny se zobrazuje popisek stěny (tloušťka, materiál…).
  */
-import { profileToWorld, protrusionDims, protrusionExtent, wallFrame, type ProtrusionDim } from '../core/protrusion';
+import { profileToWorld, protrusionArcHandles, protrusionDims, protrusionExtent, wallFrame, type ProtrusionDim } from '../core/protrusion';
 import { arcGeometry } from '../core/arc';
 import { arcChain } from '../core/arcChain';
 import { openingsOnWall, wallLength, wallNodes, wallSegments } from '../core/floorQueries';
@@ -386,5 +386,14 @@ export function drawProtrusionDims(ctx: CanvasRenderingContext2D, floor: Floor, 
   }
   const sign = p.mode === 'add' ? 1 : -1;
   drawDimLine(ctx, at(u1, 0), at(u1, sign * depth), f.d, 16 * dimScale, String(Math.round(depth)), 'hloubka', style, dimScale, act('depth'));
+  // vzepětí oblouků v obrysu (od středu tětivy k vrcholu)
+  for (const h of protrusionArcHandles(floor, p)) {
+    const s = p.pts[h.seg]?.s;
+    if (!s) continue;
+    const m = toScreen(h.chordMid, cam);
+    const a = toScreen(h.at, cam);
+    const along = unit(m, a);
+    drawDimLine(ctx, m, a, normal(along), 0, String(Math.round(Math.abs(s))), 'vzepětí', style, dimScale, { type: 'numpad', target: { kind: 'protrusion-sagitta', protrusionId: p.id, seg: h.seg } });
+  }
   ctx.restore();
 }

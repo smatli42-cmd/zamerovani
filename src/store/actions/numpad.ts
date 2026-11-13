@@ -11,7 +11,7 @@ import { setGap, setOpeningWidth, setReveal, setStartFromA } from './openings';
 import { applyWallLength, resizeCircle } from './walls';
 import { setWallLength } from '../../core/solver';
 import { faceLength, hasBody } from '../../core/wallBody';
-import { protrusionDims } from '../../core/protrusion';
+import { defaultArcSign, protrusionDims, setProtrusionSagitta } from '../../core/protrusion';
 import { applyProtrusionDim } from './protrusions';
 
 /**
@@ -90,6 +90,10 @@ export function numpadInitialValue(floor: Floor, t: NumPadTarget): number | null
       const d = p && protrusionDims(floor, p);
       return d ? Math.round(d[t.dim]) : null;
     }
+    case 'protrusion-sagitta': {
+      const s = floor.protrusions?.[t.protrusionId]?.pts[t.seg]?.s;
+      return s === undefined ? 0 : Math.round(Math.abs(s));
+    }
     case 'opening-gap': {
       const a = floor.openings[t.firstId];
       const b = floor.openings[t.secondId];
@@ -144,6 +148,10 @@ export function applyNumpadValue(t: NumPadTarget, value: number): boolean {
     } else if (t.kind === 'circle-diameter') {
       if (value < 10) return;
       ok = resizeCircle(floor, t.wallId, value / 2);
+    } else if (t.kind === 'protrusion-sagitta') {
+      // znaménko (strana vyklenutí) zůstává; u rovného úseku ven od výstupku (+ = vlevo od směru obrysu)
+      const cur = floor.protrusions?.[t.protrusionId]?.pts[t.seg]?.s ?? 0;
+      ok = setProtrusionSagitta(floor, t.protrusionId, t.seg, (Math.sign(cur) || defaultArcSign(floor, t.protrusionId, t.seg)) * value);
     } else if (t.kind === 'protrusion-dim') {
       ok = applyProtrusionDim(floor, t.protrusionId, t.dim, value);
     } else if (t.kind === 'comp-gap') {

@@ -10,7 +10,8 @@ import { protrusionDims, protrusionOutline } from '../core/protrusion';
 import { findBodyAt, pointInPolygon, wallBodies } from '../core/wallBody';
 import { migrateProject } from '../persistence/migrate';
 import { splitWallAt } from '../core/topology';
-import { addLine, addWall, applyNumpadValue, deleteSelection, duplicateSelection, groupOrigin, moveGroup, moveNode, setWallAxis, setWallThickness } from './actions';
+import { selectTool } from '../tools/selectTool';
+import { addLine, addWall, applyNumpadValue, setProtrusionArc, deleteSelection, duplicateSelection, groupOrigin, moveGroup, moveNode, setWallAxis, setWallThickness } from './actions';
 import { store } from './store';
 
 const f = () => store.floor()!;
@@ -265,5 +266,103 @@ describe('I2 výstupek a vybrání', () => {
     });
     // tělo je teď y ∈ [−300, 0], výstupek na líci y = −300 dál míří od těla (−y)
     expect(protrusionOutline(f(), prots()[0]!)![1]).toEqual({ x: 2350, y: -500 });
+  });
+
+  it('I1.10: oblouk v obrysu – vzepětí čelní strany 100 ven, hloubka 300, plocha i hrany po oblouku, jeden krok Zpět', () => {
+    const S = wallS();
+    polyline(tooth(2350, 2650, -200));
+    const id = prots()[0]!.id;
+    expect(applyNumpadValue({ kind: 'protrusion-sagitta', protrusionId: id, seg: 1 }, 100)).toBe(true);
+    const p = prots()[0]!;
+    expect(Math.abs(p.pts[1]!.s!)).toBe(100);
+    expect(protrusionDims(f(), p)).toMatchObject({ width: 300, depth: 300 });
+    // vrchol oblouku ven od stěny (y = −300), plocha patří stěně
+    expect(findBodyAt(f(), { x: 2500, y: -280 })?.id).toBe(S);
+    expect(hasEdgeOver(S, { x: 2400, y: -200 }, { x: 2600, y: -200 })).toBe(false);
+    store.undo();
+    expect(prots()[0]!.pts[1]!.s).toBeUndefined();
+  });
+
+  it('oblouk zůstane při změně hloubky úměrný a při uložení / načtení', () => {
+    wallS();
+    polyline(tooth(2350, 2650, -200));
+    const id = prots()[0]!.id;
+    setProtrusionArc(id, 1, 100);
+    expect(applyNumpadValue({ kind: 'protrusion-dim', protrusionId: id, dim: 'depth' }, 600)).toBe(true);
+    expect(protrusionDims(f(), prots()[0]!)!.depth).toBeCloseTo(600, 0);
+    const back = migrateProject(JSON.parse(JSON.stringify(store.get().project)));
+    expect(Object.values(back.floors[0]!.protrusions!)[0]!.pts[1]!.s).toBe(prots()[0]!.pts[1]!.s);
+  });
+
+  it('úsek po líci oblouk nedostane; vzepětí nejvýš půlkruh; 0 = zpět rovný', () => {
+    wallS();
+    polyline(tooth(2350, 2650, -200));
+    const id = prots()[0]!.id;
+    store.edit(fl => {
+      fl.protrusions![id]!.pts.push({ u: 2350, v: 0 }); // umělý úsek po líci na konci
+    });
+    expect(applyNumpadValue({ kind: 'protrusion-sagitta', protrusionId: id, seg: 3 }, 50)).toBe(false);
+    expect(applyNumpadValue({ kind: 'protrusion-sagitta', protrusionId: id, seg: 1 }, 400)).toBe(false);
+    setProtrusionArc(id, 1, 120);
+    setProtrusionArc(id, 1, 0);
+    expect(prots()[0]!.pts[1]!.s).toBeUndefined();
+  });
+
+  it('úchyt: tažením nástrojem Vybrat se úsek vyklene, ťuknutí otevře NumPad vzepětí', () => {
+    wallS();
+    polyline(tooth(2350, 2650, -200));
+    const id = prots()[0]!.id;
+    const Z = 0.1;
+    store.set({ camera: { x: 0, y: 0, zoom: Z }, tool: 'select', selection: { kind: 'protrusion', id } });
+    const pen = (x: number, y: number) => ({ world: { x, y }, screen: { x: x * Z, y: y * Z }, device: 'pen' as const });
+    selectTool.down!(pen(2500, -200));
+    selectTool.drag!(pen(2500, -260));
+    selectTool.drag!(pen(2500, -350));
+    selectTool.up!(pen(2500, -350));
+    expect(protrusionDims(f(), prots()[0]!)!.depth).toBe(350);
+    store.set({ selection: { kind: 'protrusion', id } });
+    selectTool.down!(pen(2500, -350));
+    selectTool.up!(pen(2500, -350));
+    expect(store.get().numpad?.target).toEqual({ kind: 'protrusion-sagitta', protrusionId: id, seg: 1 });
+  });
+
+  it('vzepětí vybrání nesmí prorazit stěnu; boční oblouk nesmí přes souseda a líc pod ním se nekreslí', () => {
+    const S = wallS();
+    polyline(tooth(1000, 1600, 150)); // vybrání hloubky 150 ve stěně 300
+    const sub = prots()[0]!;
+    expect(applyNumpadValue({ kind: 'protrusion-sagitta', protrusionId: sub.id, seg: 1 }, 200)).toBe(false);
+    expect(applyNumpadValue({ kind: 'protrusion-sagitta', protrusionId: sub.id, seg: 1 }, 100)).toBe(true);
+    polyline(tooth(2350, 2650, -200));
+    polyline(tooth(2700, 3000, -200));
+    const a = prots().find(p => p.pts[0]!.u === 2350)!;
+    // boční strana u 2650 (úsek 2) vyklenutá o 100 ven by zasáhla do souseda (2700)
+    expect(applyNumpadValue({ kind: 'protrusion-sagitta', protrusionId: a.id, seg: 2 }, 100)).toBe(false);
+    expect(applyNumpadValue({ kind: 'protrusion-sagitta', protrusionId: a.id, seg: 2 }, 40)).toBe(true);
+    expect(protrusionDims(f(), prots().find(p => p.id === a.id)!)!.width).toBeCloseTo(340, 0);
+    expect(hasEdgeOver(S, { x: 2655, y: 0 }, { x: 2685, y: 0 })).toBe(false);
+  });
+
+  it('změna hloubky s obloukem na čele: hloubka přesně, vzepětí nejvýš půlkruh', () => {
+    wallS();
+    polyline(tooth(2350, 2650, -200));
+    const id = prots()[0]!.id;
+    setProtrusionArc(id, 1, 150);
+    expect(applyNumpadValue({ kind: 'protrusion-dim', protrusionId: id, dim: 'depth' }, 700)).toBe(true);
+    const p = prots()[0]!;
+    expect(protrusionDims(f(), p)!.depth).toBeCloseTo(700, 0);
+    expect(Math.abs(p.pts[1]!.s!)).toBeLessThanOrEqual(150);
+  });
+
+  it('sloučení s obráceně kreslenou stěnou: oblouk ve výkresu zůstane na místě', () => {
+    const S = wallS();
+    polyline(tooth(2350, 2650, -200));
+    setProtrusionArc(prots()[0]!.id, 1, 100);
+    const before = protrusionOutline(f(), prots()[0]!)!;
+    // pokračování na konci A kreslené od A ven (opačný směr než S)
+    addWall({ x: 0, y: 0 }, f().walls[S]!.a, { x: -1000, y: 0 }, null, false, { thickness: 300 });
+    expect(Object.keys(f().walls)).toHaveLength(1);
+    const after = protrusionOutline(f(), prots()[0]!)!;
+    const near = (p: { x: number; y: number }) => after.some(q => Math.hypot(q.x - p.x, q.y - p.y) < 0.6);
+    expect(before.every(near)).toBe(true);
   });
 });

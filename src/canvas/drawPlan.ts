@@ -12,7 +12,7 @@ import { isSelected, type Camera, type Selection, type SingleSelection } from '.
 import { toScreen } from './view';
 import { bodyNormal, bodyStart, facePointAt, hasBody, wallBodies } from '../core/wallBody';
 import { addHitBox } from './hitTargets';
-import { protrusionOutline, protrusionsOf } from '../core/protrusion';
+import { protrusionArcHandles, protrusionOutline, protrusionsOf } from '../core/protrusion';
 
 export const COLORS = {
   wall: '#0f172a',
@@ -205,6 +205,18 @@ export function drawArcHandle(ctx: CanvasRenderingContext2D, floor: Floor, cam: 
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.arc(p.x, p.y, h.selected ? 10 : 8, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fill();
+  }
+  // vybraný výstupek: úchyty vzepětí na úsecích obrysu (tažením se úsek vyklene do oblouku, I1.10)
+  const pr = selection?.kind === 'protrusion' ? floor.protrusions?.[selection.id] : null;
+  for (const h of pr ? protrusionArcHandles(floor, pr) : []) {
+    const p = toScreen(h.at, cam);
+    ctx.fillStyle = pr!.pts[h.seg]?.s ? COLORS.selected : '#60a5fa';
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
     ctx.stroke();
     ctx.fill();
   }
