@@ -181,7 +181,7 @@ Podklad: `KRESLENI-VYSTUPKU.md` (schváleno uživatelem v chatu 2026-11-12). Sek
 | # | Chování | Revit | Archicad | Návrh | Stav | Rozhodnutí |
 |---|---|---|---|---|---|---|
 | I1.1 | Výstupek / vybrání je **samostatný prvek s odkazem na stěnu**; stěna zůstává jedna celistvá (jedna kóta, jedna tloušťka) | přizdívka / Edit Profile | Custom Profile, Wall Accessory | ano | hotovo (2026-11-13) | ✔ (vy) |
-| I1.2 | Kreslí se nástrojem **Čára**: otevřená lomená čára, jejíž oba konce leží na **stejném líci téže stěny**, se po dokončení sama uzavře po líci | – | – | ano; konce mimo stěnu = obyčejná čára | hotovo (2026-11-13) | ✔ (vy) |
+| I1.2 | Kreslí se nástrojem **Čára**: otevřená lomená čára, jejíž oba konce leží na **stejném líci téže stěny**, se po dokončení sama uzavře po líci. **Totéž uzavřený tvar** (čáry nebo plný obdélník nástrojem Obdélník), který jednou stranou (souvislým úsekem stran) leží na líci stěny – strana po líci se vynechá; čárkovaný obdélník (překlad) zůstane čarami | – | – | ano; konce mimo stěnu = obyčejná čára | hotovo (2026-11-13) | ✔ (vy, uzavřený tvar doplněn 2026-11-13) |
 | I1.3 | Obrys ven od těla = **výstupek (přidá)**, obrys do těla = **vybrání (ubere)** | – | – | rozpozná se samo podle strany líce | hotovo (2026-11-13) | ✔ (vy) |
 | I1.4 | Připojení z kterékoli strany stěny (zevnitř i zvenku místnosti) | – | – | ano | hotovo (2026-11-13) | ✔ (vy) |
 | I1.5 | Vykreslení: výplň jako tělo stěny, **čára líce v šířce výstupku se nekreslí** (jeden obrys); u vybrání se tělo ubere a kreslí se nový obrys | sloučí se | sloučí se | ano | hotovo (2026-11-13) | ✔ (vy) |
@@ -209,6 +209,7 @@ Souřadnice v mm jako v C2 (osa Y nahoru; v aplikaci dolů). Výchozí stěna **
 8. **Změna tloušťky S na 200.** Výstupek z příkladu 1 (líc y = 0) beze změny. Výstupek z příkladu 4 (vnější líc) se posune s lícem: [500, 900] × [−500, −200].
 9. **Osa uprostřed.** Stěna S s osou uprostřed (y = 0, tělo y ∈ [−150, 150]). Čára s konci na y = 0 (osa) výstupek **nevytvoří** – konce se přichytí k líci těla y = 150 nebo y = −150; výstupek z příkladu 1 nakreslený od y = 150 je [2350, 2650] × [150, 350].
 10. **Kóta hloubky.** Vybraný výstupek z příkladu 1, kóta hloubky 200 → NumPad 250: obrys [2350, 2650] × [0, 250]; stěna S ani její kóta se nemění. Jeden krok Zpět.
+12. **Uzavřený tvar u líce.** Plný obdélník (2350, 0) – (2650, 200) nástrojem Obdélník (nebo čtyři čáry včetně strany po líci y = 0): výsledek jako příklad 1, strana po líci zmizí. Čárkovaný obdélník tamtéž zůstane čtyřmi čarami; obdélník dotýkající se líce jen rohem zůstane čarami.
 11. **Uložení a načtení.** Výkres s výstupky se uloží a po načtení (i po migraci ze starší verze bez výstupků) je stejný.
 
 ## Zdroje

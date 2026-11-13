@@ -12,7 +12,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Viditelně v aplikaci:** obdélník nakreslený u stěny (zevnitř i zvenku) se přidá ke stěně jako šedý výstupek; čárkovaný obdélník (překlad) a obdélník volně v místnosti zůstanou čarami.
 - **Rozhodnuto samostatně:** převádí se jen plný obdélník (čárkovaný = překlad / konstrukce nad řezem); tvary nakreslené před touto opravou se samy nepřevedou (stačí je nakreslit znovu).
 - **Po kontrole revieweru doplněno:** čára po líci, která jen uzavírá už hotový výstupek, se smaže (nezůstane navíc); obdélník se převádí i když některá jeho strana už existovala; testy vybrání, Zpět, dotyku rohem.
-- **Otevřené:** ověřit na tabletu; tvar v rohu místnosti (na lících dvou stěn) patří jen jedné stěně – líc druhé se v něm dál kreslí (blízké I1.11 „přes roh“, později); obdélník sdílející roh s jinou čárou zůstane čarami; doplnit do katalogu I1.2 „uzavřený tvar stranou na líci“ (čeká na uživatele).
+- **Otevřené:** ověřit na tabletu; tvar v rohu místnosti (na lících dvou stěn) patří jen jedné stěně – líc druhé se v něm dál kreslí (blízké I1.11 „přes roh“, později); obdélník sdílející roh s jinou čárou zůstane čarami. Katalog I1.2 a příklad I2/12 doplněny na pokyn uživatele.
 - **Chyby od uživatele:** „Tvar nakreslený u stávající stěny zůstane samostatný bez výplně (přidání nefunguje, vybrání ano)“ – obrázek: oba tvary byly uzavřené (i se stranou po líci), program uměl jen otevřenou čáru ze tří stran. Opraveno, testy `tools/lineTool.test.ts`.
 
 ### 2026-11-13 (2) – oprava: výstupek ven, zarovnání s rohem při kreslení
@@ -128,7 +128,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Rozhodnuto samostatně
 (Rozhodnutí mimo katalog, udělaná bez uživatele – nejnovější nahoře. Uživatel je může kdykoli změnit.)
-- 2026-11-13: Uzavřený tvar (čáry nebo plný obdélník) přiložený stranou k líci stěny = výstupek / vybrání (rozšíření I1.2, katalog zatím beze změny); čárkovaný obdélník (překlad) zůstane čarami.
+- 2026-11-13: Čárkovaný obdélník (překlad) u líce zůstane čarami (uzavřený tvar = výstupek schválil uživatel, I1.2).
 - 2026-11-13: Výstupek – čára se kreslí tažením úsek po úseku, výstupek vznikne sám po úseku, který dosedne na líc (bez tlačítka Hotovo); NumPad kót: odstup před → šířka → odstup za → hloubka; šířka se mění od okraje u rohu A, hloubka úměrně; výstupek nejde táhnout (jen kóty); přehození strany stěny ho nechá na „své“ straně (ven od těla, posune se s tělem); na stěně bez tloušťky / oblouku se jen nekreslí.
 - 2026-11-12: D11 – „kolmo na původní směr“ a „vodorovně / svisle“ se nabízí jen u konce jediné stěny; u rohu více stěn jen jejich původní směry (přehlednost) a kolmice k blízkým stěnám.
 - 2026-11-12: D12 – kruh a část rozděleného oblouku se posunem stěny nehýbou (oblouk se tvaruje jako celek úchytem).
