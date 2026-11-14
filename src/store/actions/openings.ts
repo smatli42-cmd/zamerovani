@@ -95,25 +95,42 @@ export function setReveal(floor: Floor, op: Opening, part: RevealPart, value: nu
   return true;
 }
 
-/** Zapne (výchozí hodnoty) nebo vypne ostění otvoru. */
-export function setRevealEnabled(id: Id, on: boolean): void {
+/**
+ * Zapne / vypne ostění z vnitřního a vnějšího líce. Obě vypnuté = bez ostění (`reveal` zmizí).
+ * Zárubeň / rám i okno zůstanou na místě: při prvním zapnutí se otvor rozšíří o ostění kolem, při vypnutí zúží.
+ */
+export function setRevealSides(id: Id, inner: boolean, outer: boolean): void {
   store.edit(floor => {
     const op = floor.openings[id];
     const wall = op && floor.walls[op.wallId];
     if (!op || !wall) return;
     const len = wallLength(floor, wall);
     const start = openingStartFromA(op, len);
+    const T = openingThickness(floor, op);
     const oldLeft = op.reveal?.left ?? 0;
-    if (on) {
-      const T = openingThickness(floor, op);
+    const fo = Math.round(doorLayout(op, T).fo);
+    if (inner || outer) {
+      if (op.reveal) {
+        op.reveal.inner = inner;
+        op.reveal.outer = outer;
+        return;
+      }
       // stěna s tloušťkou: zárubeň / rám zůstane, kde je (hloubka ostění = jeho odsazení od líce A); jinak 150 mm
-      const depth = T !== null ? Math.round(doorLayout(op, T).fo) : 150;
-      op.reveal = op.reveal ?? { depth, left: 100, right: 100, top: 0 };
+      op.reveal = { depth: T !== null ? fo : 150, left: 100, right: 100, top: 0, inner, outer };
+      setStartFromA(op, start - op.reveal.left, len);
+    } else {
+      if (!op.reveal) return;
+      delete op.reveal;
+      // zárubeň / rám zůstane ve stejné hloubce
+      if (op.frame && T !== null) op.frame.offset = fo;
+      setStartFromA(op, start + oldLeft, len);
     }
-    else delete op.reveal;
-    // okno zůstane na stejném místě: otvor se rozšíří (nebo zúží) o ostění kolem okna
-    setStartFromA(op, on ? start - (op.reveal?.left ?? 0) : start + oldLeft, len);
   });
+}
+
+/** Zapne (výchozí hodnoty, ostění z obou líců) nebo vypne ostění otvoru. */
+export function setRevealEnabled(id: Id, on: boolean): void {
+  setRevealSides(id, on, on);
 }
 
 /** Změní mezeru mezi dvěma sousedními otvory – posune druhý a všechny další za ním. */

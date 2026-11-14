@@ -283,7 +283,7 @@ function drawFramed(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, 
   const nrm = scale(normal(u), op.swing);
   const dir = off && T ? scale(off, 1 / Math.hypot(off.x, off.y)) : nrm;
   const lay = doorLayout(op, off ? T : null);
-  const { L, R, fw, F, dA, fo } = lay;
+  const { L, R, fw, F, fo } = lay;
   const span = openingSpan(op);
   const P = (x: number, y: number): Pt => add(add(s1, scale(u, x * k)), scale(dir, y * k));
   const thick = off && T ? T : null;
@@ -301,9 +301,19 @@ function drawFramed(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, 
     ctx.fillStyle = '#f8fafc';
     quad(0, -2 / k, span, thick + 2 / k);
     if (lay.reveal) {
+      // zdivo mezi okrajem otvoru a obrysem ostění (zuby u zárubně, u líce bez ostění až k líci)
       ctx.fillStyle = COLORS.body;
-      quad(0, dA, L, dA + F);
-      quad(span - R, dA, span, dA + F);
+      for (const end of ['a', 'b'] as const) {
+        const pts = jambOutline(lay, span, end);
+        ctx.beginPath();
+        pts.forEach(([x, y], i) => {
+          const p = P(x, y);
+          if (i === 0) ctx.moveTo(p.x, p.y);
+          else ctx.lineTo(p.x, p.y);
+        });
+        ctx.closePath();
+        ctx.fill();
+      }
     }
   }
 
@@ -340,9 +350,10 @@ function drawFramed(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, 
   }
 
   // čáry v rovině líců přes otvor: s ostěním čerchovaně (konstrukce nad řezem), bez ostění tenká plná (práh)
-  const faceLine = (y: number, dashed: boolean) => {
-    const a = P(0, y);
-    const b = P(span, y);
+  // líc bez ostění: otvor v něm je užší o ostění vlevo a vpravo
+  const faceLine = (y: number, dashed: boolean, narrow = false) => {
+    const a = P(narrow ? L : 0, y);
+    const b = P(narrow ? span - R : span, y);
     ctx.save();
     ctx.lineWidth = 1.2;
     if (dashed) ctx.setLineDash([10, 3, 2, 3]);
@@ -352,8 +363,8 @@ function drawFramed(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, 
     ctx.stroke();
     ctx.restore();
   };
-  faceLine(0, true);
-  if (thick) faceLine(thick, true);
+  faceLine(0, true, lay.reveal && !lay.inner);
+  if (thick) faceLine(thick, true, lay.reveal && !lay.outer);
 
   // průchod bez dveří: jen okraje stěny a čerchované čáry líců
   if (op.kind === 'opening') {

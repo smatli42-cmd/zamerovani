@@ -10,7 +10,7 @@ describe('ostění', () => {
     const w = createWall('a', 'b');
     f.walls[w.id] = w;
     // starší okno bez rámu (otvor = okno + ostění)
-    const op = createOpening(f, w.id, 'window', { width: 1000, offset: 500, frame: undefined, reveal: { depth: 150, left: 100, right: 200, top: 0 } });
+    const op = createOpening(f, w.id, 'window', { width: 1000, offset: 500, frame: undefined, reveal: { depth: 150, left: 100, right: 200, top: 0, inner: true, outer: true } });
     f.openings[op.id] = op;
     expect(openingSpan(op)).toBe(1300);
     const [placed] = openingsOnWall(f, w);

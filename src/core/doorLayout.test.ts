@@ -10,14 +10,14 @@ describe('dveře se zárubní', () => {
     const op = createOpening(f, w.id, 'door', { width: 800 });
     expect(op.frame).toEqual({ width: 50, depth: 100 });
     expect(openingSpan(op)).toBe(900);
-    op.reveal = { depth: 0, left: 125, right: 250, top: 0 };
+    op.reveal = { depth: 0, left: 125, right: 250, top: 0, inner: true, outer: true };
     expect(openingSpan(op)).toBe(1275);
   });
 
   it('tloušťka = ostění A + zárubeň + ostění B; změna jednoho ostění posune druhé', () => {
     const f = createFloor('t');
     const w = createWall('a', 'b');
-    const op = createOpening(f, w.id, 'door', { width: 800, reveal: { depth: 100, left: 125, right: 125, top: 0 } });
+    const op = createOpening(f, w.id, 'door', { width: 800, reveal: { depth: 100, left: 125, right: 125, top: 0, inner: true, outer: true } });
     // bez příčky (T neznámé) se druhé ostění nepočítá
     expect(doorLayout(op, null).dB).toBe(0);
     // příčka tloušťky 450: A 100 + zárubeň 100 + B 250
@@ -38,7 +38,7 @@ describe('okna s rámem', () => {
     const win = createOpening(f, w.id, 'window', { width: 1200 });
     expect(win.frame).toEqual({ width: 50, depth: 50 });
     expect(openingSpan(win)).toBe(1300);
-    win.reveal = { depth: 150, left: 100, right: 80, top: 0 };
+    win.reveal = { depth: 150, left: 100, right: 80, top: 0, inner: true, outer: true };
     expect(openingSpan(win)).toBe(1480);
     const fr = createOpening(f, w.id, 'french');
     expect(fr.frame).toEqual({ width: 50, depth: 50 });
@@ -48,7 +48,7 @@ describe('okna s rámem', () => {
   it('okno ve stěně s tloušťkou: tloušťka = ostění A + rám + ostění B', () => {
     const f = createFloor('t');
     const w = createWall('a', 'b');
-    const win = createOpening(f, w.id, 'window', { reveal: { depth: 100, left: 0, right: 0, top: 0 } });
+    const win = createOpening(f, w.id, 'window', { reveal: { depth: 100, left: 0, right: 0, top: 0, inner: true, outer: true } });
     expect(doorLayout(win, 300).dB).toBe(150);
     // bez ostění je rám okna u vnitřního líce (líc A), zárubeň dveří uprostřed tloušťky
     delete win.reveal;
@@ -99,7 +99,7 @@ describe('značka otvoru: okraje stěny po stranách (chyba – různě široká
     const f = createFloor('t');
     const w = createWall('a', 'b');
     for (const kind of ['door', 'window'] as const) {
-      const op = createOpening(f, w.id, kind, { width: 800, reveal: { depth: 100, left: 100, right: 250, top: 0 } });
+      const op = createOpening(f, w.id, kind, { width: 800, reveal: { depth: 100, left: 100, right: 250, top: 0, inner: true, outer: true } });
       const lay = doorLayout(op, 300);
       const span = openingSpan(op);
       const F = op.frame!.depth;

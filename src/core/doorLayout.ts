@@ -26,8 +26,11 @@ export interface DoorLayout {
   fo: number;
   /** Tloušťka stěny (null = otvor jen na čáře líce). */
   T: number | null;
-  /** Je zapnuté ostění. */
+  /** Je zapnuté ostění (aspoň z jednoho líce). */
   reveal: boolean;
+  /** Ostění z vnitřního líce (A) / z vnějšího líce (B). U čáry bez tloušťky jen `inner`. */
+  inner: boolean;
+  outer: boolean;
 }
 
 export function doorLayout(op: Opening, T: number | null): DoorLayout {
@@ -45,7 +48,9 @@ export function doorLayout(op: Opening, T: number | null): DoorLayout {
     // bez ostění: zárubeň dveří uprostřed tloušťky, rám okna u vnitřního líce (líc A)
     fo: rv ? dA : (op.frame?.offset ?? (T !== null && op.kind !== 'window' && op.kind !== 'french' ? Math.max(0, (T - F) / 2) : 0)),
     T,
-    reveal: !!rv
+    reveal: !!rv,
+    inner: !!rv && (rv.inner || T === null),
+    outer: !!rv && T !== null && rv.outer
   };
 }
 
@@ -58,13 +63,26 @@ export function doorLayout(op: Opening, T: number | null): DoorLayout {
 export function jambOutline(lay: DoorLayout, span: number, end: 'a' | 'b'): [number, number][] {
   const w = end === 'a' ? lay.L : lay.R;
   const X = (x: number) => (end === 'a' ? x : span - x);
-  const pts: [number, number][] = [[0, 0]];
+  let pts: [number, number][];
   if (lay.reveal) {
-    pts.push([0, lay.dA], [w, lay.dA], [w, lay.dA + lay.F], [0, lay.dA + lay.F]);
-    if (lay.T !== null) pts.push([0, lay.T]);
-  } else if (lay.T !== null) pts.push([0, lay.T]);
+    const { dA, F, T } = lay;
+    // vnitřní líc: s ostěním schod u zárubně, bez něj okraj rovně od líce (líc stěny pokračuje až k okraji)
+    pts = lay.inner ? [[0, 0], [0, dA], [w, dA]] : [[0, 0], [w, 0]];
+    pts.push([w, dA + F]);
+    if (T !== null) {
+      if (lay.outer) pts.push([0, dA + F], [0, T]);
+      else pts.push([w, T], [0, T]);
+    } else pts.push([0, dA + F]);
+  } else if (lay.T !== null) pts = [[0, 0], [0, lay.T]];
   else return [];
-  return pts.map(([x, y]) => [X(x), y]);
+  // bez duplicitních bodů (nulová šířka / hloubka ostění) a bez bodů uprostřed rovného úseku
+  const uniq = pts.filter((p, i) => i === 0 || p[0] !== pts[i - 1]![0] || p[1] !== pts[i - 1]![1]);
+  const out = uniq.filter((p, i) => {
+    const a = uniq[i - 1];
+    const b = uniq[i + 1];
+    return !a || !b || !((a[0] === p[0] && p[0] === b[0]) || (a[1] === p[1] && p[1] === b[1]));
+  });
+  return out.map(([x, y]) => [X(x), y]);
 }
 
 /**

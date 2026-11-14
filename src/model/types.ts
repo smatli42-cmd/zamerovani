@@ -8,7 +8,7 @@
  * - Při změně struktury zvýšit SCHEMA_VERSION a doplnit migraci v persistence/migrate.ts.
  */
 
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
 
 export type Id = string;
 
@@ -100,10 +100,17 @@ export interface Opening {
 }
 
 export interface Reveal {
+  /** Odsazení zárubně / rámu od vnitřního líce (líc A) = hloubka vnitřního ostění. */
   depth: number;
   left: number;
   right: number;
   top: number;
+  /**
+   * Ostění z vnitřního líce (líc A, čára stěny) / z vnějšího líce (líc B). Vypnutá strana má okraj stěny rovně
+   * až k zárubni / rámu (otvor v tom líci je o `left` + `right` užší). Obě vypnuté = `reveal` chybí. Od verze 12.
+   */
+  inner: boolean;
+  outer: boolean;
 }
 
 export interface RoomHeight {

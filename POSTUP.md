@@ -7,6 +7,12 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-14 (3) – ostění vnitřní a vnější zvlášť (schéma 12)
+- **Co se změnilo:** Místo přepínače „Bez ostění / S ostěním“ má panel otvoru dvě samostatná tlačítka **Vnitřní** a **Vnější** (ve stěně s tloušťkou; u čáry bez tloušťky jedno tlačítko „Ostění“). `Reveal.inner` / `Reveal.outer`, akce `setRevealSides`, obrys okraje v `jambOutline`. SCHEMA_VERSION 12, migrace `revealSides`.
+- **Viditelně v aplikaci:** nic nevybráno = bez ostění. Líc bez ostění má okraj stěny rovně až k rámu / zárubni (otvor v tom líci je užší o ostění vlevo a vpravo, zdivo šedé), líc s ostěním má schod jako dřív.
+- **Rozhodnuto samostatně:** vnitřní = líc A (čára stěny), vnější = líc B; dřívější „S ostěním“ → **obě ostění zapnutá** (kresba se nemění); zapnutí / vypnutí ostění nechá rám i zárubeň na místě (při vypnutí se hloubka uloží do odsazení rámu). Okno má rám u vnitřního líce, takže vnitřní ostění je po zapnutí hluboké 0 mm – hloubku je třeba zadat („Hloubka zevnitř“).
+- **Otevřené:** vyzkoušet na tabletu.
+
 ### 2026-11-14 (2) – oprava: pravé ostění ve značce dveří a oken
 - **Co se změnilo:** Okraj stěny po pravé straně otvoru se kreslil zrcadlením levé strany, takže bral šířku levého ostění. Nová čistá funkce `jambOutline` v `core/doorLayout.ts` počítá každou stranu s vlastní šířkou (L / R); testy v `doorLayout.test.ts`.
 - **Viditelně v aplikaci:** u dveří i oken s různě širokým ostěním vlevo a vpravo sedí „schod“ ostění vpravo na správném místě.

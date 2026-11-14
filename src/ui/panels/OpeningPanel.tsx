@@ -4,7 +4,7 @@
 import { openingThickness, revealPartValue, type RevealPart } from '../../core/doorLayout';
 import { isWindowKind, OPENING_DEFAULTS } from '../../model/factory';
 import type { Opening } from '../../model/types';
-import { applyNumpadValue, deleteSelection, duplicateSelection, setOpeningRef, setRevealEnabled, updateOpening } from '../../store/actions';
+import { applyNumpadValue, deleteSelection, duplicateSelection, setOpeningRef, setRevealEnabled, setRevealSides, updateOpening } from '../../store/actions';
 import { openTarget } from '../../store/numpadController';
 import { store } from '../../store/store';
 import { close } from './common';
@@ -102,17 +102,28 @@ export function OpeningPanel({ op }: { op: Opening }) {
       )}
       {op.kind !== 'niche' && (
         <>
-          <div class="field field-inline">
-            <span>Ostění</span>
-            <Seg
-              options={[
-                { v: 'no', label: 'Bez ostění' },
-                { v: 'yes', label: 'S ostěním' }
-              ]}
-              value={op.reveal ? 'yes' : 'no'}
-              onChange={v => setRevealEnabled(op.id, v === 'yes')}
-            />
-          </div>
+          {T !== null ? (
+            <div class="field field-inline">
+              <span>Ostění</span>
+              <div class="seg">
+                <button type="button" class={op.reveal?.inner ? 'active' : ''} onClick={() => setRevealSides(op.id, !op.reveal?.inner, !!op.reveal?.outer)}>
+                  {op.reveal?.inner ? '☑' : '☐'} Vnitřní
+                </button>
+                <button type="button" class={op.reveal?.outer ? 'active' : ''} onClick={() => setRevealSides(op.id, !!op.reveal?.inner, !op.reveal?.outer)}>
+                  {op.reveal?.outer ? '☑' : '☐'} Vnější
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div class="field field-inline">
+              <span>Ostění</span>
+              <div class="seg">
+                <button type="button" class={op.reveal ? 'active' : ''} onClick={() => setRevealEnabled(op.id, !op.reveal)}>
+                  {op.reveal ? '☑' : '☐'} Ostění
+                </button>
+              </div>
+            </div>
+          )}
           {op.reveal && (
             <>
               <div class="field-grid">

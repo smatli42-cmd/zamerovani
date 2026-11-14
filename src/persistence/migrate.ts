@@ -5,7 +5,7 @@
 import { createCircleWall, createWall, DEFAULT_WALL_THICKNESS, newId } from '../model/factory';
 import { hasBody, orientLoopOutward } from '../core/wallBody';
 import { mergeArcAt, mergeStraightAt } from '../core/topology';
-import { SCHEMA_VERSION, type Floor, type LineStyle, type Project, type Pt } from '../model/types';
+import { SCHEMA_VERSION, type Floor, type LineStyle, type Project, type Pt, type Reveal } from '../model/types';
 
 export function migrateProject(raw: unknown): Project {
   const p = raw as Project;
@@ -22,12 +22,13 @@ export function migrateProject(raw: unknown): Project {
   // 7 → 8: T bez dělení – průběžné stěny rozdělené napojením se spojí zpět, roh se na ně napojí (Node.host)
   // 8 → 9: totéž i pro oblouky (verze 8 je ještě dělila) – joinSplitWalls je opakovatelná beze změny výsledku
   // 9 → 10: výstupky a vybrání stěn (floor.protrusions); 10 → 11: oblouk v obrysu výstupku (ProfilePt.s) – bez převodu
+  // 11 → 12: ostění vnitřní / vnější zvlášť (Reveal.inner / outer); dřívější „s ostěním“ = obě strany (stejná kresba)
   const old = p.schema ?? 1;
   const floors = p.floors.map(f => {
     const j = joinSemicircles(convertShapesToWalls(f));
     const r = removePairing(addWallThickness({ ...j, texts: j.texts ?? {} }));
     const out = old < 9 ? joinSplitWalls(r) : r;
-    return { ...out, protrusions: out.protrusions ?? {} };
+    return revealSides({ ...out, protrusions: out.protrusions ?? {} });
   });
   return { ...p, floors, schema: SCHEMA_VERSION };
 }
@@ -185,4 +186,17 @@ export function joinSplitWalls(floor: Floor): Floor {
   const used = new Set(Object.values(f.walls).flatMap(w => [w.a, w.b]));
   for (const id of Object.keys(f.nodes)) if (!used.has(id)) delete f.nodes[id];
   return f;
+}
+
+/** 11 → 12: ostění bez údaje o straně = ostění z obou líců (tak se kreslilo dřív). */
+export function revealSides(floor: Floor): Floor {
+  let changed = false;
+  const openings = { ...floor.openings };
+  for (const [id, op] of Object.entries(openings)) {
+    const rv = op.reveal as (Partial<Reveal> & Omit<Reveal, 'inner' | 'outer'>) | undefined;
+    if (!rv || (typeof rv.inner === 'boolean' && typeof rv.outer === 'boolean')) continue;
+    openings[id] = { ...op, reveal: { ...rv, inner: rv.inner ?? true, outer: rv.outer ?? true } };
+    changed = true;
+  }
+  return changed ? { ...floor, openings } : floor;
 }
