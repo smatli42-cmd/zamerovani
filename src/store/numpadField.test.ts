@@ -61,3 +61,18 @@ describe('NumPad pro obecná pole (výška, parapet, úhel…)', () => {
     pressKey('ESC');
   });
 });
+
+describe('NumPad: výraz hned po otevření', () => {
+  it('čerstvá hodnota + „−“ dá výraz (1200 − 150), ne zahození znaménka', () => {
+    store.openProject(createProject({ name: 't' }));
+    let got: number | null | undefined;
+    openField({ label: 'Výška' }, 1200, v => (got = v));
+    pressKey('-');
+    pressKey('1');
+    pressKey('5');
+    pressKey('0');
+    expect(store.get().numpad?.buffer).toBe('1200-150');
+    pressKey('ENTER');
+    expect(got).toBe(1050);
+  });
+});

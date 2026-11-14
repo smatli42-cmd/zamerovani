@@ -7,6 +7,12 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-14 (8) – opravy po kontrole revieweru
+- **Co se změnilo:** NumPad: „−“ hned po otevření zase dá výraz (1200 − 150), jak tomu bylo dřív. Migrace rámu okna zachová celou díru ve zdivu (rozdíl staré šířky rámu přejde do šířky okna, okno se neposune). Pole hloubek u vypnuté strany ostění se jmenují „Rám od vnitř. / vnějš. líce“. Wake Lock: ošetřené uvolnění zámku.
+- **Viditelně v aplikaci:** popisky hloubek v panelu otvoru podle zapnuté strany ostění.
+- **Rozhodnuto samostatně:** řetězová kóta podél líce ukazuje ostění vlevo / vpravo i při vypnutém vnitřním ostění (kótuje celý otvor; nechávám, dokud uživatel nerozhodne jinak).
+- **Otevřené:** nic nového.
+
 ### 2026-11-14 (7) – Nevypínat displej (Screen Wake Lock)
 - **Co se změnilo:** Nový modul `input/wakeLock.ts` drží displej zapnutý přes Screen Wake Lock API: žádá o zámek při spuštění, při každém ťuknutí, dokud ho nemá (Safari chce dotyk), a znovu po návratu do aplikace (`visibilitychange`). Volba `Settings.keepAwake` (ukládá se v prohlížeči jako ostatní nastavení). Testy s falešným prohlížečem.
 - **Viditelně v aplikaci:** v Nastavení (⚙️) přepínač **Nevypínat displej**, výchozí **zapnuto**. Bez podpory API se pod ním ukáže rada prodloužit časový limit obrazovky v nastavení tabletu.
@@ -197,7 +203,15 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Otevřené:** vyzkoušet na tabletu; další krok tažení a posun jako blok (D2, D11–D14).
 - **Chyby od uživatele:** zatím žádné.
 
-## Poslední stav (2026-11-13, konec sezení)
+## Poslední stav (2026-11-14 – úpravy oken, dveří, ostění, displeje)
+
+**Hotové (na webu po push; na PC ověřeno v náhledu, na tabletu neověřeno):** NumPad u všech číselných polí + tlačítko 000; oprava pravého ostění ve značce; ostění vnitřní / vnější zvlášť (schéma 12); francouzské okno s křídlem (panty, dovnitř / ven); rám okna pevně 50 mm (schéma 13); plná čára v lících u okna; Nevypínat displej (Wake Lock, výchozí zapnuto). Reviewer: nálezy opraveny. Testy 280 + 1 `it.fails` (C2/6), typecheck OK.
+
+**Čeká na vyzkoušení uživatelem (tablet):** všech 7 úprav – podrobnosti v Deníku změn 2026-11-14 (1–8). Zvlášť Nevypínat displej (jen přes https, tedy na GitHub Pages).
+
+**Fronta kroků:** beze změny proti 2026-11-13 (D3, přichytávání k lícům, výstupek při přehození strany, F4, C1.11, audit). Případně: zda má řetězová kóta při vypnutém vnitřním ostění kótovat užší otvor v líci.
+
+## Předchozí stav (2026-11-13, konec sezení)
 
 **Hotové (vše na webu; uživatel zkoušel průběžně na PC, na tabletu neověřeno):** výstupek / vybrání stěny jako samostatný prvek (`Floor.protrusions`, schéma 11, katalog sekce I) – nástroj **Čára**, převod otevřené čáry, uzavřeného tvaru i plného obdélníku u líce / přes líc, obrys přes celou tloušťku = výstupek na protějším líci, rovné i obloukové stěny (I1.15), oblouk v obrysu (úchyt vzepětí, I1.10), kóty a panel; zarovnání konce s rohem na pomocné čáře; kóta polohy T-napojení na průběžné stěně (posun příčky číslem). Testy 260 + 1 `it.fails` (C2/6), typecheck a build OK.
 

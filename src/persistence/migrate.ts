@@ -208,7 +208,9 @@ export function fixWindowFrames(floor: Floor): Floor {
   const openings = { ...floor.openings };
   for (const [id, op] of Object.entries(openings)) {
     if (!isWindowKind(op.kind) || !op.frame || op.frame.width === WINDOW_FRAME.width) continue;
-    openings[id] = { ...op, frame: { ...op.frame, width: WINDOW_FRAME.width } };
+    // celý otvor (díra ve zdivu) zůstane stejně široký a na místě: rozdíl rámu přejde do šířky okna
+    const extra = 2 * (op.frame.width - WINDOW_FRAME.width);
+    openings[id] = { ...op, width: Math.max(100, op.width + extra), frame: { ...op.frame, width: WINDOW_FRAME.width } };
     changed = true;
   }
   return changed ? { ...floor, openings } : floor;

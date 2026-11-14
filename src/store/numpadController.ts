@@ -80,7 +80,7 @@ export function pressKey(key: NumKey): void {
     case '+':
     case '-':
       // záporné číslo na začátku jen u polí, která ho připouští (úhel)
-      if ((buffer === '' || fresh) && key === '-') {
+      if (buffer === '' && key === '-') {
         if (np.target.kind === 'field' && np.target.min < 0) {
           buffer = '-';
           fresh = false;

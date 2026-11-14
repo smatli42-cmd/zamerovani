@@ -36,6 +36,8 @@ describe('rám okna má pevnou šířku 50 mm', () => {
     });
     const o = p.floors[0]!.openings;
     expect(o.o1!.frame).toEqual({ width: 50, depth: 60 });
+    expect(o.o1!.width).toBe(960); // díra ve zdivu stejná: 900 + 2 × 80 = 960 + 2 × 50
+    expect(o.o2!.width).toBe(940);
     expect(o.o2!.frame!.width).toBe(50);
     expect(o.d1!.frame!.width).toBe(70);
   });

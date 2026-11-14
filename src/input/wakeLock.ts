@@ -59,7 +59,7 @@ export function createWakeLock(env: WakeLockEnv) {
       .request('screen')
       .then(s => {
         pending = false;
-        if (!enabled) return void s.release();
+        if (!enabled) return void s.release().catch(() => {});
         sentinel = s;
         s.addEventListener('release', () => {
           if (sentinel === s) sentinel = null;
@@ -73,7 +73,7 @@ export function createWakeLock(env: WakeLockEnv) {
   const release = () => {
     const s = sentinel;
     sentinel = null;
-    if (s && !s.released) void s.release();
+    if (s && !s.released) void s.release().catch(() => {});
   };
   const stop = env.listen(acquire, acquire);
 

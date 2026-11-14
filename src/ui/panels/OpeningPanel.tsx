@@ -127,8 +127,8 @@ export function OpeningPanel({ op }: { op: Opening }) {
           {op.reveal && (
             <>
               <div class="field-grid">
-                <RevealField op={op} part="depth" label={T !== null ? 'Hloubka zevnitř' : 'Hloubka'} />
-                {T !== null && <RevealField op={op} part="depthBack" label="Hloubka zvenku" />}
+                <RevealField op={op} part="depth" label={T === null ? 'Hloubka' : op.reveal.inner ? 'Hloubka zevnitř' : 'Rám od vnitř. líce'} />
+                {T !== null && <RevealField op={op} part="depthBack" label={op.reveal.outer ? 'Hloubka zvenku' : 'Rám od vnějš. líce'} />}
                 <RevealField op={op} part="top" label="Nahoře" />
                 <RevealField op={op} part="left" label="Vlevo" />
                 <RevealField op={op} part="right" label="Vpravo" />
