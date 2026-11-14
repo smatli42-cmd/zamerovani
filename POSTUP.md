@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-14 (konec sezení)
+- **Co se změnilo:** šířka okna = otvor ve stěně bez kót rámu (17) a přichytávání nové stěny k oběma lícům jiné stěny (18); uživatel potvrdil „funguje to jak má“. Testy 355 + 1 `it.fails`, typecheck a build OK.
+- **Viditelně v aplikaci:** viz (17) a (18).
+- **Rozhodnuto samostatně:** viz (17) a (18).
+- **Otevřené:** fronta kroků v „Poslední stav“ – další je výstupek při přehození strany stěny.
+- **Chyby od uživatele:** kóty rámu okna a rám přičítaný k šířce okna – opraveno (17).
+
 ### 2026-11-14 (18) – přichytávání nové stěny k oběma lícům jiné stěny
 - **Co se změnilo:** Nástroj Stěna přichytí začátek i konec nové stěny nejen na čáru jiné stěny, ale i na její **protější (vnější) líc** a u osy uprostřed na oba líce. Nová stěna se na líc napojí (T bez dělení), roh leží přímo na líci (`Node.hostFace`, schéma 14) – délka nové stěny je viditelná délka od líce. Roh drží na líci i při změně tloušťky, strany, osy a posunu průběžné stěny. Testy `store/hostFace.test.ts`, `tools/wallTool.draw.test.ts`.
 - **Viditelně v aplikaci:** stěnu jde začít / ukončit ťuknutím na šedý vnější okraj jiné stěny; napojí se čistě bez čáry mezi stěnami.
@@ -268,7 +275,23 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Otevřené:** vyzkoušet na tabletu; další krok tažení a posun jako blok (D2, D11–D14).
 - **Chyby od uživatele:** zatím žádné.
 
-## Poslední stav (2026-11-14 – úpravy oken, dveří, ostění, displeje)
+## Poslední stav (2026-11-14, konec sezení)
+
+**Hotové (na webu):** šířka okna = otvor ve stěně, rám uvnitř, bez kót rámu (Deník (17)); nová stěna se přichytí a napojí i na protější líc jiné stěny, roh na líci (`Node.hostFace`, schéma 14, Deník (18)) – uživatel vyzkoušel a potvrdil. Kótování (zámky, řetěz otvorů, celková kóta) uživatel potvrdil jako funkční. Testy 355 + 1 `it.fails` (C2/6), typecheck a build OK.
+
+**Rozpracované:** nic.
+
+**Čeká na vyzkoušení na tabletu:** úpravy oken / dveří / ostění / Nevypínat displej, nástroj Do rohu (Deník 2026-11-14 (1)–(9)).
+
+**Fronta kroků:**
+1. **Výstupek při přehození strany stěny** (rozhodnout, zda zůstává na svém líci).
+2. **F4** (otvory při dělení stěny), **C1.11** (hrana odskoku, test C2/6 `it.fails`).
+3. Z auditu: F7, D4, A2 / A10 / B6; výstupek přes roh / kopie v řadě (I1.11).
+4. D3 doplnit: zkrátit jen jednu stěnu k hraně druhé (T místo L); případně řetězová kóta užšího otvoru při vypnutém vnitřním ostění.
+5. Napojení na líc obloukové stěny (zatím jen rovné stěny).
+6. Kóty: volná kóta / úhlopříčka (POZADAVKY.md) – zámek je připravený; později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) spolu s exportem DXF / PDF.
+
+## Předchozí stav (2026-11-14 – úpravy oken, dveří, ostění, displeje)
 
 **Hotové (na webu po push; na PC ověřeno v náhledu, na tabletu neověřeno):** NumPad u všech číselných polí + tlačítko 000; oprava pravého ostění ve značce; ostění vnitřní / vnější zvlášť (schéma 12); francouzské okno s křídlem (panty, dovnitř / ven); rám okna pevně 50 mm (schéma 13); plná čára v lících u okna; Nevypínat displej (Wake Lock, výchozí zapnuto). Reviewer: nálezy opraveny. Testy 280 + 1 `it.fails` (C2/6), typecheck OK.
 
@@ -330,6 +353,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Rozhodnuto samostatně
 (Rozhodnutí mimo katalog, udělaná bez uživatele – nejnovější nahoře. Uživatel je může kdykoli změnit.)
+- 2026-11-14: Napojení na líc jen u rovných stěn a jen pro stěnu vedoucí od líce ven; po přehození strany / změně tloušťky průběžné stěny jede roh s lícem (napojená stěna se prodlouží / zkrátí). Šířka okna bez migrace dat (existující okna se zúží o 100 mm, i u zamčených kót); okno s rámem min. 200 mm.
 - 2026-11-14: Zámek kót – přepsání zamčené kóty v NumPadu po druhém potvrzení, zámek zůstane (dokument navrhoval zrušení – uživatel nerozhodl); tažení prvku se zamčenou kótou se blokuje průběžně; další drobná rozhodnutí v Deníku změn (10).
 - 2026-11-13: Čárkovaný obdélník (překlad) u líce zůstane čarami (uzavřený tvar = výstupek schválil uživatel, I1.2).
 - 2026-11-13: Výstupek – čára se kreslí tažením úsek po úseku, výstupek vznikne sám po úseku, který dosedne na líc (bez tlačítka Hotovo); NumPad kót: odstup před → šířka → odstup za → hloubka; šířka se mění od okraje u rohu A, hloubka úměrně; výstupek nejde táhnout (jen kóty); přehození strany stěny ho nechá na „své“ straně (ven od těla, posune se s tělem); na stěně bez tloušťky / oblouku se jen nekreslí.
