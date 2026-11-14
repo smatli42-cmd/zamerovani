@@ -3,7 +3,7 @@
  */
 import { arcGeometry } from '../core/arc';
 import { arcHandles } from '../core/arcChain';
-import { doorLayout } from '../core/doorLayout';
+import { doorLayout, jambOutline } from '../core/doorLayout';
 import { openingSpan, openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
 import { add, dist, dot, lerp, normal, scale, sub, unit } from '../core/geometry';
 import { isWindowKind } from '../model/factory';
@@ -326,24 +326,18 @@ function drawFramed(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, 
   ctx.strokeStyle = color;
   ctx.lineWidth = thick ? 2 : 3;
   ctx.lineJoin = 'miter';
-  const side = (mirror: boolean) => {
-    const X = (x: number) => (mirror ? span - x : x);
-    const pts: [number, number][] = [[0, 0]];
-    if (lay.reveal) {
-      pts.push([0, dA], [L, dA], [L, dA + F], [0, dA + F]);
-      if (thick) pts.push([0, thick]);
-    } else if (thick) pts.push([0, thick]);
-    else return;
+  // levá a pravá strana zvlášť – každé ostění má svou šířku (L / R)
+  for (const end of ['a', 'b'] as const) {
+    const pts = jambOutline(lay, span, end);
+    if (!pts.length) continue;
     ctx.beginPath();
     pts.forEach(([x, y], i) => {
-      const p = P(X(x), y);
+      const p = P(x, y);
       if (i === 0) ctx.moveTo(p.x, p.y);
       else ctx.lineTo(p.x, p.y);
     });
     ctx.stroke();
-  };
-  side(false);
-  side(true);
+  }
 
   // čáry v rovině líců přes otvor: s ostěním čerchovaně (konstrukce nad řezem), bez ostění tenká plná (práh)
   const faceLine = (y: number, dashed: boolean) => {

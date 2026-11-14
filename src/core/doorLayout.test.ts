@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createFloor, createOpening, createWall } from '../model/factory';
-import { applyRevealPart, doorLayout, revealPartValue } from './doorLayout';
+import { applyRevealPart, doorLayout, jambOutline, revealPartValue } from './doorLayout';
 import { openingSpan } from './floorQueries';
 
 describe('dveře se zárubní', () => {
@@ -91,5 +91,29 @@ describe('strana rámu okna', () => {
       // bod posunutý na stranu rámu je dál od středu (2000, 1500) než střed stěny
       expect(Math.hypot(mid.x - 2000, mid.y - 1500)).toBeGreaterThan(Math.hypot((A.x + B.x) / 2 - 2000, (A.y + B.y) / 2 - 1500));
     }
+  });
+});
+
+describe('značka otvoru: okraje stěny po stranách (chyba – různě široká ostění)', () => {
+  it('pravé ostění má svou šířku R, ne šířku levého L (dveře i okno)', () => {
+    const f = createFloor('t');
+    const w = createWall('a', 'b');
+    for (const kind of ['door', 'window'] as const) {
+      const op = createOpening(f, w.id, kind, { width: 800, reveal: { depth: 100, left: 100, right: 250, top: 0 } });
+      const lay = doorLayout(op, 300);
+      const span = openingSpan(op);
+      const F = op.frame!.depth;
+      expect(jambOutline(lay, span, 'a')).toEqual([[0, 0], [0, 100], [100, 100], [100, 100 + F], [0, 100 + F], [0, 300]]);
+      expect(jambOutline(lay, span, 'b')).toEqual([[span, 0], [span, 100], [span - 250, 100], [span - 250, 100 + F], [span, 100 + F], [span, 300]]);
+    }
+  });
+
+  it('bez ostění rovný okraj přes tloušťku; v čáře bez tloušťky se okraj nekreslí', () => {
+    const f = createFloor('t');
+    const w = createWall('a', 'b');
+    const op = createOpening(f, w.id, 'door', { width: 800 });
+    const span = openingSpan(op);
+    expect(jambOutline(doorLayout(op, 300), span, 'b')).toEqual([[span, 0], [span, 300]]);
+    expect(jambOutline(doorLayout(op, null), span, 'a')).toEqual([]);
   });
 });

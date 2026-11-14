@@ -50,6 +50,24 @@ export function doorLayout(op: Opening, T: number | null): DoorLayout {
 }
 
 /**
+ * Okraj stěny po jedné straně otvoru v půdorysné značce (x podél stěny od začátku otvoru, y od líce A).
+ * `end` 'a' = levá strana (x od 0, ostění `L`), 'b' = pravá strana (x od `span`, ostění `R`).
+ * S ostěním je okraj „vykousnutý“ (schod o délku ostění u zárubně / rámu); bez ostění rovná čára přes tloušťku.
+ * Prázdné pole = nic se nekreslí (otvor bez ostění v čáře bez tloušťky).
+ */
+export function jambOutline(lay: DoorLayout, span: number, end: 'a' | 'b'): [number, number][] {
+  const w = end === 'a' ? lay.L : lay.R;
+  const X = (x: number) => (end === 'a' ? x : span - x);
+  const pts: [number, number][] = [[0, 0]];
+  if (lay.reveal) {
+    pts.push([0, lay.dA], [w, lay.dA], [w, lay.dA + lay.F], [0, lay.dA + lay.F]);
+    if (lay.T !== null) pts.push([0, lay.T]);
+  } else if (lay.T !== null) pts.push([0, lay.T]);
+  else return [];
+  return pts.map(([x, y]) => [X(x), y]);
+}
+
+/**
  * Tloušťka stěny, ve které leží otvor (otvor se kreslí skrz celé tělo, ostění z obou líců).
  * null = stěna bez tloušťky (čára) – otvor se kreslí jen na čáře.
  */

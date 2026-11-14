@@ -7,6 +7,12 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-14 (2) – oprava: pravé ostění ve značce dveří a oken
+- **Co se změnilo:** Okraj stěny po pravé straně otvoru se kreslil zrcadlením levé strany, takže bral šířku levého ostění. Nová čistá funkce `jambOutline` v `core/doorLayout.ts` počítá každou stranu s vlastní šířkou (L / R); testy v `doorLayout.test.ts`.
+- **Viditelně v aplikaci:** u dveří i oken s různě širokým ostěním vlevo a vpravo sedí „schod“ ostění vpravo na správném místě.
+- **Rozhodnuto samostatně:** oprava (bod 7 zadání) udělána před bodem 2, protože ten mění stejné kreslení.
+- **Chyby od uživatele:** různě velká ostění → pravé ostění špatně (dveře i okna); opraveno.
+
 ### 2026-11-14 (1) – NumPad u všech číselných polí, tlačítko 000
 - **Co se změnilo:** Všechna číselná pole v panelech (výška, parapet, hloubka niky, tloušťka stěny, výstupek, text, úhel otočení, výška oblouku, vlastní tloušťka, světlé výšky místnosti) otevírají po ťuknutí NumPad místo malého políčka (`openField` v `numpadController.ts`, cíl `field`). NumPad má tlačítko **000**.
 - **Viditelně v aplikaci:** pole vypadají jako modrá tlačítka s hodnotou; ťuknutí otevře velkou klávesnici; 2 + 000 = 2000. U obecných polí chybí tlačítko „Další“ (nemají pořadí).
