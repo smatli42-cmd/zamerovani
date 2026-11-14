@@ -11,7 +11,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Co se změnilo:** Ověřeno, že průchod a nika (druhy otvorů) zůstávají při změně délky stěny na místě; doplněny napojené příčky (T): zůstanou na místě, se zamčenou polohou napojení jedou s koncem stěny (řetěz zámků, `keepOpeningsAfterResize`). Pravidlo zapsáno jako závazné do `CLAUDE.md`, `KOTY-ZAMEK-EXPORT.md` a do hlavičky `core/openingChain.ts` – platí i pro budoucí druhy prvků na stěně. Testy v `store/openingChain.test.ts` (27).
 - **Viditelně v aplikaci:** příčka napojená na stěnu se zamčenou kótou polohy jede při změně délky stěny s jejím koncem; jinak zůstane na místě.
 - **Rozhodnuto uživatelem:** platí úplně pro všechny prvky, které stěna nese, i pro budoucí.
-- **Rozhodnuto samostatně:** zkrácení stěny za napojenou příčku se neprovede s hlášením (dřív se příčka potichu odpojila); příčka přivázaná zámky nesmí dosednout do otvoru; pravidlo zatím jen pro rovné stěny (oblouk, kruh ne). Napojené příčky nejsou v katalogu I1.6 – navrhnout uživateli doplnění katalogu.
+- **Rozhodnuto samostatně:** zkrácení stěny za napojenou příčku se neprovede s hlášením (dřív se příčka potichu odpojila); příčka přivázaná zámky nesmí dosednout do otvoru; pravidlo zatím jen pro rovné stěny (oblouk, kruh ne). Katalog I1.6 doplněn o všechny prvky nesené stěnou včetně napojených příček (se souhlasem uživatele).
 - **Otevřené:** vyzkoušet na tabletu.
 
 ### 2026-11-14 (14) – výstupky při změně délky stěny jako otvory (rozhodnutí uživatele)
