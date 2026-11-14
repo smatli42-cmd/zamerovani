@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createFloor, createOpening, createWall } from '../model/factory';
 import { migrateProject } from '../persistence/migrate';
-import { applyRevealPart } from './doorLayout';
+import { applyRevealPart, faceLineDashed } from './doorLayout';
 
 describe('rám okna má pevnou šířku 50 mm', () => {
   it('šířku rámu okna ani francouzského okna nejde změnit, zárubeň dveří ano', () => {
@@ -38,5 +38,14 @@ describe('rám okna má pevnou šířku 50 mm', () => {
     expect(o.o1!.frame).toEqual({ width: 50, depth: 60 });
     expect(o.o2!.frame!.width).toBe(50);
     expect(o.d1!.frame!.width).toBe(70);
+  });
+});
+
+describe('značka okna: čára v lících', () => {
+  it('u okna a francouzského okna plná, u dveří a průchodu čerchovaná', () => {
+    expect(faceLineDashed('window')).toBe(false);
+    expect(faceLineDashed('french')).toBe(false);
+    expect(faceLineDashed('door')).toBe(true);
+    expect(faceLineDashed('opening')).toBe(true);
   });
 });

@@ -5,7 +5,7 @@
  * Tloušťka stěny T = hloubka ostění z líce A + hloubka zárubně + hloubka ostění z líce B
  * (hloubka z líce B se dopočítává, ukládá se jen hloubka z líce A).
  */
-import type { Floor, Opening, Wall } from '../model/types';
+import type { Floor, Opening, OpeningKind, Wall } from '../model/types';
 import { isWindowKind } from '../model/factory';
 import { hasBody } from './wallBody';
 import { wallNodes } from './floorQueries';
@@ -54,6 +54,12 @@ export function doorLayout(op: Opening, T: number | null): DoorLayout {
     outer: !!rv && T !== null && rv.outer
   };
 }
+
+/**
+ * Čára v rovině líce přes otvor v půdorysné značce: u okna a francouzského okna plná (navazuje na hrany stěny),
+ * u dveří a průchodu čerchovaná (konstrukce nad řezem).
+ */
+export const faceLineDashed = (kind: OpeningKind): boolean => !isWindowKind(kind);
 
 /**
  * Okraj stěny po jedné straně otvoru v půdorysné značce (x podél stěny od začátku otvoru, y od líce A).

@@ -3,7 +3,7 @@
  */
 import { arcGeometry } from '../core/arc';
 import { arcHandles } from '../core/arcChain';
-import { doorLayout, jambOutline } from '../core/doorLayout';
+import { doorLayout, faceLineDashed, jambOutline } from '../core/doorLayout';
 import { openingSpan, openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
 import { add, dist, dot, lerp, normal, scale, sub, unit } from '../core/geometry';
 import { hasLeaf, isWindowKind } from '../model/factory';
@@ -349,7 +349,7 @@ function drawFramed(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, 
     ctx.stroke();
   }
 
-  // čáry v rovině líců přes otvor: s ostěním čerchovaně (konstrukce nad řezem), bez ostění tenká plná (práh)
+  // čáry v rovině líců přes otvor (konstrukce nad řezem)
   // líc bez ostění: otvor v něm je užší o ostění vlevo a vpravo
   const faceLine = (y: number, dashed: boolean, narrow = false) => {
     const a = P(narrow ? L : 0, y);
@@ -363,8 +363,10 @@ function drawFramed(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, 
     ctx.stroke();
     ctx.restore();
   };
-  faceLine(0, true, lay.reveal && !lay.inner);
-  if (thick) faceLine(thick, true, lay.reveal && !lay.outer);
+  // okno a francouzské okno: čára v rovině líců plná (navazuje na hrany stěny), dveře a průchod čerchovaně
+  const dashedFace = faceLineDashed(op.kind);
+  faceLine(0, dashedFace, lay.reveal && !lay.inner);
+  if (thick) faceLine(thick, dashedFace, lay.reveal && !lay.outer);
 
   // průchod bez dveří: jen okraje stěny a čerchované čáry líců
   if (op.kind === 'opening') {

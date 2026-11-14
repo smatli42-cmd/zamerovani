@@ -7,6 +7,12 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-14 (6) – značka okna: plná čára v lících
+- **Co se změnilo:** Čára přes otvor v rovině líců (navazuje na hrany stěny) je u okna a francouzského okna plná, u dveří a průchodu zůstává čerchovaná (`faceLineDashed` v `core/doorLayout.ts`, test ve `windowFrame.test.ts`).
+- **Viditelně v aplikaci:** okno ve stěně má v obou lících plnou tenkou čáru místo čerchované.
+- **Rozhodnuto samostatně:** platí i pro francouzské okno a okno ve stěně kreslené jednou čarou.
+- **Otevřené:** vyzkoušet na tabletu.
+
 ### 2026-11-14 (5) – rám okna pevně 50 mm (schéma 13)
 - **Co se změnilo:** Šířka rámu okna a francouzského okna je vždy 50 mm: pole „Šířka rámu“ zmizelo z panelu, `applyRevealPart('frameWidth')` u oken nic nemění, migrace `fixWindowFrames` (12 → 13) přepíše starou uloženou šířku rámu na 50. Zárubeň dveří se dál nastavuje.
 - **Viditelně v aplikaci:** v řetězové kótě okna už nejsou klikací čísla 50 u rámu (zůstaly jen dělicí značky), u okna je jen kóta šířky (+ ostění vlevo / vpravo, pokud je zapnuté). Hloubka rámu zůstává nastavitelná.
