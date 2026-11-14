@@ -266,7 +266,7 @@ export function applyWallLength(wallId: Id, length: number, move: MoveTarget, op
   }, {}, opts);
   // otvory nejde rozmístit → hlášení (zamčená kóta, která brání, nebo otvor by vyjel ze stěny)
   if (blocked && before) store.set({ lockBlock: { key: dimKey(blocked), text: `Nelze – brání zamčená kóta: ${describeDim(before, blocked)}`, target: blocked } });
-  else if (misfit) store.set({ lockBlock: { key: '', text: 'Nelze – otvor by vyjel ze stěny nebo se překryl s jiným otvorem.' } });
+  else if (misfit) store.set({ lockBlock: { key: '', text: 'Nelze – otvor nebo výstupek by vyjel ze stěny nebo se překryl se sousedem.' } });
   return applied && ok;
 }
 

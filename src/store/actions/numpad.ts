@@ -69,7 +69,7 @@ export function applyNumpadValue(t: NumPadTarget, value: number, overrideLock = 
     // neúspěch = nic se nezmění (ani to, co recept stihl nastavit)
     return ok;
   }, {}, opts);
-  if (chainFail) store.set({ lockBlock: { key: '', text: 'Nelze – otvor by přesáhl sousední otvor nebo konec stěny (nebo je konec stěny napojený na jinou stěnu).' } });
+  if (chainFail) store.set({ lockBlock: { key: '', text: 'Nelze – otvor nebo výstupek by přesáhl souseda nebo konec stěny (nebo je konec stěny napojený na jinou stěnu).' } });
   return applied && ok;
 
   function run(floor: Floor): void {

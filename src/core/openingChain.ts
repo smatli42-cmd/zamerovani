@@ -12,6 +12,7 @@ import type { Floor, Id, Opening } from '../model/types';
 import { openingSpan, openingStartFromA, openingsOnWall, wallLength } from './floorQueries';
 import { setWallLength } from './solver';
 import { dot, sub, unit } from './geometry';
+import { protrusionExtent, protrusionFits } from './protrusion';
 
 const locked = (floor: Floor, key: string) => !!floor.dimLocks?.[key];
 
@@ -91,7 +92,7 @@ export function chainEdge(floor: Floor, op: Opening, ref: 'a' | 'b'): number | n
 }
 
 /**
- * Po změně délky stěny (posun rohu A a / nebo B podél stěny): otvory zůstanou ve výkresu na místě, jen ty,
+ * Po změně délky stěny (posun rohu A a / nebo B podél stěny): otvory a výstupky zůstanou ve výkresu na místě, jen ty,
  * které jsou k posunutému rohu přivázané zamčenými kótami (odstup od rohu + zamčená meziostění), jedou s ním.
  * Volá se, když by výchozí chování (otvor drží odstup od svého referenčního rohu) porušilo zamčenou kótu.
  * `before` = podlaží před úpravou. Vrací false, když jsou otvory přivázané k oběma rohům (nejde splnit).
@@ -127,6 +128,36 @@ export function keepOpeningsAfterResize(before: Floor, floor: Floor, wallId: Id)
     const start = p.start - shiftA + (tiedA.has(i) ? shiftA : 0) + (tiedB.has(i) ? shiftB : 0);
     placeAt(floor.openings[p.op.id]!, start, newLen);
   });
+  // výstupky stejně (rozhodnutí uživatele 2026-11-14): na místě; s rohem jedou ty, které jsou k němu přivázané
+  // zamčeným odstupem od konce a dál zamčenými odstupy mezi sousedy na stejném líci (řetěz jako u otvorů)
+  const prots = Object.values(before.protrusions ?? {}).filter(p => p.wallId === wallId);
+  const pTiedA = new Set<Id>();
+  const pTiedB = new Set<Id>();
+  for (const side of [1, -1] as const) {
+    const row = prots.filter(p => p.side === side).sort((x, y) => protrusionExtent(x).u0 - protrusionExtent(y).u0);
+    const m = row.length;
+    for (let i = 0; i < m; i++) {
+      const link = i === 0 ? lk(`protrusion-dim:${row[0]!.id}:before`) : pTiedA.has(row[i - 1]!.id) && (lk(`protrusion-dim:${row[i]!.id}:before`) || lk(`protrusion-dim:${row[i - 1]!.id}:after`));
+      if (!link) break;
+      pTiedA.add(row[i]!.id);
+    }
+    for (let i = m - 1; i >= 0; i--) {
+      const link = i === m - 1 ? lk(`protrusion-dim:${row[m - 1]!.id}:after`) : pTiedB.has(row[i + 1]!.id) && (lk(`protrusion-dim:${row[i]!.id}:after`) || lk(`protrusion-dim:${row[i + 1]!.id}:before`));
+      if (!link) break;
+      pTiedB.add(row[i]!.id);
+    }
+  }
+  for (const p0 of prots) {
+    const p = floor.protrusions?.[p0.id];
+    if (!p) continue;
+    const toA = pTiedA.has(p.id);
+    const toB = pTiedB.has(p.id);
+    if (toA && toB && Math.abs(shiftA - shiftB) > 0.5) return false;
+    const du = -shiftA + (toA ? shiftA : 0) + (toB ? shiftB : 0);
+    p.pts = p0.pts.map(q => ({ ...q, u: Math.round((q.u + du) * 10) / 10 }));
+  }
+  // výstupky musí zůstat na stěně a nesmí se překrýt se sousedem
+  for (const p0 of prots) if (floor.protrusions?.[p0.id] && !protrusionFits(floor, floor.protrusions[p0.id]!)) return false;
   // otvory musí zůstat na stěně a nesmí se překrýt
   const spans = placed
     .map(p => {
@@ -146,7 +177,7 @@ export function keepOpeningsOnResizedWalls(before: Floor, floor: Floor): boolean
   for (const w1 of Object.values(floor.walls)) {
     const w0 = before.walls[w1.id];
     if (!w0 || w0.sagitta || w1.sagitta || w0.radius !== undefined) continue;
-    if (!Object.values(before.openings).some(o => o.wallId === w0.id)) continue;
+    if (!Object.values(before.openings).some(o => o.wallId === w0.id) && !Object.values(before.protrusions ?? {}).some(p => p.wallId === w0.id)) continue;
     const a0 = before.nodes[w0.a];
     const b0 = before.nodes[w0.b];
     const a1 = floor.nodes[w1.a];

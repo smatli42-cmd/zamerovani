@@ -7,12 +7,19 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-14 (14) – výstupky při změně délky stěny jako otvory (rozhodnutí uživatele)
+- **Co se změnilo:** Při změně délky stěny kótou / NumPadem zůstanou ve výkresu na místě i výstupky; s koncem stěny jedou jen ty, které jsou k němu přivázané zamčeným odstupem od konce a dál zamčenými odstupy mezi sousedy na stejném líci (řetěz jako u otvorů). Překryv výstupků nebo vyjetí ze stěny → nic se nezmění, hlášení. Katalog I1.6 doplněn o upřesnění uživatele (tažení beze změny). Testy v `store/openingChain.test.ts` (24).
+- **Viditelně v aplikaci:** zadání délky stěny už neposouvá přizdívky / pilastry měřené od posunutého rohu.
+- **Rozhodnuto uživatelem:** „Ano, stejně“ (výstupky jako otvory).
+- **Rozhodnuto samostatně:** tažení konce stěny dál nese výstupek od rohu A (katalog I2/6 př. 6 platí); výstupky na obloukové stěně a změny délky mimo kótu stěny (např. jiné nástroje) se nemění.
+- **Otevřené:** vyzkoušet na tabletu.
+
 ### 2026-11-14 (13) – otvory při změně délky stěny vždy na místě (rozhodnutí uživatele)
 - **Co se změnilo:** Při změně délky stěny kótou / NumPadem (celková délka i délka po líci) zůstanou otvory ve výkresu vždy na místě, i bez zámků; s posunutým rohem jedou jen otvory přivázané zamčeným odstupem a zamčenými meziostěními. Platí pro všechny stěny, kterým řešič změnil délku posunem konce podél stěny (protější stěna místnosti, navazující stěna) – `keepOpeningsOnResizedWalls` v `core/openingChain.ts`. Testy v `store/openingChain.test.ts` (21); dva testy se starým chováním přepsané podle rozhodnutí uživatele.
 - **Viditelně v aplikaci:** změna délky stěny už nehýbe okny a dveřmi měřenými od posunutého rohu; zkrácení stěny pod otvor se neprovede s hlášením „otvor by vyjel ze stěny“.
 - **Rozhodnuto uživatelem:** „Ano, vždy na místě“ (otvory při změně délky stěny).
 - **Rozhodnuto samostatně:** tažení konce stěny myší / perem se nemění – otvory dál drží odstup od svého rohu (katalog I1.6, I2/6 „jako u otvorů“ popisuje tažení); výstupky se při změně délky přes NumPad dál vedou od rohu A (katalog I2/6) – kdyby se měly chovat jako otvory, je to otázka na uživatele (rozpor s katalogem).
-- **Otevřené:** sjednotit výstupky s otvory? (vyžaduje změnu katalogu I2/6, rozhodne uživatel).
+- **Otevřené:** výstupky sjednoceny s otvory – viz (14).
 
 ### 2026-11-14 (12) – celková kóta stěny protáhne volný konec
 - **Co se změnilo:** Kóta celkové délky stěny posouvá volný (nepřipojený) konec, pokud je volný jen jeden (`openTarget`). Když by otvory jedoucí se svým referenčním rohem porušily zamčenou kótu, zůstanou ve výkresu na místě a s rohem jedou jen otvory k němu přivázané zamčeným odstupem a zamčenými meziostěními (`keepOpeningsAfterResize` v `core/openingChain.ts`); rozdíl spolkne nezamčená krajní kóta. Další (NEXT) pokračuje od napojeného konce. Testy v `store/openingChain.test.ts` (19).
@@ -241,7 +248,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Čeká na vyzkoušení uživatelem (tablet):** všech 7 úprav – podrobnosti v Deníku změn 2026-11-14 (1–8). Zvlášť Nevypínat displej (jen přes https, tedy na GitHub Pages).
 
-**Hotové navíc (2026-11-14):** D3 – nástroj „Do rohu“ (viz Deník změn (9)); **zámek kót** místo „změřeno × náčrt“ (Deník (10), KOTY-ZAMEK-EXPORT.md) a řetěz otvorů se zámky (Deník (11)–(13)). Vše čeká na vyzkoušení. Testy 330 + 1 `it.fails`.
+**Hotové navíc (2026-11-14):** D3 – nástroj „Do rohu“ (viz Deník změn (9)); **zámek kót** místo „změřeno × náčrt“ (Deník (10), KOTY-ZAMEK-EXPORT.md) a řetěz otvorů se zámky (Deník (11)–(14)). Vše čeká na vyzkoušení. Testy 333 + 1 `it.fails`.
 
 **Fronta kroků:**
 1. **Přichytávání k oběma lícům stěny** u nástroje Stěna – zároveň poloha napojeného rohu mimo osu.

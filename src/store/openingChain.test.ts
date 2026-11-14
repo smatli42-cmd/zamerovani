@@ -295,4 +295,58 @@ describe('řetězová kóta otvorů se zámky', () => {
     expect(Math.round(wallLength(f(), f().walls[top]!))).toBe(4500);
     expect(x()).toBe(x0);
   });
+
+  it('výstupek: při změně délky stěny zůstane na místě; se zamčeným odstupem od konce jede s ním', () => {
+    store.openProject(createProject({ name: 't' }));
+    const w = addWall({ x: 0, y: 0 }, null, { x: 5000, y: 0 }, null, false, { thickness: 300 })!;
+    store.edit(fl => {
+      fl.protrusions = {
+        pr1: { id: 'pr1', wallId: w, side: -1, mode: 'add', pts: [{ u: 1000, v: 0 }, { u: 1000, v: 200 }, { u: 1400, v: 200 }, { u: 1400, v: 0 }], name: '', material: '', note: '' }
+      };
+    });
+    const u0 = () => Math.min(...f().protrusions!.pr1!.pts.map(q => q.u));
+    // posun rohu A o 500 ven: výstupek ve výkresu zůstane → odstup od A vzroste o 500
+    expect(applyNumpadValue({ kind: 'wall-length', wallId: w, move: { nodeId: f().walls[w]!.a } }, 5500)).toBe(true);
+    expect(f().nodes[f().walls[w]!.a]).toMatchObject({ x: -500 });
+    expect(u0()).toBe(1500);
+    // zamčený odstup od A: výstupek jede s rohem A
+    setDimLock({ kind: 'protrusion-dim', protrusionId: 'pr1', dim: 'before' }, true);
+    expect(applyNumpadValue({ kind: 'wall-length', wallId: w, move: { nodeId: f().walls[w]!.a } }, 6000)).toBe(true);
+    expect(u0()).toBe(1500);
+  });
+
+  it('výstupky: zamčená mezera k sousedovi jede s koncem jako řetěz; překryv se odmítne; Zpět vrátí vše', () => {
+    store.openProject(createProject({ name: 't' }));
+    const w = addWall({ x: 0, y: 0 }, null, { x: 5000, y: 0 }, null, false, { thickness: 300 })!;
+    const box = (id: string, u0: number, u1: number) => ({ id, wallId: w, side: -1 as const, mode: 'add' as const, pts: [{ u: u0, v: 0 }, { u: u0, v: 200 }, { u: u1, v: 200 }, { u: u1, v: 0 }], name: '', material: '', note: '' });
+    store.edit(fl => {
+      fl.protrusions = { p1: box('p1', 1000, 1400), p2: box('p2', 1600, 2000) };
+    });
+    const u0 = (id: string) => Math.min(...f().protrusions![id]!.pts.map(q => q.u));
+    const moveA = (len: number) => applyNumpadValue({ kind: 'wall-length', wallId: w, move: { nodeId: f().walls[w]!.a } }, len);
+    // p1 přivázaný k A, p2 volný → zkrácení od A o 500: p1 by najel na p2 → odmítnuto
+    setDimLock({ kind: 'protrusion-dim', protrusionId: 'p1', dim: 'before' }, true);
+    const snap = f();
+    expect(moveA(4500)).toBe(false);
+    expect(f()).toBe(snap);
+    expect(store.get().lockBlock?.text).toContain('výstupek');
+    // zamčená mezera p1–p2 → jedou oba s rohem A
+    setDimLock({ kind: 'protrusion-dim', protrusionId: 'p2', dim: 'before' }, true);
+    const before = f();
+    expect(moveA(4500)).toBe(true);
+    expect([u0('p1'), u0('p2')]).toEqual([1000, 1600]);
+    store.undo();
+    expect(f()).toBe(before);
+  });
+
+  it('výstupek se zamčeným odstupem k B jede s rohem B', () => {
+    store.openProject(createProject({ name: 't' }));
+    const w = addWall({ x: 0, y: 0 }, null, { x: 5000, y: 0 }, null, false, { thickness: 300 })!;
+    store.edit(fl => {
+      fl.protrusions = { p1: { id: 'p1', wallId: w, side: 1, mode: 'add', pts: [{ u: 4000, v: 0 }, { u: 4000, v: 200 }, { u: 4400, v: 200 }, { u: 4400, v: 0 }], name: '', material: '', note: '' } };
+    });
+    setDimLock({ kind: 'protrusion-dim', protrusionId: 'p1', dim: 'after' }, true);
+    expect(applyNumpadValue({ kind: 'wall-length', wallId: w, move: { nodeId: f().walls[w]!.b } }, 5600)).toBe(true);
+    expect(Math.min(...f().protrusions!.p1!.pts.map(q => q.u))).toBe(4600);
+  });
 });
