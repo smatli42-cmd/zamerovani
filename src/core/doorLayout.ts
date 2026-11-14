@@ -6,6 +6,7 @@
  * (hloubka z líce B se dopočítává, ukládá se jen hloubka z líce A).
  */
 import type { Floor, Opening, Wall } from '../model/types';
+import { isWindowKind } from '../model/factory';
 import { hasBody } from './wallBody';
 import { wallNodes } from './floorQueries';
 import { normal, unit } from './geometry';
@@ -115,7 +116,8 @@ export function applyRevealPart(floor: Floor, op: Opening, part: RevealPart, val
   const T = openingThickness(floor, op);
   const v = Math.max(0, Math.round(value));
   if (part === 'frameWidth') {
-    if (!op.frame) return false;
+    // rám okna má pevnou šířku WINDOW_FRAME.width (50 mm), mění se jen zárubeň dveří
+    if (!op.frame || isWindowKind(op.kind)) return false;
     op.frame.width = v;
     return true;
   }

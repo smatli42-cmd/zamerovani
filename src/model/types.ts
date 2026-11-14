@@ -8,7 +8,7 @@
  * - Při změně struktury zvýšit SCHEMA_VERSION a doplnit migraci v persistence/migrate.ts.
  */
 
-export const SCHEMA_VERSION = 12;
+export const SCHEMA_VERSION = 13;
 
 export type Id = string;
 

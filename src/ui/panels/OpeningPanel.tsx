@@ -95,7 +95,7 @@ export function OpeningPanel({ op }: { op: Opening }) {
       )}
       {op.frame && (
         <div class="field-grid">
-          <RevealField op={op} part="frameWidth" label={op.kind === 'door' ? 'Šířka zárubně' : 'Šířka rámu'} />
+          {op.kind === 'door' && <RevealField op={op} part="frameWidth" label="Šířka zárubně" />}
           <RevealField op={op} part="frameDepth" label={op.kind === 'door' ? 'Hloubka zárubně' : 'Hloubka rámu'} />
           {!op.reveal && <RevealField op={op} part="frameOffset" label={op.kind === 'door' ? 'Odsazení zárubně' : 'Odsazení rámu'} />}
         </div>

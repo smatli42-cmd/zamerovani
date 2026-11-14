@@ -7,6 +7,12 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-14 (5) – rám okna pevně 50 mm (schéma 13)
+- **Co se změnilo:** Šířka rámu okna a francouzského okna je vždy 50 mm: pole „Šířka rámu“ zmizelo z panelu, `applyRevealPart('frameWidth')` u oken nic nemění, migrace `fixWindowFrames` (12 → 13) přepíše starou uloženou šířku rámu na 50. Zárubeň dveří se dál nastavuje.
+- **Viditelně v aplikaci:** v řetězové kótě okna už nejsou klikací čísla 50 u rámu (zůstaly jen dělicí značky), u okna je jen kóta šířky (+ ostění vlevo / vpravo, pokud je zapnuté). Hloubka rámu zůstává nastavitelná.
+- **Rozhodnuto samostatně:** šířka okna (`width`) dál znamená světlou šířku mezi rámy (otvor = šířka + 2 × 50 + ostění) – význam dat se nemění; hloubka rámu zůstává v panelu.
+- **Otevřené:** vyzkoušet na tabletu.
+
 ### 2026-11-14 (4) – francouzské okno s křídlem
 - **Co se změnilo:** Francouzské okno se kreslí s křídlem a obloukem otevírání jako dveře (sdílený kód křídla v `drawFramed`, `hasLeaf` ve `factory.ts`). Panel má u francouzského okna stejná tlačítka jako dveře: **Panty L/P** a **Dovnitř/ven**. Přepnutí druhu přes akci `setWindowKind`. Bez změny dat (panty a směr už otvor měl).
 - **Viditelně v aplikaci:** francouzské okno = rám + křídlo s obloukem místo čáry skla; ve stěně s tloušťkou se výchozí otevírá do místnosti (i po přepnutí z okna).

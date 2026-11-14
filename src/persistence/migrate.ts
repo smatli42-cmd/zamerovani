@@ -2,7 +2,7 @@
  * Převod starších uložených projektů na aktuální strukturu dat.
  * Při každé změně SCHEMA_VERSION sem přidat krok „z verze N na N+1“.
  */
-import { createCircleWall, createWall, DEFAULT_WALL_THICKNESS, newId } from '../model/factory';
+import { createCircleWall, createWall, DEFAULT_WALL_THICKNESS, isWindowKind, newId, WINDOW_FRAME } from '../model/factory';
 import { hasBody, orientLoopOutward } from '../core/wallBody';
 import { mergeArcAt, mergeStraightAt } from '../core/topology';
 import { SCHEMA_VERSION, type Floor, type LineStyle, type Project, type Pt, type Reveal } from '../model/types';
@@ -23,12 +23,13 @@ export function migrateProject(raw: unknown): Project {
   // 8 → 9: totéž i pro oblouky (verze 8 je ještě dělila) – joinSplitWalls je opakovatelná beze změny výsledku
   // 9 → 10: výstupky a vybrání stěn (floor.protrusions); 10 → 11: oblouk v obrysu výstupku (ProfilePt.s) – bez převodu
   // 11 → 12: ostění vnitřní / vnější zvlášť (Reveal.inner / outer); dřívější „s ostěním“ = obě strany (stejná kresba)
+  // 12 → 13: rám okna má pevnou šířku 50 mm (dřívější vlastní šířka rámu se přepíše)
   const old = p.schema ?? 1;
   const floors = p.floors.map(f => {
     const j = joinSemicircles(convertShapesToWalls(f));
     const r = removePairing(addWallThickness({ ...j, texts: j.texts ?? {} }));
     const out = old < 9 ? joinSplitWalls(r) : r;
-    return revealSides({ ...out, protrusions: out.protrusions ?? {} });
+    return fixWindowFrames(revealSides({ ...out, protrusions: out.protrusions ?? {} }));
   });
   return { ...p, floors, schema: SCHEMA_VERSION };
 }
@@ -196,6 +197,18 @@ export function revealSides(floor: Floor): Floor {
     const rv = op.reveal as (Partial<Reveal> & Omit<Reveal, 'inner' | 'outer'>) | undefined;
     if (!rv || (typeof rv.inner === 'boolean' && typeof rv.outer === 'boolean')) continue;
     openings[id] = { ...op, reveal: { ...rv, inner: rv.inner ?? true, outer: rv.outer ?? true } };
+    changed = true;
+  }
+  return changed ? { ...floor, openings } : floor;
+}
+
+/** 12 → 13: rám okna a francouzského okna má vždy šířku WINDOW_FRAME.width (50 mm). */
+export function fixWindowFrames(floor: Floor): Floor {
+  let changed = false;
+  const openings = { ...floor.openings };
+  for (const [id, op] of Object.entries(openings)) {
+    if (!isWindowKind(op.kind) || !op.frame || op.frame.width === WINDOW_FRAME.width) continue;
+    openings[id] = { ...op, frame: { ...op.frame, width: WINDOW_FRAME.width } };
     changed = true;
   }
   return changed ? { ...floor, openings } : floor;
