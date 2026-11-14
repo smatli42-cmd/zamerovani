@@ -7,12 +7,14 @@ import { store } from '../store/store';
 import { useStore } from '../store/useStore';
 import { NumField, Seg } from './panels/fields';
 import { LINE_STYLES } from './panels/SidePanel';
+import { TRIM_MSG_FIRST } from '../tools/trimTool';
 
 export function ToolOptions() {
   const tool = useStore(s => s.tool);
   const settings = useStore(s => s.settings);
   const clipboard = useStore(s => s.clipboard);
   const project = useStore(s => s.project);
+  const toolMsg = useStore(s => s.toolMsg);
   if (tool === 'wall') {
     // menu Stěny: předvolby tloušťky, aktuální je označená (stačí zkontrolovat a kreslit)
     const active = activeWallThickness(project);
@@ -77,6 +79,13 @@ export function ToolOptions() {
           value={settings.windowKind}
           onChange={v => store.updateSettings({ windowKind: v })}
         />
+      </div>
+    );
+  }
+  if (tool === 'trim') {
+    return (
+      <div class="tool-options">
+        <span class="small">⌐ {toolMsg ?? TRIM_MSG_FIRST}</span>
       </div>
     );
   }

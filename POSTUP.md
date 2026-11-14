@@ -7,6 +7,12 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-14 (9) – D3: nástroj „Do rohu“ (zkrátit / prodloužit do rohu)
+- **Co se změnilo:** Nový nástroj **⌐ Do rohu** na liště: ťukne se na první stěnu a pak na druhou, vždy na část, která má zůstat. Referenční čáry obou rovných stěn se protnou; přečnívající část se odřízne, krátká stěna se prodlouží a obě sdílejí jeden roh (`core/trimExtend.ts`, akce `trimToCorner`, nástroj `tools/trimTool.ts`, zpráva v liště voleb `toolMsg`). Jeden krok Zpět. Testy `store/trimExtend.test.ts` (11).
+- **Viditelně v aplikaci:** nové tlačítko „Do rohu“; v liště nahoře návod, co ťuknout, a upozornění, když to nejde (oblouk, rovnoběžné stěny, příliš krátká stěna, už spojené). Při volbě druhé stěny kroužek v místě budoucího rohu.
+- **Rozhodnuto samostatně:** přesouvá se jen konec dané stěny (roh sdílený s další stěnou se pro ni oddělí, sousedé zůstanou); otvor, který leží v odříznuté části **i jen zčásti**, se smaže (F4), ostatní otvory a výstupky drží polohu ve výkresu; změřená délka se zruší (stěna je zase náčrt); oddělený konec (C1.13) v místě rohu se spojí; oblouky a kruhy nástroj odmítne; napojení společného rohu na třetí stěnu zůstává.
+- **Otevřené:** z křížení T (příčka přečnívá přes průběžnou stěnu) nástroj vždy udělá roh L – varianta „zkrátit jen jednu stěnu k hraně druhé“ (Revit: jeden prvek) zatím není; stěna napojená na odříznutou část zůstane s volným koncem; výstupek přesahující nový konec se neořízne.
+
 ### 2026-11-14 (8) – opravy po kontrole revieweru
 - **Co se změnilo:** NumPad: „−“ hned po otevření zase dá výraz (1200 − 150), jak tomu bylo dřív. Migrace rámu okna zachová celou díru ve zdivu (rozdíl staré šířky rámu přejde do šířky okna, okno se neposune). Pole hloubek u vypnuté strany ostění se jmenují „Rám od vnitř. / vnějš. líce“. Wake Lock: ošetřené uvolnění zámku.
 - **Viditelně v aplikaci:** popisky hloubek v panelu otvoru podle zapnuté strany ostění.
@@ -209,7 +215,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Čeká na vyzkoušení uživatelem (tablet):** všech 7 úprav – podrobnosti v Deníku změn 2026-11-14 (1–8). Zvlášť Nevypínat displej (jen přes https, tedy na GitHub Pages).
 
-**Fronta kroků:** beze změny proti 2026-11-13 (D3, přichytávání k lícům, výstupek při přehození strany, F4, C1.11, audit). Případně: zda má řetězová kóta při vypnutém vnitřním ostění kótovat užší otvor v líci.
+**Hotové navíc (2026-11-14):** D3 – nástroj „Do rohu“ (viz Deník změn (9)), čeká na vyzkoušení.
+
+**Fronta kroků:**
+1. **Přichytávání k oběma lícům stěny** u nástroje Stěna – zároveň poloha napojeného rohu mimo osu.
+2. **Výstupek při přehození strany stěny** (rozhodnout, zda zůstává na svém líci).
+3. **F4** (otvory při dělení stěny), **C1.11** (hrana odskoku, test C2/6 `it.fails`).
+4. Z auditu: F7, D4, A2 / A10 / B6; výstupek přes roh / kopie v řadě (I1.11).
+5. D3 doplnit: zkrátit jen jednu stěnu k hraně druhé (T místo L); případně řetězová kóta užšího otvoru při vypnutém vnitřním ostění.
 
 ## Předchozí stav (2026-11-13, konec sezení)
 

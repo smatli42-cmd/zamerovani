@@ -17,7 +17,7 @@ import type { ProtrusionDim } from '../core/protrusion';
 import { syncHosted } from '../core/hosting';
 import { syncProtrusions } from '../core/protrusion';
 
-export type ToolId = 'select' | 'wall' | 'line' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'text' | 'leader' | 'paste' | 'pan';
+export type ToolId = 'select' | 'wall' | 'line' | 'trim' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'text' | 'leader' | 'paste' | 'pan';
 
 export type SingleSelection =
   | { kind: 'wall'; id: Id }
@@ -123,6 +123,8 @@ export interface AppState {
   saveStatus: SaveStatus;
   canUndo: boolean;
   canRedo: boolean;
+  /** Krátká zpráva aktivního nástroje v liště voleb (např. nástroj Do rohu: co ťuknout, proč to nešlo). */
+  toolMsg: string | null;
 }
 
 const SETTINGS_KEY = 'zamerovani.settings';
@@ -155,7 +157,8 @@ class Store {
     settings: loadSettings(),
     saveStatus: 'saved',
     canUndo: false,
-    canRedo: false
+    canRedo: false,
+    toolMsg: null
   };
 
   private listeners = new Set<Listener>();
