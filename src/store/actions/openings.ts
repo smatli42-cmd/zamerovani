@@ -4,7 +4,7 @@
 import { createOpening, hasLeaf, isWindowKind } from '../../model/factory';
 import { applyRevealPart, doorLayout, leafSwingIntoRoom, openingThickness, outwardSwing, type RevealPart } from '../../core/doorLayout';
 import type { Floor, Id, Opening, OpeningKind } from '../../model/types';
-import { openingSpan, openingStartFromA, wallLength } from '../../core/floorQueries';
+import { frameOutside, minOpeningWidth, openingSpan, openingStartFromA, wallLength } from '../../core/floorQueries';
 import { store } from '../store';
 
 /** Vloží otvor na stěnu v místě ťuknutí (t = 0..1 od rohu A). Měří se od bližšího rohu. */
@@ -15,7 +15,7 @@ export function addOpening(wallId: Id, kind: OpeningKind, t: number): Id | null 
     if (!wall) return;
     const len = wallLength(floor, wall);
     const probe = createOpening(floor, wallId, kind);
-    const width = Math.min(probe.width, Math.max(100, Math.round(len - 100 - (probe.frame?.width ?? 0) * 2)));
+    const width = Math.min(probe.width, Math.max(minOpeningWidth(probe), Math.round(len - 100 - frameOutside(probe) * 2)));
     const ref: 'a' | 'b' = t < 0.5 ? 'a' : 'b';
     const center = t * len;
     const spanW = openingSpan({ ...probe, width });
@@ -76,7 +76,7 @@ export function setOpeningRef(id: Id, ref: 'a' | 'b'): void {
 export function setOpeningWidth(floor: Floor, op: Opening, width: number): void {
   const wall = floor.walls[op.wallId];
   if (!wall) return;
-  op.width = Math.max(100, Math.round(width));
+  op.width = Math.max(minOpeningWidth(op), Math.round(width));
   // offset je měřen od ref rohu → při změně šířky zůstává bližší okraj na místě automaticky
   const len = wallLength(floor, wall);
   setStartFromA(op, openingStartFromA(op, len), len);

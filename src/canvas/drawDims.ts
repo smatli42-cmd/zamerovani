@@ -6,9 +6,9 @@
 import { profileToWorld, protrusionArcHandles, protrusionDims, protrusionExtent, wallFrame, type ProtrusionDim } from '../core/protrusion';
 import { arcGeometry } from '../core/arc';
 import { arcChain } from '../core/arcChain';
-import { openingsOnWall, wallLength, wallNodes, wallSegments } from '../core/floorQueries';
+import { frameOutside, openingsOnWall, wallLength, wallNodes, wallSegments } from '../core/floorQueries';
 import { add, centroid, dist, dot, lerp, normal, scale, sub, unit } from '../core/geometry';
-import { isWindowKind, OPENING_DEFAULTS } from '../model/factory';
+import { OPENING_DEFAULTS } from '../model/factory';
 import type { Floor, Id, Pt } from '../model/types';
 import type { Camera, NumPadTarget, Selection } from '../store/store';
 import { addHitBox, type HitAction } from './hitTargets';
@@ -130,11 +130,10 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
         const sub = po.op.kind === 'door' || po.op.kind === 'opening' ? `${po.op.number} v${po.op.height}` : `${po.op.number} v${po.op.height} p${po.op.sill}`;
         const rv = po.op.reveal && po.op.kind !== 'niche' ? po.op.reveal : null;
         if (rv) marks.push({ at: po.start, text: String(Math.round(rv.left)), target: { kind: 'opening-reveal', openingId: po.op.id, part: 'left' } });
-        const fw = po.op.frame?.width ?? 0;
-        // rám okna má pevnou šířku (50 mm) – jen dělicí značka bez čísla; zárubeň dveří je klikací kóta
-        const fixedFrame = isWindowKind(po.op.kind);
+        // zárubeň dveří je klikací kóta; rám okna leží uvnitř šířky okna a kótu nemá
+        const fw = frameOutside(po.op);
         const frameMark = (at: number) =>
-          marks.push(fixedFrame ? { at, text: '', target: null } : { at, text: String(Math.round(fw)), target: { kind: 'opening-reveal', openingId: po.op.id, part: 'frameWidth' } });
+          marks.push({ at, text: String(Math.round(fw)), target: { kind: 'opening-reveal', openingId: po.op.id, part: 'frameWidth' } });
         if (fw) frameMark(po.start + (rv?.left ?? 0));
         marks.push({ at: po.start + (rv?.left ?? 0) + fw, text: String(Math.round(po.op.width)), sub: sub || kindInfo.label, target: { kind: 'opening-width', openingId: po.op.id } });
         if (fw) frameMark(po.end - (rv?.right ?? 0) - fw);

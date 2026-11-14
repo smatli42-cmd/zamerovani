@@ -32,16 +32,20 @@ describe('dveře se zárubní', () => {
 });
 
 describe('okna s rámem', () => {
-  it('okno i francouzské okno mají rám 50 + 50, hloubku 50; otvor = okno + 2 × rám + ostění', () => {
+  it('okno i francouzské okno mají rám 50 + 50, hloubku 50; rám je UVNITŘ šířky okna: otvor = okno + ostění (rozhodnutí uživatele 2026-11-14)', () => {
     const f = createFloor('t');
     const w = createWall('a', 'b');
     const win = createOpening(f, w.id, 'window', { width: 1200 });
     expect(win.frame).toEqual({ width: 50, depth: 50 });
-    expect(openingSpan(win)).toBe(1300);
+    expect(openingSpan(win)).toBe(1200);
     win.reveal = { depth: 150, left: 100, right: 80, top: 0, inner: true, outer: true };
-    expect(openingSpan(win)).toBe(1480);
-    const fr = createOpening(f, w.id, 'french');
+    expect(openingSpan(win)).toBe(1380);
+    const fr = createOpening(f, w.id, 'french', { width: 1000 });
     expect(fr.frame).toEqual({ width: 50, depth: 50 });
+    expect(openingSpan(fr)).toBe(1000);
+    // zárubeň dveří se k šířce dveří dál přičítá
+    const door = createOpening(f, w.id, 'door', { width: 800 });
+    expect(openingSpan(door)).toBe(800 + 2 * (door.frame?.width ?? 0));
     expect(fr.sill).toBe(50);
   });
 

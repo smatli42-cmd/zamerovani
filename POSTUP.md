@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-14 (17) – šířka okna = otvor ve stěně, bez kót rámu
+- **Chyby od uživatele:** po zrušení zadávání šířky rámu zůstaly v kótě okna dělicí značky rámu a k šířce okna se rám dál přičítal (okno 1000 zabralo ve stěně 1100).
+- **Co se změnilo:** rám okna a francouzského okna (50 mm) leží UVNITŘ zadané šířky okna; šířka okna = otvor ve stěně mezi ostěními (`frameOutside` / `openingSpan` v `core/floorQueries.ts`). Řetězová kóta okna nemá značky rámu. Zárubeň dveří se nemění (přičítá se, má kótu). Křídlo francouzského okna se kreslí na světlost mezi rámy.
+- **Viditelně v aplikaci:** okno 1000 je ve stěně 1000 mm, kóta ukazuje jen odstup – šířku okna – odstup.
+- **Rozhodnuto samostatně:** bez migrace dat – zadané šířky oken zůstávají (to je číslo, které uživatel změřil), existující okna se ve výkresu zúží o 100 mm a o 100 mm se změní kóta na straně okna, od které se neměří (mezera k sousednímu otvoru / k protějšímu rohu) – **i když je zamčená** (zámek hlídá jen úpravy, ne změnu pravidla). Okno s rámem musí být široké aspoň 200 mm (světlost mezi rámy 100 mm).
+- **Otevřené:** vyzkoušet na tabletu.
+
 ### 2026-11-14 (16) – oprava: změna celkové kóty hlásila zamčenou kótu
 - **Chyby od uživatele:** u stěny s dveřmi, průchodem, nikou a dvěma okny těsně u sebe hlásila změna celkové kóty „brání zamčená kóta“ (mezi průchodem a nikou), místo aby se posunul konec stěny. Příčina: kontrola střetů po změně délky brala jako chybu i stav, který už ve výkresu byl (okna s rámy těsně u sebe / s malým překryvem), a hlášení pak ukázalo na zamčenou kótu.
 - **Co se změnilo:** Vadí jen NOVÝ střet (překryv otvorů ve všech dvojicích, vyjetí ze stěny, příčka v otvoru, výstupky) – porovnává se se stavem před úpravou. Hlášení říká skutečný důvod (zamčená kóta jen u prvků přivázaných k oběma koncům). Testy v `store/openingChain.test.ts` (29).

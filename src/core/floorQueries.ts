@@ -4,6 +4,7 @@
 import type { Floor, Id, Node, Opening, Wall } from '../model/types';
 import { arcGeometry, nearestOnArc, nearestOnCircle } from './arc';
 import { dist, unit } from './geometry';
+import { isWindowKind } from '../model/factory';
 import type { Pt } from '../model/types';
 
 export function wallNodes(floor: Floor, wall: Wall): [Node, Node] | null {
@@ -123,8 +124,17 @@ export interface PlacedOpening {
   end: number;
 }
 
-/** Celková šířka otvoru ve stěně: okno + ostění vlevo a vpravo. */
-export const openingSpan = (op: Opening): number => op.width + (op.frame ? op.frame.width * 2 : 0) + (op.reveal ? op.reveal.left + op.reveal.right : 0);
+/**
+ * Šířka zárubně, která se přičítá k šířce otvoru (jen dveře). Rám okna a francouzského okna leží UVNITŘ
+ * zadané šířky okna (šířka okna = otvor ve stěně mezi ostěními; rozhodnutí uživatele 2026-11-14).
+ */
+export const frameOutside = (op: Opening): number => (op.frame && !isWindowKind(op.kind) ? op.frame.width : 0);
+
+/** Nejmenší šířka otvoru: 100 mm, u okna s rámem navíc oba rámy (aby zbyla světlost aspoň 100 mm). */
+export const minOpeningWidth = (op: Opening): number => 100 + (op.frame && isWindowKind(op.kind) ? op.frame.width * 2 : 0);
+
+/** Celková šířka otvoru ve stěně: okno + (zárubeň dveří) + ostění vlevo a vpravo. */
+export const openingSpan = (op: Opening): number => op.width + frameOutside(op) * 2 + (op.reveal ? op.reveal.left + op.reveal.right : 0);
 
 export function openingStartFromA(op: Opening, wallLen: number): number {
   return op.ref === 'a' ? op.offset : wallLen - op.offset - openingSpan(op);

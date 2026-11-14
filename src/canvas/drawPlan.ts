@@ -411,7 +411,9 @@ function drawFramed(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, 
   const xFree = op.hinge === 'a' ? span - R - fw : L + fw;
   const hingePt = P(xHinge, yLeaf);
   const freePt = P(xFree, yLeaf);
-  const leafEnd = add(hingePt, scale(nrm, op.width * k));
+  // délka křídla = světlost mezi zárubní / rámem (u okna je rám uvnitř šířky okna)
+  const leafLen = Math.abs(xFree - xHinge);
+  const leafEnd = add(hingePt, scale(nrm, leafLen * k));
   ctx.lineWidth = 1.6;
   ctx.beginPath();
   ctx.moveTo(hingePt.x, hingePt.y);
@@ -424,7 +426,7 @@ function drawFramed(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, 
   while (diff < -Math.PI) diff += Math.PI * 2;
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.arc(hingePt.x, hingePt.y, op.width * k, a0, a1, diff < 0);
+  ctx.arc(hingePt.x, hingePt.y, leafLen * k, a0, a1, diff < 0);
   ctx.stroke();
   ctx.restore();
 }

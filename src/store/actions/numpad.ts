@@ -3,7 +3,7 @@
  */
 import type { Floor } from '../../model/types';
 import { arcChain, setChainSagitta } from '../../core/arcChain';
-import { openingStartFromA, openingsOnWall, wallLength } from '../../core/floorQueries';
+import { minOpeningWidth, openingStartFromA, openingsOnWall, wallLength } from '../../core/floorQueries';
 import { chainEdge, chainIndex, keepOpeningsOnResizedWalls, pushChainRight } from '../../core/openingChain';
 import { setComponentGap } from '../../core/components';
 import { dimKey, dimValue } from '../../core/dimLock';
@@ -106,7 +106,7 @@ export function applyNumpadValue(t: NumPadTarget, value: number, overrideLock = 
       }
     } else if (t.kind === 'opening-width') {
       const op = floor.openings[t.openingId];
-      if (!op || value < 100) return;
+      if (!op || value < minOpeningWidth(op)) return;
       const wall = floor.walls[op.wallId];
       const len = wall ? wallLength(floor, wall) : 0;
       const delta = Math.round(value) - op.width;
