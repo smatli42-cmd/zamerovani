@@ -9,14 +9,14 @@
  */
 import { requestRender } from '../canvas/invalidate';
 import { toScreen } from '../canvas/view';
-import { add, dist, dot, normal, scale, sub } from '../core/geometry';
+import { add, dist, dot, normal, scale, sub, unit } from '../core/geometry';
 import { dragParams, drawLinesFrom, linesNear, resolveDragPoint, type DragLine } from '../core/dragResolve';
-import { findWallNear } from '../core/floorQueries';
+import { canHostOnFace, findWallNear } from '../core/floorQueries';
 import { snapEnd, snapPoint, type SnapResult } from '../core/snapping';
 import { facePath, initialSideAt, sideFromPen, straightContinuation } from '../core/wallBody';
 import type { Floor, Pt, Wall } from '../model/types';
 import { addLine, addWall, lineChain } from '../store/actions';
-import { findFaceNear, profileFromPolyline, profileToWorld, takesProtrusion, wallFrame, worldToProfile, type FaceHit, type Frame } from '../core/protrusion';
+import { faceOffset, findFaceNear, profileFromPolyline, profileToWorld, takesProtrusion, wallFrame, worldToProfile, type FaceHit, type Frame } from '../core/protrusion';
 import { activeWallArcHeight, activeWallThickness } from '../model/factory';
 import { store, type Camera } from '../store/store';
 import { pickAny } from './pick';
@@ -46,7 +46,41 @@ const NEAR_PX = 60;
  */
 function guidedEnd(floor: Floor, d: Drawing, p: PointerInput): SnapResult {
   const r = guidedEndBase(floor, d, p);
-  return lineMode ? snapToFace(floor, r, p.world, d.guide?.line ?? null, d.start.pt) : r;
+  return lineMode ? snapToFace(floor, r, p.world, d.guide?.line ?? null, d.start.pt) : snapToHostFace(floor, r, p.world, d.guide?.line ?? null, d.start.pt);
+}
+
+/**
+ * Nástroj Stěna: konec (i začátek) u líce rovné stěny s tloušťkou – i protějšího, i u osy uprostřed – se přichytí
+ * přesně na líc a nová stěna se na něj napojí (`Node.hostFace`): začne na líci, její délka je viditelná délka.
+ * Roh a zvláštní bod mají přednost; napojení na čáru stěny jen, je-li pero blíž k ní než k líci.
+ * Na pomocné čáře / ve směru kreslení se bere průsečík s lícem.
+ */
+function snapToHostFace(floor: Floor, r: SnapResult, raw: Pt, line: DragLine | null, from: Pt | null): SnapResult {
+  const { settings, camera } = store.get();
+  if (!settings.snap || r.node || r.special) return r;
+  const tol = HIT_PX.snapNode / camera.zoom;
+  const ok = (h: FaceHit | null) => !!h && canHostOnFace(h.wall) && Math.abs(faceOffset(h.wall, h.side)) > 0.5;
+  let hit = line ? findFaceNear(floor, r.pt, tol) : null;
+  if (!ok(hit)) hit = findFaceNear(floor, raw, tol);
+  if (!hit || !ok(hit)) return r;
+  // napojení na čáru stěny, je-li pero blíž k ní
+  if (r.wallHit && dist(raw, r.wallHit.point) <= hit.distance) return r;
+  if (from) {
+    // začátek na téže stěně (líc i čára) → konec se na její líc nepřichytí (stěna by ležela v těle / v líci)
+    if (findFaceNear(floor, from, 1, hit.wall.id) || findWallNear(floor, from, 1)?.wall.id === hit.wall.id) return r;
+    // líc jen pro stěnu přicházející zvenku (ne přes tělo a osu – to by bylo křížení)
+    const fr = wallFrame(floor, hit.wall);
+    const v = fr ? worldToProfile(fr, hit.wall, hit.side, from).v : 0;
+    if (v <= 0) return r;
+  }
+  let pt = hit.point;
+  const f = wallFrame(floor, hit.wall);
+  const dirLine: DragLine | null = line ?? (from && dist(from, raw) > 1 ? { id: 'draw', origin: from, dir: unit(from, raw), weight: 1 } : null);
+  if (f && dirLine) {
+    const x = lineFaceCrossing(f, hit, dirLine, line ? r.pt : raw, tol) ?? lineFaceCrossing(f, hit, dirLine, raw, tol);
+    if (x) pt = x;
+  }
+  return { pt, node: null, wallHit: null, guides: [], special: true };
 }
 
 /**
@@ -177,7 +211,7 @@ let lineMode = false;
 /** Začátek: u nástroje Čára i líc stěny. */
 function startSnap(floor: Floor, raw: Pt): SnapResult {
   const s = snapPoint(floor, raw, snapOptions());
-  return lineMode ? snapToFace(floor, s, raw, null, null) : s;
+  return lineMode ? snapToFace(floor, s, raw, null, null) : snapToHostFace(floor, s, raw, null, null);
 }
 
 /**

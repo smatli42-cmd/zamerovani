@@ -231,7 +231,11 @@ export function setWallNoJoin(wallId: Id, end: 'a' | 'b', noJoin: boolean): void
         const id = newId('n');
         floor.nodes[id] = { id, x: node.x, y: node.y };
         setNode(id);
-      } else delete node.host; // konec napojený doprostřed stěny (T bez dělení) se od ní odpojí
+      } else {
+        // konec napojený doprostřed stěny (T bez dělení) se od ní odpojí
+        delete node.host;
+        delete node.hostFace;
+      }
       setFlag(true);
     } else {
       setFlag(false);

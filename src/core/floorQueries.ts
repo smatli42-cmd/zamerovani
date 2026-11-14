@@ -187,6 +187,37 @@ export function nextWallInChain(floor: Floor, wallId: Id, fromNodeId: Id): { wal
   return { wall: w, nodeId: otherEnd(w, fromNodeId) };
 }
 
+/** Může mít stěna roh napojený na líc (rovná stěna s tloušťkou, ne oblouk / kruh)? */
+export const canHostOnFace = (w: Wall | undefined): w is Wall =>
+  !!w && w.thickness > 0 && w.radius === undefined && !w.sagitta && w.a !== w.b;
+
+/**
+ * Posun líce `side` od osy stěny podél normal(a→b) (stejně jako `faceOffset` v core/protrusion.ts – tady
+ * bez importu wallBody kvůli kruhovému importu): líc stěny side 1 = [0, t], side −1 = [−t, 0], osa uprostřed ±t/2.
+ */
+export function wallFaceOffset(w: Wall, side: 1 | -1): number {
+  const t = w.thickness;
+  const [r0, r1] = w.axis === 'center' ? [-t / 2, t / 2] : w.side === 1 ? [0, t] : [-t, 0];
+  return side === 1 ? r1 : r0;
+}
+
+/** Posun napojeného rohu od osy průběžné stěny podél normal(a→b) (0 = roh na ose / čáře stěny). */
+export function hostOffset(floor: Floor, node: Node): number {
+  const h = node.host ? floor.walls[node.host] : undefined;
+  return node.hostFace && canHostOnFace(h) ? wallFaceOffset(h, node.hostFace) : 0;
+}
+
+/** Bod na ose průběžné stěny proti napojenému rohu (u rohu na ose = roh sám). */
+export function hostAxisPoint(floor: Floor, node: Node): Pt {
+  const off = hostOffset(floor, node);
+  const h = off ? floor.walls[node.host!] : undefined;
+  const a = h && floor.nodes[h.a];
+  const b = h && floor.nodes[h.b];
+  if (!off || !a || !b || dist(a, b) < 1e-9) return node;
+  const u = unit(a, b);
+  return { x: node.x + u.y * off, y: node.y - u.x * off };
+}
+
 /** Napojené rohy na stěně seřazené od konce a, s polohou t (u oblouku podél oblouku). */
 export function hostedOn(floor: Floor, wallId: Id): { id: Id; t: number }[] {
   const w = floor.walls[wallId];
@@ -314,7 +345,8 @@ export function junctionPoints(floor: Floor, crossings?: Crossing[]): Junction[]
     }
     if (!j.walls.includes(wallId)) j.walls.push(wallId);
   };
-  for (const n of Object.values(floor.nodes)) if (n.host) addJ(n.id, n, n.host);
+  // roh na líci průběžné stěny: spoj těl se počítá v bodě na její ose (napojená stěna se zastaví na líci jako u T)
+  for (const n of Object.values(floor.nodes)) if (n.host) addJ(n.id, hostAxisPoint(floor, n), n.host);
   for (const c of crossings ?? wallCrossings(floor)) for (const w of c.walls) addJ(c.id, c.pt, w);
   if (useCache) junctionCache.set(floor, out);
   return out;

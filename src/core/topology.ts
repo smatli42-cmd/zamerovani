@@ -163,6 +163,8 @@ export function mergeStraightAt(floor: Floor, wallId: Id, nodeId: Id, throughT =
   } else moveProtrusions(floor, w.id, o.id, u => oldLen + fromNode(u), w.b === nodeId);
   // vzdálený konec nové části se stává koncem sloučené stěny – přenese se i jeho příznak
   const wFarNoJoin = w.a === nodeId ? w.noJoinB : w.noJoinA;
+  // směr slučované části vůči sloučené stěně (rohy na líci části w: strana líce se počítá podél a→b)
+  const wSameDir = (o.b === nodeId && w.a === nodeId) || (o.a === nodeId && w.b === nodeId);
   if (o.a === nodeId) {
     o.a = wFarId;
     if (wFarNoJoin) o.noJoinA = true;
@@ -174,8 +176,15 @@ export function mergeStraightAt(floor: Floor, wallId: Id, nodeId: Id, throughT =
   }
   delete floor.walls[w.id];
   // rohy napojené na slučovanou část teď leží na sloučené stěně; přes T zůstává roh napojený
-  for (const n of Object.values(floor.nodes)) if (n.host === w.id) n.host = o.id;
-  if (throughT && Object.values(floor.walls).some(x => x.a === nodeId || x.b === nodeId)) node.host = o.id;
+  for (const n of Object.values(floor.nodes)) {
+    if (n.host !== w.id) continue;
+    n.host = o.id;
+    if (n.hostFace && !wSameDir) n.hostFace = n.hostFace === 1 ? -1 : 1;
+  }
+  if (throughT && Object.values(floor.walls).some(x => x.a === nodeId || x.b === nodeId)) {
+    node.host = o.id;
+    delete node.hostFace; // roh v místě sloučení leží na ose
+  }
   const newLen = oldLen + added;
   for (const { op, start } of starts) {
     const s = Math.max(0, Math.round(start));
@@ -231,8 +240,15 @@ export function mergeArcAt(floor: Floor, nodeId: Id): boolean {
       if (farNoJoin2) w1.noJoinB = true;
       else delete w1.noJoinB;
       delete floor.walls[w2.id];
-      for (const x of Object.values(floor.nodes)) if (x.host === w2.id) x.host = w1.id;
-      if (Object.values(floor.walls).some(x => x.a === nodeId || x.b === nodeId)) node.host = w1.id;
+      // oblouk nenese rohy na líci (Node.hostFace jen u rovné stěny) – napojení na oblouk je vždy na ose
+      for (const x of Object.values(floor.nodes)) if (x.host === w2.id) {
+        x.host = w1.id;
+        delete x.hostFace;
+      }
+      if (Object.values(floor.walls).some(x => x.a === nodeId || x.b === nodeId)) {
+        node.host = w1.id;
+        delete node.hostFace;
+      }
       return true;
     }
   }

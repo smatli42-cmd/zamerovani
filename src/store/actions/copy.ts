@@ -88,7 +88,12 @@ export function duplicateSelection(): void {
     for (const [oldId, nid] of nodeMap) {
       const host = floor.nodes[oldId]?.host;
       const newHost = host && wallMap.get(host);
-      if (newHost && floor.nodes[nid]) floor.nodes[nid]!.host = newHost;
+      if (newHost && floor.nodes[nid]) {
+        floor.nodes[nid]!.host = newHost;
+        // roh na líci průběžné stěny zůstane na stejném líci (kopie stěny má stejný směr a→b)
+        const face = floor.nodes[oldId]?.hostFace;
+        if (face) floor.nodes[nid]!.hostFace = face;
+      }
     }
     // otvory se kopírují se svou stěnou (nebo samostatně vybrané otvory se stěnou, která se kopíruje)
     for (const op of Object.values(floor.openings)) {

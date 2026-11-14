@@ -134,7 +134,10 @@ export function trimExtendToCorner(floor: Floor, w1: Id, keep1: Pt, w2: Id, keep
   }
   // roh v X je roh obou stěn – napojení doprostřed jedné z nich se zruší (napojení na třetí stěnu zůstane)
   const corner = floor.nodes[cornerId]!;
-  if (corner.host === w1 || corner.host === w2) delete corner.host;
+  if (corner.host === w1 || corner.host === w2) {
+    delete corner.host;
+    delete corner.hostFace;
+  }
   // rohy, které po zkrácení nenese žádná stěna, zmizí
   const used = new Set(Object.values(floor.walls).flatMap(w => [w.a, w.b]));
   for (const id of Object.keys(floor.nodes)) if (!used.has(id)) delete floor.nodes[id];

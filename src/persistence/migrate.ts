@@ -24,6 +24,7 @@ export function migrateProject(raw: unknown): Project {
   // 9 → 10: výstupky a vybrání stěn (floor.protrusions); 10 → 11: oblouk v obrysu výstupku (ProfilePt.s) – bez převodu
   // 11 → 12: ostění vnitřní / vnější zvlášť (Reveal.inner / outer); dřívější „s ostěním“ = obě strany (stejná kresba)
   // 12 → 13: rám okna má pevnou šířku 50 mm (dřívější vlastní šířka rámu se přepíše)
+  // 13 → 14: roh napojený na líc průběžné stěny (Node.hostFace) – nepovinné pole, bez převodu
   const old = p.schema ?? 1;
   const floors = p.floors.map(f => {
     const j = joinSemicircles(convertShapesToWalls(f));

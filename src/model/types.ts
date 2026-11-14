@@ -10,7 +10,7 @@
 
 import type { DimTarget } from '../core/dimLock';
 
-export const SCHEMA_VERSION = 13;
+export const SCHEMA_VERSION = 14;
 
 export type Id = string;
 
@@ -27,6 +27,12 @@ export interface Node extends Pt {
    * napojená stěna ji sleduje při posunu (core/hosting.ts). Chybí = obyčejný roh.
    */
   host?: Id;
+  /**
+   * Roh napojený na LÍC průběžné stěny (ne na její osu): strana líce podél normal(a→b) průběžné stěny
+   * (1 / −1, poloha = `faceOffset`). Jen u rovné průběžné stěny s tloušťkou; chybí = roh na ose (čáře) stěny.
+   * Napojená stěna pak začíná na líci (její délka je viditelná délka), tělo se napojí jako u T na osu.
+   */
+  hostFace?: 1 | -1;
 }
 
 export type WallType = 'obvodova' | 'nosna' | 'pricka' | 'sdk' | 'neovereno';

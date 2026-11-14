@@ -7,6 +7,12 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-14 (18) – přichytávání nové stěny k oběma lícům jiné stěny
+- **Co se změnilo:** Nástroj Stěna přichytí začátek i konec nové stěny nejen na čáru jiné stěny, ale i na její **protější (vnější) líc** a u osy uprostřed na oba líce. Nová stěna se na líc napojí (T bez dělení), roh leží přímo na líci (`Node.hostFace`, schéma 14) – délka nové stěny je viditelná délka od líce. Roh drží na líci i při změně tloušťky, strany, osy a posunu průběžné stěny. Testy `store/hostFace.test.ts`, `tools/wallTool.draw.test.ts`.
+- **Viditelně v aplikaci:** stěnu jde začít / ukončit ťuknutím na šedý vnější okraj jiné stěny; napojí se čistě bez čáry mezi stěnami.
+- **Rozhodnuto samostatně:** jen rovné stěny (oblouk zatím ne); čára stěny má přednost, když je pero blíž k ní; po přehození strany průběžné stěny zůstane roh na líci na své straně (může to být čára stěny) – napojená stěna se prodlouží / zkrátí, vzdálený konec zůstane. Na líc se napojí jen stěna vedoucí od líce ven (stěna přes tělo a osu je křížení); konec stěny začaté na téže stěně se na její líc nepřichytí. Po kontrole revieweru opraveno: kopie zachová napojení na líc, odpojení a slučování stěn mažou / otáčejí stranu líce.
+- **Otevřené:** vyzkoušet na tabletu (v náhledu na PC se tažení myší nepodařilo nasimulovat – ověřeno testy).
+
 ### 2026-11-14 (17) – šířka okna = otvor ve stěně, bez kót rámu
 - **Chyby od uživatele:** po zrušení zadávání šířky rámu zůstaly v kótě okna dělicí značky rámu a k šířce okna se rám dál přičítal (okno 1000 zabralo ve stěně 1100).
 - **Co se změnilo:** rám okna a francouzského okna (50 mm) leží UVNITŘ zadané šířky okna; šířka okna = otvor ve stěně mezi ostěními (`frameOutside` / `openingSpan` v `core/floorQueries.ts`). Řetězová kóta okna nemá značky rámu. Zárubeň dveří se nemění (přičítá se, má kótu). Křídlo francouzského okna se kreslí na světlost mezi rámy.
@@ -271,7 +277,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 **Hotové navíc (2026-11-14):** D3 – nástroj „Do rohu“ (viz Deník změn (9)); **zámek kót** místo „změřeno × náčrt“ (Deník (10), KOTY-ZAMEK-EXPORT.md) a řetěz otvorů se zámky (Deník (11)–(16)). Vše čeká na vyzkoušení. Testy 338 + 1 `it.fails`.
 
 **Fronta kroků:**
-1. **Přichytávání k oběma lícům stěny** u nástroje Stěna – zároveň poloha napojeného rohu mimo osu.
+1. ~~Přichytávání k oběma lícům stěny~~ – hotovo 2026-11-14 (18); zbývá líc oblouku.
 2. **Výstupek při přehození strany stěny** (rozhodnout, zda zůstává na svém líci).
 3. **F4** (otvory při dělení stěny), **C1.11** (hrana odskoku, test C2/6 `it.fails`).
 4. Z auditu: F7, D4, A2 / A10 / B6; výstupek přes roh / kopie v řadě (I1.11).

@@ -77,3 +77,53 @@ describe('kreslení – nálezy revieweru', () => {
     expect(f.nodes[w.b]!.host).toBe(S);
   });
 });
+
+describe('přichytávání k oběma lícům stěny (nástroj Stěna)', () => {
+  // průběžná stěna A: osa y = 0, tělo y ∈ [0, 300] → vnější líc y = 300
+  const hostWall = () => addWall({ x: 0, y: 0 }, null, { x: 4000, y: 0 }, null, false, { thickness: 300, side: 1 })!;
+
+  it('začátek u vnějšího líce se přichytí na líc a napojí (roh mimo osu)', () => {
+    open();
+    const A = hostWall();
+    draw([[2000, 330], [2000, 1300], [2000, 2300]]);
+    const { a, b, w } = lastWall();
+    expect(a).toMatchObject({ x: 2000, y: 300, host: A, hostFace: 1 });
+    expect(b).toMatchObject({ x: 2000, y: 2300 });
+    expect(Object.keys(store.floor()!.walls)).toHaveLength(2);
+    expect(w.id).not.toBe(A);
+  });
+
+  it('konec u vnějšího líce se přichytí přesně na líc ve směru kreslení', () => {
+    open();
+    const A = hostWall();
+    draw([[1000, 2300], [1000, 1000], [1000, 340]]);
+    const { b } = lastWall();
+    expect(b).toMatchObject({ x: 1000, y: 300, host: A, hostFace: 1 });
+  });
+
+  it('u čáry stěny (osy) se dál napojí na ni', () => {
+    open();
+    const A = hostWall();
+    draw([[1000, -2000], [1000, -1000], [1000, -20]]);
+    const { b } = lastWall();
+    expect(b).toMatchObject({ x: 1000, y: 0, host: A });
+    expect(b.hostFace).toBeUndefined();
+  });
+
+  it('stěna začatá na čáře stěny nekončí na jejím protějším líci (neleží v těle)', () => {
+    open();
+    hostWall();
+    draw([[1000, 0], [1000, 150], [1000, 320]]);
+    const { b } = lastWall();
+    expect(b.hostFace).toBeUndefined();
+  });
+
+  it('konec přicházející přes tělo (z druhé strany) se na vnější líc nepřichytí', () => {
+    open();
+    hostWall();
+    draw([[3000, -1000], [3000, 0], [3000, 320]]);
+    const { b } = lastWall();
+    expect(b.hostFace).toBeUndefined();
+  });
+});
+
