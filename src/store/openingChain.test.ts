@@ -204,7 +204,7 @@ describe('řetězová kóta otvorů se zámky', () => {
     expect(f().nodes[f().walls[w]!.a]).toMatchObject({ x: 0, y: 0 });
   });
 
-  it('bez zámků se otvor měřený od posunutého rohu posune s ním (jako dřív)', () => {
+  it('i bez zámků zůstane otvor měřený od posunutého rohu na místě (rozhodnutí uživatele)', () => {
     const { w, ids } = setup(false);
     store.edit(fl => {
       const op = fl.openings[ids[2]!]!;
@@ -212,10 +212,10 @@ describe('řetězová kóta otvorů se zámky', () => {
       op.offset = 1280;
     });
     expect(applyNumpadValue({ kind: 'wall-length', wallId: w, move: { nodeId: f().walls[w]!.b } }, 7500)).toBe(true);
-    expect(chain(w)).toEqual([1050, 1200, 730, 900, 1540, 800, 1280]);
+    expect(chain(w)).toEqual([1050, 1200, 730, 900, 1040, 800, 1780]);
   });
 
-  it('volný konec je u rohu A: stěna se protáhne tam; otvory měřené od A drží odstup (jedou s ním), zámek mezi nimi drží', () => {
+  it('volný konec je u rohu A: stěna se protáhne tam, otvory zůstanou ve výkresu, první kóta se přepíše', () => {
     store.openProject(createProject({ name: 't' }));
     addWall({ x: 7000, y: 0 }, null, { x: 7000, y: 3000 }, null, false, { thickness: 300 });
     const w = addWall({ x: 0, y: 0 }, null, { x: 7000, y: 0 }, null, false, { thickness: 300 })!;
@@ -236,7 +236,7 @@ describe('řetězová kóta otvorů se zámky', () => {
     pressKey('ENTER');
     expect(Math.round(wallLength(f(), f().walls[w]!))).toBe(7500);
     expect(f().nodes[f().walls[w]!.b]!.x).toBe(x0);
-    expect(chain(w)).toEqual([1000, 900, 600, 900, 4100]);
+    expect(chain(w)).toEqual([1500, 900, 600, 900, 3600]);
   });
 
   it('otvory přivázané zámky k oběma koncům: změna délky se neprovede', () => {
@@ -259,5 +259,40 @@ describe('řetězová kóta otvorů se zámky', () => {
     expect(Math.round(wallLength(f(), f().walls[w1]!))).toBe(3500);
     const t = store.get().numpad?.target;
     expect(t?.kind === 'wall-length' && t.wallId).toBe(w2);
+  });
+
+  it('zkrácení stěny pod otvor: neprovede se, lišta řekne proč', () => {
+    const { w } = setup(false);
+    const snap = f();
+    expect(applyNumpadValue({ kind: 'wall-length', wallId: w, move: { nodeId: f().walls[w]!.b } }, 5000)).toBe(false);
+    expect(f()).toBe(snap);
+    expect(store.get().lockBlock?.text).toContain('vyjel');
+  });
+
+  it('místnost: otvor na protější stěně zůstane na místě, když ji řešič prodlouží', () => {
+    store.openProject(createProject({ name: 't' }));
+    const bottom = addWall({ x: 0, y: 0 }, null, { x: 4000, y: 0 }, null, false, { thickness: 300 })!;
+    addWall({ x: 4000, y: 0 }, null, { x: 4000, y: -3000 }, null, false, { thickness: 300 });
+    const top = addWall({ x: 4000, y: -3000 }, null, { x: 0, y: -3000 }, null, false, { thickness: 300 })!;
+    addWall({ x: 0, y: -3000 }, null, { x: 0, y: 0 }, null, false, { thickness: 300 });
+    let id = '';
+    store.edit(fl => {
+      // horní stěna vede z (4000, -3000) do (0, -3000): otvor měřený od jejího rohu A (vpravo)
+      const op = createOpening(fl, top, 'window', { offset: 1000, ref: 'a', width: 1000 });
+      fl.openings[op.id] = op;
+      id = op.id;
+    });
+    const x = () => {
+      const w = f().walls[top]!;
+      const a = f().nodes[w.a]!;
+      const b = f().nodes[w.b]!;
+      const len = Math.hypot(b.x - a.x, b.y - a.y);
+      const s = f().openings[id]!.ref === 'a' ? f().openings[id]!.offset : len - f().openings[id]!.offset - 1100;
+      return Math.round(a.x + ((b.x - a.x) / len) * s);
+    };
+    const x0 = x();
+    expect(applyNumpadValue({ kind: 'wall-length', wallId: bottom, move: { nodeId: f().walls[bottom]!.b } }, 4500)).toBe(true);
+    expect(Math.round(wallLength(f(), f().walls[top]!))).toBe(4500);
+    expect(x()).toBe(x0);
   });
 });

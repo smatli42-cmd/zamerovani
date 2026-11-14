@@ -136,3 +136,30 @@ export function keepOpeningsAfterResize(before: Floor, floor: Floor, wallId: Id)
     .sort((x, y) => x.s - y.s);
   return spans.every((x, i) => x.s > -0.5 && x.e < newLen + 0.5 && (i === 0 || x.s > spans[i - 1]!.e - 0.5));
 }
+
+/**
+ * Pravidlo „otvory zůstanou na místě“ pro všechny rovné stěny, kterým úprava změnila délku posunem konce
+ * podél stěny (upravovaná stěna, protější stěna místnosti posunutá řešičem, navazující stěna). Stěny jen
+ * posunuté (stejná délka) nebo natočené se nechají – otvory jedou s nimi. Vrací false, když to u některé nejde.
+ */
+export function keepOpeningsOnResizedWalls(before: Floor, floor: Floor): boolean {
+  for (const w1 of Object.values(floor.walls)) {
+    const w0 = before.walls[w1.id];
+    if (!w0 || w0.sagitta || w1.sagitta || w0.radius !== undefined) continue;
+    if (!Object.values(before.openings).some(o => o.wallId === w0.id)) continue;
+    const a0 = before.nodes[w0.a];
+    const b0 = before.nodes[w0.b];
+    const a1 = floor.nodes[w1.a];
+    const b1 = floor.nodes[w1.b];
+    if (!a0 || !b0 || !a1 || !b1 || w0.a !== w1.a || w0.b !== w1.b) continue;
+    const len0 = Math.hypot(b0.x - a0.x, b0.y - a0.y);
+    const len1 = Math.hypot(b1.x - a1.x, b1.y - a1.y);
+    if (Math.abs(len1 - len0) < 0.5) continue;
+    // konce se posunuly jen podél stěny (bez natočení)
+    const d = unit(a0, b0);
+    const perp = (p: { x: number; y: number }, q: { x: number; y: number }) => Math.abs((q.x - p.x) * d.y - (q.y - p.y) * d.x);
+    if (perp(a0, a1) > 0.5 || perp(b0, b1) > 0.5) continue;
+    if (!keepOpeningsAfterResize(before, floor, w1.id)) return false;
+  }
+  return true;
+}

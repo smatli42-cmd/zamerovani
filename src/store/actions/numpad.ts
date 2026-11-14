@@ -4,7 +4,7 @@
 import type { Floor } from '../../model/types';
 import { arcChain, setChainSagitta } from '../../core/arcChain';
 import { openingStartFromA, openingsOnWall, wallLength } from '../../core/floorQueries';
-import { chainEdge, chainIndex, pushChainRight } from '../../core/openingChain';
+import { chainEdge, chainIndex, keepOpeningsOnResizedWalls, pushChainRight } from '../../core/openingChain';
 import { setComponentGap } from '../../core/components';
 import { dimKey, dimValue } from '../../core/dimLock';
 import { store, type NumPadTarget } from '../store';
@@ -76,6 +76,12 @@ export function applyNumpadValue(t: NumPadTarget, value: number, overrideLock = 
     if (t.kind === 'field') return;
     if (t.kind === 'wall-face-length') {
       ok = setFaceLength(floor, t.wallId, t.face, value);
+      // otvory zůstanou ve výkresu na místě (jako u celkové délky stěny)
+      const before = store.floor();
+      if (ok && before && !keepOpeningsOnResizedWalls(before, floor)) {
+        ok = false;
+        chainFail = true;
+      }
     } else if (t.kind === 'opening-offset') {
       const op = floor.openings[t.openingId];
       const wall = op && floor.walls[op.wallId];
