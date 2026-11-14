@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-14 (15) – pravidlo „prvky nesené stěnou zůstanou na místě“ pro všechny prvky
+- **Co se změnilo:** Ověřeno, že průchod a nika (druhy otvorů) zůstávají při změně délky stěny na místě; doplněny napojené příčky (T): zůstanou na místě, se zamčenou polohou napojení jedou s koncem stěny (řetěz zámků, `keepOpeningsAfterResize`). Pravidlo zapsáno jako závazné do `CLAUDE.md`, `KOTY-ZAMEK-EXPORT.md` a do hlavičky `core/openingChain.ts` – platí i pro budoucí druhy prvků na stěně. Testy v `store/openingChain.test.ts` (27).
+- **Viditelně v aplikaci:** příčka napojená na stěnu se zamčenou kótou polohy jede při změně délky stěny s jejím koncem; jinak zůstane na místě.
+- **Rozhodnuto uživatelem:** platí úplně pro všechny prvky, které stěna nese, i pro budoucí.
+- **Rozhodnuto samostatně:** zkrácení stěny za napojenou příčku se neprovede s hlášením (dřív se příčka potichu odpojila); příčka přivázaná zámky nesmí dosednout do otvoru; pravidlo zatím jen pro rovné stěny (oblouk, kruh ne). Napojené příčky nejsou v katalogu I1.6 – navrhnout uživateli doplnění katalogu.
+- **Otevřené:** vyzkoušet na tabletu.
+
 ### 2026-11-14 (14) – výstupky při změně délky stěny jako otvory (rozhodnutí uživatele)
 - **Co se změnilo:** Při změně délky stěny kótou / NumPadem zůstanou ve výkresu na místě i výstupky; s koncem stěny jedou jen ty, které jsou k němu přivázané zamčeným odstupem od konce a dál zamčenými odstupy mezi sousedy na stejném líci (řetěz jako u otvorů). Překryv výstupků nebo vyjetí ze stěny → nic se nezmění, hlášení. Katalog I1.6 doplněn o upřesnění uživatele (tažení beze změny). Testy v `store/openingChain.test.ts` (24).
 - **Viditelně v aplikaci:** zadání délky stěny už neposouvá přizdívky / pilastry měřené od posunutého rohu.
@@ -248,7 +255,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Čeká na vyzkoušení uživatelem (tablet):** všech 7 úprav – podrobnosti v Deníku změn 2026-11-14 (1–8). Zvlášť Nevypínat displej (jen přes https, tedy na GitHub Pages).
 
-**Hotové navíc (2026-11-14):** D3 – nástroj „Do rohu“ (viz Deník změn (9)); **zámek kót** místo „změřeno × náčrt“ (Deník (10), KOTY-ZAMEK-EXPORT.md) a řetěz otvorů se zámky (Deník (11)–(14)). Vše čeká na vyzkoušení. Testy 333 + 1 `it.fails`.
+**Hotové navíc (2026-11-14):** D3 – nástroj „Do rohu“ (viz Deník změn (9)); **zámek kót** místo „změřeno × náčrt“ (Deník (10), KOTY-ZAMEK-EXPORT.md) a řetěz otvorů se zámky (Deník (11)–(15)). Vše čeká na vyzkoušení. Testy 336 + 1 `it.fails`.
 
 **Fronta kroků:**
 1. **Přichytávání k oběma lícům stěny** u nástroje Stěna – zároveň poloha napojeného rohu mimo osu.

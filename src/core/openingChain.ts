@@ -7,12 +7,17 @@
  * - první nezamčený úsek napravo změnu „spolkne“ (přepíše se na novou délku);
  * - když nezamčený úsek napravo není (nebo se mění poslední úsek k rohu B), posune se roh B – stěna se
  *   prodlouží / zkrátí a otvory zůstanou ve výkresu na místě.
+ *
+ * ZÁVAZNÉ PRAVIDLO (uživatel 2026-11-14, CLAUDE.md): při změně délky stěny kótou / NumPadem zůstanou VŠECHNY
+ * prvky nesené stěnou na místě (otvory všech druhů, výstupky, napojené příčky). Nový druh prvku na stěně
+ * musí přibýt do `keepOpeningsAfterResize` i s testem.
  */
 import type { Floor, Id, Opening } from '../model/types';
 import { openingSpan, openingStartFromA, openingsOnWall, wallLength } from './floorQueries';
 import { setWallLength } from './solver';
 import { dot, sub, unit } from './geometry';
 import { protrusionExtent, protrusionFits } from './protrusion';
+import { hostedChain, shiftHosted } from './hosting';
 
 const locked = (floor: Floor, key: string) => !!floor.dimLocks?.[key];
 
@@ -156,6 +161,31 @@ export function keepOpeningsAfterResize(before: Floor, floor: Floor, wallId: Id)
     const du = -shiftA + (toA ? shiftA : 0) + (toB ? shiftB : 0);
     p.pts = p0.pts.map(q => ({ ...q, u: Math.round((q.u + du) * 10) / 10 }));
   }
+  // napojené rohy příček (T) stejně: na místě, s koncem jedou ty přivázané zamčenými polohami napojení
+  const chain0 = hostedChain(before, wallId);
+  const m = chain0.length;
+  const jTiedA = new Set<number>();
+  for (let i = 0; i < m && lk(`junction-gap:${wallId}:${chain0[i]!.nodeId}:prev`); i++) jTiedA.add(i);
+  const jTiedB = new Set<number>();
+  if (m && lk(`junction-gap:${wallId}:${chain0[m - 1]!.nodeId}:next`)) {
+    jTiedB.add(m - 1);
+    for (let i = m - 2; i >= 0 && lk(`junction-gap:${wallId}:${chain0[i + 1]!.nodeId}:prev`); i--) jTiedB.add(i);
+  }
+  if ([...jTiedA].some(i => jTiedB.has(i)) && Math.abs(shiftA - shiftB) > 0.5) return false;
+  for (let i = 0; i < m; i++) {
+    if (!jTiedA.has(i) && !jTiedB.has(i)) continue; // nepřivázaný roh zůstal ve výkresu na místě
+    const want = chain0[i]!.at - shiftA + (jTiedA.has(i) ? shiftA : 0) + (jTiedB.has(i) ? shiftB : 0);
+    const cur = hostedChain(floor, wallId).find(c => c.nodeId === chain0[i]!.nodeId);
+    if (!cur) return false;
+    shiftHosted(floor, chain0[i]!.nodeId, want - cur.at);
+  }
+  // napojení zůstanou na stěně a příčka nedosedne do otvoru (jako setHostedGap)
+  const ops1 = openingsOnWall(floor, floor.walls[wallId]!);
+  for (const c of hostedChain(floor, wallId)) {
+    if (c.at < 1 || c.at > newLen - 1) return false;
+    const half = Math.max(0, ...Object.values(floor.walls).filter(x => x.id !== wallId && (x.a === c.nodeId || x.b === c.nodeId)).map(x => x.thickness / 2));
+    if (ops1.some(po => c.at + half > po.start + 0.5 && c.at - half < po.end - 0.5)) return false;
+  }
   // výstupky musí zůstat na stěně a nesmí se překrýt se sousedem
   for (const p0 of prots) if (floor.protrusions?.[p0.id] && !protrusionFits(floor, floor.protrusions[p0.id]!)) return false;
   // otvory musí zůstat na stěně a nesmí se překrýt
@@ -177,7 +207,9 @@ export function keepOpeningsOnResizedWalls(before: Floor, floor: Floor): boolean
   for (const w1 of Object.values(floor.walls)) {
     const w0 = before.walls[w1.id];
     if (!w0 || w0.sagitta || w1.sagitta || w0.radius !== undefined) continue;
-    if (!Object.values(before.openings).some(o => o.wallId === w0.id) && !Object.values(before.protrusions ?? {}).some(p => p.wallId === w0.id)) continue;
+    // stěna nese otvory, výstupky nebo napojené příčky (prvky „hostované“ stěnou)
+    const hosts = Object.values(before.openings).some(o => o.wallId === w0.id) || Object.values(before.protrusions ?? {}).some(p => p.wallId === w0.id) || hostedChain(before, w0.id).length > 0;
+    if (!hosts) continue;
     const a0 = before.nodes[w0.a];
     const b0 = before.nodes[w0.b];
     const a1 = floor.nodes[w1.a];

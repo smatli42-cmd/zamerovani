@@ -148,7 +148,7 @@ export function hostedChain(floor: Floor, wallId: Id): { nodeId: Id; at: number 
  * Posune napojení podél průběžné stěny o `delta` mm: roh i napojená stěna se posunou rovnoběžně (vzdálený konec,
  * který je volný nebo napojený na jinou stěnu, jde s nimi; konec v rohu dalších stěn zůstane – stěna se natočí).
  */
-function shiftHosted(floor: Floor, nodeId: Id, delta: number): void {
+export function shiftHosted(floor: Floor, nodeId: Id, delta: number): void {
   const node = floor.nodes[nodeId];
   const h = node?.host ? floor.walls[node.host] : undefined;
   const a = h && floor.nodes[h.a];

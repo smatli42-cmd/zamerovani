@@ -349,4 +349,61 @@ describe('řetězová kóta otvorů se zámky', () => {
     expect(applyNumpadValue({ kind: 'wall-length', wallId: w, move: { nodeId: f().walls[w]!.b } }, 5600)).toBe(true);
     expect(Math.min(...f().protrusions!.p1!.pts.map(q => q.u))).toBe(4600);
   });
+
+  it('všechny prvky nesené stěnou: průchod, nika i napojená příčka zůstanou na místě; zamčená poloha příčky ji veze s koncem', () => {
+    store.openProject(createProject({ name: 't' }));
+    const w = addWall({ x: 0, y: 0 }, null, { x: 6000, y: 0 }, null, false, { thickness: 300 })!;
+    const p = addWall({ x: 4000, y: 0 }, null, { x: 4000, y: -2000 }, null, false, { thickness: 100 })!;
+    store.edit(fl => {
+      for (const [k, o] of [['opening', 1000], ['niche', 3000]] as const) {
+        const op = createOpening(fl, w, k, { offset: o, ref: 'b', width: 800 });
+        fl.openings[op.id] = op;
+      }
+    });
+    const xs = () => openingsOnWall(f(), f().walls[w]!).map(x => Math.round(f().nodes[f().walls[w]!.a]!.x + x.start));
+    const jx = () => f().nodes[f().walls[p]!.a]!.x;
+    const before = xs();
+    const moveA = (len: number) => applyNumpadValue({ kind: 'wall-length', wallId: w, move: { nodeId: f().walls[w]!.a } }, len);
+    expect(moveA(7000)).toBe(true);
+    expect(xs()).toEqual(before);
+    expect(jx()).toBe(4000);
+    // zamčená poloha napojení od rohu A → příčka jede s rohem A (i s druhým koncem)
+    const j = f().walls[p]!.a;
+    setDimLock({ kind: 'junction-gap', wallId: w, nodeId: j, to: 'prev' }, true);
+    expect(moveA(7500)).toBe(true);
+    expect(jx()).toBe(3500);
+    expect(f().nodes[f().walls[p]!.b]!.x).toBe(3500);
+    expect(xs()).toEqual(before);
+  });
+
+  it('napojené příčky: přivázání k rohu B, k oběma koncům = odmítnutí, zkrácení přes příčku = odmítnutí', () => {
+    store.openProject(createProject({ name: 't' }));
+    const w = addWall({ x: 0, y: 0 }, null, { x: 6000, y: 0 }, null, false, { thickness: 300 })!;
+    const p1 = addWall({ x: 2000, y: 0 }, null, { x: 2000, y: -2000 }, null, false, { thickness: 100 })!;
+    const p2 = addWall({ x: 4000, y: 0 }, null, { x: 4000, y: -2000 }, null, false, { thickness: 100 })!;
+    const j1 = f().walls[p1]!.a;
+    const j2 = f().walls[p2]!.a;
+    const moveB = (len: number) => applyNumpadValue({ kind: 'wall-length', wallId: w, move: { nodeId: f().walls[w]!.b } }, len);
+    // p2 přivázaná k B (next), p1 přes zamčenou mezeru p1–p2 (prev u p2) také
+    setDimLock({ kind: 'junction-gap', wallId: w, nodeId: j2, to: 'next' }, true);
+    setDimLock({ kind: 'junction-gap', wallId: w, nodeId: j2, to: 'prev' }, true);
+    expect(moveB(6500)).toBe(true);
+    expect([f().nodes[j1]!.x, f().nodes[j2]!.x]).toEqual([2500, 4500]);
+    // a k A: zamčené prev u p1 → přivázané k oběma koncům → odmítnuto
+    setDimLock({ kind: 'junction-gap', wallId: w, nodeId: j1, to: 'prev' }, true);
+    const snap = f();
+    expect(moveB(7000)).toBe(false);
+    expect(f()).toBe(snap);
+    expect(store.get().lockBlock).not.toBeNull();
+  });
+
+  it('zkrácení stěny přes napojenou příčku se neprovede s hlášením', () => {
+    store.openProject(createProject({ name: 't' }));
+    const w = addWall({ x: 0, y: 0 }, null, { x: 6000, y: 0 }, null, false, { thickness: 300 })!;
+    addWall({ x: 5000, y: 0 }, null, { x: 5000, y: -2000 }, null, false, { thickness: 100 });
+    const snap = f();
+    expect(applyNumpadValue({ kind: 'wall-length', wallId: w, move: { nodeId: f().walls[w]!.b } }, 4500)).toBe(false);
+    expect(f()).toBe(snap);
+    expect(store.get().lockBlock?.text).toContain('příčka');
+  });
 });

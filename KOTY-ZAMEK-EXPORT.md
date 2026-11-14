@@ -39,3 +39,5 @@ Stav: **A (zámek) schváleno uživatelem v chatu 2026-11-14, nenaprogramováno.
 - **Ikona zámku je uprostřed kóty u textu** (aby bylo poznat, ke které kótě patří), **modrá** – jinou barvou než kóta.
 - Ikona je **jen pomocná** – při exportu výkresu se nekreslí.
 - Platí to, co bylo domluveno v chatu; tento dokument byl dodán až po domluvě.
+- **Řetěz kót se zámky:** zamčené kóty spojují prvky na stěně do celku. Změna úseku řetězové kóty posune vše napravo spojené zámky, první nezamčený úsek změnu spolkne, jinak se prodlouží stěna; poslední kóta k rohu B prodlouží stěnu.
+- **Změna délky stěny (celková kóta, délka po líci): všechny prvky nesené stěnou zůstanou ve výkresu na místě** – okna, dveře, průchody, niky, výstupky, napojené příčky i každý budoucí druh prvku na stěně; s koncem stěny jedou jen prvky k němu přivázané zamčenými kótami. Celková kóta posouvá volný (nepřipojený) konec stěny.
