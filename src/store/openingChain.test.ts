@@ -394,7 +394,7 @@ describe('řetězová kóta otvorů se zámky', () => {
     const snap = f();
     expect(moveB(7000)).toBe(false);
     expect(f()).toBe(snap);
-    expect(store.get().lockBlock).not.toBeNull();
+    expect(store.get().lockBlock?.text).toContain('brání zamčená kóta');
   });
 
   it('zkrácení stěny přes napojenou příčku se neprovede s hlášením', () => {
@@ -405,5 +405,58 @@ describe('řetězová kóta otvorů se zámky', () => {
     expect(applyNumpadValue({ kind: 'wall-length', wallId: w, move: { nodeId: f().walls[w]!.b } }, 4500)).toBe(false);
     expect(f()).toBe(snap);
     expect(store.get().lockBlock?.text).toContain('příčka');
+  });
+
+  it('obrázek uživatele: okna těsně u sebe / s malým překryvem nebrání změně délky (chyba 2026-11-14)', () => {
+    for (const dir of [1, -1]) {
+      store.openProject(createProject({ name: 't' }));
+      const L = 6432;
+      const w = dir === 1 ? addWall({ x: 0, y: 0 }, null, { x: L, y: 0 }, null, false, { thickness: 300 })! : addWall({ x: L, y: 0 }, null, { x: 0, y: 0 }, null, false, { thickness: 300 })!;
+      store.edit(fl => {
+        // s výchozími rámy (+100 mm) se O1 a O2 o kousek překrývají – takový stav už ve výkresu byl
+        for (const [k, s0, wd] of [['door', 580, 800], ['opening', 1750, 900], ['niche', 3650, 600], ['window', 5180, 500], ['window', 5730, 500]] as const) {
+          const op = createOpening(fl, w, k, { offset: dir === 1 ? s0 : L - s0 - wd, ref: 'a', width: wd });
+          fl.openings[op.id] = op;
+        }
+      });
+      const placed = openingsOnWall(f(), f().walls[w]!);
+      setDimLock({ kind: 'opening-gap', firstId: placed[1]!.op.id, secondId: placed[2]!.op.id }, true);
+      setDimLock({ kind: 'opening-gap', firstId: placed[2]!.op.id, secondId: placed[3]!.op.id }, true);
+      for (const len of [7000, 6600]) {
+        openTarget({ kind: 'wall-length', wallId: w, move: { nodeId: f().walls[w]!.b } });
+        for (const k of String(len)) pressKey(k as '0');
+        pressKey('ENTER');
+        expect(store.get().lockBlock).toBeNull();
+        expect(Math.round(wallLength(f(), f().walls[w]!))).toBe(len);
+        // otvory zůstaly ve výkresu na místě (roh A se nehýbe, měří se od něj)
+        const after = openingsOnWall(f(), f().walls[w]!).map(p => Math.round(p.start));
+        expect(after).toEqual(placed.map(p => Math.round(p.start)));
+      }
+    }
+  });
+
+  it('nový překryv otvorů se odmítne; otvor uvnitř průchodu (starý stav) nevadí', () => {
+    store.openProject(createProject({ name: 't' }));
+    const w = addWall({ x: 0, y: 0 }, null, { x: 6000, y: 0 }, null, false, { thickness: 300 })!;
+    const ids: string[] = [];
+    store.edit(fl => {
+      for (const [k, o, wd] of [['opening', 1000, 1000], ['niche', 1200, 300], ['window', 2400, 800]] as const) {
+        const op = createOpening(fl, w, k, { offset: o, ref: 'a', width: wd });
+        delete op.frame;
+        delete op.reveal;
+        fl.openings[op.id] = op;
+        ids.push(op.id);
+      }
+    });
+    const moveA = (len: number) => applyNumpadValue({ kind: 'wall-length', wallId: w, move: { nodeId: f().walls[w]!.a } }, len);
+    // nika uvnitř průchodu – změna délky projde
+    expect(moveA(6200)).toBe(true);
+    // průchod (a nika uvnitř? ne – jen průchod) přivázaný zamčeným odstupem k rohu A
+    setDimLock({ kind: 'opening-offset', openingId: ids[0]!, ref: 'a' }, true);
+    const snap = f();
+    // průchod jede s A o 700 doprava (zkrácení od A) a najede na okno, které zůstane
+    expect(moveA(5500)).toBe(false);
+    expect(f()).toBe(snap);
+    expect(store.get().lockBlock?.text).toContain('narazil');
   });
 });

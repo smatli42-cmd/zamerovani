@@ -249,6 +249,7 @@ export function applyWallLength(wallId: Id, length: number, move: MoveTarget, op
   let ok = false;
   let blocked: DimTarget | null = null;
   let misfit = false;
+  let tied = false;
   const before = store.floor();
   const applied = store.edit(floor => {
     ok = setWallLength(floor, wallId, length, move);
@@ -256,9 +257,12 @@ export function applyWallLength(wallId: Id, length: number, move: MoveTarget, op
     // k němu přivázané zamčeným odstupem a zamčenými meziostěními (řetěz otvorů, core/openingChain.ts)
     if (ok && before) {
       const v = lockViolation(before, floor, opts.allowKey); // jak by to dopadlo, kdyby otvory jely s rohem
-      if (!keepOpeningsOnResizedWalls(before, floor)) {
+      const r = keepOpeningsOnResizedWalls(before, floor);
+      if (r !== true) {
         ok = false;
-        if (v) blocked = v;
+        // přivázané zámky k oběma koncům → hlásit zamčenou kótu; jinak skutečný důvod (střet prvků)
+        if (r === 'tied' && v) blocked = v;
+        else if (r === 'tied') tied = true;
         else misfit = true;
       }
     }
@@ -266,6 +270,7 @@ export function applyWallLength(wallId: Id, length: number, move: MoveTarget, op
   }, {}, opts);
   // otvory nejde rozmístit → hlášení (zamčená kóta, která brání, nebo otvor by vyjel ze stěny)
   if (blocked && before) store.set({ lockBlock: { key: dimKey(blocked), text: `Nelze – brání zamčená kóta: ${describeDim(before, blocked)}`, target: blocked } });
+  else if (tied) store.set({ lockBlock: { key: '', text: 'Nelze – prvky na stěně jsou zamčenými kótami přivázané k oběma koncům stěny.' } });
   else if (misfit) store.set({ lockBlock: { key: '', text: 'Nelze – otvor, výstupek nebo napojená příčka by vyjel ze stěny nebo narazil na jiný prvek.' } });
   return applied && ok;
 }

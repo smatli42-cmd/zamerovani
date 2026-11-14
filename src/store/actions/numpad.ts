@@ -78,7 +78,7 @@ export function applyNumpadValue(t: NumPadTarget, value: number, overrideLock = 
       ok = setFaceLength(floor, t.wallId, t.face, value);
       // otvory zůstanou ve výkresu na místě (jako u celkové délky stěny)
       const before = store.floor();
-      if (ok && before && !keepOpeningsOnResizedWalls(before, floor)) {
+      if (ok && before && keepOpeningsOnResizedWalls(before, floor) !== true) {
         ok = false;
         chainFail = true;
       }

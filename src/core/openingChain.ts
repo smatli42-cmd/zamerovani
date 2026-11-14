@@ -16,7 +16,7 @@ import type { Floor, Id, Opening } from '../model/types';
 import { openingSpan, openingStartFromA, openingsOnWall, wallLength } from './floorQueries';
 import { setWallLength } from './solver';
 import { dot, sub, unit } from './geometry';
-import { protrusionExtent, protrusionFits } from './protrusion';
+import { protrusionExtent } from './protrusion';
 import { hostedChain, shiftHosted } from './hosting';
 
 const locked = (floor: Floor, key: string) => !!floor.dimLocks?.[key];
@@ -100,16 +100,17 @@ export function chainEdge(floor: Floor, op: Opening, ref: 'a' | 'b'): number | n
  * Po změně délky stěny (posun rohu A a / nebo B podél stěny): otvory a výstupky zůstanou ve výkresu na místě, jen ty,
  * které jsou k posunutému rohu přivázané zamčenými kótami (odstup od rohu + zamčená meziostění), jedou s ním.
  * Volá se, když by výchozí chování (otvor drží odstup od svého referenčního rohu) porušilo zamčenou kótu.
- * `before` = podlaží před úpravou. Vrací false, když jsou otvory přivázané k oběma rohům (nejde splnit).
+ * `before` = podlaží před úpravou. Vrací true, 'tied' (prvky přivázané zámky k oběma koncům – nejde splnit)
+ * nebo 'misfit' (prvek by nově vyjel ze stěny / narazil na jiný prvek).
  */
-export function keepOpeningsAfterResize(before: Floor, floor: Floor, wallId: Id): boolean {
+export function keepOpeningsAfterResize(before: Floor, floor: Floor, wallId: Id): true | 'tied' | 'misfit' {
   const w0 = before.walls[wallId];
   const w1 = floor.walls[wallId];
   const a0 = w0 && before.nodes[w0.a];
   const b0 = w0 && before.nodes[w0.b];
   const a1 = w1 && floor.nodes[w1.a];
   const b1 = w1 && floor.nodes[w1.b];
-  if (!w0 || !w1 || !a0 || !b0 || !a1 || !b1) return false;
+  if (!w0 || !w1 || !a0 || !b0 || !a1 || !b1) return 'misfit';
   const dir = unit(a0, b0);
   const shiftA = dot(sub(a1, a0), dir); // posun rohu A podél stěny (kladně k B)
   const shiftB = dot(sub(b1, b0), dir);
@@ -126,7 +127,7 @@ export function keepOpeningsAfterResize(before: Floor, floor: Floor, wallId: Id)
     tiedB.add(n - 1);
     for (let i = n - 2; i >= 0 && lk(`opening-gap:${placed[i]!.op.id}:${placed[i + 1]!.op.id}`); i--) tiedB.add(i);
   }
-  if ([...tiedA].some(i => tiedB.has(i)) && Math.abs(shiftA - shiftB) > 0.5) return false;
+  if ([...tiedA].some(i => tiedB.has(i)) && Math.abs(shiftA - shiftB) > 0.5) return 'tied';
   const newLen = wallLength(floor, w1);
   placed.forEach((p, i) => {
     // na místě ve výkresu = začátek od nového rohu A se zmenší o posun A; přivázané jedou se svým rohem
@@ -157,7 +158,7 @@ export function keepOpeningsAfterResize(before: Floor, floor: Floor, wallId: Id)
     if (!p) continue;
     const toA = pTiedA.has(p.id);
     const toB = pTiedB.has(p.id);
-    if (toA && toB && Math.abs(shiftA - shiftB) > 0.5) return false;
+    if (toA && toB && Math.abs(shiftA - shiftB) > 0.5) return 'tied';
     const du = -shiftA + (toA ? shiftA : 0) + (toB ? shiftB : 0);
     p.pts = p0.pts.map(q => ({ ...q, u: Math.round((q.u + du) * 10) / 10 }));
   }
@@ -171,39 +172,79 @@ export function keepOpeningsAfterResize(before: Floor, floor: Floor, wallId: Id)
     jTiedB.add(m - 1);
     for (let i = m - 2; i >= 0 && lk(`junction-gap:${wallId}:${chain0[i + 1]!.nodeId}:prev`); i--) jTiedB.add(i);
   }
-  if ([...jTiedA].some(i => jTiedB.has(i)) && Math.abs(shiftA - shiftB) > 0.5) return false;
+  if ([...jTiedA].some(i => jTiedB.has(i)) && Math.abs(shiftA - shiftB) > 0.5) return 'tied';
   for (let i = 0; i < m; i++) {
     if (!jTiedA.has(i) && !jTiedB.has(i)) continue; // nepřivázaný roh zůstal ve výkresu na místě
     const want = chain0[i]!.at - shiftA + (jTiedA.has(i) ? shiftA : 0) + (jTiedB.has(i) ? shiftB : 0);
     const cur = hostedChain(floor, wallId).find(c => c.nodeId === chain0[i]!.nodeId);
-    if (!cur) return false;
+    if (!cur) return 'misfit';
     shiftHosted(floor, chain0[i]!.nodeId, want - cur.at);
   }
   // napojení zůstanou na stěně a příčka nedosedne do otvoru (jako setHostedGap)
-  const ops1 = openingsOnWall(floor, floor.walls[wallId]!);
-  for (const c of hostedChain(floor, wallId)) {
-    if (c.at < 1 || c.at > newLen - 1) return false;
-    const half = Math.max(0, ...Object.values(floor.walls).filter(x => x.id !== wallId && (x.a === c.nodeId || x.b === c.nodeId)).map(x => x.thickness / 2));
-    if (ops1.some(po => c.at + half > po.start + 0.5 && c.at - half < po.end - 0.5)) return false;
+  // Kontroly: vadí jen NOVÝ střet – stav, který už ve výkresu byl (např. dva otvory těsně u sebe nebo
+  // s malým překryvem), změnu délky nezastaví (chyba nahlášená uživatelem 2026-11-14).
+  const len0 = wallLength(before, w0);
+  const outside = (s0: number, e0: number, L: number) => Math.max(0, -s0, e0 - L);
+  const halfOf = (fl: Floor, nodeId: Id) => Math.max(0, ...Object.values(fl.walls).filter(x => x.id !== wallId && (x.a === nodeId || x.b === nodeId)).map(x => x.thickness / 2));
+  const inOpening = (fl: Floor, L: number) => {
+    const ops = openingsOnWall(fl, fl.walls[wallId]!);
+    const set = new Set<string>();
+    for (const c of hostedChain(fl, wallId)) {
+      const half = halfOf(fl, c.nodeId);
+      for (const po of ops) if (c.at + half > po.start + 0.5 && c.at - half < po.end - 0.5) set.add(`${c.nodeId}|${po.op.id}`);
+      if (c.at < 1 || c.at > L - 1) set.add(`${c.nodeId}|out`);
+    }
+    return set;
+  };
+  const clash0 = inOpening(before, len0);
+  for (const k of inOpening(floor, newLen)) if (!clash0.has(k)) return 'misfit';
+  // výstupky musí zůstat na stěně a nesmí se překrýt se sousedem na stejném líci (nové střety)
+  const protClash = (fl: Floor, L: number) => {
+    const list = Object.values(fl.protrusions ?? {}).filter(p => p.wallId === wallId);
+    const set = new Map<string, number>();
+    for (const p of list) {
+      const e = protrusionExtent(p);
+      const out = Math.max(0, -e.u0, e.u1 - L);
+      if (out > 0.5) set.set(`${p.id}|out`, out);
+      for (const o of list) {
+        if (o.id <= p.id || o.side !== p.side) continue;
+        const f2 = protrusionExtent(o);
+        const ov = Math.min(e.u1, f2.u1) - Math.max(e.u0, f2.u0);
+        if (ov > 0.5) set.set(`${p.id}|${o.id}`, ov);
+      }
+    }
+    return set;
+  };
+  const pc0 = protClash(before, len0);
+  for (const [k, v1] of protClash(floor, newLen)) if (v1 > (pc0.get(k) ?? 0) + 0.5) return 'misfit';
+  // otvory musí zůstat na stěně a nesmí se překrýt (víc než předtím)
+  const spanOf = (fl: Floor, L: number, id: Id) => {
+    const op = fl.openings[id]!;
+    const st = openingStartFromA(op, L);
+    return { id, s: st, e: st + openingSpan(op) };
+  };
+  const now = placed.map(p => spanOf(floor, newLen, p.op.id));
+  const was = new Map(placed.map(p => [p.op.id, spanOf(before, len0, p.op.id)]));
+  const overlap = (x: { s: number; e: number }, y: { s: number; e: number }) => Math.max(0, Math.min(x.e, y.e) - Math.max(x.s, y.s));
+  for (let i = 0; i < now.length; i++) {
+    const x = now[i]!;
+    const x0 = was.get(x.id)!;
+    if (outside(x.s, x.e, newLen) > outside(x0.s, x0.e, len0) + 0.5) return 'misfit';
+    // všechny dvojice (i otvor uvnitř jiného otvoru): překryv nesmí vzrůst
+    for (let j = 0; j < i; j++) {
+      const y = now[j]!;
+      if (overlap(x, y) > overlap(x0, was.get(y.id)!) + 0.5) return 'misfit';
+    }
   }
-  // výstupky musí zůstat na stěně a nesmí se překrýt se sousedem
-  for (const p0 of prots) if (floor.protrusions?.[p0.id] && !protrusionFits(floor, floor.protrusions[p0.id]!)) return false;
-  // otvory musí zůstat na stěně a nesmí se překrýt
-  const spans = placed
-    .map(p => {
-      const s = openingStartFromA(floor.openings[p.op.id]!, newLen);
-      return { s, e: s + openingSpan(p.op) };
-    })
-    .sort((x, y) => x.s - y.s);
-  return spans.every((x, i) => x.s > -0.5 && x.e < newLen + 0.5 && (i === 0 || x.s > spans[i - 1]!.e - 0.5));
+  return true;
 }
 
 /**
  * Pravidlo „otvory zůstanou na místě“ pro všechny rovné stěny, kterým úprava změnila délku posunem konce
  * podél stěny (upravovaná stěna, protější stěna místnosti posunutá řešičem, navazující stěna). Stěny jen
- * posunuté (stejná délka) nebo natočené se nechají – otvory jedou s nimi. Vrací false, když to u některé nejde.
+ * posunuté (stejná délka) nebo natočené se nechají – otvory jedou s nimi. Vrací true nebo důvod, proč to nejde.
  */
-export function keepOpeningsOnResizedWalls(before: Floor, floor: Floor): boolean {
+export function keepOpeningsOnResizedWalls(before: Floor, floor: Floor): true | 'tied' | 'misfit' {
   for (const w1 of Object.values(floor.walls)) {
     const w0 = before.walls[w1.id];
     if (!w0 || w0.sagitta || w1.sagitta || w0.radius !== undefined) continue;
@@ -222,7 +263,8 @@ export function keepOpeningsOnResizedWalls(before: Floor, floor: Floor): boolean
     const d = unit(a0, b0);
     const perp = (p: { x: number; y: number }, q: { x: number; y: number }) => Math.abs((q.x - p.x) * d.y - (q.y - p.y) * d.x);
     if (perp(a0, a1) > 0.5 || perp(b0, b1) > 0.5) continue;
-    if (!keepOpeningsAfterResize(before, floor, w1.id)) return false;
+    const r = keepOpeningsAfterResize(before, floor, w1.id);
+    if (r !== true) return r;
   }
   return true;
 }
