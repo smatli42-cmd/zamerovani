@@ -6,7 +6,7 @@
 export { addWall, addRectWalls, addCircleWalls, setCircleRadius, setWallSagitta, updateWall, applyWallLength, unlockWall, updateWallLabel, setWallThickness, setWallAxis, flipWallSide, setWallNoJoin, type GroupOrigin, groupOrigin, moveGroup, moveNode, mergeNodeIfCoincident } from './walls';
 export { rotateSelection, duplicateSelection, pasteOpenings, endPaste } from './copy';
 export { deleteSelection } from './delete';
-export { addOpening, updateOpening, moveOpeningTo, setOpeningRef, setRevealEnabled, setRevealSides } from './openings';
+export { addOpening, updateOpening, moveOpeningTo, setOpeningRef, setRevealEnabled, setRevealSides, setWindowKind } from './openings';
 export { addRoom, updateRoom, moveRoom } from './rooms';
 export { takeFreshTextId, addText, updateText, moveText } from './texts';
 export { addFloor, renameFloor, deleteFloor } from './floors';

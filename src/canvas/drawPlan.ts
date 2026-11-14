@@ -6,7 +6,7 @@ import { arcHandles } from '../core/arcChain';
 import { doorLayout, jambOutline } from '../core/doorLayout';
 import { openingSpan, openingsOnWall, wallLength, wallNodes } from '../core/floorQueries';
 import { add, dist, dot, lerp, normal, scale, sub, unit } from '../core/geometry';
-import { isWindowKind } from '../model/factory';
+import { hasLeaf, isWindowKind } from '../model/factory';
 import type { Floor, LineStyle, Opening, Pt, Wall } from '../model/types';
 import { isSelected, type Camera, type Selection, type SingleSelection } from '../store/store';
 import { toScreen } from './view';
@@ -390,8 +390,8 @@ function drawFramed(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, 
     ctx.stroke();
   }
 
-  // okno: čára skla uprostřed hloubky rámu
-  if (op.kind !== 'door') {
+  // okno: čára skla uprostřed hloubky rámu (dveře a francouzské okno mají místo ní křídlo)
+  if (!hasLeaf(op.kind)) {
     const a = P(L + fw, fo + F / 2);
     const b = P(span - R - fw, fo + F / 2);
     ctx.beginPath();
@@ -402,7 +402,7 @@ function drawFramed(ctx: CanvasRenderingContext2D, s1: Pt, s2: Pt, op: Opening, 
     return;
   }
 
-  // křídlo (otevírá se ve směru swing; u stěny s tloušťkou z té plochy zárubně, ke které směřuje)
+  // křídlo dveří / francouzského okna (otevírá se ve směru swing; u stěny s tloušťkou z té plochy zárubně, ke které směřuje)
   const towardB = thick !== null && dot(nrm, dir) > 0;
   const yLeaf = thick !== null ? (towardB ? fo + F : fo) : fo;
   const xHinge = op.hinge === 'a' ? L + fw : span - R - fw;

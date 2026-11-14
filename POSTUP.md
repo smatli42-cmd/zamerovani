@@ -7,6 +7,12 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-14 (4) – francouzské okno s křídlem
+- **Co se změnilo:** Francouzské okno se kreslí s křídlem a obloukem otevírání jako dveře (sdílený kód křídla v `drawFramed`, `hasLeaf` ve `factory.ts`). Panel má u francouzského okna stejná tlačítka jako dveře: **Panty L/P** a **Dovnitř/ven**. Přepnutí druhu přes akci `setWindowKind`. Bez změny dat (panty a směr už otvor měl).
+- **Viditelně v aplikaci:** francouzské okno = rám + křídlo s obloukem místo čáry skla; ve stěně s tloušťkou se výchozí otevírá do místnosti (i po přepnutí z okna).
+- **Rozhodnuto samostatně:** francouzské okno nemá čáru skla (jen křídlo, jako dveře); ve stěně kreslené jednou čarou zůstává výchozí strana rámu ven (jako dřív), směr se přepne tlačítkem.
+- **Otevřené:** vyzkoušet na tabletu.
+
 ### 2026-11-14 (3) – ostění vnitřní a vnější zvlášť (schéma 12)
 - **Co se změnilo:** Místo přepínače „Bez ostění / S ostěním“ má panel otvoru dvě samostatná tlačítka **Vnitřní** a **Vnější** (ve stěně s tloušťkou; u čáry bez tloušťky jedno tlačítko „Ostění“). `Reveal.inner` / `Reveal.outer`, akce `setRevealSides`, obrys okraje v `jambOutline`. SCHEMA_VERSION 12, migrace `revealSides`.
 - **Viditelně v aplikaci:** nic nevybráno = bez ostění. Líc bez ostění má okraj stěny rovně až k rámu / zárubni (otvor v tom líci je užší o ostění vlevo a vpravo, zdivo šedé), líc s ostěním má schod jako dřív.

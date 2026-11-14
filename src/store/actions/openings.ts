@@ -1,8 +1,8 @@
 /**
  * Akce: otvory (dveře, okna, průchody, niky), ostění a zárubně.
  */
-import { createOpening, isWindowKind } from '../../model/factory';
-import { applyRevealPart, doorLayout, openingThickness, outwardSwing, type RevealPart } from '../../core/doorLayout';
+import { createOpening, hasLeaf, isWindowKind } from '../../model/factory';
+import { applyRevealPart, doorLayout, leafSwingIntoRoom, openingThickness, outwardSwing, type RevealPart } from '../../core/doorLayout';
 import type { Floor, Id, Opening, OpeningKind } from '../../model/types';
 import { openingSpan, openingStartFromA, openingsOnWall, wallLength } from '../../core/floorQueries';
 import { store } from '../store';
@@ -24,9 +24,9 @@ export function addOpening(wallId: Id, kind: OpeningKind, t: number): Id | null 
     const T = openingThickness(floor, op);
     // okno ve stěně kreslené jednou čarou: rám jde z líce ven (od středu výkresu)
     if (isWindowKind(kind) && T === null) op.swing = outwardSwing(floor, wall);
-    // stěna s tloušťkou: nika na vnitřním líci (zahlubuje se do těla), dveře se otevírají do místnosti (od těla)
+    // stěna s tloušťkou: nika na vnitřním líci (zahlubuje se do těla), dveře a francouzské okno se otevírají do místnosti (od těla)
     if (T !== null && kind === 'niche') op.swing = wall.side;
-    if (T !== null && kind === 'door') op.swing = wall.side === 1 ? -1 : 1;
+    if (T !== null && hasLeaf(kind)) op.swing = leafSwingIntoRoom(wall);
     setStartFromA(op, startFromA, len);
     floor.openings[op.id] = op;
     createdId = op.id;
@@ -148,4 +148,19 @@ export function setGap(floor: Floor, firstId: Id, secondId: Id, gap: number): vo
     const op = floor.openings[p.op.id]!;
     setStartFromA(op, p.start + shift, len);
   }
+}
+
+/**
+ * Změní druh okna (okno / francouzské okno): nastaví výchozí parapet; francouzské okno ve stěně s tloušťkou
+ * dostane křídlo otevírané do místnosti (jako dveře).
+ */
+export function setWindowKind(id: Id, kind: 'window' | 'french'): void {
+  store.edit(floor => {
+    const op = floor.openings[id];
+    const wall = op && floor.walls[op.wallId];
+    if (!op || !wall || op.kind === kind || !isWindowKind(op.kind)) return;
+    op.kind = kind;
+    op.sill = createOpening(floor, wall.id, kind).sill;
+    if (kind === 'french' && openingThickness(floor, op) !== null) op.swing = leafSwingIntoRoom(wall);
+  });
 }

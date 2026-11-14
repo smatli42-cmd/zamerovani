@@ -149,6 +149,9 @@ export function applyRevealPart(floor: Floor, op: Opening, part: RevealPart, val
   return true;
 }
 
+/** Ve stěně s tloušťkou se křídlo dveří / francouzského okna výchozí otevírá do místnosti (od těla stěny). */
+export const leafSwingIntoRoom = (wall: Wall): 1 | -1 => (wall.side === 1 ? -1 : 1);
+
 /**
  * Strana (`swing`) stěny směrem ven od středu výkresu – výchozí strana rámu okna v obvodové stěně kreslené jednou čarou
  * (rám začíná v líci a jde do stěny, tedy ven).

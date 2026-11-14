@@ -2,9 +2,9 @@
  * Panel otvoru (dveře, okno, francouzské okno, průchod, nika), ostění a zárubeň / rám.
  */
 import { openingThickness, revealPartValue, type RevealPart } from '../../core/doorLayout';
-import { isWindowKind, OPENING_DEFAULTS } from '../../model/factory';
+import { hasLeaf, isWindowKind, OPENING_DEFAULTS } from '../../model/factory';
 import type { Opening } from '../../model/types';
-import { applyNumpadValue, deleteSelection, duplicateSelection, setOpeningRef, setRevealEnabled, setRevealSides, updateOpening } from '../../store/actions';
+import { applyNumpadValue, deleteSelection, duplicateSelection, setOpeningRef, setRevealEnabled, setRevealSides, setWindowKind, updateOpening } from '../../store/actions';
 import { openTarget } from '../../store/numpadController';
 import { store } from '../../store/store';
 import { close } from './common';
@@ -44,7 +44,7 @@ export function OpeningPanel({ op }: { op: Opening }) {
               { v: 'french', label: 'Francouzské' }
             ]}
             value={op.kind as 'window' | 'french'}
-            onChange={v => v !== op.kind && set({ kind: v, sill: OPENING_DEFAULTS[v].sill })}
+            onChange={v => setWindowKind(op.id, v)}
           />
         </div>
       )}
@@ -81,15 +81,15 @@ export function OpeningPanel({ op }: { op: Opening }) {
         {op.kind !== 'door' && <NumField label="Parapet" value={op.sill} onCommit={v => v !== null && set({ sill: v })} />}
         {op.kind === 'niche' && <NumField label="Hloubka niky" value={op.depth} min={10} onCommit={v => v !== null && set({ depth: v })} />}
       </div>
-      {(op.kind === 'door' || op.kind === 'niche' || (isWindowKind(op.kind) && op.frame && T === null)) && (
+      {(hasLeaf(op.kind) || op.kind === 'niche' || (isWindowKind(op.kind) && op.frame && T === null)) && (
         <div class="btn-row">
-          {op.kind === 'door' && (
+          {hasLeaf(op.kind) && (
             <button class="btn" onClick={() => set({ hinge: op.hinge === 'a' ? 'b' : 'a' })}>
               🔄 Panty L/P
             </button>
           )}
           <button class="btn" onClick={() => set({ swing: op.swing === 1 ? -1 : 1 })}>
-            🔄 {op.kind === 'door' ? 'Dovnitř/ven' : op.kind === 'niche' ? (T !== null ? 'Líc niky' : 'Strana') : 'Strana rámu'}
+            🔄 {hasLeaf(op.kind) ? 'Dovnitř/ven' : op.kind === 'niche' ? (T !== null ? 'Líc niky' : 'Strana') : 'Strana rámu'}
           </button>
         </div>
       )}

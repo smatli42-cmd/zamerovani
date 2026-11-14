@@ -91,6 +91,8 @@ export const WINDOW_FRAME = { width: 50, depth: 50 };
 
 /** Okno nebo francouzské okno (stejná značka). */
 export const isWindowKind = (kind: OpeningKind): boolean => kind === 'window' || kind === 'french';
+/** Otvor s otevíravým křídlem (panty L/P, otevírání dovnitř / ven): dveře a francouzské okno. */
+export const hasLeaf = (kind: OpeningKind): boolean => kind === 'door' || kind === 'french';
 
 export const OPENING_DEFAULTS: Record<OpeningKind, { width: number; height: number; sill: number; depth: number; prefix: string; label: string }> = {
   door: { width: 800, height: 1970, sill: 0, depth: 0, prefix: 'D', label: 'Dveře' },
