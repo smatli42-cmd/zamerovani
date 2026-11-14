@@ -101,6 +101,8 @@ export function numpadInitialValue(floor: Floor, t: NumPadTarget): number | null
       const at = chain[i]!.at;
       return Math.round(t.to === 'prev' ? at - (chain[i - 1]?.at ?? 0) : (chain[i + 1]?.at ?? Math.hypot(b.x - a.x, b.y - a.y)) - at);
     }
+    case 'field':
+      return null; // hodnotu předává openField
     case 'protrusion-sagitta': {
       const s = floor.protrusions?.[t.protrusionId]?.pts[t.seg]?.s;
       return s === undefined ? 0 : Math.round(Math.abs(s));
@@ -118,7 +120,7 @@ export function numpadInitialValue(floor: Floor, t: NumPadTarget): number | null
 
 /** Zapíše hodnotu z NumPadu do výkresu. */
 export function applyNumpadValue(t: NumPadTarget, value: number): boolean {
-  if (!Number.isFinite(value) || value < 0) return false;
+  if (!Number.isFinite(value) || value < 0 || t.kind === 'field') return false;
   if (t.kind === 'wall-length') return applyWallLength(t.wallId, value, t.move);
   let ok = false;
   store.edit(floor => {

@@ -9,7 +9,7 @@ import type { Id } from '../model/types';
 import { applyNumpadValue, numpadInitialValue, unlockWall } from './actions';
 import { store, type NumPadTarget } from './store';
 
-export type NumKey = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '00' | '+' | '-' | 'BACK' | 'CLEAR' | 'ENTER' | 'NEXT' | 'ESC';
+export type NumKey = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '00' | '000' | '+' | '-' | 'BACK' | 'CLEAR' | 'ENTER' | 'NEXT' | 'ESC';
 
 export function numpadValue(): number | null {
   const np = store.get().numpad;
@@ -18,7 +18,7 @@ export function numpadValue(): number | null {
 
 export function openTarget(target: NumPadTarget): void {
   const floor = store.floor();
-  if (!floor) return;
+  if (!floor || target.kind === 'field') return;
   // U kruhu se místo délky stěny zadává průměr
   if (target.kind === 'wall-length' && floor.walls[target.wallId]?.radius !== undefined) target = { kind: 'circle-diameter', wallId: target.wallId };
   const v = numpadInitialValue(floor, target);
@@ -30,6 +30,26 @@ export function openTarget(target: NumPadTarget): void {
       ? ({ kind: 'wall', id: target.wallId } as const)
       : ({ kind: 'opening', id: target.kind === 'opening-gap' ? target.secondId : target.openingId } as const);
   store.set({ numpad: { target, buffer: v === null ? '' : String(v), fresh: true }, selection });
+}
+
+/** Zápis hodnoty obecného pole (cíl `field`); drží se jen po dobu otevřeného NumPadu. */
+let fieldCommit: ((v: number | null) => void) | null = null;
+
+export interface FieldSpec {
+  label: string;
+  unit?: string;
+  min?: number;
+  allowEmpty?: boolean;
+}
+
+/**
+ * Otevře NumPad pro obecné číselné pole panelu (místo malého políčka – stylusem se do něj špatně píše).
+ * Výběr na výkrese zůstane beze změny.
+ */
+export function openField(spec: FieldSpec, value: number | null, onCommit: (v: number | null) => void): void {
+  fieldCommit = onCommit;
+  const target: NumPadTarget = { kind: 'field', label: spec.label, unit: spec.unit ?? 'mm', min: spec.min ?? 0, allowEmpty: spec.allowEmpty };
+  store.set({ numpad: { target, buffer: value === null ? '' : String(value), fresh: true } });
 }
 
 export function pressKey(key: NumKey): void {
@@ -59,7 +79,14 @@ export function pressKey(key: NumKey): void {
       break;
     case '+':
     case '-':
-      if (buffer === '' && key === '-') break;
+      // záporné číslo na začátku jen u polí, která ho připouští (úhel)
+      if ((buffer === '' || fresh) && key === '-') {
+        if (np.target.kind === 'field' && np.target.min < 0) {
+          buffer = '-';
+          fresh = false;
+        }
+        break;
+      }
       buffer = /[+-]$/.test(buffer) ? buffer.slice(0, -1) + key : buffer + key;
       fresh = false;
       break;
@@ -74,9 +101,24 @@ export function pressKey(key: NumKey): void {
 function commit(): boolean {
   const np = store.get().numpad;
   if (!np) return false;
+  const t = np.target;
+  if (t.kind === 'field') {
+    const cb = fieldCommit;
+    fieldCommit = null;
+    if (!cb) return false;
+    if (np.buffer.trim() === '') {
+      if (!t.allowEmpty) return false;
+      cb(null);
+      return true;
+    }
+    const fv = evaluateExpression(np.buffer);
+    if (fv === null || Math.round(fv) < t.min) return false;
+    cb(Math.round(fv));
+    return true;
+  }
   const v = evaluateExpression(np.buffer);
   if (v === null) return false;
-  return applyNumpadValue(np.target, Math.round(v));
+  return applyNumpadValue(t, Math.round(v));
 }
 
 /** Přepne roh, který se posune při změně délky stěny. */
@@ -141,7 +183,7 @@ function commitAndNext(): void {
     return store.set({ numpad: null });
   }
 
-  if (t.kind === 'wall-sagitta' || t.kind === 'circle-diameter' || t.kind === 'wall-thickness' || t.kind === 'wall-face-length' || t.kind === 'opening-reveal') return store.set({ numpad: null });
+  if (t.kind === 'field' || t.kind === 'wall-sagitta' || t.kind === 'circle-diameter' || t.kind === 'wall-thickness' || t.kind === 'wall-face-length' || t.kind === 'opening-reveal') return store.set({ numpad: null });
 
   // Odstupy skupiny stěn od okolí: vlevo → vpravo → nahoře → dole, pak konec
   if (t.kind === 'comp-gap') {

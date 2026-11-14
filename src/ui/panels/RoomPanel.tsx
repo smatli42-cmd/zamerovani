@@ -3,6 +3,7 @@
  */
 import type { Room } from '../../model/types';
 import { deleteSelection, duplicateSelection, updateRoom } from '../../store/actions';
+import { openField } from '../../store/numpadController';
 import { close } from './common';
 import { Panel, TextField } from './fields';
 
@@ -28,16 +29,17 @@ export function RoomPanel({ room }: { room: Room }) {
       <h4>Světlé výšky</h4>
       {room.heights.map((h, i) => (
         <div class="height-row" key={i}>
-          <input
-            type="number"
-            inputMode="numeric"
-            value={h.value}
-            key={`v${h.value}`}
-            onChange={e => {
-              const v = Math.round(Number((e.target as HTMLInputElement).value));
-              if (v > 0) set({ heights: room.heights.map((x, j) => (j === i ? { ...x, value: v } : x)) });
-            }}
-          />
+          <button
+            type="button"
+            class="field-button height-value"
+            onClick={() =>
+              openField({ label: 'Světlá výška', min: 1 }, h.value, v => {
+                if (v !== null && v > 0) set({ heights: room.heights.map((x, j) => (j === i ? { ...x, value: v } : x)) });
+              })
+            }
+          >
+            <b>{h.value} mm</b>
+          </button>
           <input
             type="text"
             placeholder="kde (např. pod trámem)"

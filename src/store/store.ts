@@ -61,7 +61,9 @@ export type NumPadTarget =
   /** Poloha napojení na průběžné stěně: od předchozího napojení / rohu A ('prev') nebo k rohu B ('next'). */
   | { kind: 'junction-gap'; wallId: Id; nodeId: Id; to: 'prev' | 'next' }
   /** Vzepětí oblouku v obrysu výstupku (úsek `seg`). */
-  | { kind: 'protrusion-sagitta'; protrusionId: Id; seg: number };
+  | { kind: 'protrusion-sagitta'; protrusionId: Id; seg: number }
+  /** Obecné číselné pole panelu (výška, parapet, úhel…); hodnotu zapíše funkce předaná v `openField`. */
+  | { kind: 'field'; label: string; unit: string; min: number; allowEmpty?: boolean };
 
 export interface NumPadState {
   target: NumPadTarget;

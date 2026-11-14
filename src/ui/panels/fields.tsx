@@ -2,6 +2,7 @@
  * Společné prvky formulářů v panelech (změna se zapíše až po dopsání – 1 krok Zpět).
  */
 import type { ComponentChildren } from 'preact';
+import { openField } from '../../store/numpadController';
 
 interface NumProps {
   label: string;
@@ -12,31 +13,18 @@ interface NumProps {
   unit?: string;
 }
 
+/**
+ * Číselné pole: ťuknutí otevře NumPad (do malého políčka se stylusem špatně píše).
+ * Zápis proběhne po potvrzení v NumPadu (1 krok Zpět).
+ */
 export function NumField({ label, value, onCommit, allowEmpty, min = 0, unit = 'mm' }: NumProps) {
   return (
-    <label class="field field-inline">
+    <button type="button" class="field-button num-field" onClick={() => openField({ label, unit, min, allowEmpty }, value, onCommit)}>
       <span>{label}</span>
-      <span class="input-unit">
-        <input
-          type="number"
-          inputMode="numeric"
-          min={min}
-          step={10}
-          value={value ?? ''}
-          key={String(value)}
-          onChange={e => {
-            const raw = (e.target as HTMLInputElement).value.trim();
-            if (raw === '') {
-              if (allowEmpty) onCommit(null);
-              return;
-            }
-            const v = Math.round(Number(raw));
-            if (Number.isFinite(v) && v >= min) onCommit(v);
-          }}
-        />
-        <small>{unit}</small>
-      </span>
-    </label>
+      <b>
+        {value ?? '—'} {unit}
+      </b>
+    </button>
   );
 }
 

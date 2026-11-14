@@ -9,6 +9,7 @@ import { store, type NumPadTarget } from '../store/store';
 import { useStore } from '../store/useStore';
 
 function title(floor: Floor | null, t: NumPadTarget): string {
+  if (t.kind === 'field') return t.label;
   if (t.kind === 'wall-length') return 'Délka stěny';
   if (t.kind === 'wall-sagitta') return 'Vzepětí oblouku';
   if (t.kind === 'circle-diameter') return 'Průměr kruhu';
@@ -54,6 +55,7 @@ const KEYS: { k: NumKey; label: string; cls?: string }[] = [
   { k: '+', label: '+', cls: 'op' },
   { k: '0', label: '0' },
   { k: '00', label: '00' },
+  { k: '000', label: '000' },
   { k: '-', label: '−', cls: 'op' },
   { k: 'NEXT', label: 'Další ➔', cls: 'op next' }
 ];
@@ -81,7 +83,7 @@ export function NumPad() {
       <div class={`numpad-display ${np.fresh ? 'fresh' : ''}`}>
         {hasExpr && <div class="numpad-expr">{np.buffer.replace(/-/g, '−')} =</div>}
         <div class="numpad-value">
-          {value === null ? np.buffer || '0' : Math.round(value)} <small>mm</small>
+          {value === null ? np.buffer || (t.kind === 'field' && t.allowEmpty ? '—' : '0') : Math.round(value)} <small>{t.kind === 'field' ? t.unit : 'mm'}</small>
         </div>
       </div>
 
@@ -103,7 +105,7 @@ export function NumPad() {
       )}
 
       <div class="numpad-grid">
-        {KEYS.map(key => (
+        {KEYS.filter(key => key.k !== 'NEXT' || t.kind !== 'field').map(key => (
           <button key={key.k} class={`np-key ${key.cls ?? ''}`} onClick={() => pressKey(key.k)}>
             {key.label}
           </button>

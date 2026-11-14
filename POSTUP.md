@@ -7,6 +7,12 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-14 (1) – NumPad u všech číselných polí, tlačítko 000
+- **Co se změnilo:** Všechna číselná pole v panelech (výška, parapet, hloubka niky, tloušťka stěny, výstupek, text, úhel otočení, výška oblouku, vlastní tloušťka, světlé výšky místnosti) otevírají po ťuknutí NumPad místo malého políčka (`openField` v `numpadController.ts`, cíl `field`). NumPad má tlačítko **000**.
+- **Viditelně v aplikaci:** pole vypadají jako modrá tlačítka s hodnotou; ťuknutí otevře velkou klávesnici; 2 + 000 = 2000. U obecných polí chybí tlačítko „Další“ (nemají pořadí).
+- **Rozhodnuto samostatně:** záporné číslo (úhel otočení) jde zadat „−“ na začátku jen u polí, která ho připouští; výběr na výkrese se otevřením pole nemění.
+- **Otevřené:** vyzkoušet na tabletu.
+
 ### 2026-11-13 (konec sezení)
 - **Co se změnilo:** Sezení ukončeno. Za den: výstupky a vybrání stěn (nástroj Čára, obdélník, uzavřené tvary, tvary přes líc a přes celou tloušťku, obloukové stěny, oblouk v obrysu), zarovnání s rohem při kreslení, kóta polohy napojení; katalog doplněn (I1.2, I1.3, I1.15, příklady I2/12–14) se souhlasem uživatele.
 - **Viditelně v aplikaci:** viz záznamy níže (2026-11-13, 1–9).

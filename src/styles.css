@@ -559,8 +559,10 @@ textarea {
   padding: 0 8px;
   min-width: 0;
 }
-.height-row input[type='number'] {
-  width: 90px;
+.height-row .height-value {
+  width: 100px;
+  flex: 0 0 auto;
+  margin-bottom: 0;
 }
 .height-row input[type='text'] {
   flex: 1;
@@ -623,6 +625,8 @@ textarea {
   font-size: 18px;
 }
 .np-key.next {
+  grid-column: 1 / -1;
+  min-height: 44px;
   font-size: 14px;
   background: #fef3c7;
 }
@@ -804,4 +808,12 @@ textarea {
 }
 .wall-options .seg {
   width: auto;
+}
+
+/* Číselné pole (otevírá NumPad) v liště voleb nástroje */
+.tool-options .field-button {
+  width: auto;
+  min-height: 36px;
+  margin-bottom: 0;
+  gap: 10px;
 }
