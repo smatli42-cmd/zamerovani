@@ -3,7 +3,7 @@
  */
 import { hostedChain } from '../core/hosting';
 import { evaluateExpression } from '../core/geometry';
-import { nextWallInChain, openingsOnWall } from '../core/floorQueries';
+import { nextWallInChain, openingsOnWall, wallsAtNode } from '../core/floorQueries';
 import { componentGap } from '../core/components';
 import type { Id } from '../model/types';
 import { applyNumpadValue, numpadInitialValue, toggleDimLock } from './actions';
@@ -22,6 +22,15 @@ export function openTarget(target: NumPadTarget): void {
   if (!floor || target.kind === 'field') return;
   // U kruhu se místo délky stěny zadává průměr
   if (target.kind === 'wall-length' && floor.walls[target.wallId]?.radius !== undefined) target = { kind: 'circle-diameter', wallId: target.wallId };
+  // délka stěny: posouvá se volný (nepřipojený) konec, když je volný jen jeden
+  if (target.kind === 'wall-length' && target.move !== 'both') {
+    const w = floor.walls[target.wallId];
+    const free = (id: string) => wallsAtNode(floor, id).length === 1 && !floor.nodes[id]?.host;
+    if (w) {
+      const other = target.move.nodeId === w.a ? w.b : w.a;
+      if (!free(target.move.nodeId) && free(other)) target = { ...target, move: { nodeId: other } };
+    }
+  }
   const v = numpadInitialValue(floor, target);
   const selection =
     target.kind === 'protrusion-dim' || target.kind === 'protrusion-sagitta'
@@ -213,7 +222,9 @@ function commitAndNext(): void {
   if (t.kind === 'wall-length') {
     const wall = floor.walls[t.wallId];
     if (!wall) return store.set({ numpad: null });
-    const fromNode = t.move === 'both' ? wall.b : t.move.nodeId;
+    let fromNode = t.move === 'both' ? wall.b : t.move.nodeId;
+    // posouval se volný konec (bez další stěny) → pokračovat od napojeného konce
+    if (wallsAtNode(floor, fromNode).length < 2) fromNode = fromNode === wall.a ? wall.b : wall.a;
     const next = nextWallInChain(floor, wall.id, fromNode);
     if (!next) return store.set({ numpad: null });
     // Kóty otvorů na další stěně jdou před její celkovou délkou

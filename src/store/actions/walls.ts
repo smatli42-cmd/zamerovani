@@ -8,6 +8,8 @@ import { setChainSagitta } from '../../core/arcChain';
 import { dist } from '../../core/geometry';
 import { setWallLength, type MoveTarget } from '../../core/solver';
 import { mergeStraightAt } from '../../core/topology';
+import { describeDim, dimKey, lockViolation, type DimTarget } from '../../core/dimLock';
+import { keepOpeningsAfterResize } from '../../core/openingChain';
 import { attachAtNode } from '../../core/hosting';
 import { hasBody, initialSide, orientLoopOutward } from '../../core/wallBody';
 import { store, type EditOptions } from '../store';
@@ -245,9 +247,21 @@ export function setWallNoJoin(wallId: Id, end: 'a' | 'b', noJoin: boolean): void
 
 export function applyWallLength(wallId: Id, length: number, move: MoveTarget, opts: EditOptions = {}): boolean {
   let ok = false;
+  let blocked: DimTarget | null = null;
+  const before = store.floor();
   const applied = store.edit(floor => {
     ok = setWallLength(floor, wallId, length, move);
+    // otvory jedou se svým referenčním rohem; když by to porušilo zamčenou kótu, zůstanou na místě
+    // a s rohem jedou jen otvory k němu přivázané zámky (řetěz otvorů, core/openingChain.ts)
+    const v = ok && before ? lockViolation(before, floor, opts.allowKey) : null;
+    if (v && v.kind.startsWith('opening-') && !keepOpeningsAfterResize(before!, floor, wallId)) {
+      ok = false;
+      blocked = v;
+    }
+    return ok;
   }, {}, opts);
+  // otvory nejde rozmístit tak, aby zámky platily → hlášení, která zamčená kóta brání
+  if (blocked && before) store.set({ lockBlock: { key: dimKey(blocked), text: `Nelze – brání zamčená kóta: ${describeDim(before, blocked)}`, target: blocked } });
   return applied && ok;
 }
 

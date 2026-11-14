@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-14 (12) – celková kóta stěny protáhne volný konec
+- **Co se změnilo:** Kóta celkové délky stěny posouvá volný (nepřipojený) konec, pokud je volný jen jeden (`openTarget`). Když by otvory jedoucí se svým referenčním rohem porušily zamčenou kótu, zůstanou ve výkresu na místě a s rohem jedou jen otvory k němu přivázané zamčeným odstupem a zamčenými meziostěními (`keepOpeningsAfterResize` v `core/openingChain.ts`); rozdíl spolkne nezamčená krajní kóta. Další (NEXT) pokračuje od napojeného konce. Testy v `store/openingChain.test.ts` (19).
+- **Viditelně v aplikaci:** u stěny se zamčenými meziostěními zadání celkové délky stěnu protáhne na volném konci, otvory zůstanou a krajní kóta se přepíše (dřív hlášení „brání zamčená kóta“).
+- **Chyby od uživatele:** celková kóta hlásila zamčenou kótu místo protažení stěny – opraveno.
+- **Rozhodnuto samostatně:** bez porušení zámku zůstává staré chování – otvor drží odstup od svého referenčního rohu (např. volný konec u rohu A: otvory měřené od A jedou s ním); když jsou otvory zámky přivázané k oběma koncům, změna délky se neprovede s hlášením.
+- **Otevřené:** vyzkoušet na tabletu; případně rozhodnout, zda otvory mají zůstat na místě i bez zámků.
+
 ### 2026-11-14 (11) – řetězová kóta otvorů se zámky (požadavek uživatele z tabletu)
 - **Co se změnilo:** Zamčená meziostění spojují otvory na stěně do celku (`core/openingChain.ts`, `pushChainRight`). Změna úseku řetězu (odstup od rohu A, meziostění, šířka otvoru měřeného od A) posune vše napravo, co je s ním spojené zamčenými kótami; první nezamčený úsek napravo změnu spolkne; když žádný není, posune se roh B (stěna se prodlouží). Změna poslední kóty k rohu B nechá otvory na místě a prodlouží / zkrátí stěnu. Když to nejde, nic se nezmění a dole se ukáže důvod. Recept `store.edit` může vrátit false = úprava se zahodí celá. Testy `store/openingChain.test.ts` (14) podle příkladu uživatele.
 - **Viditelně v aplikaci:** ťuknutí na první kótu vlevo a zadání nové hodnoty posune všechny otvory spojené zámky; poslední kóta vpravo prodlouží stěnu (otvory zůstanou). Bez zámků se mění jen nejbližší soused (meziostění za ním se přepíše) – dřív změna meziostění posouvala všechny otvory napravo.
@@ -227,7 +234,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Čeká na vyzkoušení uživatelem (tablet):** všech 7 úprav – podrobnosti v Deníku změn 2026-11-14 (1–8). Zvlášť Nevypínat displej (jen přes https, tedy na GitHub Pages).
 
-**Hotové navíc (2026-11-14):** D3 – nástroj „Do rohu“ (viz Deník změn (9)); **zámek kót** místo „změřeno × náčrt“ (Deník (10), KOTY-ZAMEK-EXPORT.md) a řetěz otvorů se zámky (Deník (11)). Vše čeká na vyzkoušení. Testy 323 + 1 `it.fails`.
+**Hotové navíc (2026-11-14):** D3 – nástroj „Do rohu“ (viz Deník změn (9)); **zámek kót** místo „změřeno × náčrt“ (Deník (10), KOTY-ZAMEK-EXPORT.md) a řetěz otvorů se zámky (Deník (11), (12)). Vše čeká na vyzkoušení. Testy 328 + 1 `it.fails`.
 
 **Fronta kroků:**
 1. **Přichytávání k oběma lícům stěny** u nástroje Stěna – zároveň poloha napojeného rohu mimo osu.

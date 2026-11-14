@@ -11,6 +11,7 @@
 import type { Floor, Id, Opening } from '../model/types';
 import { openingSpan, openingStartFromA, openingsOnWall, wallLength } from './floorQueries';
 import { setWallLength } from './solver';
+import { dot, sub, unit } from './geometry';
 
 const locked = (floor: Floor, key: string) => !!floor.dimLocks?.[key];
 
@@ -87,4 +88,51 @@ export function chainEdge(floor: Floor, op: Opening, ref: 'a' | 'b'): number | n
   const len = wallLength(floor, wall);
   const start = openingStartFromA(op, len);
   return ref === 'a' ? start : len - start - openingSpan(op);
+}
+
+/**
+ * Po změně délky stěny (posun rohu A a / nebo B podél stěny): otvory zůstanou ve výkresu na místě, jen ty,
+ * které jsou k posunutému rohu přivázané zamčenými kótami (odstup od rohu + zamčená meziostění), jedou s ním.
+ * Volá se, když by výchozí chování (otvor drží odstup od svého referenčního rohu) porušilo zamčenou kótu.
+ * `before` = podlaží před úpravou. Vrací false, když jsou otvory přivázané k oběma rohům (nejde splnit).
+ */
+export function keepOpeningsAfterResize(before: Floor, floor: Floor, wallId: Id): boolean {
+  const w0 = before.walls[wallId];
+  const w1 = floor.walls[wallId];
+  const a0 = w0 && before.nodes[w0.a];
+  const b0 = w0 && before.nodes[w0.b];
+  const a1 = w1 && floor.nodes[w1.a];
+  const b1 = w1 && floor.nodes[w1.b];
+  if (!w0 || !w1 || !a0 || !b0 || !a1 || !b1) return false;
+  const dir = unit(a0, b0);
+  const shiftA = dot(sub(a1, a0), dir); // posun rohu A podél stěny (kladně k B)
+  const shiftB = dot(sub(b1, b0), dir);
+  const placed = openingsOnWall(before, w0);
+  const n = placed.length;
+  const lk = (key: string) => !!before.dimLocks?.[key];
+  const tiedA = new Set<number>();
+  if (n && lk(`opening-offset:${placed[0]!.op.id}:a`)) {
+    tiedA.add(0);
+    for (let i = 1; i < n && lk(`opening-gap:${placed[i - 1]!.op.id}:${placed[i]!.op.id}`); i++) tiedA.add(i);
+  }
+  const tiedB = new Set<number>();
+  if (n && lk(`opening-offset:${placed[n - 1]!.op.id}:b`)) {
+    tiedB.add(n - 1);
+    for (let i = n - 2; i >= 0 && lk(`opening-gap:${placed[i]!.op.id}:${placed[i + 1]!.op.id}`); i--) tiedB.add(i);
+  }
+  if ([...tiedA].some(i => tiedB.has(i)) && Math.abs(shiftA - shiftB) > 0.5) return false;
+  const newLen = wallLength(floor, w1);
+  placed.forEach((p, i) => {
+    // na místě ve výkresu = začátek od nového rohu A se zmenší o posun A; přivázané jedou se svým rohem
+    const start = p.start - shiftA + (tiedA.has(i) ? shiftA : 0) + (tiedB.has(i) ? shiftB : 0);
+    placeAt(floor.openings[p.op.id]!, start, newLen);
+  });
+  // otvory musí zůstat na stěně a nesmí se překrýt
+  const spans = placed
+    .map(p => {
+      const s = openingStartFromA(floor.openings[p.op.id]!, newLen);
+      return { s, e: s + openingSpan(p.op) };
+    })
+    .sort((x, y) => x.s - y.s);
+  return spans.every((x, i) => x.s > -0.5 && x.e < newLen + 0.5 && (i === 0 || x.s > spans[i - 1]!.e - 0.5));
 }
