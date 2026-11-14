@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-14 (7) – Nevypínat displej (Screen Wake Lock)
+- **Co se změnilo:** Nový modul `input/wakeLock.ts` drží displej zapnutý přes Screen Wake Lock API: žádá o zámek při spuštění, při každém ťuknutí, dokud ho nemá (Safari chce dotyk), a znovu po návratu do aplikace (`visibilitychange`). Volba `Settings.keepAwake` (ukládá se v prohlížeči jako ostatní nastavení). Testy s falešným prohlížečem.
+- **Viditelně v aplikaci:** v Nastavení (⚙️) přepínač **Nevypínat displej**, výchozí **zapnuto**. Bez podpory API se pod ním ukáže rada prodloužit časový limit obrazovky v nastavení tabletu.
+- **Rozhodnuto samostatně:** výchozí stav zapnuto (při zaměřování je usínání horší než spotřeba baterie; zámek platí jen, když je aplikace vidět). Náhradní trik s neviditelným videem (NoSleep) se nedělá.
+- **Podpora:** Chrome a Edge na Androidu (Galaxy Tab) ano; Safari na iPadOS od 16.4 (v aplikaci přidané na plochu spolehlivě až od 18.4); vyžaduje https (GitHub Pages ano; vývojový server přes IP adresu v síti ne).
+- **Otevřené:** ověřit na tabletu (náhledový prohlížeč v Claude zámek zakazuje).
+
 ### 2026-11-14 (6) – značka okna: plná čára v lících
 - **Co se změnilo:** Čára přes otvor v rovině líců (navazuje na hrany stěny) je u okna a francouzského okna plná, u dveří a průchodu zůstává čerchovaná (`faceLineDashed` v `core/doorLayout.ts`, test ve `windowFrame.test.ts`).
 - **Viditelně v aplikaci:** okno ve stěně má v obou lících plnou tenkou čáru místo čerchované.

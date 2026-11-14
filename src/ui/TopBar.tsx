@@ -1,6 +1,7 @@
 /**
  * Horní lišta editoru: zpět na projekty, podlaží, Zpět/Vpřed, nastavení, stav uložení.
  */
+import { wakeLockSupported } from '../input/wakeLock';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { downloadBackup } from '../persistence/backup';
 import { saveNow } from '../persistence/autosave';
@@ -166,6 +167,12 @@ function SettingsPopover({ onClose }: { onClose: () => void }) {
       {toggle('showDims', 'Zobrazit kóty', '')}
       {toggle('showGrid', 'Zobrazit mřížku', '')}
       {toggle('fingerPan', 'Prst jen posouvá', 'Kreslí se jen perem, prst posouvá výkres (ochrana proti dlani)')}
+      {toggle('keepAwake', 'Nevypínat displej', 'Tablet neusne, dokud je aplikace otevřená na obrazovce')}
+      {settings.keepAwake && !wakeLockSupported() && (
+        <p class="muted small" style="margin:0 0 6px">
+          Tento prohlížeč nevypínání displeje nepodporuje (nebo stránka neběží přes https). Prodlužte „Časový limit obrazovky“ v nastavení tabletu.
+        </p>
+      )}
       <div class="toggle-row">
         <span>Velikost kót</span>
         <button class="btn btn-sm" onClick={() => store.updateSettings({ dimScale: Math.max(0.7, +(settings.dimScale - 0.1).toFixed(2)) })}>

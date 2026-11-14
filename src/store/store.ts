@@ -96,6 +96,8 @@ export interface Settings {
   wallShape: 'straight' | 'arc';
   /** Nástroj Stěna: osa nové stěny = líc nebo střed tloušťky (B1, B10). */
   wallAxis: 'face' | 'center';
+  /** Nevypínat displej, dokud je aplikace otevřená (Screen Wake Lock, input/wakeLock.ts). */
+  keepAwake: boolean;
 }
 
 export type SaveStatus = 'saved' | 'saving' | 'dirty' | 'error';
@@ -126,7 +128,7 @@ export interface AppState {
 const SETTINGS_KEY = 'zamerovani.settings';
 
 function loadSettings(): Settings {
-  const defaults: Settings = { snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', windowKind: 'window', wallShape: 'straight', wallAxis: 'face' };
+  const defaults: Settings = { snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', windowKind: 'window', wallShape: 'straight', wallAxis: 'face', keepAwake: true };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     return raw ? { ...defaults, ...JSON.parse(raw) } : defaults;
