@@ -17,6 +17,7 @@ import { bodyNormal, bodyStart, facePointAt, faceSpan, hasBody, wallBodies } fro
 import { doorLayout } from '../core/doorLayout';
 import { openingStartFromA } from '../core/floorQueries';
 import { hostedChain } from '../core/hosting';
+import { dimKey } from '../core/dimLock';
 
 /** Těžiště každé souvislé skupiny stěn (pro určení strany „ven“). */
 function componentCentroids(floor: Floor): Map<Id, Pt> {
@@ -172,21 +173,11 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
       offset += rowGap;
     }
 
-    // 2. řada: celková délka stěny
-    const measured = wall.measured;
-    const mismatch = measured !== null && Math.abs(geomLen - measured) > 2;
-    const text = measured === null ? `~${geomLen}` : mismatch ? `${measured} ⚠` : String(measured);
-    const style: DimStyle =
-      measured === null
-        ? { color: '#c2410c', bg: '#fff7ed', bold: false }
-        : mismatch
-          ? { color: '#b91c1c', bg: '#fef2f2', bold: true }
-          : { color: '#0f172a', bg: '#ffffff', bold: true };
-    if (selected) style.bg = '#dbeafe';
+    // 2. řada: celková délka stěny – vždy skutečná délka z výkresu, černě (pojem „změřeno × náčrt“ zrušen 2026-11-14)
+    const style: DimStyle = { color: '#0f172a', bg: selected ? '#dbeafe' : '#ffffff', bold: true };
     // 2a: u osy uprostřed se měří uzel–uzel po ose (příznak „osa“)
-    const axisNote = wall.axis === 'center' && hasBody(wall) ? 'osa' : null;
-    const subText = mismatch ? (axisNote ? `osa · výkres ${geomLen}` : `výkres ${geomLen}`) : (axisNote ?? undefined);
-    drawDimLine(ctx, a, b, out, offset, text, subText, style, s, {
+    const subText = wall.axis === 'center' && hasBody(wall) ? 'osa' : undefined;
+    drawDimLine(ctx, a, b, out, offset, String(geomLen), subText, style, s, {
       type: 'numpad',
       target: { kind: 'wall-length', wallId: wall.id, move: { nodeId: wall.b } },
       wallId: wall.id
@@ -332,6 +323,52 @@ export function drawDimLine(
   ctx.restore();
 
   if (action) addHitBox({ x: mid.x, y: mid.y, halfW: boxW / 2, halfH: boxH / 2, angle, action });
+
+  // Zámek kóty: modrá ikona hned za číslem (pomocná – jen v editoru)
+  if (action?.type === 'numpad' && action.target.kind !== 'field' && lockCtx.helpers) {
+    const key = dimKey(action.target);
+    if (lockCtx.locks?.[key]) {
+      const r = 9 * s;
+      const c = add(mid, scale({ x: Math.cos(angle), y: Math.sin(angle) }, boxW / 2 + r + 2));
+      drawLockIcon(ctx, c, r, key === lockCtx.blocked);
+      addHitBox({ x: c.x, y: c.y, halfW: r, halfH: r, angle, action: { type: 'lock', target: action.target } });
+    }
+  }
+}
+
+/** Zámky kót pro aktuální vykreslení (nastaví renderer před kreslením kót). */
+let lockCtx: { locks: Floor['dimLocks']; blocked: string | null; helpers: boolean } = { locks: undefined, blocked: null, helpers: true };
+
+/**
+ * `locks` = zamčené kóty podlaží, `blocked` = kóta, která právě zastavila úpravu (zvýrazní se),
+ * `helpers` = kreslit pomocné ikony (editor ano, export výkresu ne).
+ */
+export function setDimLockContext(locks: Floor['dimLocks'], blocked: string | null, helpers: boolean): void {
+  lockCtx = { locks, blocked, helpers };
+}
+
+/** Ikona zámku: bílý kroužek s modrým okrajem a modrým zámkem (čitelné i na slunci); zvýrazněná žlutě. */
+function drawLockIcon(ctx: CanvasRenderingContext2D, c: Pt, r: number, highlight: boolean): void {
+  const blue = '#1d4ed8';
+  ctx.save();
+  ctx.translate(c.x, c.y);
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.fillStyle = highlight ? '#fde047' : '#ffffff';
+  ctx.fill();
+  ctx.lineWidth = Math.max(1.5, r * 0.18);
+  ctx.strokeStyle = blue;
+  ctx.stroke();
+  // oblouk (třmen) a tělo zámku
+  const w = r * 0.95;
+  const h = r * 0.7;
+  ctx.beginPath();
+  ctx.arc(0, -h * 0.15, w * 0.32, Math.PI, 0);
+  ctx.lineWidth = Math.max(1.5, r * 0.2);
+  ctx.stroke();
+  ctx.fillStyle = blue;
+  ctx.fillRect(-w / 2, -h * 0.15, w, h * 0.75);
+  ctx.restore();
 }
 
 /**

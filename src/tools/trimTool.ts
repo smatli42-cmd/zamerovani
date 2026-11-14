@@ -19,7 +19,8 @@ const FAIL: Record<Exclude<TrimResult, 'ok'>, string> = {
   parallel: 'Stěny jsou rovnoběžné, roh mezi nimi nevznikne.',
   same: 'Vyber dvě různé stěny.',
   tooShort: 'Stěna by byla příliš krátká – ťukni na delší část.',
-  joined: 'Stěny už jsou v rohu spojené.'
+  joined: 'Stěny už jsou v rohu spojené.',
+  locked: 'Brání zamčená kóta (viz hlášení nahoře).'
 };
 
 let first: { wallId: Id; keep: Pt } | null = null;

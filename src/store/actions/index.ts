@@ -3,7 +3,7 @@
  * nikdy nemění data přímo. Vlastní kód je rozdělený podle oblastí do souborů v této složce;
  * tady se znovu exportuje jen veřejné rozhraní (pomocné funkce mezi soubory ven nejdou).
  */
-export { addWall, addRectWalls, addCircleWalls, setCircleRadius, setWallSagitta, updateWall, applyWallLength, unlockWall, updateWallLabel, setWallThickness, setWallAxis, flipWallSide, setWallNoJoin, type GroupOrigin, groupOrigin, moveGroup, moveNode, mergeNodeIfCoincident, trimToCorner } from './walls';
+export { addWall, addRectWalls, addCircleWalls, setCircleRadius, setWallSagitta, updateWall, applyWallLength, updateWallLabel, setWallThickness, setWallAxis, flipWallSide, setWallNoJoin, type GroupOrigin, groupOrigin, moveGroup, moveNode, mergeNodeIfCoincident, trimToCorner } from './walls';
 export { rotateSelection, duplicateSelection, pasteOpenings, endPaste } from './copy';
 export { deleteSelection } from './delete';
 export { addOpening, updateOpening, moveOpeningTo, setOpeningRef, setRevealEnabled, setRevealSides, setWindowKind } from './openings';
@@ -13,3 +13,4 @@ export { addFloor, renameFloor, deleteFloor } from './floors';
 export { numpadInitialValue, applyNumpadValue } from './numpad';
 export { addLine, updateProtrusion, lineChain, setProtrusionArc } from './protrusions';
 export { setActiveWallThickness, addWallPreset, removeWallPreset, setWallArcHeight } from './project';
+export { toggleDimLock, setDimLock, setWallDimsLocked, setRoomDimsLocked, wallLockState, roomLockState } from './locks';

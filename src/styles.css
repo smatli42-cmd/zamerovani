@@ -630,6 +630,50 @@ textarea {
   font-size: 14px;
   background: #fef3c7;
 }
+.numpad-lock-warn {
+  margin: 6px 12px 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #dbeafe;
+  color: #1e3a8a;
+  font-size: 13px;
+}
+
+.lock-all {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.lock-all .seg button {
+  white-space: nowrap;
+}
+
+.lock-toggle.on {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+
+.lock-notice {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 30;
+  max-width: calc(100% - 32px);
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #1e3a8a;
+  color: #fff;
+  font-size: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .numpad-actions {
   display: flex;
   flex-direction: column;

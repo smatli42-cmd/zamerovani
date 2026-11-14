@@ -135,7 +135,7 @@ export function addLine(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: I
     if (id) prot = convertChain(floor, id);
     if (id && !prot) dropLineOverProtrusion(floor, id);
   });
-  if (prot) store.set({ selection: { kind: 'protrusion', id: prot } });
+  if (prot && store.floor()?.protrusions?.[prot]) store.set({ selection: { kind: 'protrusion', id: prot } });
 }
 
 /**

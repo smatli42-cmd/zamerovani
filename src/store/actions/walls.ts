@@ -10,7 +10,7 @@ import { setWallLength, type MoveTarget } from '../../core/solver';
 import { mergeStraightAt } from '../../core/topology';
 import { attachAtNode } from '../../core/hosting';
 import { hasBody, initialSide, orientLoopOutward } from '../../core/wallBody';
-import { store } from '../store';
+import { store, type EditOptions } from '../store';
 import { cleanup, getOrCreateNode, MERGE_TOL, nodeHasNoJoin } from './shared';
 import { convertChain } from './protrusions';
 
@@ -40,9 +40,10 @@ function linkWall(floor: Floor, a: Id, b: Id, sagitta = 0, style?: LineStyle, th
  */
 export function addWall(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: Id | null, select = true, opts: WallOpts = {}): Id | null {
   let createdId: Id | null = null;
-  store.edit(floor => {
+  // zastavené zámkem kóty → stěna nevznikla
+  if (!store.edit(floor => {
     createdId = insertWall(floor, start, startNodeId, end, endNodeId, opts);
-  });
+  })) return null;
   if (createdId && select) store.set({ selection: { kind: 'wall', id: createdId } });
   return createdId;
 }
@@ -103,7 +104,7 @@ export function addRectWalls(p: Pt, q: Pt, style: LineStyle): void {
     // plný obdélník přiložený stranou k líci stěny = výstupek / vybrání (čárkovaný překlad zůstane čarami)
     if (sides[0] && style === 'solid') prot = convertChain(floor, sides[0]);
   });
-  if (prot) store.set({ selection: { kind: 'protrusion', id: prot } });
+  if (prot && store.floor()?.protrusions?.[prot]) store.set({ selection: { kind: 'protrusion', id: prot } });
 }
 
 /** Kruh: jedna stěna se středovým rohem a poloměrem. */
@@ -117,7 +118,7 @@ export function addCircleWalls(center: Pt, radius: number, style: LineStyle): vo
     id = wall.id;
   });
   // Vybraný kruh má na obvodu úchyt pro změnu poloměru
-  if (id) store.set({ selection: { kind: 'wall', id } });
+  if (id && store.floor()?.walls[id]) store.set({ selection: { kind: 'wall', id } });
 }
 
 /** Změní poloměr kruhové stěny (tažení bodu na obvodu, kóta průměru). */
@@ -242,19 +243,12 @@ export function setWallNoJoin(wallId: Id, end: 'a' | 'b', noJoin: boolean): void
   });
 }
 
-export function applyWallLength(wallId: Id, length: number, move: MoveTarget): boolean {
+export function applyWallLength(wallId: Id, length: number, move: MoveTarget, opts: EditOptions = {}): boolean {
   let ok = false;
-  store.edit(floor => {
+  const applied = store.edit(floor => {
     ok = setWallLength(floor, wallId, length, move);
-  });
-  return ok;
-}
-
-export function unlockWall(wallId: Id): void {
-  store.edit(floor => {
-    const w = floor.walls[wallId];
-    if (w) w.measured = null;
-  });
+  }, {}, opts);
+  return applied && ok;
 }
 
 export function updateWallLabel(wallId: Id, patch: Partial<WallLabel>): void {
@@ -354,6 +348,6 @@ export function trimToCorner(w1: Id, keep1: Pt, w2: Id, keep2: Pt): TrimResult {
   if (!floor) return res;
   // nejdřív nanečisto, ať se do historie nezapíše neúspěšný pokus
   res = trimExtendToCorner(structuredClone(floor), w1, keep1, w2, keep2);
-  if (res === 'ok') store.edit(f => void trimExtendToCorner(f, w1, keep1, w2, keep2));
+  if (res === 'ok' && !store.edit(f => void trimExtendToCorner(f, w1, keep1, w2, keep2))) return 'locked';
   return res;
 }

@@ -2,7 +2,9 @@
  * Panel místnosti.
  */
 import type { Room } from '../../model/types';
-import { deleteSelection, duplicateSelection, updateRoom } from '../../store/actions';
+import { deleteSelection, duplicateSelection, roomLockState, setRoomDimsLocked, updateRoom } from '../../store/actions';
+import { store } from '../../store/store';
+import { useStore } from '../../store/useStore';
 import { openField } from '../../store/numpadController';
 import { close } from './common';
 import { Panel, TextField } from './fields';
@@ -26,6 +28,7 @@ export function RoomPanel({ room }: { room: Room }) {
           </button>
         ))}
       </div>
+      <RoomLocks roomId={room.id} />
       <h4>Světlé výšky</h4>
       {room.heights.map((h, i) => (
         <div class="height-row" key={i}>
@@ -63,5 +66,26 @@ export function RoomPanel({ room }: { room: Room }) {
         <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
       </div>
     </Panel>
+  );
+}
+
+/** Hromadné zamknutí / odemknutí kót všech stěn obrysu místnosti. */
+function RoomLocks({ roomId }: { roomId: string }) {
+  useStore(s => s.project); // překreslit po změně zámků
+  const floor = store.floor();
+  const st = floor ? roomLockState(floor, roomId) : null;
+  if (!st) return <p class="muted small">Kóty místnosti: kolem štítku není uzavřený obrys stěn.</p>;
+  return (
+    <div class="field lock-all">
+      <span>Kóty místnosti {st === 'all' ? '🔒 vše zamčeno' : st === 'some' ? '🔒 část zamčena' : ''}</span>
+      <div class="seg">
+        <button class={st === 'all' ? 'active' : ''} onClick={() => setRoomDimsLocked(roomId, true)}>
+          🔒 Zamknout vše
+        </button>
+        <button class={st === 'none' ? 'active' : ''} onClick={() => setRoomDimsLocked(roomId, false)}>
+          🔓 Odemknout vše
+        </button>
+      </div>
+    </div>
   );
 }

@@ -4,7 +4,8 @@
 import { wallNodes } from '../core/floorQueries';
 import { OPENING_DEFAULTS } from '../model/factory';
 import type { Floor } from '../model/types';
-import { numpadValue, pressKey, setMoveTarget, unlockCurrentWall, type NumKey } from '../store/numpadController';
+import { numpadValue, pressKey, setMoveTarget, toggleCurrentLock, type NumKey } from '../store/numpadController';
+import { isDimLocked } from '../core/dimLock';
 import { store, type NumPadTarget } from '../store/store';
 import { useStore } from '../store/useStore';
 
@@ -71,6 +72,7 @@ export function NumPad() {
   const hasExpr = /[+-]/.test(np.buffer.slice(1));
   const wall = t.kind === 'wall-length' ? floor?.walls[t.wallId] : null;
   const nodes = floor && wall ? wallNodes(floor, wall) : null;
+  const locked = !!floor && t.kind !== 'field' && isDimLocked(floor, t);
 
   return (
     <section class="numpad" aria-label="Zadání rozměru">
@@ -80,6 +82,9 @@ export function NumPad() {
           ✕
         </button>
       </div>
+      {np.confirmLock && (
+        <div class="numpad-lock-warn">🔒 Kóta je zamčená. Stiskni ✔ znovu – hodnota se přepíše a zámek zůstane.</div>
+      )}
       <div class={`numpad-display ${np.fresh ? 'fresh' : ''}`}>
         {hasExpr && <div class="numpad-expr">{np.buffer.replace(/-/g, '−')} =</div>}
         <div class="numpad-value">
@@ -113,11 +118,11 @@ export function NumPad() {
       </div>
       <div class="numpad-actions">
         <button class="btn btn-primary btn-lg" onClick={() => pressKey('ENTER')}>
-          ✔ Potvrdit
+          {np.confirmLock ? '✔ Přepsat zamčenou kótu' : '✔ Potvrdit'}
         </button>
-        {wall?.measured !== null && wall && (
-          <button class="btn btn-sm" onClick={unlockCurrentWall} title="Vrátit stěnu do stavu náčrtu">
-            🔓 Zrušit změření
+        {t.kind !== 'field' && (
+          <button class={`btn btn-sm lock-toggle ${locked ? 'on' : ''}`} onClick={toggleCurrentLock} title="Zamčená kóta drží hodnotu při úpravách jiných prvků">
+            {locked ? '🔒 Zamčeno – odemknout' : '🔓 Zamknout kótu'}
           </button>
         )}
       </div>

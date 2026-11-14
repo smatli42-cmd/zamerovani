@@ -8,14 +8,15 @@
  *
  * - Přesouvá se jen konec této stěny: roh sdílený s dalšími stěnami se pro ni oddělí (sousedé zůstanou).
  * - Otvory a výstupky drží svou polohu ve výkresu; ty, které leží v odříznuté části, se smažou (F4).
- * - Změřená délka se zruší (stěna má jinou délku – je zase jen náčrt).
+ * - Zamčená délka stěny (zámek kót) úpravu zastaví – hlídá store.edit.
  */
 import { newId } from '../model/factory';
 import type { Floor, Id, Pt, Wall } from '../model/types';
 import { add, dist, dot, scale, sub } from './geometry';
 import { isCurved, openingSpan, openingStartFromA, wallNodes } from './floorQueries';
 
-export type TrimResult = 'ok' | 'curved' | 'parallel' | 'same' | 'tooShort' | 'joined';
+/** 'locked' = úprava by změnila zamčenou kótu (hlídá store.edit, ne tato funkce). */
+export type TrimResult = 'ok' | 'curved' | 'parallel' | 'same' | 'tooShort' | 'joined' | 'locked';
 
 const MIN_LEN = 10; // mm – kratší stěna po úpravě se nepřipustí
 
@@ -121,7 +122,6 @@ export function trimExtendToCorner(floor: Floor, w1: Id, keep1: Pt, w2: Id, keep
     w[pl.end] = cornerId;
     if (pl.end === 'a') delete w.noJoinA;
     else delete w.noJoinB;
-    w.measured = null;
     const [a1, b1] = wallNodes(floor, w)!;
     const newLen = dist(a1, b1);
     const shift = dot(sub(a1, oldA), dir); // o kolik se posunul roh A podél stěny

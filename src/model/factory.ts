@@ -73,14 +73,14 @@ export function wallPresets(project: Project | null): number[] {
 
 /** Nová stěna; `thickness` 0 = čára bez tloušťky (tvary). */
 export function createWall(a: Id, b: Id, sagitta = 0, thickness = 0, side: 1 | -1 = 1): Wall {
-  const wall: Wall = { id: newId('w'), a, b, thickness, side, measured: null, label: emptyWallLabel() };
+  const wall: Wall = { id: newId('w'), a, b, thickness, side, label: emptyWallLabel() };
   if (sagitta) wall.sagitta = sagitta;
   return wall;
 }
 
 /** Kruhová stěna: jeden roh (střed) a poloměr. */
 export function createCircleWall(center: Id, radius: number): Wall {
-  return { id: newId('w'), a: center, b: center, thickness: 0, side: 1, measured: null, label: emptyWallLabel(), radius };
+  return { id: newId('w'), a: center, b: center, thickness: 0, side: 1, label: emptyWallLabel(), radius };
 }
 
 /** Výchozí zárubeň dveří: 50 mm na každé straně, hloubka 100 mm. */

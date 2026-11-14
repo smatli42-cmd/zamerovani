@@ -6,7 +6,8 @@ import { evaluateExpression } from '../core/geometry';
 import { nextWallInChain, openingsOnWall } from '../core/floorQueries';
 import { componentGap } from '../core/components';
 import type { Id } from '../model/types';
-import { applyNumpadValue, numpadInitialValue, unlockWall } from './actions';
+import { applyNumpadValue, numpadInitialValue, toggleDimLock } from './actions';
+import { isDimLocked } from '../core/dimLock';
 import { store, type NumPadTarget } from './store';
 
 export type NumKey = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '00' | '000' | '+' | '-' | 'BACK' | 'CLEAR' | 'ENTER' | 'NEXT' | 'ESC';
@@ -62,10 +63,14 @@ export function pressKey(key: NumKey): void {
     case 'ESC':
       store.set({ numpad: null });
       return;
-    case 'ENTER':
-      commit();
+    case 'ENTER': {
+      const block = store.get().lockBlock;
+      if (commit() === 'confirm') return;
+      // zastaveno jinou zamčenou kótou → NumPad zůstane otevřený se zadanou hodnotou (hlášení je nahoře)
+      if (store.get().lockBlock && store.get().lockBlock !== block) return;
       store.set({ numpad: null });
       return;
+    }
     case 'NEXT':
       commitAndNext();
       return;
@@ -95,10 +100,14 @@ export function pressKey(key: NumKey): void {
       if (buffer.length > 18) buffer = buffer.slice(0, 18);
       fresh = false;
   }
-  store.set({ numpad: { ...np, buffer, fresh } });
+  store.set({ numpad: { ...np, buffer, fresh, confirmLock: false } });
 }
 
-function commit(): boolean {
+/**
+ * Zapíše hodnotu. U zamčené kóty se změněná hodnota nejdřív jen ohlásí ('confirm' – NumPad zůstane otevřený
+ * s upozorněním); až další potvrzení ji přepíše a zámek zůstane na nové hodnotě.
+ */
+function commit(): boolean | 'confirm' {
   const np = store.get().numpad;
   if (!np) return false;
   const t = np.target;
@@ -118,7 +127,13 @@ function commit(): boolean {
   }
   const v = evaluateExpression(np.buffer);
   if (v === null) return false;
-  return applyNumpadValue(t, Math.round(v));
+  const floor = store.floor();
+  const locked = !!floor && isDimLocked(floor, t);
+  if (locked && !np.confirmLock && numpadInitialValue(floor, t) !== Math.round(v)) {
+    store.set({ numpad: { ...np, confirmLock: true } });
+    return 'confirm';
+  }
+  return applyNumpadValue(t, Math.round(v), locked);
 }
 
 /** Přepne roh, který se posune při změně délky stěny. */
@@ -128,11 +143,12 @@ export function setMoveTarget(move: { nodeId: Id } | 'both'): void {
   store.set({ numpad: { ...np, target: { ...np.target, move } } });
 }
 
-export function unlockCurrentWall(): void {
+/** Zamkne / odemkne kótu otevřenou v NumPadu. */
+export function toggleCurrentLock(): void {
   const np = store.get().numpad;
-  if (!np || np.target.kind !== 'wall-length') return;
-  unlockWall(np.target.wallId);
-  store.set({ numpad: null });
+  if (!np || np.target.kind === 'field') return;
+  toggleDimLock(np.target);
+  if (np.confirmLock) store.set({ numpad: { ...np, confirmLock: false } });
 }
 
 /** Pořadí kót na stěně: ostění A → otvor → mezera → … → ostění B → celá stěna. */
@@ -158,7 +174,9 @@ function sameTarget(a: NumPadTarget, b: NumPadTarget): boolean {
 function commitAndNext(): void {
   const np = store.get().numpad;
   if (!np) return;
-  commit();
+  const block = store.get().lockBlock;
+  if (commit() === 'confirm') return;
+  if (store.get().lockBlock && store.get().lockBlock !== block) return;
   const floor = store.floor();
   if (!floor) return;
   const t = np.target;

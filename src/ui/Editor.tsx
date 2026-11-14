@@ -6,6 +6,7 @@ import { attachRenderer, detachRenderer } from '../canvas/renderer';
 import { attachKeyboard } from '../input/keyboard';
 import { attachPointer } from '../input/pointer';
 import { NumPad } from './NumPad';
+import { LockNotice } from './LockNotice';
 import { ToolOptions } from './ToolOptions';
 import { SidePanel } from './panels/SidePanel';
 import { Toolbar } from './Toolbar';
@@ -39,6 +40,7 @@ export function Editor() {
           <ToolOptions />
           <SidePanel />
           <NumPad />
+          <LockNotice />
         </div>
       </div>
     </div>

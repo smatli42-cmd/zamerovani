@@ -5,7 +5,8 @@
 import { describe, expect, it } from 'vitest';
 import { createProject } from '../model/factory';
 import { hostedChain } from '../core/hosting';
-import { addOpening, addWall, applyNumpadValue } from './actions';
+import { addOpening, addWall, applyNumpadValue, setDimLock } from './actions';
+import { wallLength } from '../core/floorQueries';
 import { openTarget, pressKey } from './numpadController';
 import { store } from './store';
 
@@ -76,14 +77,22 @@ describe('kóta polohy napojení', () => {
     expect(f().nodes[w.b]!.y).toBeCloseTo(-3500, 3);
   });
 
-  it('natočená příčka ztratí změřenou délku', () => {
+  it('nezamčená délka natočené příčky se přepíše; zamčená posun napojení zastaví s hlášením', () => {
     const { A, B, m, far } = tee();
     addWall({ x: 1000, y: -2000 }, far, { x: 2000, y: -2000 }, null, false, { thickness: 100, side: 1 });
-    store.edit(fl => {
-      fl.walls[B]!.measured = 2000;
-    });
-    applyNumpadValue({ kind: 'junction-gap', wallId: A, nodeId: m, to: 'prev' }, 1200);
-    expect(f().walls[B]!.measured).toBeNull();
+    const lenB = () => Math.round(wallLength(f(), f().walls[B]!));
+    const len0 = lenB();
+    // zamčená délka příčky: posun by ji natočil a prodloužil → neprovede se, nic se nezmění
+    setDimLock({ kind: 'wall-length', wallId: B, move: 'both' }, true);
+    const snap = f();
+    expect(applyNumpadValue({ kind: 'junction-gap', wallId: A, nodeId: m, to: 'prev' }, 1200)).toBe(false);
+    expect(f()).toBe(snap);
+    expect(store.get().lockBlock?.text).toContain('délka stěny');
+    // odemčená: posun proběhne, kóta ukazuje novou délku z výkresu
+    setDimLock({ kind: 'wall-length', wallId: B, move: 'both' }, false);
+    expect(applyNumpadValue({ kind: 'junction-gap', wallId: A, nodeId: m, to: 'prev' }, 1200)).toBe(true);
+    expect(f().nodes[m]).toMatchObject({ x: 1200, y: 0 });
+    expect(lenB()).not.toBe(len0);
   });
 
   it('příčku nejde posunout do otvoru v průběžné stěně', () => {

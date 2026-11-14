@@ -39,15 +39,13 @@ export function splitWallAt(floor: Floor, wallId: Id, nodeId: Id): [Id, Id] | nu
   node.x = pr.point.x;
   node.y = pr.point.y;
   const sagParts = sag ? splitArcSagittas(nA, nB, sag, pr.point) : null;
-  const part = (a: Id, b: Id, partLen: number, partSag: number | null): Wall => {
+  const part = (a: Id, b: Id, partSag: number | null): Wall => {
     const w: Wall = {
       id: newId('w'),
       a,
       b,
       thickness: wall.thickness,
       side: wall.side,
-      // Změřená stěna → obě části jsou dané změřením (celek + poloha napojení)
-      measured: wall.measured === null ? null : Math.round(partLen),
       label: { ...wall.label }
     };
     if (partSag) w.sagitta = partSag;
@@ -56,13 +54,25 @@ export function splitWallAt(floor: Floor, wallId: Id, nodeId: Id): [Id, Id] | nu
     if (wall.axis) w.axis = wall.axis;
     return w;
   };
-  const wA = part(wall.a, nodeId, lenA, sagParts ? sagParts[0] : null);
-  const wB = part(nodeId, wall.b, lenB, sagParts ? sagParts[1] : null);
+  const wA = part(wall.a, nodeId, sagParts ? sagParts[0] : null);
+  const wB = part(nodeId, wall.b, sagParts ? sagParts[1] : null);
   // příznak „nespojovat“ patří původním koncům; nový roh uprostřed ho nemá
   if (wall.noJoinA) wA.noJoinA = true;
   if (wall.noJoinB) wB.noJoinB = true;
   delete floor.walls[wallId];
   floor.walls[wA.id] = wA;
+  // zamčená délka / tloušťka celé stěny → zamčené i obě části (celek zůstane držený); zámek celku zanikne
+  const locks = floor.dimLocks;
+  if (locks) {
+    const len = locks[`wall-length:${wallId}`];
+    const thk = locks[`wall-thickness:${wallId}`];
+    delete locks[`wall-length:${wallId}`];
+    delete locks[`wall-thickness:${wallId}`];
+    for (const id of [wA.id, wB.id]) {
+      if (len) locks[`wall-length:${id}`] = { kind: 'wall-length', wallId: id, move: 'both' };
+      if (thk) locks[`wall-thickness:${id}`] = { kind: 'wall-thickness', wallId: id };
+    }
+  }
   floor.walls[wB.id] = wB;
 
   // Otvory přesunout na část, ve které leží jejich střed
@@ -118,6 +128,8 @@ export function mergeStraightAt(floor: Floor, wallId: Id, nodeId: Id, throughT =
   if (!wFar) return wallId;
   const o = straightContinuation(floor, nodeId, node, wFar, w.thickness, w.id, throughT);
   if (!o || o.axis !== w.axis) return wallId; // různá osa = dvě stěny
+  // zamčená délka stěny (zámek kót) – pokračování se nepřipojí, zůstanou dvě stěny a zamčená kóta platí dál
+  if (floor.dimLocks?.[`wall-length:${o.id}`] || floor.dimLocks?.[`wall-length:${w.id}`]) return wallId;
   if (throughT) {
     // roh už nese jinou průběžnou stěnu (staré křížení „+“): slučuje se jen jedna průběžná dvojice
     if (node.host) return wallId;
@@ -127,7 +139,6 @@ export function mergeStraightAt(floor: Floor, wallId: Id, nodeId: Id, throughT =
     const sideOk = w.thickness === 0 || (sameDir ? o.side === w.side : o.side !== w.side);
     if (!sideOk || (o.style ?? 'solid') !== (w.style ?? 'solid') || noJoinAt(o) || noJoinAt(w)) return wallId;
   }
-  const measuredSum = o.measured !== null && w.measured !== null ? o.measured + w.measured : null;
   const oldLen = wallLength(floor, o);
   const added = dist(node, wFar);
   const starts = Object.values(floor.openings)
@@ -161,8 +172,6 @@ export function mergeStraightAt(floor: Floor, wallId: Id, nodeId: Id, throughT =
     if (wFarNoJoin) o.noJoinB = true;
     else delete o.noJoinB;
   }
-  // obě části změřené → součet (sloučení starých rozdělených stěn); jinak náčrt
-  o.measured = measuredSum;
   delete floor.walls[w.id];
   // rohy napojené na slučovanou část teď leží na sloučené stěně; přes T zůstává roh napojený
   for (const n of Object.values(floor.nodes)) if (n.host === w.id) n.host = o.id;
@@ -217,7 +226,6 @@ export function mergeArcAt(floor: Floor, nodeId: Id): boolean {
       w1.b = q.id;
       w1.side = s1 as 1 | -1;
       w1.sagitta = sagitta;
-      w1.measured = null;
       if (farNoJoin1) w1.noJoinA = true;
       else delete w1.noJoinA;
       if (farNoJoin2) w1.noJoinB = true;

@@ -8,6 +8,8 @@
  * - Při změně struktury zvýšit SCHEMA_VERSION a doplnit migraci v persistence/migrate.ts.
  */
 
+import type { DimTarget } from '../core/dimLock';
+
 export const SCHEMA_VERSION = 13;
 
 export type Id = string;
@@ -55,8 +57,11 @@ export interface Wall {
   /** Konec A / B se nenapojuje na ostatní stěny v rohu (má vlastní čelo); chybí = napojuje se. */
   noJoinA?: true;
   noJoinB?: true;
-  /** Změřená délka v mm, null = jen načrtnuto. */
-  measured: number | null;
+  /**
+   * Zastaralé (do 2026-11-14 „změřeno × náčrt“): pojem byl zrušen, nahradil ho zámek kót (`Floor.dimLocks`).
+   * Ve starých datech může zůstat, aplikace ho nečte ani nezapisuje.
+   */
+  measured?: number | null;
   label: WallLabel;
   /** Vzepětí oblouku v mm (znaménko = strana vyklenutí od směru a→b); chybí / 0 = rovná stěna. */
   sagitta?: number;
@@ -188,6 +193,11 @@ export interface Floor {
   texts: Record<Id, TextNote>;
   /** Výstupky a vybrání stěn (od verze 10; chybí = žádné). */
   protrusions?: Record<Id, Protrusion>;
+  /**
+   * Zamčené kóty (KOTY-ZAMEK-EXPORT.md, A): klíč = `dimKey(kóta)`, hodnota = popis kóty. Chybí = vše odemčeno.
+   * Zamčená kóta drží hodnotu – úprava, která by ji změnila, se neprovede (core/dimLock.ts).
+   */
+  dimLocks?: Record<string, DimTarget>;
 }
 
 /** Projekt = jedna zakázka (budova). */

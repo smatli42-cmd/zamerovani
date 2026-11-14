@@ -10,6 +10,7 @@
 | `KRESLENI-STEN-NAVRH.md` | Návrh stěn s tloušťkou a rozhodnutí uživatele |
 | `KRESLENI-EDITACE-KONCU.md` | Návrh editace konců stěn (tažení, posun, `resolveDragPoint`) |
 | `KRESLENI-VYSTUPKU.md` | Návrh výstupku / vybrání stěny (přizdívka, pilastr), kreslí se nástrojem Čára |
+| `KOTY-ZAMEK-EXPORT.md` | Návrh zámku kót (A, schváleno) a výběru kót do exportu (B, později) |
 | `ZADANI-OKNA-DVERE.md` | Zadání oken, dveří, ostění a dalších fází |
 | `POZADAVKY.md` | Celkové požadavky a plán po fázích |
 | `PREPNUTI-POCITACE.md` | Postup přepnutí mezi počítači pro uživatele |

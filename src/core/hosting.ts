@@ -176,8 +176,6 @@ function shiftHosted(floor: Floor, nodeId: Id, delta: number): void {
       const p = dist(far, from) > 1 ? lineWithHost(node, unit(from, far), fh, fa, fb, moved) : null;
       Object.assign(far, p ?? onHost(moved, fh, fa, fb).foot);
     } else if (others.length === 0) moveNode(far);
-    // příčka se natočila (vzdálený konec zůstal v rohu dalších stěn) – změřená délka už neplatí
-    else if (w.measured !== null) w.measured = null;
   }
 }
 

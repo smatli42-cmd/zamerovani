@@ -7,6 +7,12 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-14 (10) – zámek kót (KOTY-ZAMEK-EXPORT.md, A)
+- **Co se změnilo:** Pojem „změřeno × náčrt“ (`Wall.measured`) je zrušený – pole zůstává jen ve starých datech, aplikace ho nečte ani nezapisuje. Každá kóta může mít vlastní **zámek** (`Floor.dimLocks`, klíč = kóta, `core/dimLock.ts`; bez změny schématu, staré projekty mají vše odemčené). Řešič délek drží jen zamčené délky (`hasLockedWallAlong`). Každá úprava výkresu (`store.edit`) se kontroluje: když by změnila zamčenou kótu, neprovede se a nahoře se ukáže hlášení s tlačítkem Odemknout (`lockBlock`, `ui/LockNotice.tsx`). Testy `store/dimLock.test.ts` (16); testy, které ověřovaly „změřeno“, přepsané na zámek (změna zadání uživatelem).
+- **Viditelně v aplikaci:** všechny kóty černé, vždy skutečná délka z výkresu (žádná oranžová „~“ ani červený „⚠“). Zamčená kóta má za číslem **modrou ikonu zámku** (ťuknutím odemkne). V NumPadu tlačítko **Zamknout kótu / Zamčeno – odemknout**; změna zamčené kóty chce druhé potvrzení („Přepsat zamčenou kótu“) a zámek pak drží novou hodnotu. V panelu stěny a místnosti **Zamknout vše / Odemknout vše**. Tažení prvku se zamčenou kótou se nepohne a ukáže hlášení. Panel stěny už neříká „náčrt / změřeno“.
+- **Rozhodnuto samostatně:** zámek je uložený v podlaží podle kóty (kóty nejsou samostatné prvky); ruční přepsání zamčené kóty po potvrzení zámek ponechá; tažení se blokuje průběžně (prvek se nepohne), ne až po puštění; zámek kóty smazaného prvku zaniká; kóta měřená od souseda (poloha napojení, odstup výstupku), jehož soused přibyl / zmizel, je jiná kóta – zámek zaniká a úpravu nezastaví; mezera mezi otvory zablokuje přesun otvoru na jinou stěnu (kóta by zmizela); u oblouku drží zámek délky tětivu (tu kóta ukazuje); pokračování zamčené stěny rovným směrem se nesloučí (zůstanou dvě stěny); rozdělení stěny předá zámek délky / tloušťky oběma částem; hromadné zamknutí bere jen kóty viditelné u vybrané stěny (délka, vzepětí, tloušťka, řetěz otvorů s ostěním vlevo / vpravo a zárubní, polohy napojení), hloubky ostění / výstupky / líce se zamykají jednotlivě v NumPadu; místnost = nejmenší uzavřený obrys stěn kolem štítku (volné příčky uvnitř patří k ní, sloup se přeskočí); ikona zámku je pomocná (`setDimLockContext(…, helpers)` – export ji kreslit nebude). Zámek odemčené kóty se na plátně nezobrazuje – zamyká se v NumPadu nebo hromadně.
+- **Otevřené:** vyzkoušet na tabletu (čitelnost modré ikony na slunci). Úhlopříčky a volné kóty v aplikaci zatím nejsou – zámek je na ně připravený obecně. Část B (hlavní kóta pro export) později s exportem.
+
 ### 2026-11-14 (9) – D3: nástroj „Do rohu“ (zkrátit / prodloužit do rohu)
 - **Co se změnilo:** Nový nástroj **⌐ Do rohu** na liště: ťukne se na první stěnu a pak na druhou, vždy na část, která má zůstat. Referenční čáry obou rovných stěn se protnou; přečnívající část se odřízne, krátká stěna se prodlouží a obě sdílejí jeden roh (`core/trimExtend.ts`, akce `trimToCorner`, nástroj `tools/trimTool.ts`, zpráva v liště voleb `toolMsg`). Jeden krok Zpět. Testy `store/trimExtend.test.ts` (11).
 - **Viditelně v aplikaci:** nové tlačítko „Do rohu“; v liště nahoře návod, co ťuknout, a upozornění, když to nejde (oblouk, rovnoběžné stěny, příliš krátká stěna, už spojené). Při volbě druhé stěny kroužek v místě budoucího rohu.
@@ -215,7 +221,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Čeká na vyzkoušení uživatelem (tablet):** všech 7 úprav – podrobnosti v Deníku změn 2026-11-14 (1–8). Zvlášť Nevypínat displej (jen přes https, tedy na GitHub Pages).
 
-**Hotové navíc (2026-11-14):** D3 – nástroj „Do rohu“ (viz Deník změn (9)), čeká na vyzkoušení.
+**Hotové navíc (2026-11-14):** D3 – nástroj „Do rohu“ (viz Deník změn (9)); **zámek kót** místo „změřeno × náčrt“ (Deník (10), KOTY-ZAMEK-EXPORT.md). Obojí čeká na vyzkoušení. Testy 309 + 1 `it.fails`.
 
 **Fronta kroků:**
 1. **Přichytávání k oběma lícům stěny** u nástroje Stěna – zároveň poloha napojeného rohu mimo osu.
@@ -223,6 +229,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 3. **F4** (otvory při dělení stěny), **C1.11** (hrana odskoku, test C2/6 `it.fails`).
 4. Z auditu: F7, D4, A2 / A10 / B6; výstupek přes roh / kopie v řadě (I1.11).
 5. D3 doplnit: zkrátit jen jednu stěnu k hraně druhé (T místo L); případně řetězová kóta užšího otvoru při vypnutém vnitřním ostění.
+6. Kóty: volná kóta / úhlopříčka (POZADAVKY.md) – zámek je připravený; později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) spolu s exportem DXF / PDF.
 
 ## Předchozí stav (2026-11-13, konec sezení)
 
@@ -270,6 +277,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Rozhodnuto samostatně
 (Rozhodnutí mimo katalog, udělaná bez uživatele – nejnovější nahoře. Uživatel je může kdykoli změnit.)
+- 2026-11-14: Zámek kót – přepsání zamčené kóty v NumPadu po druhém potvrzení, zámek zůstane (dokument navrhoval zrušení – uživatel nerozhodl); tažení prvku se zamčenou kótou se blokuje průběžně; další drobná rozhodnutí v Deníku změn (10).
 - 2026-11-13: Čárkovaný obdélník (překlad) u líce zůstane čarami (uzavřený tvar = výstupek schválil uživatel, I1.2).
 - 2026-11-13: Výstupek – čára se kreslí tažením úsek po úseku, výstupek vznikne sám po úseku, který dosedne na líc (bez tlačítka Hotovo); NumPad kót: odstup před → šířka → odstup za → hloubka; šířka se mění od okraje u rohu A, hloubka úměrně; výstupek nejde táhnout (jen kóty); přehození strany stěny ho nechá na „své“ straně (ven od těla, posune se s tělem); na stěně bez tloušťky / oblouku se jen nekreslí.
 - 2026-11-12: D11 – „kolmo na původní směr“ a „vodorovně / svisle“ se nabízí jen u konce jediné stěny; u rohu více stěn jen jejich původní směry (přehlednost) a kolmice k blízkým stěnám.

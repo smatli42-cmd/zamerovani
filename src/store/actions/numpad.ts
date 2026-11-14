@@ -1,24 +1,24 @@
 /**
  * Akce: výchozí hodnota a zápis hodnoty z NumPadu.
  */
-import { revealPartValue } from '../../core/doorLayout';
 import type { Floor } from '../../model/types';
 import { arcChain, setChainSagitta } from '../../core/arcChain';
-import { openingSpan, openingStartFromA, wallLength } from '../../core/floorQueries';
-import { componentGap, setComponentGap } from '../../core/components';
+import { openingStartFromA, wallLength } from '../../core/floorQueries';
+import { setComponentGap } from '../../core/components';
+import { dimKey, dimValue } from '../../core/dimLock';
 import { store, type NumPadTarget } from '../store';
 import { setGap, setOpeningWidth, setReveal, setStartFromA } from './openings';
 import { applyWallLength, resizeCircle } from './walls';
 import { setWallLength } from '../../core/solver';
 import { faceLength, hasBody } from '../../core/wallBody';
-import { hostedChain, setHostedGap } from '../../core/hosting';
-import { defaultArcSign, protrusionDims, setProtrusionSagitta } from '../../core/protrusion';
+import { setHostedGap } from '../../core/hosting';
+import { defaultArcSign, setProtrusionSagitta } from '../../core/protrusion';
 import { applyProtrusionDim } from './protrusions';
 
 /**
  * Míra líce u stěny s osou uprostřed (2b): délka osy se upraví tak, aby měl líc zadanou délku
  * (posouvá se konec B jako u délky stěny). Napojení v rozích se po posunu mění, proto se dorovnává
- * v několika krocích. `measured` zůstane délka osy (výsledek), líc se neukládá – počítá se.
+ * v několika krocích. Líc se neukládá – počítá se.
  */
 function setFaceLength(floor: Floor, wallId: string, face: 0 | 1, value: number): boolean {
   const w = floor.walls[wallId];
@@ -46,84 +46,23 @@ function setFaceLength(floor: Floor, wallId: string, face: 0 | 1, value: number)
   return end !== null && Math.abs(end - value) < 0.5 ? true : fail();
 }
 
-/** Výchozí hodnota zobrazená v NumPadu pro daný cíl. */
+/** Výchozí hodnota zobrazená v NumPadu pro daný cíl = skutečná hodnota kóty z výkresu. */
 export function numpadInitialValue(floor: Floor, t: NumPadTarget): number | null {
-  switch (t.kind) {
-    case 'wall-length': {
-      const w = floor.walls[t.wallId];
-      return w ? (w.measured ?? Math.round(wallLength(floor, w))) : null;
-    }
-    case 'opening-offset': {
-      const op = floor.openings[t.openingId];
-      const wall = op && floor.walls[op.wallId];
-      if (!op || !wall) return null;
-      const len = wallLength(floor, wall);
-      const start = openingStartFromA(op, len);
-      return Math.round(t.ref === 'a' ? start : len - start - openingSpan(op));
-    }
-    case 'opening-width':
-      return floor.openings[t.openingId]?.width ?? null;
-    case 'opening-reveal':
-      {
-        const op = floor.openings[t.openingId];
-        return op ? revealPartValue(floor, op, t.part) : null;
-      }
-    case 'wall-sagitta': {
-      const w = floor.walls[t.wallId];
-      return w ? Math.round(Math.abs(arcChain(floor, w.id)?.sagitta ?? w.sagitta ?? 0)) : null;
-    }
-    case 'wall-thickness':
-      return floor.walls[t.wallId]?.thickness ?? null;
-    case 'wall-face-length': {
-      const l = faceLength(floor, t.wallId, t.face);
-      return l === null ? null : Math.round(l);
-    }
-    case 'circle-diameter': {
-      const w = floor.walls[t.wallId];
-      return w?.radius !== undefined ? w.radius * 2 : null;
-    }
-    case 'comp-gap': {
-      const g = componentGap(floor, t.wallId, t.side);
-      return g ? Math.round(g.value) : null;
-    }
-    case 'protrusion-dim': {
-      const p = floor.protrusions?.[t.protrusionId];
-      const d = p && protrusionDims(floor, p);
-      return d ? Math.round(d[t.dim]) : null;
-    }
-    case 'junction-gap': {
-      const w = floor.walls[t.wallId];
-      const a = w && floor.nodes[w.a];
-      const b = w && floor.nodes[w.b];
-      const chain = hostedChain(floor, t.wallId);
-      const i = chain.findIndex(c => c.nodeId === t.nodeId);
-      if (!a || !b || i < 0) return null;
-      const at = chain[i]!.at;
-      return Math.round(t.to === 'prev' ? at - (chain[i - 1]?.at ?? 0) : (chain[i + 1]?.at ?? Math.hypot(b.x - a.x, b.y - a.y)) - at);
-    }
-    case 'field':
-      return null; // hodnotu předává openField
-    case 'protrusion-sagitta': {
-      const s = floor.protrusions?.[t.protrusionId]?.pts[t.seg]?.s;
-      return s === undefined ? 0 : Math.round(Math.abs(s));
-    }
-    case 'opening-gap': {
-      const a = floor.openings[t.firstId];
-      const b = floor.openings[t.secondId];
-      const wall = a && floor.walls[a.wallId];
-      if (!a || !b || !wall) return null;
-      const len = wallLength(floor, wall);
-      return Math.round(openingStartFromA(b, len) - (openingStartFromA(a, len) + openingSpan(a)));
-    }
-  }
+  if (t.kind === 'field') return null; // hodnotu předává openField
+  const v = dimValue(floor, t);
+  return v === null ? null : Math.round(v);
 }
 
-/** Zapíše hodnotu z NumPadu do výkresu. */
-export function applyNumpadValue(t: NumPadTarget, value: number): boolean {
+/**
+ * Zapíše hodnotu z NumPadu do výkresu. `overrideLock` = uživatel potvrdil přepsání zamčené kóty
+ * (její zámek zůstane, drží novou hodnotu). Ostatní zamčené kóty úpravu zastaví (store.edit).
+ */
+export function applyNumpadValue(t: NumPadTarget, value: number, overrideLock = false): boolean {
   if (!Number.isFinite(value) || value < 0 || t.kind === 'field') return false;
-  if (t.kind === 'wall-length') return applyWallLength(t.wallId, value, t.move);
+  const opts = overrideLock ? { allowKey: dimKey(t) } : {};
+  if (t.kind === 'wall-length') return applyWallLength(t.wallId, value, t.move, opts);
   let ok = false;
-  store.edit(floor => {
+  const applied = store.edit(floor => {
     if (t.kind === 'wall-face-length') {
       ok = setFaceLength(floor, t.wallId, t.face, value);
     } else if (t.kind === 'opening-offset') {
@@ -172,6 +111,6 @@ export function applyNumpadValue(t: NumPadTarget, value: number): boolean {
     } else if (t.kind === 'comp-gap') {
       ok = setComponentGap(floor, t.wallId, t.side, value);
     }
-  });
-  return ok;
+  }, {}, opts);
+  return applied && ok;
 }

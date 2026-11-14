@@ -10,7 +10,7 @@ import { store } from '../store';
 /** Vloží otvor na stěnu v místě ťuknutí (t = 0..1 od rohu A). Měří se od bližšího rohu. */
 export function addOpening(wallId: Id, kind: OpeningKind, t: number): Id | null {
   let createdId: Id | null = null;
-  store.edit(floor => {
+  const applied = store.edit(floor => {
     const wall = floor.walls[wallId];
     if (!wall) return;
     const len = wallLength(floor, wall);
@@ -31,6 +31,7 @@ export function addOpening(wallId: Id, kind: OpeningKind, t: number): Id | null 
     floor.openings[op.id] = op;
     createdId = op.id;
   });
+  if (!applied) return null; // zastaveno zámkem kóty
   if (createdId) store.set({ selection: { kind: 'opening', id: createdId } });
   return createdId;
 }

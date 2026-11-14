@@ -4,12 +4,15 @@
  */
 import type { Id, Pt } from '../model/types';
 import type { NumPadTarget } from '../store/store';
+import type { DimTarget } from '../core/dimLock';
 
 export type HitAction =
   | { type: 'numpad'; target: NumPadTarget; wallId?: Id }
   | { type: 'room'; roomId: Id }
   /** Dvojitá šipka u vybrané stěny – přehodí stranu těla. */
-  | { type: 'flipWall'; wallId: Id };
+  | { type: 'flipWall'; wallId: Id }
+  /** Ikona zámku u zamčené kóty – ťuknutí kótu odemkne / zamkne. */
+  | { type: 'lock'; target: DimTarget };
 
 export interface HitBox {
   /** Střed na obrazovce (px). */

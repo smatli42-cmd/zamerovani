@@ -4,7 +4,7 @@
 import { arcChain } from '../../core/arcChain';
 import { wallLength } from '../../core/floorQueries';
 import type { Floor, Wall, WallType } from '../../model/types';
-import { deleteSelection, duplicateSelection, flipWallSide, setWallAxis, setWallNoJoin, setWallThickness, updateWall, updateWallLabel } from '../../store/actions';
+import { deleteSelection, duplicateSelection, flipWallSide, setWallAxis, setWallDimsLocked, wallLockState, setWallNoJoin, setWallThickness, updateWall, updateWallLabel } from '../../store/actions';
 import { openTarget } from '../../store/numpadController';
 import { close, LINE_STYLES } from './common';
 import { NumField, Panel, Seg, TextField } from './fields';
@@ -31,10 +31,11 @@ export function WallPanel({ floor, wall }: { floor: Floor; wall: Wall }) {
       )}
       {!circle && (
       <button class="big-value" onClick={() => openTarget({ kind: 'wall-length', wallId: wall.id, move: { nodeId: wall.b } })}>
-        {wall.measured === null ? <span class="sketch">~{len}</span> : <span>{wall.measured}</span>} <small>mm</small>
-        <span class="hint">{wall.measured === null ? 'náčrt – ťukni a zadej změřenou délku' : 'změřeno – ťukni pro změnu'}</span>
+        <span>{len}</span> <small>mm</small>
+        <span class="hint">ťukni a zadej délku</span>
       </button>
       )}
+      <LockAll floor={floor} wallId={wall.id} />
 
       {!circle && (
       <div class="field field-inline">
@@ -130,5 +131,24 @@ export function WallPanel({ floor, wall }: { floor: Floor; wall: Wall }) {
         <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
       </div>
     </Panel>
+  );
+}
+
+/** Hromadné zamknutí / odemknutí všech kót stěny (délka, tloušťka, otvory, ostění, výstupky, napojení). */
+function LockAll({ floor, wallId }: { floor: Floor; wallId: string }) {
+  const st = wallLockState(floor, wallId);
+  if (!st) return null;
+  return (
+    <div class="field lock-all">
+      <span>Kóty stěny {st === 'all' ? '🔒 vše zamčeno' : st === 'some' ? '🔒 část zamčena' : ''}</span>
+      <div class="seg">
+        <button class={st === 'all' ? 'active' : ''} onClick={() => setWallDimsLocked(wallId, true)}>
+          🔒 Zamknout vše
+        </button>
+        <button class={st === 'none' ? 'active' : ''} onClick={() => setWallDimsLocked(wallId, false)}>
+          🔓 Odemknout vše
+        </button>
+      </div>
+    </div>
   );
 }

@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { createProject } from '../model/factory';
 import { wallLength, wallNodes } from '../core/floorQueries';
-import { addOpening, addWall, setWallNoJoin, trimToCorner } from './actions';
+import { addOpening, addWall, setDimLock, setWallNoJoin, trimToCorner } from './actions';
 import { store } from './store';
 
 const f = () => store.floor()!;
@@ -56,7 +56,7 @@ describe('D3 zkrátit / prodloužit do rohu', () => {
     expect(ends(C)).toEqual([{ x: 3000, y: 0 }, { x: 3000, y: -1500 }]);
   });
 
-  it('otvory drží polohu ve výkresu; otvor v odříznuté části se smaže (F4); změřená délka se zruší', () => {
+  it('otvory drží polohu ve výkresu; otvor v odříznuté části se smaže (F4)', () => {
     fresh();
     const A = addWall({ x: 0, y: 0 }, null, { x: 6000, y: 0 }, null, false, { thickness: 300 })!;
     const B = addWall({ x: 4000, y: -2000 }, null, { x: 4000, y: 2000 }, null, false, { thickness: 300 })!;
@@ -67,8 +67,17 @@ describe('D3 zkrátit / prodloužit do rohu', () => {
     expect(trimToCorner(A, { x: 500, y: 0 }, B, { x: 4000, y: 1500 })).toBe('ok');
     expect(f().openings[lost]).toBeUndefined();
     expect(f().openings[keep]!.offset).toBe(before);
-    expect(f().walls[A]!.measured).toBeNull();
     expect(Math.round(wallLength(f(), f().walls[A]!))).toBe(4000);
+  });
+
+  it('zamčená délka stěny zkrácení zastaví (nic se nezmění)', () => {
+    fresh();
+    const A = addWall({ x: 0, y: 0 }, null, { x: 6000, y: 0 }, null, false, { thickness: 300 })!;
+    const B = addWall({ x: 4000, y: -2000 }, null, { x: 4000, y: 2000 }, null, false, { thickness: 300 })!;
+    setDimLock({ kind: 'wall-length', wallId: A, move: 'both' }, true);
+    const snap = f();
+    expect(trimToCorner(A, { x: 500, y: 0 }, B, { x: 4000, y: 1500 })).toBe('locked');
+    expect(f()).toBe(snap);
   });
 
   it('konec A se posune: otvor měřený od A zůstane na stejném místě ve výkresu', () => {

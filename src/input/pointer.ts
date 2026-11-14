@@ -12,7 +12,7 @@ import { toWorld, zoomAt } from '../canvas/view';
 import { chooseNodeAt, findNodeNear } from '../core/floorQueries';
 import type { Pt } from '../model/types';
 import { openTarget, setMoveTarget } from '../store/numpadController';
-import { flipWallSide } from '../store/actions';
+import { flipWallSide, toggleDimLock } from '../store/actions';
 import { store } from '../store/store';
 import { tools } from '../tools/registry';
 import { anyHandleUnderPen } from '../tools/selectTool';
@@ -85,6 +85,11 @@ function handleOverlayTap(p: PointerInput): boolean {
   if (box?.action.type === 'numpad') {
     cancelTool();
     openTarget(box.action.target);
+    return true;
+  }
+  if (box?.action.type === 'lock') {
+    cancelTool();
+    toggleDimLock(box.action.target);
     return true;
   }
   if (box?.action.type === 'flipWall') {

@@ -4,7 +4,8 @@
  * Při zadání změřené délky stěny posune jeden (nebo oba) rohy ve směru stěny tak, aby:
  * - volné větve stěn napojené na posouvaný roh se posunuly celé,
  * - sousední kolmé stěny zůstaly kolmé (posune se i jejich druhý roh),
- *   pokud tento roh nedrží jiná už ZMĚŘENÁ stěna ve směru posunu.
+ *   pokud tento roh nedrží jiná stěna se ZAMČENOU délkou ve směru posunu (zámek kót, core/dimLock.ts).
+ * Zadaná délka stěnu nezamyká; zda úprava neporušila jinou zamčenou kótu, hlídá store.edit (lockViolation).
  *
  * Pracuje přímo nad (měnitelnou) kopií podlaží – volá se uvnitř store.edit().
  */
@@ -12,6 +13,7 @@ import type { Floor, Id, Node } from '../model/types';
 import { dist, dot, normal, unit } from './geometry';
 import { arcGeometry } from './arc';
 import { otherEnd, wallsAtNode, wallSegments } from './floorQueries';
+import { isWallLengthLocked } from './dimLock';
 
 /** Který roh se posune: konkrétní roh stěny, nebo oba (od středu). */
 export type MoveTarget = { nodeId: Id } | 'both';
@@ -37,13 +39,9 @@ export function setWallLength(floor: Floor, wallId: Id, length: number, target: 
     const fixed = moving === nA ? nB : nA;
     const junction = shiftJunction(floor, wallId, moving, fixed, delta);
     if (junction === 'invalid') return false;
-    if (junction === 'done') {
-      wall.measured = Math.round(length);
-      return true;
-    }
+    if (junction === 'done') return true;
   }
 
-  wall.measured = Math.round(length);
   if (Math.abs(delta) < 0.05) return true;
 
   if (target === 'both') {
@@ -79,9 +77,9 @@ export function reachableWithout(floor: Floor, startId: Id, blockedId: Id): Set<
   return visited;
 }
 
-function hasMeasuredWallAlong(floor: Floor, node: Node, excludeWallId: Id, dir: { x: number; y: number }): boolean {
+function hasLockedWallAlong(floor: Floor, node: Node, excludeWallId: Id, dir: { x: number; y: number }): boolean {
   for (const w of wallsAtNode(floor, node.id)) {
-    if (w.id === excludeWallId || w.measured === null) continue;
+    if (w.id === excludeWallId || !isWallLengthLocked(floor, w.id)) continue;
     const other = floor.nodes[otherEnd(w, node.id)];
     if (!other || dist(node, other) < 1) continue;
     if (Math.abs(dot(dir, unit(node, other))) > PARALLEL_DOT) return true;
@@ -109,7 +107,7 @@ export function moveNodeWithRubberBand(floor: Floor, moving: Node, fixed: Node, 
       if (!neighbor || neighbor.id === fixed.id || toMove.has(neighbor.id)) continue;
       if (dist(moving, neighbor) < 1) continue;
       const isPerpendicular = Math.abs(dot(dir, unit(moving, neighbor))) < PERPENDICULAR_DOT;
-      if (isPerpendicular && !hasMeasuredWallAlong(floor, neighbor, w.id, dir)) {
+      if (isPerpendicular && !hasLockedWallAlong(floor, neighbor, w.id, dir)) {
         toMove.add(neighbor.id);
       }
     }
@@ -125,7 +123,7 @@ export function moveNodeWithRubberBand(floor: Floor, moving: Node, fixed: Node, 
       if (Math.abs(dot(dir, tan)) < PERPENDICULAR_DOT) {
         for (const end of [ha, hb]) {
           if (end.id === fixed.id || toMove.has(end.id) || dist(moving, end) < 1) continue;
-          if (!hasMeasuredWallAlong(floor, end, host.id, dir)) toMove.add(end.id);
+          if (!hasLockedWallAlong(floor, end, host.id, dir)) toMove.add(end.id);
         }
       }
     }
@@ -144,7 +142,7 @@ const round1 = (v: number): number => Math.round(v * 10) / 10;
 /**
  * Pokud posouvaný roh leží uprostřed rovné stěny (za ním pokračuje stěna stejným směrem),
  * jde o bod napojení příčky: posune se jen tento bod a příčka s ním, celková délka zůstane.
- * Navazující část se zkrátí/prodlouží (a pokud byla změřená, její míra se přepočítá).
+ * Navazující část se zkrátí/prodlouží.
  */
 function shiftJunction(floor: Floor, wallId: Id, moving: Node, fixed: Node, delta: number): 'done' | 'none' | 'invalid' {
   const u = unit(fixed, moving);
@@ -170,13 +168,6 @@ function shiftJunction(floor: Floor, wallId: Id, moving: Node, fixed: Node, delt
     if (!far || far.id === fixed.id || far.id === contEnd.id) continue;
     far.x = round1(far.x + dx);
     far.y = round1(far.y + dy);
-    // Druhý konec příčky sedí na protější stěně → přepočítat míry jejích částí (celek se nemění)
-    for (const ow of wallsAtNode(floor, far.id)) {
-      if (ow.id === w.id || ow.measured === null) continue;
-      const o = floor.nodes[otherEnd(ow, far.id)];
-      if (o && Math.abs(dot(u, unit(far, o))) > 0.9995) ow.measured = Math.round(dist(far, o));
-    }
   }
-  if (cont.measured !== null) cont.measured = Math.round(newContLen);
   return 'done';
 }

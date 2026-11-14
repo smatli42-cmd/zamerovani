@@ -9,13 +9,10 @@
  */
 import { produce, freeze } from 'immer';
 import type { Floor, Id, Opening, Project } from '../model/types';
-import type { MoveTarget } from '../core/solver';
-import type { RevealPart } from '../core/doorLayout';
 import type { LineStyle } from '../model/types';
-import type { Side } from '../core/components';
-import type { ProtrusionDim } from '../core/protrusion';
 import { syncHosted } from '../core/hosting';
 import { syncProtrusions } from '../core/protrusion';
+import { describeDim, dimKey, lockViolation, pruneLocks, reboundLocks, type DimTarget } from '../core/dimLock';
 
 export type ToolId = 'select' | 'wall' | 'line' | 'trim' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'text' | 'leader' | 'paste' | 'pan';
 
@@ -38,30 +35,9 @@ export function isSelected(s: Selection, kind: SingleSelection['kind'], id: Id):
   return s.kind === kind && s.id === id;
 }
 
-/** Co právě zadáváme na číselné klávesnici. */
+/** Co právě zadáváme na číselné klávesnici: kóta (core/dimLock.ts) nebo obecné číselné pole panelu. */
 export type NumPadTarget =
-  | { kind: 'wall-length'; wallId: Id; move: MoveTarget }
-  | { kind: 'opening-offset'; openingId: Id; ref: 'a' | 'b' }
-  | { kind: 'opening-width'; openingId: Id }
-  | { kind: 'opening-gap'; firstId: Id; secondId: Id }
-  /** Rozměr ostění: hloubka, šířka vlevo/vpravo, výška nahoře. */
-  | { kind: 'opening-reveal'; openingId: Id; part: RevealPart }
-  /** Vzepětí obloukové stěny. */
-  | { kind: 'wall-sagitta'; wallId: Id }
-  /** Průměr kruhové stěny. */
-  | { kind: 'circle-diameter'; wallId: Id }
-  /** Tloušťka stěny (čára líce zůstane na místě). */
-  | { kind: 'wall-thickness'; wallId: Id }
-  /** Míra líce stěny s osou uprostřed (face 0/1 = `WallBody.faces`); délka osy se dopočítá (2b). */
-  | { kind: 'wall-face-length'; wallId: Id; face: 0 | 1 }
-  /** Odstup skupiny stěn (např. sloupu) od nejbližší stěny mimo skupinu; zadáním se skupina posune. */
-  | { kind: 'comp-gap'; wallId: Id; side: Side }
-  /** Kóta výstupku: šířka, hloubka, odstup před / za (od souseda nebo konce stěny). */
-  | { kind: 'protrusion-dim'; protrusionId: Id; dim: ProtrusionDim }
-  /** Poloha napojení na průběžné stěně: od předchozího napojení / rohu A ('prev') nebo k rohu B ('next'). */
-  | { kind: 'junction-gap'; wallId: Id; nodeId: Id; to: 'prev' | 'next' }
-  /** Vzepětí oblouku v obrysu výstupku (úsek `seg`). */
-  | { kind: 'protrusion-sagitta'; protrusionId: Id; seg: number }
+  | DimTarget
   /** Obecné číselné pole panelu (výška, parapet, úhel…); hodnotu zapíše funkce předaná v `openField`. */
   | { kind: 'field'; label: string; unit: string; min: number; allowEmpty?: boolean };
 
@@ -70,6 +46,8 @@ export interface NumPadState {
   buffer: string;
   /** Další napsaná číslice nahradí výchozí hodnotu. */
   fresh: boolean;
+  /** Kóta je zamčená a uživatel jednou stiskl Potvrdit – další potvrzení hodnotu přepíše (zámek zůstane). */
+  confirmLock?: boolean;
 }
 
 export interface Camera {
@@ -125,6 +103,14 @@ export interface AppState {
   canRedo: boolean;
   /** Krátká zpráva aktivního nástroje v liště voleb (např. nástroj Do rohu: co ťuknout, proč to nešlo). */
   toolMsg: string | null;
+  /** Úprava se neprovedla, protože by změnila zamčenou kótu: která (klíč pro zvýraznění) a hlášení do lišty. */
+  lockBlock: { key: string; text: string; target: DimTarget } | null;
+}
+
+/** Volby úpravy výkresu. */
+export interface EditOptions {
+  /** Kóta, kterou uživatel vědomě přepisuje (NumPad po potvrzení) – její zámek úpravu nezastaví. */
+  allowKey?: string;
 }
 
 const SETTINGS_KEY = 'zamerovani.settings';
@@ -143,6 +129,9 @@ type Listener = (state: AppState, prev: AppState) => void;
 
 const MAX_HISTORY = 200;
 
+/** Přerušení úpravy, která by porušila zamčenou kótu (zachytí ho `edit`). */
+const LOCK_ABORT = new Error('lock');
+
 class Store {
   private state: AppState = {
     screen: 'projects',
@@ -158,7 +147,8 @@ class Store {
     saveStatus: 'saved',
     canUndo: false,
     canRedo: false,
-    toolMsg: null
+    toolMsg: null,
+    lockBlock: null
   };
 
   private listeners = new Set<Listener>();
@@ -245,19 +235,40 @@ class Store {
     if (after !== before) this.set({ project: after, saveStatus: 'dirty' });
   }
 
-  /** Změna aktuálního podlaží. */
-  edit(recipe: (floor: Floor, project: Project) => void, extra: Partial<AppState> = {}): void {
+  /**
+   * Změna aktuálního podlaží. Vrací false, když se úprava neprovedla, protože by změnila zamčenou kótu
+   * (KOTY-ZAMEK-EXPORT.md, A) – pak se nic nezmění a `lockBlock` řekne, která kóta brání.
+   */
+  edit(recipe: (floor: Floor, project: Project) => void, extra: Partial<AppState> = {}, opts: EditOptions = {}): boolean {
     const floorId = this.state.floorId;
     const before = this.state.project?.floors.find(x => x.id === floorId);
-    this.editProject(p => {
-      const f = p.floors.find(x => x.id === floorId);
-      if (!f) return;
-      recipe(f, p);
-      // napojené rohy (T bez dělení) sledují svou průběžnou stěnu
-      syncHosted(before, f);
-      // výstupky drží místo na stěně i při změně jejího vzepětí
-      syncProtrusions(before, f);
-    }, extra);
+    let blocked: AppState['lockBlock'] = null;
+    try {
+      this.editProject(p => {
+        const f = p.floors.find(x => x.id === floorId);
+        if (!f) return;
+        recipe(f, p);
+        // napojené rohy (T bez dělení) sledují svou průběžnou stěnu
+        syncHosted(before, f);
+        // výstupky drží místo na stěně i při změně jejího vzepětí
+        syncProtrusions(before, f);
+        // zámky smazaných prvků zmizí s nimi
+        pruneLocks(f);
+        const v = lockViolation(before, f, opts.allowKey);
+        if (v) {
+          blocked = { key: dimKey(v), text: `Nelze – brání zamčená kóta: ${describeDim(before!, v)}`, target: v };
+          throw LOCK_ABORT;
+        }
+        // kóta měřená od souseda, který přibyl / zmizel, je jiná kóta – původní zámek zaniká
+        for (const key of reboundLocks(before, f)) delete f.dimLocks![key];
+        if (f.dimLocks && Object.keys(f.dimLocks).length === 0) delete f.dimLocks;
+      }, { ...extra, ...(this.state.lockBlock ? { lockBlock: null } : {}) });
+    } catch (e) {
+      if (e !== LOCK_ABORT) throw e;
+      this.set({ lockBlock: blocked });
+      return false;
+    }
+    return true;
   }
 
   /** Začátek tažení – všechny změny až do endGesture() budou jeden krok Zpět. */

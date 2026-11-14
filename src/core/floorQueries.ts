@@ -162,9 +162,9 @@ export function nextWallInChain(floor: Floor, wallId: Id, fromNodeId: Id): { wal
         const other = floor.nodes[otherEnd(w, fromNodeId)];
         if (!other) continue;
         const dOut = unit(at, other);
-        // Úhel otočení (−π..π); preferujeme nezměřené stěny.
+        // Úhel otočení (−π..π); preferujeme stěny s odemčenou délkou.
         const turn = Math.atan2(dirIn.x * dOut.y - dirIn.y * dOut.x, dirIn.x * dOut.x + dirIn.y * dOut.y);
-        const score = -turn + (w.measured === null ? 0 : 10);
+        const score = -turn + (floor.dimLocks?.[`wall-length:${w.id}`] ? 10 : 0);
         if (score < bestScore) {
           bestScore = score;
           best = w;
@@ -173,7 +173,7 @@ export function nextWallInChain(floor: Floor, wallId: Id, fromNodeId: Id): { wal
       return { wall: best, nodeId: otherEnd(best, fromNodeId) };
     }
   }
-  const w = candidates.find(c => c.measured === null) ?? candidates[0]!;
+  const w = candidates.find(c => !floor.dimLocks?.[`wall-length:${c.id}`]) ?? candidates[0]!;
   return { wall: w, nodeId: otherEnd(w, fromNodeId) };
 }
 

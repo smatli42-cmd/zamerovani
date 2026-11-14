@@ -5,16 +5,17 @@ import { wallsAtNode } from './floorQueries';
 import { dist } from './geometry';
 import { setWallLength } from './solver';
 import { splitWallsAtNode } from './topology';
+import { isWallLengthLocked, setLock } from './dimLock';
 
 /** Místnost 6000 × 3000 rozdělená příčkou ve 2500 (horní stěna A–B, dolní D–C). */
-function dividedRoom(measured: boolean): Floor {
+function dividedRoom(locked: boolean): Floor {
   const f = createFloor('t');
   const pts: Record<string, [number, number]> = { A: [0, 0], B: [6000, 0], C: [6000, 3000], D: [0, 3000], P: [2500, 0], Q: [2500, 3000] };
   for (const [id, [x, y]] of Object.entries(pts)) f.nodes[id] = { id, x, y };
   for (const [a, b] of [['A', 'B'], ['B', 'C'], ['C', 'D'], ['D', 'A']] as const) {
     const w = createWall(a, b);
-    w.measured = measured ? Math.round(dist(f.nodes[a]!, f.nodes[b]!)) : null;
     f.walls[w.id] = w;
+    if (locked) setLock(f, { kind: 'wall-length', wallId: w.id, move: 'both' }, true);
   }
   const pq = createWall('P', 'Q');
   f.walls[pq.id] = pq;
@@ -34,10 +35,11 @@ describe('rozdělení stěny napojenou příčkou', () => {
     expect(wallsAtNode(f, 'P')).toHaveLength(3);
   });
 
-  it('změřená stěna předá míry oběma částem', () => {
+  it('zamčená délka stěny se předá oběma částem (zámek celku zanikne)', () => {
     const f = dividedRoom(true);
-    expect(wallBetween(f, 'A', 'P').measured).toBe(2500);
-    expect(wallBetween(f, 'P', 'B').measured).toBe(3500);
+    expect(isWallLengthLocked(f, wallBetween(f, 'A', 'P').id)).toBe(true);
+    expect(isWallLengthLocked(f, wallBetween(f, 'P', 'B').id)).toBe(true);
+    expect(Object.keys(f.dimLocks ?? {})).toHaveLength(6); // 4 stěny, horní a dolní rozdělené na dvě části
   });
 
   it('otvor přejde na část, ve které leží, a zachová polohu', () => {
@@ -67,9 +69,10 @@ describe('posun bodu napojení', () => {
     expect(f.nodes.P).toMatchObject({ x: 2700, y: 0 });
     expect(f.nodes.Q).toMatchObject({ x: 2700, y: 3000 });
     expect(f.nodes.B).toMatchObject({ x: 6000, y: 0 });
-    expect(wallBetween(f, 'P', 'B').measured).toBe(3300);
-    expect(wallBetween(f, 'D', 'Q').measured).toBe(2700);
-    expect(wallBetween(f, 'Q', 'C').measured).toBe(3300);
+    const l = (a: string, b: string) => dist(f.nodes[a]!, f.nodes[b]!);
+    expect(l('P', 'B')).toBeCloseTo(3300);
+    expect(l('D', 'Q')).toBeCloseTo(2700);
+    expect(l('Q', 'C')).toBeCloseTo(3300);
   });
 
   it('nepovolí posun za konec stěny', () => {

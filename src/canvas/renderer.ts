@@ -3,7 +3,7 @@
  */
 import { store } from '../store/store';
 import { tools } from '../tools/registry';
-import { drawBodyDims, drawDims, drawProtrusionDims } from './drawDims';
+import { drawBodyDims, drawDims, drawProtrusionDims, setDimLockContext } from './drawDims';
 import { drawGrid, drawScaleBar } from './drawGrid';
 import { drawArcHandle, drawFlipArrow, drawNodes, drawOpenings, drawWalls } from './drawPlan';
 import { drawRooms } from './drawRooms';
@@ -81,6 +81,8 @@ function render(): void {
     drawNodes(ctx, floor, cam, state.selection, state.hover);
     drawRooms(ctx, floor, cam, state.selection);
     drawTexts(ctx, floor, cam, state.selection);
+    // ikony zámků kót jsou pomocné (jen v editoru, export výkresu je kreslit nebude)
+    setDimLockContext(floor.dimLocks, state.lockBlock?.key ?? null, true);
     if (state.settings.showDims) drawDims(ctx, floor, cam, state.settings.dimScale, state.selection);
     if (state.settings.showDims) drawComponentDims(ctx, floor, cam, state.settings.dimScale, state.selection);
     if (state.settings.showDims) drawBodyDims(ctx, floor, cam, state.settings.dimScale, state.selection);

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createFloor, createWall } from '../model/factory';
 import type { Floor } from '../model/types';
 import { setWallLength } from './solver';
+import { isDimLocked, setLock } from './dimLock';
 import { dist, evaluateExpression } from './geometry';
 
 /** Obdélníková místnost A(0,0) B(4000,0) C(4000,3000) D(0,3000). */
@@ -29,7 +30,8 @@ describe('setWallLength', () => {
     expect(len(floor, w.ab)).toBeCloseTo(4500);
     expect(floor.nodes.C).toMatchObject({ x: 4500, y: 3000 });
     expect(len(floor, w.bc)).toBeCloseTo(3000);
-    expect(floor.walls[w.ab]!.measured).toBe(4500);
+    // zadaná délka kótu nezamyká (zamyká se jen ručně – KOTY-ZAMEK-EXPORT.md)
+    expect(isDimLocked(floor, { kind: 'wall-length', wallId: w.ab, move: 'both' })).toBe(false);
   });
 
   it('pevný roh zůstane na místě', () => {
@@ -40,12 +42,21 @@ describe('setWallLength', () => {
     expect(floor.nodes.D).toMatchObject({ x: 200, y: 3000 });
   });
 
-  it('změřená protější stěna drží roh – vznikne šikmá stěna', () => {
+  it('zamčená délka protější stěny drží roh – vznikne šikmá stěna', () => {
     const { floor, w } = rectRoom();
-    setWallLength(floor, w.cd, 4000, { nodeId: 'C' }); // CD změřena, beze změny
+    setLock(floor, { kind: 'wall-length', wallId: w.cd, move: 'both' }, true);
     setWallLength(floor, w.ab, 4100, { nodeId: 'B' });
     expect(floor.nodes.C).toMatchObject({ x: 4000, y: 3000 });
     expect(floor.nodes.B).toMatchObject({ x: 4100, y: 0 });
+    expect(len(floor, w.cd)).toBeCloseTo(4000);
+  });
+
+  it('nezamčená protější stěna se přepíše na novou délku (obdélník zůstane)', () => {
+    const { floor, w } = rectRoom();
+    setWallLength(floor, w.cd, 4000, { nodeId: 'C' }); // zadaná, ale nezamčená
+    setWallLength(floor, w.ab, 4100, { nodeId: 'B' });
+    expect(floor.nodes.C).toMatchObject({ x: 4100, y: 3000 });
+    expect(len(floor, w.cd)).toBeCloseTo(4100);
   });
 
   it('od středu posune oba rohy o polovinu', () => {

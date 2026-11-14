@@ -9,6 +9,7 @@ import { componentNodes } from '../core/components';
 import { bodyNormal, wallBodies } from '../core/wallBody';
 import { nearestOnArc, splitArcSagittas } from '../core/arc';
 import { joinSplitWalls, migrateProject } from '../persistence/migrate';
+import { wallLength } from '../core/floorQueries';
 import { addWall, applyWallLength, deleteSelection, duplicateSelection, moveGroup, groupOrigin, moveNode, mergeNodeIfCoincident, rotateSelection, setWallNoJoin, setWallSagitta } from './actions';
 import { store } from './store';
 
@@ -112,21 +113,20 @@ describe('migrace 7 → 8: rozdělená stěna se spojí zpět', () => {
     const fl = createFloor('t');
     for (const [id, x, y] of [['a', 0, 0], ['m', 1000, 0], ['b', 3000, 0], ['p', 1000, -2000]] as const) fl.nodes[id] = { id, x, y };
     const A1 = createWall('a', 'm', 0, 300, 1);
-    A1.measured = 1000;
     const A2 = createWall('m', 'b', 0, 300, 1);
-    A2.measured = 2000;
     const B = createWall('m', 'p', 0, 100, -1);
     for (const w of [A1, A2, B]) fl.walls[w.id] = w;
     fl.openings.o = { id: 'o', wallId: A2.id, kind: 'window', number: 'O1', width: 800, height: 1500, sill: 900, depth: 0, offset: 500, ref: 'a' } as never;
     return { fl, A1, A2, B };
   }
 
-  it('A1 + A2 → jedna stěna, roh m napojený, změřené délky sečtené, okno na stejném místě', () => {
+  it('A1 + A2 → jedna stěna, roh m napojený, délka 3000, okno na stejném místě', () => {
     const { fl, B } = oldFloor();
     const g = joinSplitWalls(fl);
     expect(Object.keys(g.walls)).toHaveLength(2);
     const A = Object.values(g.walls).find(w => w.id !== B.id)!;
-    expect(A.measured).toBe(3000);
+    expect(Math.round(wallLength(g, A))).toBe(3000);
+    expect(g.dimLocks).toBeUndefined(); // staré projekty: vše odemčené
     expect(g.nodes.m!.host).toBe(A.id);
     const op = g.openings.o!;
     expect(op.wallId).toBe(A.id);
