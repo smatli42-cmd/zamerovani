@@ -24,7 +24,8 @@ import { protrusionDims, protrusionNeighbors } from './protrusion';
 /** Kóta (to, co se zadává v NumPadu). */
 export type DimTarget =
   | { kind: 'wall-length'; wallId: Id; move: MoveTarget }
-  | { kind: 'opening-offset'; openingId: Id; ref: 'a' | 'b' }
+  /** `move` = z panelu otvoru: posunout jen otvor (z řetězové kóty se poslední úsek k B mění prodloužením stěny). */
+  | { kind: 'opening-offset'; openingId: Id; ref: 'a' | 'b'; move?: true }
   | { kind: 'opening-width'; openingId: Id }
   | { kind: 'opening-gap'; firstId: Id; secondId: Id }
   /** Rozměr ostění: hloubka, šířka vlevo/vpravo, výška nahoře. */

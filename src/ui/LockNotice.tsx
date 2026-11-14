@@ -19,10 +19,14 @@ export function LockNotice() {
   if (!block) return null;
   return (
     <div class="lock-notice" aria-live="assertive">
-      <span>🔒 {block.text}</span>
-      <button type="button" class="btn btn-sm" onClick={() => setDimLock(block.target, false)} title="Odemknout kótu, která brání (úpravu pak zopakuj)">
-        🔓 Odemknout
-      </button>
+      <span>
+        {block.target ? '🔒' : '⚠️'} {block.text}
+      </span>
+      {block.target && (
+        <button type="button" class="btn btn-sm" onClick={() => setDimLock(block.target!, false)} title="Odemknout kótu, která brání (úpravu pak zopakuj)">
+          🔓 Odemknout
+        </button>
+      )}
       <button type="button" class="btn btn-sm" onClick={() => store.set({ lockBlock: null })} title="Zavřít">
         ✕
       </button>

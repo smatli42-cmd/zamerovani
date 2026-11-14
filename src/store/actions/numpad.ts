@@ -3,11 +3,12 @@
  */
 import type { Floor } from '../../model/types';
 import { arcChain, setChainSagitta } from '../../core/arcChain';
-import { openingStartFromA, wallLength } from '../../core/floorQueries';
+import { openingStartFromA, openingsOnWall, wallLength } from '../../core/floorQueries';
+import { chainEdge, chainIndex, pushChainRight } from '../../core/openingChain';
 import { setComponentGap } from '../../core/components';
 import { dimKey, dimValue } from '../../core/dimLock';
 import { store, type NumPadTarget } from '../store';
-import { setGap, setOpeningWidth, setReveal, setStartFromA } from './openings';
+import { setOpeningWidth, setReveal, setStartFromA } from './openings';
 import { applyWallLength, resizeCircle } from './walls';
 import { setWallLength } from '../../core/solver';
 import { faceLength, hasBody } from '../../core/wallBody';
@@ -62,30 +63,77 @@ export function applyNumpadValue(t: NumPadTarget, value: number, overrideLock = 
   const opts = overrideLock ? { allowKey: dimKey(t) } : {};
   if (t.kind === 'wall-length') return applyWallLength(t.wallId, value, t.move, opts);
   let ok = false;
+  let chainFail = false; // řetěz otvorů: otvor by vyjel ze stěny / narazil na souseda
   const applied = store.edit(floor => {
+    run(floor);
+    // neúspěch = nic se nezmění (ani to, co recept stihl nastavit)
+    return ok;
+  }, {}, opts);
+  if (chainFail) store.set({ lockBlock: { key: '', text: 'Nelze – otvor by přesáhl sousední otvor nebo konec stěny (nebo je konec stěny napojený na jinou stěnu).' } });
+  return applied && ok;
+
+  function run(floor: Floor): void {
+    if (t.kind === 'field') return;
     if (t.kind === 'wall-face-length') {
       ok = setFaceLength(floor, t.wallId, t.face, value);
     } else if (t.kind === 'opening-offset') {
       const op = floor.openings[t.openingId];
       const wall = op && floor.walls[op.wallId];
       if (!op || !wall) return;
-      const len = wallLength(floor, wall);
-      op.ref = t.ref;
-      op.offset = Math.round(value);
-      setStartFromA(op, openingStartFromA(op, len), len);
-      ok = true;
+      const i = chainIndex(floor, op);
+      const n = Object.values(floor.openings).filter(o => o.wallId === wall.id).length;
+      const cur = chainEdge(floor, op, t.ref)!;
+      if (t.ref === 'a' && i === 0) {
+        // odstup od rohu A: posune první otvor a vše, co je s ním spojené zamčenými kótami (ref otvoru se nemění)
+        ok = pushChainRight(floor, wall.id, 0, value - cur);
+        chainFail = !ok;
+      } else if (t.ref === 'b' && i === n - 1 && !t.move) {
+        // odstup k rohu B (poslední úsek řetězu): otvory zůstanou, stěna se prodlouží / zkrátí
+        ok = pushChainRight(floor, wall.id, n, value - cur, true);
+        chainFail = !ok;
+      } else {
+        const len = wallLength(floor, wall);
+        op.ref = t.ref;
+        op.offset = Math.round(value);
+        setStartFromA(op, openingStartFromA(op, len), len);
+        ok = true;
+      }
     } else if (t.kind === 'opening-width') {
       const op = floor.openings[t.openingId];
       if (!op || value < 100) return;
-      setOpeningWidth(floor, op, value);
-      ok = true;
+      const wall = floor.walls[op.wallId];
+      const len = wall ? wallLength(floor, wall) : 0;
+      const delta = Math.round(value) - op.width;
+      if (op.ref === 'a' && wall && delta !== 0) {
+        // levý okraj zůstane, pravý se posune; zamčené úseky napravo se posunou s ním (řetěz otvorů)
+        const placed = openingsOnWall(floor, wall);
+        const j = placed.findIndex(p => p.op.id === op.id);
+        const next = placed[j + 1];
+        const linked = next ? !!floor.dimLocks?.[`opening-gap:${op.id}:${next.op.id}`] : !!floor.dimLocks?.[`opening-offset:${op.id}:b`];
+        const room = next ? next.start - placed[j]!.end : len - placed[j]!.end;
+        if (!linked && delta > room + 0.5) {
+          chainFail = true; // otvor by přesáhl souseda / konec stěny
+          return;
+        }
+        op.width = Math.round(value);
+        ok = !linked || pushChainRight(floor, wall.id, j + 1, delta, !next);
+        chainFail = !ok;
+      } else {
+        setOpeningWidth(floor, op, value);
+        ok = true;
+      }
     } else if (t.kind === 'opening-reveal') {
       const op = floor.openings[t.openingId];
       if (!op) return;
       ok = setReveal(floor, op, t.part, value);
     } else if (t.kind === 'opening-gap') {
-      setGap(floor, t.firstId, t.secondId, value);
-      ok = true;
+      // meziostění: posune druhý otvor a vše, co je s ním spojené zamčenými kótami (řetěz otvorů)
+      const a = floor.openings[t.firstId];
+      const b = floor.openings[t.secondId];
+      const cur = numpadInitialValue(floor, t);
+      if (!a || !b || cur === null || a.wallId !== b.wallId || chainIndex(floor, b) !== chainIndex(floor, a) + 1) return;
+      ok = pushChainRight(floor, a.wallId, chainIndex(floor, b), Math.round(value) - cur);
+      chainFail = !ok;
     } else if (t.kind === 'wall-sagitta') {
       const w = floor.walls[t.wallId];
       if (!w || value < 1) return;
@@ -111,6 +159,5 @@ export function applyNumpadValue(t: NumPadTarget, value: number, overrideLock = 
     } else if (t.kind === 'comp-gap') {
       ok = setComponentGap(floor, t.wallId, t.side, value);
     }
-  }, {}, opts);
-  return applied && ok;
+  }
 }

@@ -7,6 +7,12 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-14 (11) – řetězová kóta otvorů se zámky (požadavek uživatele z tabletu)
+- **Co se změnilo:** Zamčená meziostění spojují otvory na stěně do celku (`core/openingChain.ts`, `pushChainRight`). Změna úseku řetězu (odstup od rohu A, meziostění, šířka otvoru měřeného od A) posune vše napravo, co je s ním spojené zamčenými kótami; první nezamčený úsek napravo změnu spolkne; když žádný není, posune se roh B (stěna se prodlouží). Změna poslední kóty k rohu B nechá otvory na místě a prodlouží / zkrátí stěnu. Když to nejde, nic se nezmění a dole se ukáže důvod. Recept `store.edit` může vrátit false = úprava se zahodí celá. Testy `store/openingChain.test.ts` (14) podle příkladu uživatele.
+- **Viditelně v aplikaci:** ťuknutí na první kótu vlevo a zadání nové hodnoty posune všechny otvory spojené zámky; poslední kóta vpravo prodlouží stěnu (otvory zůstanou). Bez zámků se mění jen nejbližší soused (meziostění za ním se přepíše) – dřív změna meziostění posouvala všechny otvory napravo.
+- **Rozhodnuto samostatně:** pravidlo zobecněno na všechny úseky řetězu (směr vždy k rohu B, protože řetěz se měří od rohu A); šířka otvoru měřeného od rohu B se mění postaru (drží se okraj u B); „Odstup od B“ v panelu otvoru otvor dál posouvá (stěnu prodlužuje jen kóta v řetězu na výkresu / v pořadí Další); konec B napojený doprostřed jiné stěny (T) se prodloužit nedá; zamčená délka stěny prodloužení zastaví.
+- **Otevřené:** vyzkoušet na tabletu. Totéž pro řadu poloh napojení příček zatím není (jen otvory).
+
 ### 2026-11-14 (10) – zámek kót (KOTY-ZAMEK-EXPORT.md, A)
 - **Co se změnilo:** Pojem „změřeno × náčrt“ (`Wall.measured`) je zrušený – pole zůstává jen ve starých datech, aplikace ho nečte ani nezapisuje. Každá kóta může mít vlastní **zámek** (`Floor.dimLocks`, klíč = kóta, `core/dimLock.ts`; bez změny schématu, staré projekty mají vše odemčené). Řešič délek drží jen zamčené délky (`hasLockedWallAlong`). Každá úprava výkresu (`store.edit`) se kontroluje: když by změnila zamčenou kótu, neprovede se a nahoře se ukáže hlášení s tlačítkem Odemknout (`lockBlock`, `ui/LockNotice.tsx`). Testy `store/dimLock.test.ts` (16); testy, které ověřovaly „změřeno“, přepsané na zámek (změna zadání uživatelem).
 - **Viditelně v aplikaci:** všechny kóty černé, vždy skutečná délka z výkresu (žádná oranžová „~“ ani červený „⚠“). Zamčená kóta má za číslem **modrou ikonu zámku** (ťuknutím odemkne). V NumPadu tlačítko **Zamknout kótu / Zamčeno – odemknout**; změna zamčené kóty chce druhé potvrzení („Přepsat zamčenou kótu“) a zámek pak drží novou hodnotu. V panelu stěny a místnosti **Zamknout vše / Odemknout vše**. Tažení prvku se zamčenou kótou se nepohne a ukáže hlášení. Panel stěny už neříká „náčrt / změřeno“.
@@ -221,7 +227,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Čeká na vyzkoušení uživatelem (tablet):** všech 7 úprav – podrobnosti v Deníku změn 2026-11-14 (1–8). Zvlášť Nevypínat displej (jen přes https, tedy na GitHub Pages).
 
-**Hotové navíc (2026-11-14):** D3 – nástroj „Do rohu“ (viz Deník změn (9)); **zámek kót** místo „změřeno × náčrt“ (Deník (10), KOTY-ZAMEK-EXPORT.md). Obojí čeká na vyzkoušení. Testy 309 + 1 `it.fails`.
+**Hotové navíc (2026-11-14):** D3 – nástroj „Do rohu“ (viz Deník změn (9)); **zámek kót** místo „změřeno × náčrt“ (Deník (10), KOTY-ZAMEK-EXPORT.md) a řetěz otvorů se zámky (Deník (11)). Vše čeká na vyzkoušení. Testy 323 + 1 `it.fails`.
 
 **Fronta kroků:**
 1. **Přichytávání k oběma lícům stěny** u nástroje Stěna – zároveň poloha napojeného rohu mimo osu.

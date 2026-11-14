@@ -4,7 +4,7 @@
 import { createOpening, hasLeaf, isWindowKind } from '../../model/factory';
 import { applyRevealPart, doorLayout, leafSwingIntoRoom, openingThickness, outwardSwing, type RevealPart } from '../../core/doorLayout';
 import type { Floor, Id, Opening, OpeningKind } from '../../model/types';
-import { openingSpan, openingStartFromA, openingsOnWall, wallLength } from '../../core/floorQueries';
+import { openingSpan, openingStartFromA, wallLength } from '../../core/floorQueries';
 import { store } from '../store';
 
 /** Vloží otvor na stěnu v místě ťuknutí (t = 0..1 od rohu A). Měří se od bližšího rohu. */
@@ -132,23 +132,6 @@ export function setRevealSides(id: Id, inner: boolean, outer: boolean): void {
 /** Zapne (výchozí hodnoty, ostění z obou líců) nebo vypne ostění otvoru. */
 export function setRevealEnabled(id: Id, on: boolean): void {
   setRevealSides(id, on, on);
-}
-
-/** Změní mezeru mezi dvěma sousedními otvory – posune druhý a všechny další za ním. */
-export function setGap(floor: Floor, firstId: Id, secondId: Id, gap: number): void {
-  const first = floor.openings[firstId];
-  const wall = first && floor.walls[first.wallId];
-  if (!first || !wall) return;
-  const len = wallLength(floor, wall);
-  const placed = openingsOnWall(floor, wall);
-  const idx = placed.findIndex(p => p.op.id === firstId);
-  if (idx < 0 || placed[idx + 1]?.op.id !== secondId) return;
-  const shift = placed[idx]!.end + gap - placed[idx + 1]!.start;
-  for (let i = idx + 1; i < placed.length; i++) {
-    const p = placed[i]!;
-    const op = floor.openings[p.op.id]!;
-    setStartFromA(op, p.start + shift, len);
-  }
 }
 
 /**

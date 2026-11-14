@@ -103,8 +103,11 @@ export interface AppState {
   canRedo: boolean;
   /** Krátká zpráva aktivního nástroje v liště voleb (např. nástroj Do rohu: co ťuknout, proč to nešlo). */
   toolMsg: string | null;
-  /** Úprava se neprovedla, protože by změnila zamčenou kótu: která (klíč pro zvýraznění) a hlášení do lišty. */
-  lockBlock: { key: string; text: string; target: DimTarget } | null;
+  /**
+   * Úprava se neprovedla: zamčená kóta, která brání (klíč pro zvýraznění, `target` pro tlačítko Odemknout),
+   * nebo jiný důvod (bez `target`, např. otvor by vyjel ze stěny). Hlášení dole na plátně.
+   */
+  lockBlock: { key: string; text: string; target?: DimTarget } | null;
 }
 
 /** Volby úpravy výkresu. */
@@ -131,6 +134,8 @@ const MAX_HISTORY = 200;
 
 /** Přerušení úpravy, která by porušila zamčenou kótu (zachytí ho `edit`). */
 const LOCK_ABORT = new Error('lock');
+/** Přerušení úpravy, kterou recept odmítl (vrátil false). */
+const EDIT_ABORT = new Error('abort');
 
 class Store {
   private state: AppState = {
@@ -239,7 +244,7 @@ class Store {
    * Změna aktuálního podlaží. Vrací false, když se úprava neprovedla, protože by změnila zamčenou kótu
    * (KOTY-ZAMEK-EXPORT.md, A) – pak se nic nezmění a `lockBlock` řekne, která kóta brání.
    */
-  edit(recipe: (floor: Floor, project: Project) => void, extra: Partial<AppState> = {}, opts: EditOptions = {}): boolean {
+  edit(recipe: (floor: Floor, project: Project) => void | boolean, extra: Partial<AppState> = {}, opts: EditOptions = {}): boolean {
     const floorId = this.state.floorId;
     const before = this.state.project?.floors.find(x => x.id === floorId);
     let blocked: AppState['lockBlock'] = null;
@@ -247,7 +252,8 @@ class Store {
       this.editProject(p => {
         const f = p.floors.find(x => x.id === floorId);
         if (!f) return;
-        recipe(f, p);
+        // recept vrátil false = akce nejde → nic se nezmění (žádný krok Zpět)
+        if (recipe(f, p) === false) throw EDIT_ABORT;
         // napojené rohy (T bez dělení) sledují svou průběžnou stěnu
         syncHosted(before, f);
         // výstupky drží místo na stěně i při změně jejího vzepětí
@@ -264,6 +270,7 @@ class Store {
         if (f.dimLocks && Object.keys(f.dimLocks).length === 0) delete f.dimLocks;
       }, { ...extra, ...(this.state.lockBlock ? { lockBlock: null } : {}) });
     } catch (e) {
+      if (e === EDIT_ABORT) return false;
       if (e !== LOCK_ABORT) throw e;
       this.set({ lockBlock: blocked });
       return false;

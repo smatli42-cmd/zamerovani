@@ -60,7 +60,7 @@ export function OpeningPanel({ op }: { op: Opening }) {
         />
       </div>
       <div class="field-grid">
-        <button class="field-button" onClick={() => openTarget({ kind: 'opening-offset', openingId: op.id, ref: op.ref })}>
+        <button class="field-button" onClick={() => openTarget({ kind: 'opening-offset', openingId: op.id, ref: op.ref, move: true })}>
           <span>Odstup od {op.ref.toUpperCase()}</span>
           <b>{op.offset} mm</b>
         </button>
