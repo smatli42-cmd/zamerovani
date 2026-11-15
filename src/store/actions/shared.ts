@@ -4,6 +4,7 @@
 import { newId } from '../../model/factory';
 import type { Floor, Id, Pt } from '../../model/types';
 import { dist } from '../../core/geometry';
+import { dropOrphanCarried } from '../../core/carried';
 
 export const MERGE_TOL = 1; // mm – rohy blíž než toto jsou jeden roh
 
@@ -30,7 +31,7 @@ export function cleanup(floor: Floor): void {
     used.add(w.b);
   }
   for (const id of Object.keys(floor.nodes)) if (!used.has(id)) delete floor.nodes[id];
-  for (const op of Object.values(floor.openings)) if (!floor.walls[op.wallId]) delete floor.openings[op.id];
-  // výstupek smazané stěny zmizí (I1.12); na stěně bez tloušťky / oblouku se jen nekreslí (vrátí se s tloušťkou)
-  for (const p of Object.values(floor.protrusions ?? {})) if (!floor.walls[p.wallId]) delete floor.protrusions![p.id];
+  // prvky nesené smazanou stěnou zaniknou (F4, I1.12; napojené rohy se odpojí) – core/carried.ts;
+  // výstupek na stěně bez tloušťky / oblouku se jen nekreslí (vrátí se s tloušťkou)
+  dropOrphanCarried(floor);
 }

@@ -123,7 +123,7 @@ Souřadnice v mm. Vnitřní roh místnosti = (0, 0), místnost leží v kladném
 | F1 | Otvory se vkládají jen do stěn a jsou jejich součástí | ano | ano | MVP | hotovo | ✔ |
 | F2 | Otvor se kreslí skrz celé tělo stěny a ukládá se jednou | ano | ano | rozhodnuto dříve | audit | ✔ |
 | F3 | Při přehození strany nebo změně tloušťky otvor zůstane na místě | ano | ano | odstup se drží od rohu čáry líce | audit | ✔ |
-| F4 | Co s otvory při dělení / smazání části stěny | zůstane na kusu, na kterém leží | – | původně ? | audit | ✔ **Otvor zůstane na části stěny, která se nemaže; pokud leží v mazané části, smaže se** (vy) |
+| F4 | Co s otvory při dělení / smazání části stěny | zůstane na kusu, na kterém leží | – | původně ? | audit | ✔ **Otvor zůstane na části stěny, která se nemaže; pokud leží v mazané části, smaže se** (vy). **Upřesněno 2026-11-15 (vy):** platí pro všechny prvky nesené stěnou (otvor, výstupek / vybrání); prvek **i jen zčásti** v mazané části nebo přes dělicí bod se smaže celý; napojená příčka (T) se nemaže, jen se odpojí (volný konec). Kód: `core/carried.ts` |
 | F5 | Nika, strana přístupu | – | – | rozhodnuto dříve | rozhodnuto | ✔ |
 | F6 | Otvor na obloukové stěně | ano | ano | POZ | ne (známá mezera) | ↷ |
 | F7 | Otvor blízko rohu | omezení | omezení | upozornění, ne zákaz | audit | ✔ |
@@ -193,7 +193,7 @@ Podklad: `KRESLENI-VYSTUPKU.md` (schváleno uživatelem v chatu 2026-11-12). Sek
 | I1.11 | Výstupek přes roh / konec stěny, kopírování v řadě | – | – | později (obrys zůstane obyčejnou čárou) | – | ↷ (vy) |
 | I1.15 | Výstupek / vybrání **na obloukové stěně** (poloha po oblouku osy, hloubka radiálně; nakreslené čáry zůstanou rovné, plocha se uzavře po oblouku líce) | – | – | ano | hotovo (2026-11-13) | ✔ (vy, požadavek 2026-11-13 – přesunuto z I1.11) |
 | I1.12 | Smazání stěny smaže i její výstupky; smazání výstupku vrátí stěnu do původního stavu | ano | ano | ano | hotovo (2026-11-13) | ✔ |
-| I1.13 | Dělení stěny (D4): výstupek přejde na úsek, na kterém leží; leží-li přes dělicí bod, zůstane u úseku s větším překrytím | – | – | ano | hotovo (2026-11-13) | ✔ (vy) |
+| I1.13 | Dělení stěny (D4): výstupek přejde na úsek, na kterém leží; ~~leží-li přes dělicí bod, zůstane u úseku s větším překrytím~~ → **leží-li přes dělicí bod, smaže se (jako otvor, F4)** | – | – | ano | změněno 2026-11-15 (vy) | ✔ (vy) |
 | I1.14 | Výstupek / vybrání, které zasahuje do otvoru, se nezakazuje (upozornění později) | – | – | ano | – | ✔ (vy) |
 
 ### I2. Příklady „vstup → očekávaný výsledek“ (podklad pro testy)

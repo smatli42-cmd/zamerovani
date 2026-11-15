@@ -7,13 +7,15 @@
  * sdílejí jeden roh, takže se stěny napojí do rohu (tělo podle core/wallBody.ts).
  *
  * - Přesouvá se jen konec této stěny: roh sdílený s dalšími stěnami se pro ni oddělí (sousedé zůstanou).
- * - Otvory a výstupky drží svou polohu ve výkresu; ty, které leží v odříznuté části, se smažou (F4).
+ * - Prvky nesené stěnou drží svou polohu ve výkresu; ty, které leží v odříznuté části (i jen zčásti), se smažou,
+ *   napojené příčky se odpojí (F4, core/carried.ts).
  * - Zamčená délka stěny (zámek kót) úpravu zastaví – hlídá store.edit.
  */
 import { newId } from '../model/factory';
 import type { Floor, Id, Pt, Wall } from '../model/types';
 import { add, dist, dot, scale, sub } from './geometry';
-import { isCurved, openingSpan, openingStartFromA, wallNodes } from './floorQueries';
+import { isCurved, wallNodes } from './floorQueries';
+import { redistributeCarried } from './carried';
 
 /** 'locked' = úprava by změnila zamčenou kótu (hlídá store.edit, ne tato funkce). */
 export type TrimResult = 'ok' | 'curved' | 'parallel' | 'same' | 'tooShort' | 'joined' | 'locked';
@@ -125,7 +127,8 @@ export function trimExtendToCorner(floor: Floor, w1: Id, keep1: Pt, w2: Id, keep
     const [a1, b1] = wallNodes(floor, w)!;
     const newLen = dist(a1, b1);
     const shift = dot(sub(a1, oldA), dir); // o kolik se posunul roh A podél stěny
-    keepPositions(floor, w, shift, oldLen, newLen);
+    // prvky nesené stěnou zůstanou na místě; co leží v odříznuté části (i jen zčásti), zanikne (F4)
+    redistributeCarried(floor, w.id, oldLen, [{ wallId: w.id, from: shift, to: shift + newLen }], p => dot(sub(p, oldA), dir));
   }
 
   if (!changed) {
@@ -142,27 +145,4 @@ export function trimExtendToCorner(floor: Floor, w1: Id, keep1: Pt, w2: Id, keep
   const used = new Set(Object.values(floor.walls).flatMap(w => [w.a, w.b]));
   for (const id of Object.keys(floor.nodes)) if (!used.has(id)) delete floor.nodes[id];
   return 'ok';
-}
-
-/** Otvory a výstupky zůstanou na místě ve výkresu; co leží mimo novou stěnu, se smaže (F4). */
-function keepPositions(floor: Floor, w: Wall, shift: number, oldLen: number, newLen: number): void {
-  for (const op of Object.values(floor.openings)) {
-    if (op.wallId !== w.id) continue;
-    const span = openingSpan(op);
-    const start = openingStartFromA(op, oldLen) - shift;
-    if (start < -0.5 || start + span > newLen + 0.5) {
-      delete floor.openings[op.id];
-      continue;
-    }
-    op.offset = Math.round(op.ref === 'a' ? start : newLen - start - span);
-  }
-  for (const p of Object.values(floor.protrusions ?? {})) {
-    if (p.wallId !== w.id) continue;
-    const us = p.pts.map(q => q.u - shift);
-    if (Math.max(...us) <= 0 || Math.min(...us) >= newLen) {
-      delete floor.protrusions![p.id];
-      continue;
-    }
-    p.pts.forEach((q, i) => (q.u = us[i]!));
-  }
 }

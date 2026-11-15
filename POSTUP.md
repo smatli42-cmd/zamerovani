@@ -7,6 +7,15 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-15 (2) – F4: prvky nesené stěnou při zkrácení, dělení a smazání stěny
+- **Co se změnilo:** Pravidlo F4 je na jednom místě `core/carried.ts` (první krok podle „Pravidla pro průřezové funkce“) a používá ho nástroj Do rohu (`core/trimExtend.ts`), dělení stěny (`splitWallAt`, v aplikaci zatím nevolané) i smazání stěny (`cleanup`). Prvek celý na zbývajícím kusu zůstane na místě; prvek i jen zčásti v mazaném kusu nebo přes dělicí bod se smaže celý; napojená příčka se jen odpojí. Katalog F4 upřesněn a I1.13 změněn (se souhlasem uživatele). Testy `store/carried.test.ts` (10), starý test I1.13 přepsán na rozhodnutí uživatele. Po kontrole revieweru: napojený roh v konci kusu (bod dělení, nový roh) se odpojí přímo v `carried.ts` (dřív to dořešil až `syncHosted`), test příčky v bodě dělení a polohy ponechaných příček.
+- **Viditelně v aplikaci:** nástroj Do rohu smaže i výstupek / vybrání, které do odříznutého kusu zasahuje jen zčásti (dřív přečníval přes konec stěny).
+- **Rozhodnuto uživatelem:** výstupek zčásti v odříznuté části → smazat celý; příčka na odříznuté části → zůstane s volným koncem; otvor zčásti v odříznuté části → smazat celý (potvrzeno); dělení sjednotit; prvek přes dělicí bod → smazat (změna I1.13).
+- **Opraveno navíc (nález testu):** dělení stěny odpojovalo i příčky napojené na část, která zůstává – teď zůstanou napojené na svou část.
+- **Tabulka pravidlo × prvek:** otvor (okno, dveře, průchod, nika, s ostěním) ✔; výstupek ✔; vybrání ✔; napojená příčka na čáře ✔ a na líci ✔ (výjimka: nemaže se, jen odpojí – rozhodnutí uživatele); zámky kót ✔ (zanikají se svým prvkem, `pruneLocks`); překlad, úhlopříčka, volná kóta – v aplikaci zatím nejsou (musí přibýt do `carriedBy`).
+- **Pravidlo dosud zvlášť:** sloučení rovného pokračování stěn (`mergeStraightAt` v `core/topology.ts`) přenáší otvory a výstupky každý svým kódem – jiná operace (nic se nemaže), ponecháno.
+- **Otevřené:** vyzkoušet nástroj Do rohu na tabletu. Prvek se zamčenou kótou, který leží v odříznutém kusu, se smaže bez hlášení (zámek hlídá jen kóty prvků, které zůstávají – jako dosud); zamčená poloha odpojené příčky zanikne.
+
 ### 2026-11-15 (1) – výstupek při přehození strany stěny (fronta bod 1)
 - **Co se změnilo:** Ověřeno, že ruční přehození strany (⇅) i automatické natočení rovné stěny ven po uzavření místnosti odpovídá katalogu I1.7 (výstupek zůstane na své straně a posune se s lícem). Opravena chyba u obloukové stěny: po uzavření místnosti se oblouk překlopí ven (zrcadlí se podle tětivy), ale výstupek zůstal na původní straně a přeskočil z vnějšího líce na vnitřní. Teď se výstupek zrcadlí s obloukem (`orientLoopOutward` v `core/wallBody.ts`), test v `store/protrusionArc.test.ts`.
 - **Viditelně v aplikaci:** výstupek nakreslený na obloukové stěně před uzavřením místnosti zůstane po uzavření na vnějším líci oblouku (dřív skočil dovnitř místnosti).
@@ -291,8 +300,10 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Hotovo 2026-11-15:** výstupek při přehození strany stěny (Deník 2026-11-15 (1)) – I1.7 ověřeno, oprava zrcadlení výstupku na oblouku po uzavření místnosti. Testy 356 + 1 `it.fails`.
 
+**Hotovo 2026-11-15:** F4 – prvky nesené stěnou při zkrácení / dělení / smazání (Deník 2026-11-15 (2)), centrálně v `core/carried.ts`. Testy 366 + 1 `it.fails`.
+
 **Fronta kroků:**
-1. **F4** (otvory při dělení stěny), **C1.11** (hrana odskoku, test C2/6 `it.fails`).
+1. **C1.11** (hrana odskoku, test C2/6 `it.fails`).
 2. Z auditu: F7, D4, A2 / A10 / B6; výstupek přes roh / kopie v řadě (I1.11).
 3. D3 doplnit: zkrátit jen jednu stěnu k hraně druhé (T místo L); případně řetězová kóta užšího otvoru při vypnutém vnitřním ostění.
 4. Napojení na líc obloukové stěny (zatím jen rovné stěny).

@@ -8,7 +8,8 @@ import { arcGeometry, nearestOnArc, splitArcSagittas } from './arc';
 import { dist } from './geometry';
 import { openingSpan, openingStartFromA, wallLength, wallNodes } from './floorQueries';
 import { straightContinuation } from './wallBody';
-import { moveProtrusions, protrusionExtent, wallFrame } from './protrusion';
+import { moveProtrusions, wallFrame } from './protrusion';
+import { redistributeCarried } from './carried';
 
 /** Jak blízko (mm) musí roh ležet u stěny, aby ji rozdělil. */
 const ON_WALL_TOL = 1;
@@ -32,8 +33,12 @@ export function splitWallAt(floor: Floor, wallId: Id, nodeId: Id): [Id, Id] | nu
   // u oblouku se míry částí berou jako tětivy
   const lenA = dist(nA, pr.point);
   const lenB = dist(pr.point, nB);
-  const at = sag ? lenA : pr.t * len;
   if (pr.distance > ON_WALL_TOL || lenA < MIN_PART || lenB < MIN_PART) return null;
+  // poloha podél PŮVODNÍ stěny (u oblouku po oblouku osy) – pro rozdělení nesených prvků
+  const frame = wallFrame(floor, wall);
+  if (!frame) return null;
+  const uOf = (p: { x: number; y: number }) => frame.project(p).u;
+  const uAt = uOf(pr.point);
 
   // Přesně na stěnu (bez zaokrouhlovací odchylky)
   node.x = pr.point.x;
@@ -75,27 +80,12 @@ export function splitWallAt(floor: Floor, wallId: Id, nodeId: Id): [Id, Id] | nu
   }
   floor.walls[wB.id] = wB;
 
-  // Otvory přesunout na část, ve které leží jejich střed
-  for (const op of Object.values(floor.openings)) {
-    if (op.wallId !== wallId) continue;
-    const start = openingStartFromA(op, len);
-    const center = start + openingSpan(op) / 2;
-    const inA = center <= at;
-    const target = inA ? wA : wB;
-    const partLen = inA ? lenA : lenB;
-    const startInPart = Math.max(0, Math.min(partLen - openingSpan(op), inA ? start : start - at));
-    op.wallId = target.id;
-    op.offset = Math.max(0, Math.round(op.ref === 'a' ? startInPart : partLen - startInPart - openingSpan(op)));
-  }
-  // výstupky na část, na které leží větší část jejich šířky (I1.13); u B se měří od nového rohu
-  // (u oblouku po oblouku osy – obě části leží na stejné kružnici)
-  const uAt = sag ? (wallFrame(floor, wall)?.project(pr.point).u ?? at) : at;
-  const inA = (p: Parameters<typeof protrusionExtent>[0]) => {
-    const { u0, u1 } = protrusionExtent(p);
-    return (u0 + u1) / 2 <= uAt;
-  };
-  moveProtrusions(floor, wallId, wA.id, u => u, false, inA);
-  moveProtrusions(floor, wallId, wB.id, u => u - uAt);
+  // prvky nesené stěnou přejdou na část, na které leží, a zůstanou na místě; prvek přes dělicí bod
+  // zanikne (F4, I1.13 – rozhodnutí uživatele 2026-11-15; core/carried.ts)
+  redistributeCarried(floor, wallId, len, [
+    { wallId: wA.id, from: 0, to: uAt },
+    { wallId: wB.id, from: uAt, to: frame.len }
+  ], uOf);
   return [wA.id, wB.id];
 }
 

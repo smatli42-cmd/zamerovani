@@ -252,15 +252,16 @@ describe('I2 výstupek a vybrání', () => {
     expect(protrusionDims(f(), prots().find(p => p.id === first.id)!)).toMatchObject({ before: 3350, after: 0 });
   });
 
-  it('výstupek přes dělicí bod zůstane u části s větším překrytím (I1.13)', () => {
+  // dřív „zůstane u části s větším překrytím“ – změněno rozhodnutím uživatele 2026-11-15 (F4, I1.13)
+  it('výstupek přes dělicí bod se smaže (I1.13, F4)', () => {
     const S = wallS();
     polyline(tooth(2350, 2650, -200));
     store.edit(fl => {
       fl.nodes.m = { id: 'm', x: 2400, y: 0 };
       splitWallAt(fl, S, 'm');
     });
-    expect(f().walls[prots()[0]!.wallId]!.a).toBe('m');
-    expect(protrusionOutline(f(), prots()[0]!)![0]).toEqual({ x: 2350, y: 0 });
+    expect(Object.keys(f().walls)).toHaveLength(2);
+    expect(prots()).toHaveLength(0);
   });
 
   it('přehození strany stěny: výstupek zůstane na své straně (ven od těla) a posune se s lícem', () => {
