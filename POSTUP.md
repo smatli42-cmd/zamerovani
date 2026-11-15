@@ -7,6 +7,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-15 (konec sezení)
+- **Co se změnilo:** Sezení ukončeno; za den kroky (1)–(11) níže. Uživatel vše vyzkoušel na PC: „vše funguje“. Přidán dokument `metoda-pruchozi-funkce.md` (metoda pro funkce, které ovlivňují více prvků – od uživatele).
+- **Viditelně v aplikaci:** viz záznamy (1)–(11).
+- **Rozhodnuto samostatně:** nic nového.
+- **Otevřené:** fronta kroků v „Poslední stav“; vyzkoušet na tabletu.
+- **Chyby od uživatele:** výstupek v rohu tvarem U nechával čáru na sousední stěně – opraveno (7).
+- **Soubory nad 500 řádků:** žádné (největší `canvas/drawDims.ts` 464, `tools/wallTool.ts` 446, `tools/selectTool.ts` 439).
+
 ### 2026-11-15 (11) – výstupek přes volný konec stěny (I1.11)
 - **Co se změnilo:** Nový prvek `Floor.endProtrusions` (SCHEMA_VERSION 16 bez převodu dat, `core/endProtrusion.ts`): lomená čára nástrojem Čára z líce stěny kolem čela jejího volného konce na protější líc se sama změní na výstupek. Souřadnice od čela (s dovnitř, v ven od líce; každý bod si pamatuje, ke kterému líci patří), takže se drží konce stěny a při změně tloušťky jede část u protějšího líce s ním. Kreslení (`core/wallBodyEdges.ts`): líce i čelo pod výstupkem se nekreslí. Výběr, panel „Výstupek na konci stěny“ (výška, název, materiál, poznámka), smazání, kopie se stěnou, F4 (`core/carried.ts`: dělení / zkrácení / smazání), změna délky kótou (jede s koncem; zkrácení pod jeho dosah se neprovede), sloučení s rovným pokračováním (výstupek na sloučeném konci zanikne, na druhém konci zůstane). Testy `store/endProtrusion.test.ts` (15), `store/carried.test.ts`, `store/openingChain.test.ts`. Po kontrole revieweru opraveno: Do rohu, který odřízne konec s výstupkem, ho smaže (F4); hlášení nástroje Rozdělit ho počítá; kopie stěny nekopíruje skrytý výstupek; změna délky kótou hlídá i překryv výstupků na koncích; kopie v řadě (a rozměry výstupku) se nepoloží přes výstupek na konci ani v rohu; ťuknutí na tělo stěny u konce vybere stěnu; panel kopírování v řadě se po přepnutí výstupku vynuluje a hlásí i zastavení zámkem.
 - **Viditelně v aplikaci:** nástrojem Čára obtočit konec stěny (z jednoho líce ven, za čelo, na druhou stranu a zpět na druhý líc) = šedý výstupek bez čar uvnitř. Ověřeno v prohlížeči.
@@ -365,23 +373,25 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Otevřené:** vyzkoušet na tabletu; další krok tažení a posun jako blok (D2, D11–D14).
 - **Chyby od uživatele:** zatím žádné.
 
-## Poslední stav (2026-11-14, konec sezení)
+## Poslední stav (2026-11-15, konec sezení)
 
-**Hotové (na webu):** šířka okna = otvor ve stěně, rám uvnitř, bez kót rámu (Deník (17)); nová stěna se přichytí a napojí i na protější líc jiné stěny, roh na líci (`Node.hostFace`, schéma 14, Deník (18)) – uživatel vyzkoušel a potvrdil. Kótování (zámky, řetěz otvorů, celková kóta) uživatel potvrdil jako funkční. Testy 355 + 1 `it.fails` (C2/6), typecheck a build OK.
+**Hotové (na webu, uživatel vyzkoušel na PC a potvrdil „vše funguje“):** výstupek při přehození strany (Deník 2026-11-15 (1)); F4 – prvky nesené stěnou při zkrácení / dělení / smazání, centrálně `core/carried.ts` (2); úklid velkých souborů + test velikosti `src/sizeGuard.test.ts` (3); C1.11 hrana odskoku (4); F7 upozornění u prvku blízko rohu – otvory i výstupky (5, 6); výstupek přes roh I1.11 (7); kreslení řetězem A2 / A10 / B6 (8); nástroj Rozdělit D4 (9); kopírování výstupku v řadě (10); výstupek přes volný konec stěny (11). Testy 476, žádný `it.fails`, typecheck a build OK. SCHEMA_VERSION 16.
 
 **Rozpracované:** nic.
 
-**Čeká na vyzkoušení na tabletu:** úpravy oken / dveří / ostění / Nevypínat displej, nástroj Do rohu (Deník 2026-11-14 (1)–(9)).
+**Čeká na vyzkoušení na tabletu:** vše z 2026-11-14 a 2026-11-15 (na PC ověřeno uživatelem); u kreslení řetězem délka lišty Stěny na užším displeji.
 
-**Hotovo 2026-11-15:** výstupek při přehození strany stěny (Deník 2026-11-15 (1)) – I1.7 ověřeno, oprava zrcadlení výstupku na oblouku po uzavření místnosti. Testy 356 + 1 `it.fails`.
-
-**Hotovo 2026-11-15:** F4 – prvky nesené stěnou při zkrácení / dělení / smazání (Deník 2026-11-15 (2)), centrálně v `core/carried.ts`; úklid velkých souborů + test velikosti (3); C1.11 hrana odskoku (4); F7 upozornění u prvku blízko rohu – otvory i výstupky (5, 6); výstupek přes roh I1.11 (7); kreslení řetězem A2/A10/B6 (8); nástroj Rozdělit D4 (9); kopírování výstupku v řadě (10); výstupek přes volný konec stěny (11). Testy 476, žádný `it.fails`.
+**Nová pravidla práce (CLAUDE.md):** „Pravidlo pro průřezové funkce“ (jedno centrální místo, tabulka pravidlo × prvek, nic nerozhodovat sám, výjimky vypsat) – popis metody v `metoda-pruchozi-funkce.md`; „Velké soubory“ (nad ~500 řádků nejdřív rozdělit čistým přesunem v samostatném commitu).
 
 **Fronta kroků:**
 1. D3 doplnit: zkrátit jen jednu stěnu k hraně druhé (T místo L); případně řetězová kóta užšího otvoru při vypnutém vnitřním ostění.
 2. Napojení na líc obloukové stěny (zatím jen rovné stěny).
 3. Kóty výstupku v rohu a na konci stěny na výkrese; vybrání v rohu.
 4. Kóty: volná kóta / úhlopříčka (POZADAVKY.md) – zámek je připravený; později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) spolu s exportem DXF / PDF.
+
+## Předchozí stav (2026-11-14, konec sezení)
+
+**Hotové (na webu):** šířka okna = otvor ve stěně, rám uvnitř, bez kót rámu (Deník (17)); nová stěna se přichytí a napojí i na protější líc jiné stěny, roh na líci (`Node.hostFace`, schéma 14, Deník (18)) – uživatel vyzkoušel a potvrdil. Kótování (zámky, řetěz otvorů, celková kóta) uživatel potvrdil jako funkční. Testy 355 + 1 `it.fails` (C2/6), typecheck a build OK.
 
 ## Předchozí stav (2026-11-14 – úpravy oken, dveří, ostění, displeje)
 
