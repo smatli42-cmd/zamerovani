@@ -8,7 +8,7 @@ import { useStore } from '../../store/useStore';
 import { close } from './common';
 import { NumField, Panel } from './fields';
 import { OpeningPanel } from './OpeningPanel';
-import { CornerProtrusionPanel, ProtrusionPanel } from './ProtrusionPanel';
+import { CornerProtrusionPanel, EndProtrusionPanel, ProtrusionPanel } from './ProtrusionPanel';
 import { RoomPanel } from './RoomPanel';
 import { TextPanel } from './TextPanel';
 import { WallPanel } from './WallPanel';
@@ -44,7 +44,8 @@ export function SidePanel() {
     case 'protrusion': {
       const p = floor.protrusions?.[selection.id];
       const cp = floor.cornerProtrusions?.[selection.id];
-      return p ? <ProtrusionPanel floor={floor} p={p} /> : cp ? <CornerProtrusionPanel cp={cp} /> : null;
+      const ep = floor.endProtrusions?.[selection.id];
+      return p ? <ProtrusionPanel key={p.id} floor={floor} p={p} /> : cp ? <CornerProtrusionPanel cp={cp} /> : ep ? <EndProtrusionPanel ep={ep} /> : null;
     }
     case 'multi': {
       const count = (k: string) => selection.items.filter(i => i.kind === k).length;

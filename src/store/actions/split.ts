@@ -30,6 +30,7 @@ const carriedCount = (f: Floor | null) =>
     ? Object.keys(f.openings).length +
       Object.keys(f.protrusions ?? {}).length +
       Object.keys(f.cornerProtrusions ?? {}).length +
+      Object.keys(f.endProtrusions ?? {}).length +
       Object.values(f.nodes).filter(n => n.host).length
     : 0;
 

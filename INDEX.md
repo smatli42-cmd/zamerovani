@@ -25,6 +25,8 @@
 | `src/core/cornerOverlap.ts` | Prvek blízko rohu (F7) – upozornění pro otvory i výstupky, jediné místo pravidla |
 | `src/tools/wallTool.ts`, `src/tools/wallToolSnap.ts`, `src/tools/wallChain.test.ts` | Nástroje Stěna a Čára, přichycení na líce, kreslení řetězem (A2) |
 | `src/tools/splitTool.ts`, `src/store/actions/split.ts`, `src/store/split.test.ts` | Nástroj Rozdělit (D4): rozdělení stěny a vyjmutí úseku |
+| `src/core/endProtrusion.ts`, `src/store/endProtrusion.test.ts` | Výstupek přes volný konec stěny (I1.11) |
+| `src/store/protrusionRow.test.ts` | Kopírování výstupku v řadě (I1.11) |
 | `src/sizeGuard.test.ts` | Hlídání velikosti zdrojových souborů (nad 700 řádků selže, nad 500 upozorní) |
 | `prototyp/` | Starý první prototyp (jen inspirace) |
 | `.claude/agents/reviewer.md` | Agent pro nezávislou kontrolu kroku |

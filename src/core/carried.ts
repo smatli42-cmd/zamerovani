@@ -10,13 +10,15 @@
  *
  * Druhy prvků: otvor (okno, dveře, průchod, nika – ostění a rám jsou jeho součást), výstupek / vybrání,
  * výstupek přes roh (I1.11 – jeho rozsah podél stěny je od rohu po konec obrysu na líci; přejde na kus, který
- * má konec v rohu), napojený roh (`Node.host`). **Nový druh prvku na stěně musí přibýt do `carriedBy` i s testem**
+ * má konec v rohu), výstupek na konci stěny (I1.11 – rozsah od konce po nejvzdálenější bod obrysu), napojený roh
+ * (`Node.host`). **Nový druh prvku na stěně musí přibýt do `carriedBy` i s testem**
  * (`store/carried.test.ts`). Zámky kót smazaných prvků zanikají samy (`pruneLocks`).
  */
 import type { Floor, Id, Pt } from '../model/types';
 import { openingSpan, openingStartFromA } from './floorQueries';
 import { protrusionExtent } from './protrusion';
 import { cornerFaceCover, cornerProtrusionsOf } from './cornerProtrusion';
+import { endProtrusionsOf, endReach } from './endProtrusion';
 
 /** Tolerance (mm) na okraji kusu stěny – zaokrouhlení poloh. */
 const TOL = 0.5;
@@ -34,7 +36,7 @@ export interface KeptPart {
 }
 
 interface Carried {
-  kind: 'opening' | 'protrusion' | 'corner' | 'hosted';
+  kind: 'opening' | 'protrusion' | 'corner' | 'end' | 'hosted';
   id: Id;
   /** rozsah podél původní stěny (napojený roh: u0 = u1) */
   u0: number;
@@ -64,6 +66,15 @@ function carriedBy(floor: Floor, wallId: Id, len: number, uOf: (p: Pt) => number
     const us = cover && node ? [uOf(node), uOf(cover[1])] : [Infinity, Infinity];
     out.push({ kind: 'corner', id: cp.id, u0: Math.min(...us), u1: Math.max(...us) });
   }
+  // výstupek na konci stěny: od konce po nejvzdálenější bod obrysu na stěně
+  for (const ep of endProtrusionsOf(floor)) {
+    if (ep.wallId !== wallId) continue;
+    // konec podle PŮVODNÍ stěny (u0 = 0 / délka) – Do rohu už roh přepsal, když se prvky rozdělují
+    const uE = ep.end === 'a' ? 0 : len;
+    const inward = ep.end === 'a' ? 1 : -1;
+    const u2 = uE + inward * endReach(ep);
+    out.push({ kind: 'end', id: ep.id, u0: Math.min(uE, u2), u1: Math.max(uE, u2) });
+  }
   for (const n of Object.values(floor.nodes)) {
     if (n.host !== wallId) continue;
     const u = uOf(n);
@@ -77,6 +88,7 @@ function drop(floor: Floor, c: Carried): void {
   if (c.kind === 'opening') delete floor.openings[c.id];
   else if (c.kind === 'protrusion') delete floor.protrusions?.[c.id];
   else if (c.kind === 'corner') delete floor.cornerProtrusions?.[c.id];
+  else if (c.kind === 'end') delete floor.endProtrusions?.[c.id];
   else {
     const n = floor.nodes[c.id];
     if (n) {
@@ -95,6 +107,9 @@ function move(floor: Floor, c: Carried, part: KeptPart, oldWallId: Id): void {
     const span = c.u1 - c.u0;
     op.wallId = part.wallId;
     op.offset = Math.round(op.ref === 'a' ? start : part.to - part.from - start - span);
+  } else if (c.kind === 'end') {
+    // souřadnice od konce stěny nezávisí na délce – mění se jen stěna (konec a / b zůstává: části drží směr a→b)
+    floor.endProtrusions![c.id]!.wallId = part.wallId;
   } else if (c.kind === 'corner') {
     // souřadnice rohu nezávisí na délce stěny – mění se jen stěna, ke které roh patří
     const cp = floor.cornerProtrusions![c.id]!;
@@ -129,4 +144,5 @@ export function dropOrphanCarried(floor: Floor): void {
   for (const p of Object.values(floor.protrusions ?? {})) if (!floor.walls[p.wallId]) drop(floor, { kind: 'protrusion', id: p.id, u0: 0, u1: 0 });
   for (const n of Object.values(floor.nodes)) if (n.host && !floor.walls[n.host]) drop(floor, { kind: 'hosted', id: n.id, u0: 0, u1: 0 });
   for (const cp of cornerProtrusionsOf(floor)) if (cp.walls.some(w => !floor.walls[w]) || !floor.nodes[cp.node]) drop(floor, { kind: 'corner', id: cp.id, u0: 0, u1: 0 });
+  for (const ep of endProtrusionsOf(floor)) if (!floor.walls[ep.wallId]) drop(floor, { kind: 'end', id: ep.id, u0: 0, u1: 0 });
 }

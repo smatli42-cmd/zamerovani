@@ -10,7 +10,7 @@
 
 import type { DimTarget } from '../core/dimLock';
 
-export const SCHEMA_VERSION = 15;
+export const SCHEMA_VERSION = 16;
 
 export type Id = string;
 
@@ -221,6 +221,34 @@ export interface CornerProtrusion {
   note: string;
 }
 
+/**
+ * Bod obrysu výstupku na konci stěny: s = mm od čela podél stěny dovnitř (záporně za čelem), v = mm kolmo ven od líce
+ * `f` (0 = líc, na kterém obrys začíná; 1 = protější líc). Body vztažené k protějšímu líci jedou s ním při změně tloušťky.
+ */
+export interface EndPt {
+  s: number;
+  v: number;
+  f: 0 | 1;
+}
+
+/**
+ * Výstupek přes volný konec stěny (KATALOG-STEN.md I1.11, rozhodnutí uživatele 2026-11-15): obrys z líce kolem čela
+ * na protější líc; drží se konce stěny (souřadnice od čela). Když konec přestane být volný, jen se nekreslí.
+ */
+export interface EndProtrusion {
+  id: Id;
+  wallId: Id;
+  /** Konec stěny, kolem jehož čela obrys vede. */
+  end: 'a' | 'b';
+  /** Líc, na kterém obrys začíná (1 / −1 vůči normal(a→b), jako `Protrusion.side`); končí na protějším. */
+  side: 1 | -1;
+  pts: EndPt[];
+  height?: number;
+  name: string;
+  material: string;
+  note: string;
+}
+
 /** Podlaží = jeden půdorys. */
 export interface Floor {
   id: Id;
@@ -234,6 +262,8 @@ export interface Floor {
   protrusions?: Record<Id, Protrusion>;
   /** Výstupky přes roh dvou stěn (I1.11, od verze 15; chybí = žádné). */
   cornerProtrusions?: Record<Id, CornerProtrusion>;
+  /** Výstupky přes volný konec stěny (I1.11, od verze 16; chybí = žádné). */
+  endProtrusions?: Record<Id, EndProtrusion>;
   /**
    * Zamčené kóty (KOTY-ZAMEK-EXPORT.md, A): klíč = `dimKey(kóta)`, hodnota = popis kóty. Chybí = vše odemčeno.
    * Zamčená kóta drží hodnotu – úprava, která by ji změnila, se neprovede (core/dimLock.ts).

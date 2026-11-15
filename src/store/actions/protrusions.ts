@@ -4,7 +4,8 @@
  * se po dokončení sama změní na výstupek nebo vybrání.
  */
 import { newId } from '../../model/factory';
-import type { CornerProtrusion, Floor, Id, Protrusion, Pt, Wall } from '../../model/types';
+import type { CornerProtrusion, EndProtrusion, Floor, Id, Protrusion, Pt, Wall } from '../../model/types';
+import { endFromPolyline } from '../../core/endProtrusion';
 import { findFaceNear, profileFromLoop, profileFromPolyline } from '../../core/protrusion';
 import { cornerFromPolyline, setCornerDim } from '../../core/cornerProtrusion';
 import { protrusionFits, setProtrusionDim, setProtrusionSagitta, type ProtrusionDim } from '../../core/protrusionEdit';
@@ -116,6 +117,15 @@ export function convertChain(floor: Floor, wallId: Id): Id | null {
   if (chain && prof) return addProtrusion(floor, prof, chain.walls);
   // výstupek přes roh: dvě čáry přes vnitřní roh / tři a víc kolem vnějšího, z líce jedné stěny na líc druhé (I1.11)
   const corner = chain && cornerFromPolyline(floor, chain.pts);
+  // výstupek přes volný konec stěny: z líce kolem čela na protější líc (I1.11)
+  const atEnd = chain && !corner ? endFromPolyline(floor, chain.pts) : null;
+  if (chain && atEnd) {
+    for (const id of chain.walls) delete floor.walls[id];
+    const ep: EndProtrusion = { id: newId('pe'), ...atEnd, name: '', material: '', note: '' };
+    (floor.endProtrusions ??= {})[ep.id] = ep;
+    cleanup(floor);
+    return ep.id;
+  }
   if (!chain || !corner) return null;
   for (const id of chain.walls) delete floor.walls[id];
   const cp: CornerProtrusion = { id: newId('pc'), ...corner, name: '', material: '', note: '' };
@@ -125,7 +135,8 @@ export function convertChain(floor: Floor, wallId: Id): Id | null {
 }
 
 /** Existuje výstupek (i přes roh) s tímto ID? */
-export const protrusionExists = (floor: Floor | null, id: Id): boolean => !!floor && !!(floor.protrusions?.[id] ?? floor.cornerProtrusions?.[id]);
+export const protrusionExists = (floor: Floor | null, id: Id): boolean =>
+  !!floor && !!(floor.protrusions?.[id] ?? floor.cornerProtrusions?.[id] ?? floor.endProtrusions?.[id]);
 
 /** Čáry `lines` nahradí výstupkem `prof` (vybere se). */
 function addProtrusion(floor: Floor, prof: NonNullable<ReturnType<typeof profileFromPolyline>>, lines: Id[]): Id {
@@ -184,7 +195,7 @@ export function setProtrusionArc(id: Id, seg: number, s: number): void {
 /** Vlastnosti výstupku i výstupku přes roh (výška, název, materiál, poznámka). */
 export function updateProtrusion(id: Id, patch: Partial<Pick<Protrusion, 'height' | 'name' | 'material' | 'note'>>): void {
   store.edit(floor => {
-    const p = floor.protrusions?.[id] ?? floor.cornerProtrusions?.[id];
+    const p = floor.protrusions?.[id] ?? floor.cornerProtrusions?.[id] ?? floor.endProtrusions?.[id];
     if (!p) return;
     Object.assign(p, patch);
     if (p.height === undefined || !(p.height > 0)) delete p.height;
@@ -210,7 +221,7 @@ export function applyProtrusionDim(floor: Floor, id: Id, dim: ProtrusionDim, val
 export function copyProtrusionRow(id: Id, count: number, spacing: number, dir: 1 | -1): number {
   let placed = 0;
   if (!(count >= 1) || !(spacing > 0)) return 0;
-  store.edit(floor => {
+  const ok = store.edit(floor => {
     const src = floor.protrusions?.[id];
     if (!src) return false;
     for (let k = 1; k <= Math.min(100, Math.floor(count)); k++) {
@@ -223,5 +234,5 @@ export function copyProtrusionRow(id: Id, count: number, spacing: number, dir: 1
     }
     if (!placed) return false;
   });
-  return placed;
+  return ok ? placed : 0;
 }

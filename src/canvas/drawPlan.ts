@@ -14,6 +14,7 @@ import { addHitBox } from './hitTargets';
 import { protrusionArcHandles } from '../core/protrusionEdit';
 import { protrusionPolygon, protrusionsOf } from '../core/protrusion';
 import { cornerPolygon, cornerProtrusionsOf } from '../core/cornerProtrusion';
+import { endOutline, endProtrusionsOf } from '../core/endProtrusion';
 
 export const COLORS = {
   wall: '#0f172a',
@@ -93,6 +94,15 @@ export function drawWalls(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
     if (!outline) continue;
     ctx.fillStyle = sel ? 'rgba(37,99,235,0.35)' : 'rgba(147,197,253,0.4)';
     path(outline);
+    ctx.fill();
+  }
+  for (const ep of endProtrusionsOf(floor)) {
+    const sel = isSel(selection, 'protrusion', ep.id);
+    const hov = isSel(hover, 'protrusion', ep.id);
+    const area = (sel || hov) && endOutline(floor, ep);
+    if (!area) continue;
+    ctx.fillStyle = sel ? 'rgba(37,99,235,0.35)' : 'rgba(147,197,253,0.4)';
+    path(area);
     ctx.fill();
   }
   for (const cp of cornerProtrusionsOf(floor)) {

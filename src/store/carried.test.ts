@@ -200,3 +200,28 @@ describe('F4: smazání celé stěny', () => {
     }
   });
 });
+
+describe('F4: výstupek přes volný konec stěny (I1.11)', () => {
+  it('Do rohu, který odřízne konec s výstupkem, výstupek smaže; zkrácení druhého konce ho nechá', () => {
+    store.openProject(createProject({ name: 't' }));
+    const W = addWall({ x: 0, y: 0 }, null, { x: 3000, y: 0 }, null, false, { thickness: 300, side: 1 })!;
+    const around = [
+      { x: 2600, y: 0 },
+      { x: 2600, y: -200 },
+      { x: 3200, y: -200 },
+      { x: 3200, y: 500 },
+      { x: 2600, y: 500 },
+      { x: 2600, y: 300 }
+    ];
+    for (let i = 0; i + 1 < around.length; i++) addLine(around[i]!, null, around[i + 1]!, null);
+    expect(Object.keys(f().endProtrusions ?? {})).toHaveLength(1);
+    const B = addWall({ x: 2000, y: -2000 }, null, { x: 2000, y: -500 }, null, false, { thickness: 300 })!;
+    // ponechat levou část W → konec B s výstupkem se odřízne
+    expect(trimToCorner(W, { x: 500, y: 150 }, B, { x: 2000, y: -1000 })).toBe('ok');
+    expect(Object.keys(f().endProtrusions ?? {})).toHaveLength(0);
+    store.undo();
+    // ponechat pravou část W → odřízne se konec A, výstupek u B zůstane
+    expect(trimToCorner(W, { x: 2900, y: 150 }, B, { x: 2000, y: -1000 })).toBe('ok');
+    expect(Object.keys(f().endProtrusions ?? {})).toHaveLength(1);
+  });
+});

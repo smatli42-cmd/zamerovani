@@ -2,6 +2,7 @@
  * Akce: otočení výběru, kopírování a vkládání otvorů ze schránky.
  */
 import { newId, nextOpeningNumber } from '../../model/factory';
+import { endFrame } from '../../core/endProtrusion';
 import type { Id, Opening, Pt, Wall } from '../../model/types';
 import { openingSpan, openingStartFromA, wallLength } from '../../core/floorQueries';
 import { store } from '../store';
@@ -118,6 +119,14 @@ export function duplicateSelection(): void {
       if (!w1 || !w2 || !node) continue;
       const nc = { ...clone(cp), id: newId('pc'), walls: [w1, w2] as [Id, Id], node };
       (floor.cornerProtrusions ??= {})[nc.id] = nc;
+    }
+    // výstupek na konci stěny se kopíruje se svou stěnou (souřadnice jsou od jejího konce) – jen ten, který se
+    // kreslí (u napojeného konce skrytý by v kopii se samostatnou stěnou nečekaně ožil)
+    for (const ep of Object.values(floor.endProtrusions ?? {})) {
+      const target = wallMap.get(ep.wallId);
+      if (!target || !endFrame(floor, ep)) continue;
+      const ne = { ...clone(ep), id: newId('pe'), wallId: target };
+      (floor.endProtrusions ??= {})[ne.id] = ne;
     }
     for (const it of items) {
       if (it.kind === 'room' && floor.rooms[it.id]) {

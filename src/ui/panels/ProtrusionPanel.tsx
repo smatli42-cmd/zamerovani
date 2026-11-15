@@ -3,7 +3,7 @@
  */
 import { protrusionDims } from '../../core/protrusionEdit';
 import { protrusionCornerWarning } from '../../core/cornerOverlap';
-import type { CornerProtrusion, Floor, Protrusion } from '../../model/types';
+import type { CornerProtrusion, EndProtrusion, Floor, Protrusion } from '../../model/types';
 import { cornerDims } from '../../core/cornerProtrusion';
 import { useState } from 'preact/hooks';
 import { applyNumpadValue, copyProtrusionRow, deleteSelection, setCornerProtrusionDim, updateProtrusion } from '../../store/actions';
@@ -60,8 +60,9 @@ function RowCopy({ p, width }: { p: Protrusion; width: number }) {
         <button
           class="btn"
           onClick={() => {
-            const n = copyProtrusionRow(p.id, count, spacing, dir === 'b' ? 1 : -1);
-            setMsg(n === count ? `Vloženo kopií: ${n}.` : `Vloženo kopií: ${n} z ${count} – ostatní by vyjely ze stěny nebo se překryly.`);
+            const want = Math.min(100, count);
+            const n = copyProtrusionRow(p.id, want, spacing, dir === 'b' ? 1 : -1);
+            setMsg(n === want ? `Vloženo kopií: ${n}.` : n === 0 ? 'Nevložena žádná kopie – vyjely by ze stěny, překryly by se, nebo brání zamčená kóta.' : `Vloženo kopií: ${n} z ${want} – ostatní by vyjely ze stěny nebo se překryly.`);
           }}
         >
           📄 Kopírovat
@@ -86,6 +87,24 @@ export function CornerProtrusionPanel({ cp }: { cp: CornerProtrusion }) {
       <TextField label="Název" value={cp.name} placeholder="např. sloupek, šachta" presets={['sloupek', 'šachta', 'pilíř']} onCommit={v => updateProtrusion(cp.id, { name: v })} />
       <TextField label="Materiál" value={cp.material} onCommit={v => updateProtrusion(cp.id, { material: v })} />
       <TextField label="Poznámka" value={cp.note} onCommit={v => updateProtrusion(cp.id, { note: v })} />
+      <div class="panel-actions">
+        <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
+      </div>
+    </Panel>
+  );
+}
+
+/** Panel výstupku na konci stěny (I1.11): výška, název, materiál, poznámka. */
+export function EndProtrusionPanel({ ep }: { ep: EndProtrusion }) {
+  return (
+    <Panel title="Výstupek na konci stěny" onClose={close}>
+      <p class="muted small">Obtáčí čelo volného konce stěny a drží se ho. Tvar se mění nakreslením znovu.</p>
+      <div class="field-grid">
+        <NumField label="Výška" value={ep.height ?? null} allowEmpty onCommit={v => updateProtrusion(ep.id, { height: v ?? undefined })} />
+      </div>
+      <TextField label="Název" value={ep.name} placeholder="např. přizdívka, pilíř" presets={['přizdívka', 'pilíř', 'obklad']} onCommit={v => updateProtrusion(ep.id, { name: v })} />
+      <TextField label="Materiál" value={ep.material} onCommit={v => updateProtrusion(ep.id, { material: v })} />
+      <TextField label="Poznámka" value={ep.note} onCommit={v => updateProtrusion(ep.id, { note: v })} />
       <div class="panel-actions">
         <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
       </div>

@@ -5,9 +5,10 @@ import { chooseNodeAt, findWallNear, isCurved, openingsOnWall, wallLength, wallN
 import { textBoxPx } from '../canvas/textBox';
 import { dot, projectToSegment, sub } from '../core/geometry';
 import { bodyNormal, bodyStart, hasBody } from '../core/wallFace';
-import { findBodyAt, pointInPolygon } from '../core/wallBody';
+import { findBodyAt, pointInPolygon, wallBodies } from '../core/wallBody';
 import { protrusionOutline, protrusionPolygon, protrusionsOf } from '../core/protrusion';
 import { cornerOutline, cornerPolygon, cornerProtrusionsOf } from '../core/cornerProtrusion';
+import { endOutline, endProtrusionsOf } from '../core/endProtrusion';
 import type { Floor, Pt } from '../model/types';
 import type { Camera, Selection } from '../store/store';
 import { HIT_PX } from './types';
@@ -82,6 +83,15 @@ export function pickProtrusion(floor: Floor, p: Pt, cam: Camera): string | null 
     if (!outline || !area) continue;
     if (pointInPolygon(p, area)) return pr.id;
     for (let i = 0; i + 1 < outline.length; i++) if (projectToSegment(p, outline[i]!, outline[i + 1]!).distance <= tol) return pr.id;
+  }
+  // výstupky přes volný konec stěny (I1.11)
+  for (const ep of endProtrusionsOf(floor)) {
+    const outline = endOutline(floor, ep);
+    if (!outline) continue;
+    // jen část mimo tělo stěny (ťuknutí na stěnu u konce vybere stěnu)
+    const body = wallBodies(floor).get(ep.wallId)?.poly;
+    if (pointInPolygon(p, outline) && !(body && pointInPolygon(p, body))) return ep.id;
+    for (let i = 0; i + 1 < outline.length; i++) if (projectToSegment(p, outline[i]!, outline[i + 1]!).distance <= tol) return ep.id;
   }
   // výstupky přes roh (I1.11)
   for (const cp of cornerProtrusionsOf(floor)) {

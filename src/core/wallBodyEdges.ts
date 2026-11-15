@@ -7,6 +7,7 @@ import { add, dist, scale, sub } from './geometry';
 import { faceOffset, protrusionExtent, protrusionOutline, protrusionPolygon, protrusionsOf, wallFrame, type Frame } from './protrusion';
 import { pointInPolygon, type WallBody } from './wallBody';
 import { cornerFaceCover, cornerOutline, cornerPolygon, cornerProtrusionsOf } from './cornerProtrusion';
+import { endFrame, endOutline, endProtrusionsOf } from './endProtrusion';
 
 /**
  * Výstupky a vybrání: líc se v jejich šířce nekreslí, přidá se jejich obrys; plochy se vyplní (výstupek)
@@ -46,7 +47,30 @@ export function applyProtrusions(floor: Floor, bodies: Map<Id, WallBody>): void 
     owner.adds.push(area);
     for (const q of outline) owner.snaps.push(q);
   }
-  clipEdgesAtAdds(bodies);
+  // výstupky přes volný konec stěny (I1.11): oba líce od čela po obrys se nekreslí, čelo zmizí v ořezu níže
+  const endWalls = new Set<Id>();
+  for (const ep of endProtrusionsOf(floor)) {
+    const w = floor.walls[ep.wallId];
+    const body = bodies.get(ep.wallId);
+    const fr = w && wallFrame(floor, w);
+    const ef = endFrame(floor, ep);
+    const outline = endOutline(floor, ep);
+    if (!w || !body || !fr || !ef || !outline) continue;
+    const uE = fr.project(ef.E).u;
+    for (const [fi, q] of [
+      [0, outline[0]!],
+      [1, outline[outline.length - 1]!]
+    ] as const) {
+      const side = fi === 0 ? ep.side : ep.side === 1 ? -1 : 1;
+      const uq = fr.project(q).u;
+      body.edges = cutAlongFace(body.edges, fr, faceOffset(w, side), Math.min(uE, uq), Math.max(uE, uq));
+    }
+    for (let i = 0; i + 1 < outline.length; i++) body.edges.push([outline[i]!, outline[i + 1]!]);
+    body.adds.push(outline);
+    for (const q of outline) body.snaps.push(q);
+    endWalls.add(ep.wallId);
+  }
+  clipEdgesAtAdds(bodies, endWalls);
 }
 
 /**
@@ -54,8 +78,9 @@ export function applyProtrusions(floor: Floor, bodies: Map<Id, WallBody>): void 
  * která má z obou stran tělo stěny nebo plochu výstupku, se nekreslí – u stěn, jejichž výstupek se dotýká
  * jiného těla, a u těl, kterých se dotýká cizí výstupek.
  */
-function clipEdgesAtAdds(bodies: Map<Id, WallBody>): void {
-  const ids = new Set<Id>();
+function clipEdgesAtAdds(bodies: Map<Id, WallBody>, extra: Set<Id> = new Set()): void {
+  // extra: stěny s výstupkem na konci – jejich čelo pod výstupkem se nekreslí
+  const ids = new Set<Id>(extra);
   const all = [...bodies.values()].map(b => ({ b, box: boxOf(b.poly) }));
   for (const { b } of all) {
     for (const a of b.adds) {

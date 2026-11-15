@@ -30,6 +30,7 @@ export function deleteSelection(): void {
         case 'protrusion':
           if (floor.protrusions) delete floor.protrusions[sel.id];
           if (floor.cornerProtrusions) delete floor.cornerProtrusions[sel.id];
+          if (floor.endProtrusions) delete floor.endProtrusions[sel.id];
           break;
       }
       cleanup(floor);

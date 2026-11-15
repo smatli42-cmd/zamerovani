@@ -460,3 +460,21 @@ describe('řetězová kóta otvorů se zámky', () => {
     expect(store.get().lockBlock?.text).toContain('narazil');
   });
 });
+
+describe('pravidlo prvků nesených stěnou: výstupek přes volný konec (I1.11)', () => {
+  it('jede s koncem; zkrácení, při kterém by najel na výstupek u druhého konce, se neprovede', async () => {
+    const { addLine } = await import('./actions');
+    store.openProject(createProject({ name: 't' }));
+    const W = addWall({ x: 0, y: 0 }, null, { x: 3000, y: 0 }, null, false, { thickness: 300, side: 1 })!;
+    const line = (pts: { x: number; y: number }[]) => {
+      for (let i = 0; i + 1 < pts.length; i++) addLine(pts[i]!, null, pts[i + 1]!, null);
+    };
+    // dosah 1200 mm od každého konce
+    line([{ x: 1800, y: 0 }, { x: 1800, y: -200 }, { x: 3200, y: -200 }, { x: 3200, y: 500 }, { x: 1800, y: 500 }, { x: 1800, y: 300 }]);
+    line([{ x: 1200, y: 0 }, { x: 1200, y: -200 }, { x: -200, y: -200 }, { x: -200, y: 500 }, { x: 1200, y: 500 }, { x: 1200, y: 300 }]);
+    expect(Object.keys(f().endProtrusions ?? {})).toHaveLength(2);
+    expect(applyNumpadValue({ kind: 'wall-length', wallId: W, move: { nodeId: f().walls[W]!.b } }, 3500)).toBe(true);
+    expect(applyNumpadValue({ kind: 'wall-length', wallId: W, move: { nodeId: f().walls[W]!.b } }, 2000)).toBe(false);
+    expect(Math.round(wallLength(f(), f().walls[W]!))).toBe(3500);
+  });
+});

@@ -18,6 +18,7 @@ import { setWallLength } from './solver';
 import { dot, sub, unit } from './geometry';
 import { protrusionExtent } from './protrusion';
 import { cornerOverhang } from './cornerProtrusion';
+import { endClash, endOverhang } from './endProtrusion';
 import { hostedChain, shiftHosted } from './hosting';
 
 const locked = (floor: Floor, key: string) => !!floor.dimLocks?.[key];
@@ -251,6 +252,9 @@ export function keepOpeningsOnResizedWalls(before: Floor, floor: Floor): true | 
     if (!w0 || w0.sagitta || w1.sagitta || w0.radius !== undefined) continue;
     // výstupek přes roh: konec jeho obrysu na líci se musí vejít na stěnu (s rohem jede, jinak zůstane na místě)
     if (cornerOverhang(floor, w1.id) > cornerOverhang(before, w0.id) + 0.5) return 'misfit';
+    // výstupek na konci stěny jede s koncem; nesmí sahat za druhý konec
+    if (endOverhang(floor, w1.id) > endOverhang(before, w0.id) + 0.5) return 'misfit';
+    if (endClash(floor, w1.id) > endClash(before, w0.id) + 0.5) return 'misfit';
     // stěna nese otvory, výstupky nebo napojené příčky (prvky „hostované“ stěnou)
     const hosts = Object.values(before.openings).some(o => o.wallId === w0.id) || Object.values(before.protrusions ?? {}).some(p => p.wallId === w0.id) || hostedChain(before, w0.id).length > 0;
     if (!hosts) continue;

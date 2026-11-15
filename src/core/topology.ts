@@ -165,6 +165,20 @@ export function mergeStraightAt(floor: Floor, wallId: Id, nodeId: Id, throughT =
     else delete o.noJoinB;
   }
   delete floor.walls[w.id];
+  // výstupek na vzdáleném konci slučované části přejde na sloučenou stěnu (ten konec je teď jejím koncem);
+  // výstupek na konci v místě sloučení zanikne (konec už neexistuje, F4)
+  for (const ep of Object.values(floor.endProtrusions ?? {})) {
+    if (ep.wallId === o.id && (ep.end === 'a' ? o.a : o.b) === wFarId) {
+      delete floor.endProtrusions![ep.id];
+      continue;
+    }
+    if (ep.wallId !== w.id) continue;
+    const endNode = ep.end === 'a' ? w.a : w.b;
+    if (endNode !== wFarId) continue;
+    ep.wallId = o.id;
+    ep.end = o.a === wFarId ? 'a' : 'b';
+    if (!wSameDir) ep.side = ep.side === 1 ? -1 : 1;
+  }
   // výstupky přes roh na slučované části přejdou na sloučenou stěnu (obrácený směr = líc a směr na druhou stranu)
   for (const cp of Object.values(floor.cornerProtrusions ?? {})) {
     const i = cp.walls.indexOf(w.id);
