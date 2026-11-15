@@ -7,7 +7,7 @@ import type { Floor, Id, Wall } from '../model/types';
 import { arcGeometry, nearestOnArc, splitArcSagittas } from './arc';
 import { dist } from './geometry';
 import { openingSpan, openingStartFromA, wallLength, wallNodes } from './floorQueries';
-import { straightContinuation } from './wallBody';
+import { straightContinuation } from './wallSide';
 import { moveProtrusions, wallFrame } from './protrusion';
 import { redistributeCarried } from './carried';
 

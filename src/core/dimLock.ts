@@ -17,7 +17,8 @@ import { revealPartValue } from './doorLayout';
 import { arcChain } from './arcChain';
 import { openingSpan, openingStartFromA, openingsOnWall, wallLength, wallSegments } from './floorQueries';
 import { componentGap } from './components';
-import { faceLength, hasBody } from './wallBody';
+import { faceLength } from './wallBody';
+import { hasBody } from './wallFace';
 import { hostedChain } from './hosting';
 import { protrusionDims, protrusionNeighbors } from './protrusion';
 

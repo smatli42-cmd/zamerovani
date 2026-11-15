@@ -7,7 +7,8 @@ import { createFloor, createProject, createWall } from '../model/factory';
 import type { Floor } from '../model/types';
 import { componentNodes } from './components';
 import { wallCrossings } from './floorQueries';
-import { bodyNormal, findBodyAt, wallBodies } from './wallBody';
+import { bodyNormal } from './wallFace';
+import { findBodyAt, wallBodies } from './wallBody';
 import { addWall, applyWallLength, moveNode } from '../store/actions';
 import { store } from '../store/store';
 

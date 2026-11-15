@@ -10,7 +10,8 @@
 import type { Floor, Id, ProfilePt, Protrusion, Pt, Wall } from '../model/types';
 import { add, dist, dot, normal, scale, sub, unit } from './geometry';
 import { arcGeometry } from './arc';
-import { bodyRange, facePath, findBodyAt, hasBody } from './wallBody';
+import { bodyRange, facePath, hasBody } from './wallFace';
+import { findBodyAt } from './wallBody';
 
 /** Výstupky podlaží (pole chybí u starších dat v testech). */
 export const protrusionsOf = (floor: Floor): Protrusion[] => Object.values(floor.protrusions ?? {});

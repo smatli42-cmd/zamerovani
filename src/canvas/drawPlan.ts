@@ -10,7 +10,8 @@ import { hasLeaf, isWindowKind } from '../model/factory';
 import type { Floor, LineStyle, Opening, Pt, Wall } from '../model/types';
 import { isSelected, type Camera, type Selection, type SingleSelection } from '../store/store';
 import { toScreen } from './view';
-import { bodyNormal, bodyStart, facePointAt, hasBody, wallBodies } from '../core/wallBody';
+import { bodyNormal, bodyStart, facePointAt, hasBody } from '../core/wallFace';
+import { wallBodies } from '../core/wallBody';
 import { addHitBox } from './hitTargets';
 import { protrusionArcHandles, protrusionPolygon, protrusionsOf } from '../core/protrusion';
 

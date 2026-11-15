@@ -8,7 +8,7 @@ import { createProject } from '../model/factory';
 import { addRectWalls, addWall } from '../store/actions';
 import { store } from '../store/store';
 import { faceOffset, profileToWorld, protrusionDims, wallFrame } from '../core/protrusion';
-import { bodyRange } from '../core/wallBody';
+import { bodyRange } from '../core/wallFace';
 import { wallTool } from './wallTool';
 import type { PointerInput } from './types';
 

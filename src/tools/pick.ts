@@ -4,7 +4,8 @@
 import { chooseNodeAt, findWallNear, isCurved, openingsOnWall, wallLength, wallNodes, type NodePrefer, type WallHit } from '../core/floorQueries';
 import { textBoxPx } from '../canvas/textBox';
 import { dot, projectToSegment, sub } from '../core/geometry';
-import { bodyNormal, bodyStart, findBodyAt, hasBody, pointInPolygon } from '../core/wallBody';
+import { bodyNormal, bodyStart, hasBody } from '../core/wallFace';
+import { findBodyAt, pointInPolygon } from '../core/wallBody';
 import { protrusionOutline, protrusionPolygon, protrusionsOf } from '../core/protrusion';
 import type { Floor, Pt } from '../model/types';
 import type { Camera, Selection } from '../store/store';

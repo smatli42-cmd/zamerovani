@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { createFloor, createWall } from '../model/factory';
 import type { Floor, Pt } from '../model/types';
-import { bodyNormal, bodySnapPoints, findBodyAt, initialSide, orientLoopOutward, wallBodies } from './wallBody';
+import { bodyNormal } from './wallFace';
+import { bodySnapPoints, findBodyAt, wallBodies } from './wallBody';
+import { initialSide, orientLoopOutward } from './wallSide';
 
 function floorWith(nodes: Record<string, [number, number]>): Floor {
   const f = createFloor('t');
@@ -127,7 +129,7 @@ describe('strana těla', () => {
 
 describe('překlopení těla perem při kreslení', () => {
   it('odchýlení pera nad / pod čáru určí stranu, malé odchýlení stranu nemění', async () => {
-    const { sideFromPen } = await import('./wallBody');
+    const { sideFromPen } = await import('./wallSide');
     const a = { x: 0, y: 0 };
     const b = { x: 1000, y: 0 }; // normal(1,0) = (0,1) → side 1 = +y
     expect(sideFromPen(a, b, { x: 1000, y: 5 }, 50, null)).toBeNull();

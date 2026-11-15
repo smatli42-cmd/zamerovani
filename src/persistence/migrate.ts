@@ -3,7 +3,8 @@
  * Při každé změně SCHEMA_VERSION sem přidat krok „z verze N na N+1“.
  */
 import { createCircleWall, createWall, DEFAULT_WALL_THICKNESS, isWindowKind, newId, WINDOW_FRAME } from '../model/factory';
-import { hasBody, orientLoopOutward } from '../core/wallBody';
+import { hasBody } from '../core/wallFace';
+import { orientLoopOutward } from '../core/wallSide';
 import { mergeArcAt, mergeStraightAt } from '../core/topology';
 import { SCHEMA_VERSION, type Floor, type LineStyle, type Project, type Pt, type Reveal } from '../model/types';
 

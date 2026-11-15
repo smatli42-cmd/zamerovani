@@ -7,7 +7,7 @@
  */
 import type { Floor, Opening, OpeningKind, Wall } from '../model/types';
 import { isWindowKind } from '../model/factory';
-import { hasBody } from './wallBody';
+import { hasBody } from './wallFace';
 import { wallNodes } from './floorQueries';
 import { normal, unit } from './geometry';
 

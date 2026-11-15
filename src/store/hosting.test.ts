@@ -6,7 +6,8 @@
 import { describe, expect, it } from 'vitest';
 import { createFloor, createProject, createWall } from '../model/factory';
 import { componentNodes } from '../core/components';
-import { bodyNormal, wallBodies } from '../core/wallBody';
+import { bodyNormal } from '../core/wallFace';
+import { wallBodies } from '../core/wallBody';
 import { nearestOnArc, splitArcSagittas } from '../core/arc';
 import { joinSplitWalls, migrateProject } from '../persistence/migrate';
 import { wallLength } from '../core/floorQueries';
