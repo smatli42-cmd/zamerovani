@@ -14,7 +14,7 @@ import { setWallLength } from '../../core/solver';
 import { faceLength } from '../../core/wallBody';
 import { hasBody } from '../../core/wallFace';
 import { setHostedGap } from '../../core/hosting';
-import { defaultArcSign, setProtrusionSagitta } from '../../core/protrusion';
+import { defaultArcSign, setProtrusionSagitta } from '../../core/protrusionEdit';
 import { applyProtrusionDim } from './protrusions';
 
 /**

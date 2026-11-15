@@ -1,7 +1,7 @@
 /**
  * Panel výstupku / vybrání stěny (KATALOG-STEN.md, sekce I): rozměry, výška, název, materiál, poznámka.
  */
-import { protrusionDims } from '../../core/protrusion';
+import { protrusionDims } from '../../core/protrusionEdit';
 import type { Floor, Protrusion } from '../../model/types';
 import { applyNumpadValue, deleteSelection, updateProtrusion } from '../../store/actions';
 import { close } from './common';

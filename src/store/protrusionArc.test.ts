@@ -5,7 +5,8 @@
 import { describe, expect, it } from 'vitest';
 import { createProject } from '../model/factory';
 import type { Pt } from '../model/types';
-import { faceOffset, profileToWorld, protrusionArcHandles, protrusionDims, protrusionOutline, protrusionPolygon, wallFrame } from '../core/protrusion';
+import { faceOffset, profileToWorld, protrusionOutline, protrusionPolygon, wallFrame } from '../core/protrusion';
+import { protrusionArcHandles, protrusionDims } from '../core/protrusionEdit';
 import { splitWallAt } from '../core/topology';
 import { findBodyAt, pointInPolygon, wallBodies } from '../core/wallBody';
 import { addLine, addWall, applyNumpadValue, deleteSelection, duplicateSelection, groupOrigin, moveGroup, setWallSagitta } from './actions';

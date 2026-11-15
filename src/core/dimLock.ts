@@ -12,7 +12,7 @@ import type { Floor, Id, Pt } from '../model/types';
 import type { MoveTarget } from './solver';
 import type { RevealPart } from './doorLayout';
 import type { Side } from './components';
-import type { ProtrusionDim } from './protrusion';
+import type { ProtrusionDim } from './protrusionEdit';
 import { revealPartValue } from './doorLayout';
 import { arcChain } from './arcChain';
 import { openingSpan, openingStartFromA, openingsOnWall, wallLength, wallSegments } from './floorQueries';
@@ -20,7 +20,7 @@ import { componentGap } from './components';
 import { faceLength } from './wallBody';
 import { hasBody } from './wallFace';
 import { hostedChain } from './hosting';
-import { protrusionDims, protrusionNeighbors } from './protrusion';
+import { protrusionDims, protrusionNeighbors } from './protrusionEdit';
 
 /** Kóta (to, co se zadává v NumPadu). */
 export type DimTarget =

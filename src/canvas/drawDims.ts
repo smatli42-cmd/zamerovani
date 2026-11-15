@@ -3,7 +3,8 @@
  * Každé číslo je klikací (otevře NumPad). Kóty se vynáší ven z místnosti.
  * Uvnitř podél stěny se zobrazuje popisek stěny (tloušťka, materiál…).
  */
-import { profileToWorld, protrusionArcHandles, protrusionDims, protrusionExtent, wallFrame, type ProtrusionDim } from '../core/protrusion';
+import { profileToWorld, protrusionExtent, wallFrame } from '../core/protrusion';
+import { protrusionArcHandles, protrusionDims, type ProtrusionDim } from '../core/protrusionEdit';
 import { arcGeometry } from '../core/arc';
 import { arcChain } from '../core/arcChain';
 import { frameOutside, openingsOnWall, wallLength, wallNodes, wallSegments } from '../core/floorQueries';

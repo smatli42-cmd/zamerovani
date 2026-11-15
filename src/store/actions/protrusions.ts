@@ -5,7 +5,8 @@
  */
 import { newId } from '../../model/factory';
 import type { Floor, Id, Protrusion, Pt, Wall } from '../../model/types';
-import { findFaceNear, profileFromLoop, profileFromPolyline, setProtrusionDim, setProtrusionSagitta, type ProtrusionDim } from '../../core/protrusion';
+import { findFaceNear, profileFromLoop, profileFromPolyline } from '../../core/protrusion';
+import { setProtrusionDim, setProtrusionSagitta, type ProtrusionDim } from '../../core/protrusionEdit';
 import { store } from '../store';
 import { cleanup } from './shared';
 import { insertWall } from './walls';

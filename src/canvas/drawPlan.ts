@@ -11,7 +11,8 @@ import { toScreen } from './view';
 import { facePointAt, hasBody } from '../core/wallFace';
 import { wallBodies } from '../core/wallBody';
 import { addHitBox } from './hitTargets';
-import { protrusionArcHandles, protrusionPolygon, protrusionsOf } from '../core/protrusion';
+import { protrusionArcHandles } from '../core/protrusionEdit';
+import { protrusionPolygon, protrusionsOf } from '../core/protrusion';
 
 export const COLORS = {
   wall: '#0f172a',

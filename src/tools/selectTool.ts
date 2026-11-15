@@ -13,7 +13,7 @@ import { dragParams, linesNear, nodeDragLines, resolveDragPoint, wallMoveLines, 
 import type { Camera } from '../store/store';
 import { groupOrigin, type GroupOrigin, mergeNodeIfCoincident, moveGroup, moveNode, moveOpeningTo, moveRoom, moveText, updateText, setCircleRadius, setWallSagitta, setProtrusionArc } from '../store/actions';
 import { store } from '../store/store';
-import { protrusionArcHandles, sagittaFromPoint } from '../core/protrusion';
+import { protrusionArcHandles, sagittaFromPoint } from '../core/protrusionEdit';
 import { openTarget } from '../store/numpadController';
 import { pickAny } from './pick';
 import { HIT_PX, type PointerInput, type Tool } from './types';

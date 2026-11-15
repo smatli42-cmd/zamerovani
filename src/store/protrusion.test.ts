@@ -6,7 +6,8 @@
 import { describe, expect, it } from 'vitest';
 import { createProject } from '../model/factory';
 import type { Pt } from '../model/types';
-import { protrusionDims, protrusionOutline } from '../core/protrusion';
+import { protrusionDims } from '../core/protrusionEdit';
+import { protrusionOutline } from '../core/protrusion';
 import { findBodyAt, pointInPolygon, wallBodies } from '../core/wallBody';
 import { migrateProject } from '../persistence/migrate';
 import { splitWallAt } from '../core/topology';
