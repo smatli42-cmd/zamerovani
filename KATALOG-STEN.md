@@ -126,7 +126,7 @@ Souřadnice v mm. Vnitřní roh místnosti = (0, 0), místnost leží v kladném
 | F4 | Co s otvory při dělení / smazání části stěny | zůstane na kusu, na kterém leží | – | původně ? | audit | ✔ **Otvor zůstane na části stěny, která se nemaže; pokud leží v mazané části, smaže se** (vy). **Upřesněno 2026-11-15 (vy):** platí pro všechny prvky nesené stěnou (otvor, výstupek / vybrání); prvek **i jen zčásti** v mazané části nebo přes dělicí bod se smaže celý; napojená příčka (T) se nemaže, jen se odpojí (volný konec). Kód: `core/carried.ts` |
 | F5 | Nika, strana přístupu | – | – | rozhodnuto dříve | rozhodnuto | ✔ |
 | F6 | Otvor na obloukové stěně | ano | ano | POZ | ne (známá mezera) | ↷ |
-| F7 | Otvor blízko rohu | omezení | omezení | upozornění, ne zákaz | audit | ✔ |
+| F7 | Otvor blízko rohu | omezení | omezení | upozornění, ne zákaz | hotovo (2026-11-15) | ✔ |
 
 ## G. Obecný kontrolní seznam životního cyklu objektu (použít u každého nástroje)
 

@@ -2,6 +2,7 @@
  * Panel otvoru (dveře, okno, francouzské okno, průchod, nika), ostění a zárubeň / rám.
  */
 import { openingThickness, revealPartValue, type RevealPart } from '../../core/doorLayout';
+import { openingCornerWarning } from '../../core/openingCorner';
 import { hasLeaf, isWindowKind, OPENING_DEFAULTS } from '../../model/factory';
 import type { Opening } from '../../model/types';
 import { applyNumpadValue, deleteSelection, duplicateSelection, setOpeningRef, setRevealEnabled, setRevealSides, setWindowKind, updateOpening } from '../../store/actions';
@@ -33,6 +34,8 @@ export function OpeningPanel({ op }: { op: Opening }) {
   // stěna s tloušťkou: otvor jde skrz celé tělo, ostění z obou líců
   const T = openingThickness(store.floor()!, op);
   const set = (patch: Partial<Opening>) => updateOpening(op.id, patch);
+  // F7: otvor blízko rohu – jen upozornění, úprava se nezakazuje
+  const cornerWarn = openingCornerWarning(store.floor()!, op.id);
   return (
     <Panel title={`${info.label} ${op.number}`} onClose={close}>
       {isWindowKind(op.kind) && (
@@ -69,6 +72,7 @@ export function OpeningPanel({ op }: { op: Opening }) {
           <b>{op.width} mm</b>
         </button>
       </div>
+      {cornerWarn && <div class="panel-warn">⚠️ {cornerWarn}</div>}
       <div class="chips">
         {OPENING_PRESETS[op.kind].map(w => (
           <button key={w} class={`chip ${w === op.width ? 'active' : ''}`} onClick={() => applyNumpadValue({ kind: 'opening-width', openingId: op.id }, w)}>

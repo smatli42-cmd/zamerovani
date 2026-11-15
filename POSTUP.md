@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-15 (5) – F7: upozornění u otvoru blízko rohu
+- **Co se změnilo:** Nová kontrola `core/openingCorner.ts`: otvor jde skrz celé tělo, takže má ležet tam, kde jsou vidět oba líce stěny; když zasahuje za začátek / konec líce (do těla napojené stěny v rohu), spočítá se o kolik mm. Po kontrole revieweru doplněno: otvor přes příčku napojenou doprostřed stěny (T) se hlásí také. Testy `core/openingCorner.test.ts` (8).
+- **Viditelně v aplikaci:** v panelu vybraného otvoru se u rohu ukáže žluté upozornění „Otvor zasahuje do rohu A o 300 mm – překrývá se s tělem sousední stěny.“ (u příčky „… do napojené příčky o 100 mm …“). Ověřeno v prohlížeči. Úpravu nic nezakazuje (F7: upozornění, ne zákaz).
+- **Rozhodnuto samostatně:** upozornění jen v panelu otvoru (ne na výkresu); hlídají se rovné stěny s tloušťkou (otvory na oblouku zatím nejsou); měří se proti oběma lícům (rozhoduje ten, který začíná dál od rohu).
+- **Otevřené:** vyzkoušet na tabletu. Nehlídá se: oddělený konec (C1.13, těla se překrývají bez napojení), velmi ostrý úhel rohu (pod ~20°, napojení „natupo“), křížení stěn přes otvor. **Otázka na uživatele:** má se upozornění „blízko rohu“ týkat i výstupku / vybrání (katalog F7 mluví jen o otvoru)?
+- **Soubory nad 500 řádků:** žádné.
+
 ### 2026-11-15 (4) – C1.11: hrana odskoku u stěn v přímce s různou tloušťkou
 - **Co se změnilo:** Dvě stěny v jedné přímce s posunutým lícem (různá tloušťka, opačná strana, osa uprostřed) mají v rohu nakreslenou hranu odskoku (`computeWallBodies` v `core/wallBody.ts`: hranice líců se neprotnou a stěny pokračují opačným směrem → schod mezi konci líců). Hrana patří stěně, jejíž čelo zůstalo odkryté. Test C2/6 už není `it.fails` – v projektu nezůstal žádný; nové testy v `core/wallBody.test.ts` (osa uprostřed, opačná strana, stejná tloušťka, oblouky na jedné kružnici, stěny skoro v přímce, tečně navazující oblouk).
 - **Viditelně v aplikaci:** u stěny 300 navazující rovně na stěnu 200 je na vnější straně čára schodu (dřív tam tělo zůstalo „otevřené“). Ověřeno v prohlížeči měřením pixelů.
@@ -314,10 +321,10 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Hotovo 2026-11-15:** výstupek při přehození strany stěny (Deník 2026-11-15 (1)) – I1.7 ověřeno, oprava zrcadlení výstupku na oblouku po uzavření místnosti. Testy 356 + 1 `it.fails`.
 
-**Hotovo 2026-11-15:** F4 – prvky nesené stěnou při zkrácení / dělení / smazání (Deník 2026-11-15 (2)), centrálně v `core/carried.ts`; úklid velkých souborů + test velikosti (3); C1.11 hrana odskoku (4). Testy 381, žádný `it.fails`.
+**Hotovo 2026-11-15:** F4 – prvky nesené stěnou při zkrácení / dělení / smazání (Deník 2026-11-15 (2)), centrálně v `core/carried.ts`; úklid velkých souborů + test velikosti (3); C1.11 hrana odskoku (4); F7 upozornění u otvoru blízko rohu (5). Testy 389, žádný `it.fails`.
 
 **Fronta kroků:**
-1. Z auditu: F7, D4, A2 / A10 / B6; výstupek přes roh / kopie v řadě (I1.11).
+1. Z auditu: D4 (ruční dělení stěny), A2 / A10 / B6 (řetěz, délka a tloušťka číslem během kreslení); výstupek přes roh / kopie v řadě (I1.11).
 2. D3 doplnit: zkrátit jen jednu stěnu k hraně druhé (T místo L); případně řetězová kóta užšího otvoru při vypnutém vnitřním ostění.
 3. Napojení na líc obloukové stěny (zatím jen rovné stěny).
 4. Kóty: volná kóta / úhlopříčka (POZADAVKY.md) – zámek je připravený; později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) spolu s exportem DXF / PDF.
