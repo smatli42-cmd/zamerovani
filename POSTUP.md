@@ -7,6 +7,12 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-15 (1) – výstupek při přehození strany stěny (fronta bod 1)
+- **Co se změnilo:** Ověřeno, že ruční přehození strany (⇅) i automatické natočení rovné stěny ven po uzavření místnosti odpovídá katalogu I1.7 (výstupek zůstane na své straně a posune se s lícem). Opravena chyba u obloukové stěny: po uzavření místnosti se oblouk překlopí ven (zrcadlí se podle tětivy), ale výstupek zůstal na původní straně a přeskočil z vnějšího líce na vnitřní. Teď se výstupek zrcadlí s obloukem (`orientLoopOutward` v `core/wallBody.ts`), test v `store/protrusionArc.test.ts`.
+- **Viditelně v aplikaci:** výstupek nakreslený na obloukové stěně před uzavřením místnosti zůstane po uzavření na vnějším líci oblouku (dřív skočil dovnitř místnosti).
+- **Rozhodnuto samostatně:** bod fronty uzavřen podle schváleného I1.7 – při ručním přehození strany se výstupek nepřesouvá na protější stranu stěny; zrcadlení výstupku jen tehdy, když se zrcadlí celý oblouk.
+- **Otevřené:** nic nového; další ve frontě F4 a C1.11.
+
 ### 2026-11-14 (konec sezení)
 - **Co se změnilo:** šířka okna = otvor ve stěně bez kót rámu (17) a přichytávání nové stěny k oběma lícům jiné stěny (18); uživatel potvrdil „funguje to jak má“. Testy 355 + 1 `it.fails`, typecheck a build OK.
 - **Viditelně v aplikaci:** viz (17) a (18).
@@ -283,13 +289,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Čeká na vyzkoušení na tabletu:** úpravy oken / dveří / ostění / Nevypínat displej, nástroj Do rohu (Deník 2026-11-14 (1)–(9)).
 
+**Hotovo 2026-11-15:** výstupek při přehození strany stěny (Deník 2026-11-15 (1)) – I1.7 ověřeno, oprava zrcadlení výstupku na oblouku po uzavření místnosti. Testy 356 + 1 `it.fails`.
+
 **Fronta kroků:**
-1. **Výstupek při přehození strany stěny** (rozhodnout, zda zůstává na svém líci).
-2. **F4** (otvory při dělení stěny), **C1.11** (hrana odskoku, test C2/6 `it.fails`).
-3. Z auditu: F7, D4, A2 / A10 / B6; výstupek přes roh / kopie v řadě (I1.11).
-4. D3 doplnit: zkrátit jen jednu stěnu k hraně druhé (T místo L); případně řetězová kóta užšího otvoru při vypnutém vnitřním ostění.
-5. Napojení na líc obloukové stěny (zatím jen rovné stěny).
-6. Kóty: volná kóta / úhlopříčka (POZADAVKY.md) – zámek je připravený; později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) spolu s exportem DXF / PDF.
+1. **F4** (otvory při dělení stěny), **C1.11** (hrana odskoku, test C2/6 `it.fails`).
+2. Z auditu: F7, D4, A2 / A10 / B6; výstupek přes roh / kopie v řadě (I1.11).
+3. D3 doplnit: zkrátit jen jednu stěnu k hraně druhé (T místo L); případně řetězová kóta užšího otvoru při vypnutém vnitřním ostění.
+4. Napojení na líc obloukové stěny (zatím jen rovné stěny).
+5. Kóty: volná kóta / úhlopříčka (POZADAVKY.md) – zámek je připravený; později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) spolu s exportem DXF / PDF.
 
 ## Předchozí stav (2026-11-14 – úpravy oken, dveří, ostění, displeje)
 
@@ -353,6 +360,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Rozhodnuto samostatně
 (Rozhodnutí mimo katalog, udělaná bez uživatele – nejnovější nahoře. Uživatel je může kdykoli změnit.)
+- 2026-11-15: Výstupek při přehození strany stěny: platí I1.7 beze změny (zůstane na své straně, posune se s lícem); jen při automatickém překlopení oblouku po uzavření místnosti se výstupek zrcadlí s obloukem (zůstane na vnějším líci).
 - 2026-11-14: Napojení na líc jen u rovných stěn a jen pro stěnu vedoucí od líce ven; po přehození strany / změně tloušťky průběžné stěny jede roh s lícem (napojená stěna se prodlouží / zkrátí). Šířka okna bez migrace dat (existující okna se zúží o 100 mm, i u zamčených kót); okno s rámem min. 200 mm.
 - 2026-11-14: Zámek kót – přepsání zamčené kóty v NumPadu po druhém potvrzení, zámek zůstane (dokument navrhoval zrušení – uživatel nerozhodl); tažení prvku se zamčenou kótou se blokuje průběžně; další drobná rozhodnutí v Deníku změn (10).
 - 2026-11-13: Čárkovaný obdélník (překlad) u líce zůstane čarami (uzavřený tvar = výstupek schválil uživatel, I1.2).

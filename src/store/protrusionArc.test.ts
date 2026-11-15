@@ -5,10 +5,10 @@
 import { describe, expect, it } from 'vitest';
 import { createProject } from '../model/factory';
 import type { Pt } from '../model/types';
-import { faceOffset, profileToWorld, protrusionDims, protrusionPolygon, wallFrame } from '../core/protrusion';
+import { faceOffset, profileToWorld, protrusionArcHandles, protrusionDims, protrusionOutline, protrusionPolygon, wallFrame } from '../core/protrusion';
 import { splitWallAt } from '../core/topology';
 import { findBodyAt, pointInPolygon, wallBodies } from '../core/wallBody';
-import { addLine, addWall, deleteSelection, duplicateSelection, groupOrigin, moveGroup, setWallSagitta } from './actions';
+import { addLine, addWall, applyNumpadValue, deleteSelection, duplicateSelection, groupOrigin, moveGroup, setWallSagitta } from './actions';
 import { store } from './store';
 
 const f = () => store.floor()!;
@@ -126,5 +126,40 @@ describe('výstupek na obloukové stěně', () => {
     expect(prots()).toHaveLength(1);
     expect(prots()[0]).toMatchObject({ side: 1, mode: 'add' });
     expect(findBodyAt(f(), at(1700, 150))?.id).toBe(W);
+  });
+
+  it('uzavření místnosti překlopí oblouk ven: výstupek se překlopí s ním a zůstane na svém (vnějším) líci (I1.7)', () => {
+    const { W, at } = arcWall();
+    // oblouk i tělo míří do budoucí místnosti (+y); strana není ručně zvolená → automatika ji smí otočit
+    store.edit(fl => {
+      delete fl.walls[W]!.sideLocked;
+    });
+    tooth(at); // výstupek na vypouklém (vnějším) líci, s obloukem na čele
+    const id = prots()[0]!.id;
+    expect(applyNumpadValue({ kind: 'protrusion-sagitta', protrusionId: id, seg: 1 }, 100)).toBe(true);
+    const outline0 = protrusionOutline(f(), prots()[0]!)!;
+    const arc0 = protrusionArcHandles(f(), prots()[0]!)[0]!.at;
+    const inside0 = at(1, 2250, 200); // bod uvnitř výstupku
+    const mirror = (p: Pt): Pt => ({ x: p.x, y: -p.y });
+    for (const [a, b] of [
+      [{ x: 4000, y: 0 }, { x: 4000, y: 3000 }],
+      [{ x: 4000, y: 3000 }, { x: 0, y: 3000 }],
+      [{ x: 0, y: 3000 }, { x: 0, y: 0 }]
+    ] as const) addWall(a, null, b, null, false, { thickness: 300 });
+    expect(f().walls[W]!.sagitta).toBe(-1000); // oblouk se překlopil ven z místnosti
+    const p = prots()[0]!;
+    expect(p.side).toBe(-1);
+    // celý výstupek je zrcadlem podle tětivy – zůstal na vnějším líci, venku z místnosti
+    protrusionOutline(f(), p)!.forEach((q, i) => {
+      const e = mirror(outline0[i]!);
+      expect(Math.hypot(q.x - e.x, q.y - e.y)).toBeLessThan(1);
+    });
+    const arc1 = protrusionArcHandles(f(), p)[0]!.at;
+    expect(Math.hypot(arc1.x - mirror(arc0).x, arc1.y - mirror(arc0).y)).toBeLessThan(1);
+    expect(findBodyAt(f(), mirror(inside0))?.id).toBe(W);
+    store.undo();
+    expect(prots()[0]!.side).toBe(1);
+    store.redo();
+    expect(prots()[0]!.side).toBe(-1);
   });
 });

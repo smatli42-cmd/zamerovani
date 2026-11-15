@@ -631,7 +631,12 @@ export function orientLoopOutward(floor: Floor, wallId: Id): boolean {
     const probe = add(base, bn);
     if (pointInPolygon(probe, poly)) {
       w.side = w.side === 1 ? -1 : 1;
-      if (w.sagitta) w.sagitta = -w.sagitta;
+      if (w.sagitta) {
+        w.sagitta = -w.sagitta;
+        // oblouk se zrcadlí podle tětivy → výstupky se zrcadlí s ním a zůstanou na svém líci (I1.7);
+        // u, v i vzepětí úseků obrysu zůstávají, mění se jen strana líce
+        for (const p of protrusionsOf(floor)) if (p.wallId === w.id) p.side = p.side === 1 ? -1 : 1;
+      }
     }
   }
   return true;
