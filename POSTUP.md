@@ -7,6 +7,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-15 (9) – D4: nástroj Rozdělit (i s mezerou)
+- **Co se změnilo:** Nový nástroj **✂️ Rozdělit** (`tools/splitTool.ts`, akce `store/actions/split.ts`: `splitWall`, `cutWallSegment`, `splitPoint`): ťuknutí na stěnu (čáru i tělo) ji rozdělí na dvě – bod po 10 mm od rohu A, zarovnání s rohy jiných stěn (svisle / vodorovně), u oblouku na oblouku. Režim **S mezerou** (`Settings.splitGap`): první ťuknutí označí začátek, druhé na téže stěně konec – úsek zmizí (u konce stěny ji jen zkrátí). Prvky nesené stěnou podle F4 (`core/carried.ts`): zůstanou na své části, přes dělicí bod nebo v úseku zaniknou, napojené příčky se odpojí; hlášení řekne, kolik prvků zaniklo. Jeden krok Zpět. Testy `store/split.test.ts` (17). Po kontrole revieweru opraveno: dělení v místě příčky napojené na čáru stěny použije její roh (vznikne T, dřív se příčka odpojila); oblouk se dělí podle polohy po oblouku (u oblouku přes půlkruh dřív chybné hlášení / vyjmutí skoro celého oblouku); vyjmout úsek ze stěny se zamčenou délkou nejde (pravidlo zámků).
+- **Viditelně v aplikaci:** v liště nástrojů ✂️ Rozdělit; nahoře volba Rozdělit / S mezerou a návod. Pod perem červený křížek v místě dělení, u mezery červeně úsek, který zmizí. Ověřeno v prohlížeči.
+- **Rozhodnuto uživatelem:** nový nástroj; mezera dvěma ťuknutími; zamčená kóta (např. odstup okna od rohu A) dělení zastaví s hlášením; příčka napojená na líc v místě dělení zůstane napojená – dělicí bod se posune na okraj jejího těla.
+- **Rozhodnuto samostatně:** po 10 mm a zarovnání s rohy (jako kreslení); u oblouku bez zaokrouhlení; kruh rozdělit nejde; mezera přes celou stěnu se neprovede (stěnu smazat); po prvním ťuknutí mezery se stěna vybere (jako u nástroje Do rohu); ťuknutí na jinou stěnu začne mezeru znovu.
+- **Otevřené:** vyzkoušet na tabletu.
+- **Soubory nad 500 řádků:** žádné.
+
 ### 2026-11-15 (8) – kreslení řetězem (A2, A10, B6)
 - **Co se změnilo:** Nástroj Stěna umí kreslit řetězem (`Settings.wallChain`, stav `chainNode` v `store.ts`, `tools/wallTool.ts`): další tah začne v konci poslední stěny a tah perem se přenese odkudkoli na plátně. Řetěz končí, když konec dosedne na existující roh nebo stěnu (uzavření místnosti), ťuknutím bez tažení, tlačítkem Ukončit řetěz nebo změnou nástroje; po Zpět (roh řetězu zmizel) začne další stěna zase u pera. Předtím čistý přesun `wallTool.ts` → `wallToolSnap.ts` (samostatný commit). Testy `tools/wallChain.test.ts` (12). Po kontrole revieweru opraveno: napojení konce na líc stěny (a zvláštní bod) řetěz také ukončí; tlačítko Ukončit se ukazuje jen při běžícím řetězu na aktuálním podlaží; Esc řetěz ukončí.
 - **Viditelně v aplikaci:** v liště Stěny přepínač **Řetěz Vyp / Zap**; při běžícím řetězu zelený kroužek v konci poslední stěny a tlačítko **⏹ Ukončit řetěz**. Délka se zadává ťuknutím na kótu (jako dřív), tloušťka tlačítky mezi tahy. Ověřeno v prohlížeči.
@@ -351,10 +359,10 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Hotovo 2026-11-15:** výstupek při přehození strany stěny (Deník 2026-11-15 (1)) – I1.7 ověřeno, oprava zrcadlení výstupku na oblouku po uzavření místnosti. Testy 356 + 1 `it.fails`.
 
-**Hotovo 2026-11-15:** F4 – prvky nesené stěnou při zkrácení / dělení / smazání (Deník 2026-11-15 (2)), centrálně v `core/carried.ts`; úklid velkých souborů + test velikosti (3); C1.11 hrana odskoku (4); F7 upozornění u prvku blízko rohu – otvory i výstupky (5, 6); výstupek přes roh I1.11 (7); kreslení řetězem A2/A10/B6 (8). Testy 438, žádný `it.fails`.
+**Hotovo 2026-11-15:** F4 – prvky nesené stěnou při zkrácení / dělení / smazání (Deník 2026-11-15 (2)), centrálně v `core/carried.ts`; úklid velkých souborů + test velikosti (3); C1.11 hrana odskoku (4); F7 upozornění u prvku blízko rohu – otvory i výstupky (5, 6); výstupek přes roh I1.11 (7); kreslení řetězem A2/A10/B6 (8); nástroj Rozdělit D4 (9). Testy 455, žádný `it.fails`.
 
 **Fronta kroků:**
-1. Z auditu: D4 (ruční dělení stěny); výstupek přes konec stěny / kopie v řadě (I1.11).
+1. Výstupek přes konec stěny / kopie v řadě (I1.11).
 2. D3 doplnit: zkrátit jen jednu stěnu k hraně druhé (T místo L); případně řetězová kóta užšího otvoru při vypnutém vnitřním ostění.
 3. Napojení na líc obloukové stěny (zatím jen rovné stěny).
 4. Kóty: volná kóta / úhlopříčka (POZADAVKY.md) – zámek je připravený; později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) spolu s exportem DXF / PDF.

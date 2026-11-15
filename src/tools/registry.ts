@@ -8,6 +8,7 @@ import { pasteTool } from './pasteTool';
 import { leaderTool } from './leaderTool';
 import { textTool } from './textTool';
 import { trimTool } from './trimTool';
+import { splitTool } from './splitTool';
 import { selectTool } from './selectTool';
 import type { Tool } from './types';
 import { lineTool, wallTool } from './wallTool';
@@ -17,6 +18,7 @@ export const tools: Record<ToolId, Tool> = {
   wall: wallTool,
   line: lineTool,
   trim: trimTool,
+  split: splitTool,
   door: doorTool,
   window: windowTool,
   opening: openingTool,

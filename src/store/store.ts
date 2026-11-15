@@ -14,7 +14,7 @@ import { syncHosted } from '../core/hosting';
 import { syncProtrusions } from '../core/protrusion';
 import { describeDim, dimKey, lockViolation, pruneLocks, reboundLocks, type DimTarget } from '../core/dimLock';
 
-export type ToolId = 'select' | 'wall' | 'line' | 'trim' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'text' | 'leader' | 'paste' | 'pan';
+export type ToolId = 'select' | 'wall' | 'line' | 'trim' | 'split' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'text' | 'leader' | 'paste' | 'pan';
 
 export type SingleSelection =
   | { kind: 'wall'; id: Id }
@@ -76,6 +76,8 @@ export interface Settings {
   wallAxis: 'face' | 'center';
   /** Nástroj Stěna: kreslení řetězem – další tah navazuje na konec poslední stěny (A2). */
   wallChain: boolean;
+  /** Nástroj Rozdělit: dvěma ťuknutími vyjme úsek stěny (D4 „s mezerou“). */
+  splitGap: boolean;
   /** Nevypínat displej, dokud je aplikace otevřená (Screen Wake Lock, input/wakeLock.ts). */
   keepAwake: boolean;
 }
@@ -123,7 +125,7 @@ export interface EditOptions {
 const SETTINGS_KEY = 'zamerovani.settings';
 
 function loadSettings(): Settings {
-  const defaults: Settings = { snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', windowKind: 'window', wallShape: 'straight', wallAxis: 'face', wallChain: false, keepAwake: true };
+  const defaults: Settings = { snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', windowKind: 'window', wallShape: 'straight', wallAxis: 'face', wallChain: false, splitGap: false, keepAwake: true };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     return raw ? { ...defaults, ...JSON.parse(raw) } : defaults;

@@ -13,4 +13,5 @@ export { addFloor, renameFloor, deleteFloor } from './floors';
 export { numpadInitialValue, applyNumpadValue } from './numpad';
 export { addLine, updateProtrusion, lineChain, setProtrusionArc, setCornerProtrusionDim } from './protrusions';
 export { setActiveWallThickness, addWallPreset, removeWallPreset, setWallArcHeight } from './project';
+export { splitWall, cutWallSegment, splitPoint, canSplit, type SplitResult } from './split';
 export { toggleDimLock, setDimLock, setWallDimsLocked, setRoomDimsLocked, wallLockState, roomLockState } from './locks';

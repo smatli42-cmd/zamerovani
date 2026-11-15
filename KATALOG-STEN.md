@@ -92,7 +92,7 @@ Souřadnice v mm. Vnitřní roh místnosti = (0, 0), místnost leží v kladném
 | D1 | Tažení koncového bodu | ano | ano (stretch) | MVP | hotovo (bez držení směru, viz D11) | ✔ |
 | D2 | Posun celé stěny | ano | ano | MVP | částečně (viz D12) | ✔ |
 | D3 | Zkrátit/prodloužit do rohu: klepnete na část, kterou ponecháte | Trim/Extend: do rohu, jeden prvek, více prvků | – | původně ? | audit | ✔ jako **samostatný nástroj** (vy) |
-| D4 | Rozdělit stěnu (případně s mezerou, smazat vnitřní úsek) | Split Element / Split with Gap | Split | MVP | audit | ✔ |
+| D4 | Rozdělit stěnu (případně s mezerou, smazat vnitřní úsek) | Split Element / Split with Gap | Split | MVP; **nástroj Rozdělit: ťuknutím na dvě části (po 10 mm, zarovnání s rohy), režim S mezerou: dvě ťuknutí vyjmou úsek; přesná poloha kótou; prvky podle F4** (vy, 2026-11-15) | hotovo (2026-11-15) | ✔ |
 | D5 | Zámek zarovnání | Align + zámek | – | POZ | ne | ↷ |
 | D6 | Kopírovat / otočit / zrcadlit | ano | ano | MVP kopie a otočení, zrcadlení později | kopie a otočení hotovo | ✔ (zrcadlení ↷) |
 | D7 | Smazání stěny, sousedé se přepočítají | přepočítá | přepočítá | otvory se smažou se stěnou | audit | ✔ |

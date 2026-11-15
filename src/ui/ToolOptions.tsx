@@ -8,6 +8,7 @@ import { useStore } from '../store/useStore';
 import { NumField, Seg } from './panels/fields';
 import { LINE_STYLES } from './panels/SidePanel';
 import { TRIM_MSG_FIRST } from '../tools/trimTool';
+import { splitMsg, splitTool } from '../tools/splitTool';
 
 export function ToolOptions() {
   const tool = useStore(s => s.tool);
@@ -75,6 +76,25 @@ export function ToolOptions() {
           ))}
         </div>
         <NumField label="Vlastní" value={wallPresets(project).includes(active) ? null : active} min={10} onCommit={v => v !== null && addWallPreset(v)} />
+      </div>
+    );
+  }
+  if (tool === 'split') {
+    return (
+      <div class="tool-options">
+        <Seg
+          options={[
+            { v: 'one', label: 'Rozdělit' },
+            { v: 'gap', label: 'S mezerou' }
+          ]}
+          value={settings.splitGap ? 'gap' : 'one'}
+          onChange={v => {
+            splitTool.cancel?.();
+            store.updateSettings({ splitGap: v === 'gap' });
+            store.set({ toolMsg: splitMsg(v === 'gap') });
+          }}
+        />
+        <span class="small">✂️ {toolMsg ?? splitMsg(settings.splitGap)}</span>
       </div>
     );
   }
