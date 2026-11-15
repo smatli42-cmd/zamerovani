@@ -39,6 +39,7 @@ Uživatel střídá dva počítače (projekt je na OneDrive). **Na začátku sez
 - `ui/` – Preact komponenty (seznam projektů, editor, NumPad, panely). Panely vlastností v `ui/panels/` (`SidePanel.tsx` jen vybírá panel: `WallPanel`, `OpeningPanel`, `TextPanel`, `RoomPanel`; společné `common.ts`, prvky formulářů `fields.tsx`).
 
 ## Pravidla
+- **Velké soubory:** zdrojový soubor nad cca 500 řádků se při další úpravě **nejdřív rozdělí podle odpovědností** (čistý přesun bez změny logiky, v samostatném commitu) a teprve potom se do něj přidává. Hlídá to test `src/sizeGuard.test.ts` (nad 700 řádků selže, nad 500 upozorní). **Když test velikosti selže, má oprava přednost před další funkcí.**
 - Vývojový server běží z OneDrive: když hromadná úprava souborů (skript) neprojde do prohlížeče, Vite ji nezachytil – restartovat `npm run dev` (a ověřit, co server posílá).
 - Data projektu měnit jen přes `store.edit()` / `store/actions/`, nikdy přímo.
 - **Zámek kót** (`KOTY-ZAMEK-EXPORT.md`, `core/dimLock.ts`): každá kóta může být zamčená (`Floor.dimLocks`); `store.edit` zastaví každou úpravu, která by zamčenou kótu změnila, s hlášením. Pojem „změřeno × náčrt“ je zrušený.

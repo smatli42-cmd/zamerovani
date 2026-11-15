@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-15 (3) – úklid velkých souborů a hlídání velikosti
+- **Co se změnilo:** Tři čisté přesuny bez změny logiky (každý zvlášť commit): `core/wallBody.ts` (678 ř.) → `wallFace.ts` (tvar a líce, 74), `wallBody.ts` (těla a ořez hran, 463), `wallSide.ts` (strana těla, 161); `canvas/drawPlan.ts` (604) → `drawPlan.ts` (stěny a rohy, 241) + `drawOpenings.ts` (otvory, 374); `core/protrusion.ts` (508) → `protrusion.ts` (geometrie, 351) + `protrusionEdit.ts` (kóty a úpravy rozměrů, 171). Kromě importů přibylo jen `export` u pomocných funkcí `isSel`, `cornersOf`, `r1`; testy změněny jen v cestách importů. Nový test `src/sizeGuard.test.ts` (nad 700 řádků selže, nad 500 upozorní); pravidlo „Velké soubory“ v `CLAUDE.md`, kontrola velikosti v reviewerovi a v `/konec`.
+- **Viditelně v aplikaci:** nic – ověřeno v prohlížeči: stejná scéna (místnost s obloukem, dveře, okno, výstupek, vybrání, příčka; bez výběru i s vybranou stěnou, obloukem a výstupkem) vykreslená starým i novým kódem je pixelově shodná.
+- **Rozhodnuto samostatně:** dělení a názvy souborů podle zadání; `straightContinuation` (navázání kreslené stěny) patří do `wallSide.ts`; `wallBody.ts` má 463 řádků (cíl „cca 450“, další dělení by trhalo výpočet těl).
+- **Otevřené:** nic.
+- **Soubory nad 500 řádků:** žádné (největší `tools/wallTool.ts` 491, `canvas/drawDims.ts` 464, `core/wallBody.ts` 463).
+
 ### 2026-11-15 (2) – F4: prvky nesené stěnou při zkrácení, dělení a smazání stěny
 - **Co se změnilo:** Pravidlo F4 je na jednom místě `core/carried.ts` (první krok podle „Pravidla pro průřezové funkce“) a používá ho nástroj Do rohu (`core/trimExtend.ts`), dělení stěny (`splitWallAt`, v aplikaci zatím nevolané) i smazání stěny (`cleanup`). Prvek celý na zbývajícím kusu zůstane na místě; prvek i jen zčásti v mazaném kusu nebo přes dělicí bod se smaže celý; napojená příčka se jen odpojí. Katalog F4 upřesněn a I1.13 změněn (se souhlasem uživatele). Testy `store/carried.test.ts` (10), starý test I1.13 přepsán na rozhodnutí uživatele. Po kontrole revieweru: napojený roh v konci kusu (bod dělení, nový roh) se odpojí přímo v `carried.ts` (dřív to dořešil až `syncHosted`), test příčky v bodě dělení a polohy ponechaných příček.
 - **Viditelně v aplikaci:** nástroj Do rohu smaže i výstupek / vybrání, které do odříznutého kusu zasahuje jen zčásti (dřív přečníval přes konec stěny).

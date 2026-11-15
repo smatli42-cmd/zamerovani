@@ -19,6 +19,7 @@ Dostaneš popis jednoho hotového kroku. Kód neupravuješ, jen kontroluješ a h
 - **Rozsah:** změny jen v rozsahu kroku, žádné nesouvisející úpravy a refaktoring.
 - **Pravidla projektu:** data jen přes `store/actions`; při změně struktury dat `SCHEMA_VERSION` + migrace v `persistence/migrate.ts`; texty v UI česky.
 - Zjevné chyby v logice (okrajové případy: oblouky, stěny bez tloušťky, oddělené konce, Zpět/Vpřed).
+- **Velikost souborů:** po každém kroku vypiš jako nález každý zdrojový soubor v `src` (bez testů) nad 500 řádků s počtem řádků (pravidlo „Velké soubory“ v `CLAUDE.md`, test `src/sizeGuard.test.ts`).
 
 ## Výstup
 Krátký seznam nálezů seřazený od nejzávažnějšího: soubor:řádek, co je špatně, proč (odkaz na katalog), návrh opravy. Když je vše v pořádku, napiš „Bez nálezů“ a výsledek testů.

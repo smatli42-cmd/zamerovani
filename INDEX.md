@@ -16,7 +16,11 @@
 | `PREPNUTI-POCITACE.md` | Postup přepnutí mezi počítači pro uživatele |
 | `src/` | Zdrojový kód (struktura v `CLAUDE.md`) |
 | `src/core/wallJoins.catalog.test.ts` | Testy z příkladů katalogu C2 |
-| `src/core/protrusion.ts`, `src/store/actions/protrusions.ts`, `src/store/protrusion.test.ts` | Výstupek / vybrání stěny a nástroj Čára (katalog I, testy z příkladů I2) |
+| `src/core/protrusion.ts`, `src/core/protrusionEdit.ts`, `src/store/actions/protrusions.ts`, `src/store/protrusion.test.ts` | Výstupek / vybrání stěny a nástroj Čára (katalog I, testy z příkladů I2): geometrie / kóty a úpravy rozměrů |
+| `src/core/wallFace.ts`, `src/core/wallBody.ts`, `src/core/wallSide.ts` | Stěna s tloušťkou: tvar a líce / výpočet těl, napojení a ořez hran / strana těla |
+| `src/canvas/drawPlan.ts`, `src/canvas/drawOpenings.ts` | Kreslení stěn a rohů / kreslení otvorů |
+| `src/core/carried.ts`, `src/store/carried.test.ts` | Prvky nesené stěnou při zkrácení, dělení a smazání stěny (F4) – jediné místo pravidla |
+| `src/sizeGuard.test.ts` | Hlídání velikosti zdrojových souborů (nad 700 řádků selže, nad 500 upozorní) |
 | `prototyp/` | Starý první prototyp (jen inspirace) |
 | `.claude/agents/reviewer.md` | Agent pro nezávislou kontrolu kroku |
 | `.claude/commands/` | `/pokracuji` (začátek sezení), `/konec` (konec sezení) |
