@@ -137,9 +137,8 @@ describe('C2/6: odskok – dvě stěny v přímce, 300 a 200', () => {
     expect(Object.keys(f.walls)).toHaveLength(2);
     expect(hasLineInsideUnion(f)).toBe(false);
   });
-  // Podle katalogu je u spoje na vnější straně hrana odskoku 100 mm, aplikace ji nekreslí
-  // (naměřeno: chybí úsek (1000,200)–(1000,300), AUDIT-STEN.md, C1.11).
-  it.fails('C2/6: hrana odskoku (1000,200)–(1000,300) se kreslí', () => {
+  // Podle katalogu je u spoje na vnější straně hrana odskoku 100 mm (C1.11, opraveno 2026-11-15).
+  it('C2/6: hrana odskoku (1000,200)–(1000,300) se kreslí', () => {
     expect(hasEdge(offset(), 1000, 200, 1000, 300)).toBe(true);
   });
 });

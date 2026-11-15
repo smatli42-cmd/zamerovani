@@ -188,6 +188,9 @@ function computeWallBodies(floor: Floor): Map<Id, WallBody> {
   }
   for (const list of virtualByHost.values()) list.sort((p, q) => p.t - q.t);
 
+  // hrany odskoku (C1.11): stěny v přímce s různou tloušťkou / stranou – líce se neprotnou, schod mezi nimi
+  // patří ke konci stěny, jejíž líc je od rohu dál (její čelo zůstalo odkryté)
+  const steps: { wallId: Id; a: Pt; b: Pt }[] = [];
   for (const all of byNode.values()) {
     const node = all[0]!.node;
     const closeFree = (e: End) => {
@@ -213,12 +216,20 @@ function computeWallBodies(floor: Floor): Map<Id, WallBody> {
       const q = add(node, scale(next.n, next.lo));
       // u obloukové stěny se počítá se skutečnou kružnicí líce (ne s tečnou)
       const x = intersectBoundaries(boundaryOf(e, e.hi), boundaryOf(next, next.lo), node);
-      if (x && dist(x, node) <= limit) {
+      // (téměř) rovné pokračování – i naměřené stěny skoro v přímce a rovná stěna s tečně navazujícím obloukem:
+      // líce se napojí jen průsečíkem u rohu (do tloušťky), jinak vznikne odskok (C1.11) místo líce protaženého za roh
+      const straight = !e.virtual && !next.virtual && dot(e.d, next.d) < -0.99;
+      const pairLimit = straight ? Math.max(Math.abs(e.hi), Math.abs(next.lo)) + 1 : limit;
+      if (x && dist(x, node) <= pairLimit) {
         e.hiPt = x;
         next.loPt = x;
       } else {
         e.hiPt = p;
         next.loPt = q;
+        // odskok: schod mezi konci líců patří stěně, jejíž líc je od rohu dál
+        if (straight && dist(p, q) > 0.5) {
+          steps.push({ wallId: (dist(p, node) >= dist(q, node) ? e : next).wall.id, a: p, b: q });
+        }
       }
     }
   }
@@ -288,6 +299,7 @@ function computeWallBodies(floor: Floor): Map<Id, WallBody> {
     // líc „lo“ (od konce A) leží na straně, kam míří normal(a→b) × znaménko lo; lo ≤ hi, takže lo = záporná strana
     out.set(eA.wall.id, { wallId: eA.wall.id, poly, edges, snaps, faces: [faceLo, [...hiLine].reverse()], adds: [], holes: [] });
   }
+  for (const s of steps) out.get(s.wallId)?.edges.push([s.a, s.b]);
   // Spoje uprostřed stěn (křížení, T bez dělení, 3+ stěny v bodě, ostré úhly, oblouk protnutý dvakrát):
   // napojení podle sousedních konců nemusí stačit – kreslené hrany zúčastněných stěn se ořežou o těla
   // ostatních stěn, zůstane jen to, co má aspoň jednu stranu venku (žádná čára uvnitř, C1.5).

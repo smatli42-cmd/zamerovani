@@ -60,7 +60,7 @@ Navazuje na `KRESLENI-STEN-NAVRH.md` (tam jsou dříve schválená rozhodnutí) 
 | C1.8 | Různé tloušťky v rohu | průsečík vnějších líců | podle priorit | průsečík vnějších odsazených čar | rozhodnuto dříve | ✔ |
 | C1.9 | Úhel jiný než 90° | Miter / Square off | ref. čáry se protnou | průsečík vnějších odsazených čar | rozhodnuto dříve | ✔ |
 | C1.10 | Volný konec | rovný uzavřený | rovný | rovný uzavřený, kolmo | rozhodnuto dříve | ✔ |
-| C1.11 | Stěny v jedné přímce s různou tloušťkou (odskok) | spojí se s přechodem | – | **dvě samostatné stěny; u spoje odskok na vnější straně; každá se dál upravuje zvlášť** | ne | ✔ (vy) |
+| C1.11 | Stěny v jedné přímce s různou tloušťkou (odskok) | spojí se s přechodem | – | **dvě samostatné stěny; u spoje odskok na vnější straně; každá se dál upravuje zvlášť** | hotovo (2026-11-15) | ✔ (vy) |
 | C1.12 | Sloučení souběžných stejných stěn v jednu | ne | – | POZ | ne | ↷ |
 | C1.13 | Nespojený konec je i **fyzicky oddělený** | – | – | každá stěna má na nespojeném konci vlastní uzel (stejné souřadnice), táhnou se samostatně; přepnutí zpět na Spojený uzly sloučí; sloučení uzlů „při shodě souřadnic“ se u označeného konce nesmí provést samo | hotovo (2026-11-11, krok 1) | ✔ (vy) |
 

@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-15 (4) – C1.11: hrana odskoku u stěn v přímce s různou tloušťkou
+- **Co se změnilo:** Dvě stěny v jedné přímce s posunutým lícem (různá tloušťka, opačná strana, osa uprostřed) mají v rohu nakreslenou hranu odskoku (`computeWallBodies` v `core/wallBody.ts`: hranice líců se neprotnou a stěny pokračují opačným směrem → schod mezi konci líců). Hrana patří stěně, jejíž čelo zůstalo odkryté. Test C2/6 už není `it.fails` – v projektu nezůstal žádný; nové testy v `core/wallBody.test.ts` (osa uprostřed, opačná strana, stejná tloušťka, oblouky na jedné kružnici, stěny skoro v přímce, tečně navazující oblouk).
+- **Viditelně v aplikaci:** u stěny 300 navazující rovně na stěnu 200 je na vnější straně čára schodu (dřív tam tělo zůstalo „otevřené“). Ověřeno v prohlížeči měřením pixelů.
+- **Rozhodnuto samostatně:** odskok se kreslí i u osy uprostřed (na obou stranách) a u stěn se stejnou tloušťkou, ale opačnou stranou těla (celé odkryté čelo); oblouky na jedné kružnici stejně (radiální hrana). U konců, které pokračují téměř rovně (odchylka do ~8°, i rovná stěna s tečně navazujícím obloukem), se líce napojí průsečíkem jen do vzdálenosti tloušťky od rohu – jinak odskok (dřív se líc silnější stěny u naměřených stěn „skoro v přímce“ protáhl až o 1 m za roh, nález revieweru).
+- **Otevřené:** vyzkoušet na tabletu. Vybrání sahající přesně k rohu odskoku kreslí tutéž čáru dvakrát (vypadá stejně).
+- **Soubory nad 500 řádků:** žádné.
+
 ### 2026-11-15 (3) – úklid velkých souborů a hlídání velikosti
 - **Co se změnilo:** Tři čisté přesuny bez změny logiky (každý zvlášť commit): `core/wallBody.ts` (678 ř.) → `wallFace.ts` (tvar a líce, 74), `wallBody.ts` (těla a ořez hran, 463), `wallSide.ts` (strana těla, 161); `canvas/drawPlan.ts` (604) → `drawPlan.ts` (stěny a rohy, 241) + `drawOpenings.ts` (otvory, 374); `core/protrusion.ts` (508) → `protrusion.ts` (geometrie, 351) + `protrusionEdit.ts` (kóty a úpravy rozměrů, 171). Kromě importů přibylo jen `export` u pomocných funkcí `isSel`, `cornersOf`, `r1`; testy změněny jen v cestách importů. Nový test `src/sizeGuard.test.ts` (nad 700 řádků selže, nad 500 upozorní); pravidlo „Velké soubory“ v `CLAUDE.md`, kontrola velikosti v reviewerovi a v `/konec`.
 - **Viditelně v aplikaci:** nic – ověřeno v prohlížeči: stejná scéna (místnost s obloukem, dveře, okno, výstupek, vybrání, příčka; bez výběru i s vybranou stěnou, obloukem a výstupkem) vykreslená starým i novým kódem je pixelově shodná.
@@ -307,14 +314,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Hotovo 2026-11-15:** výstupek při přehození strany stěny (Deník 2026-11-15 (1)) – I1.7 ověřeno, oprava zrcadlení výstupku na oblouku po uzavření místnosti. Testy 356 + 1 `it.fails`.
 
-**Hotovo 2026-11-15:** F4 – prvky nesené stěnou při zkrácení / dělení / smazání (Deník 2026-11-15 (2)), centrálně v `core/carried.ts`. Testy 366 + 1 `it.fails`.
+**Hotovo 2026-11-15:** F4 – prvky nesené stěnou při zkrácení / dělení / smazání (Deník 2026-11-15 (2)), centrálně v `core/carried.ts`; úklid velkých souborů + test velikosti (3); C1.11 hrana odskoku (4). Testy 381, žádný `it.fails`.
 
 **Fronta kroků:**
-1. **C1.11** (hrana odskoku, test C2/6 `it.fails`).
-2. Z auditu: F7, D4, A2 / A10 / B6; výstupek přes roh / kopie v řadě (I1.11).
-3. D3 doplnit: zkrátit jen jednu stěnu k hraně druhé (T místo L); případně řetězová kóta užšího otvoru při vypnutém vnitřním ostění.
-4. Napojení na líc obloukové stěny (zatím jen rovné stěny).
-5. Kóty: volná kóta / úhlopříčka (POZADAVKY.md) – zámek je připravený; později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) spolu s exportem DXF / PDF.
+1. Z auditu: F7, D4, A2 / A10 / B6; výstupek přes roh / kopie v řadě (I1.11).
+2. D3 doplnit: zkrátit jen jednu stěnu k hraně druhé (T místo L); případně řetězová kóta užšího otvoru při vypnutém vnitřním ostění.
+3. Napojení na líc obloukové stěny (zatím jen rovné stěny).
+4. Kóty: volná kóta / úhlopříčka (POZADAVKY.md) – zámek je připravený; později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) spolu s exportem DXF / PDF.
 
 ## Předchozí stav (2026-11-14 – úpravy oken, dveří, ostění, displeje)
 

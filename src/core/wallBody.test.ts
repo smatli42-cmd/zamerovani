@@ -220,3 +220,109 @@ describe('napojení stěny na obloukovou stěnu (přesně na kružnici líce)', 
     expect(findBodyAt(f, mid)).not.toBeNull();
   });
 });
+
+describe('odskok – stěny v přímce s posunutým lícem (C1.11, C2/6)', () => {
+  /** Hrany těla stěny `id` ležící na svislé přímce x = 1000 (rohu) jako [y1, y2] seřazené. */
+  function stepEdges(f: Floor, id: string): [number, number][] {
+    return wallBodies(f)
+      .get(id)!
+      .edges.filter(([p, q]) => Math.abs(p.x - 1000) < 0.01 && Math.abs(q.x - 1000) < 0.01 && Math.abs(p.y - q.y) > 0.01)
+      .map(([p, q]) => [Math.min(p.y, q.y), Math.max(p.y, q.y)] as [number, number])
+      .sort((p, q) => p[0] - q[0]);
+  }
+  function pair(t1: number, t2: number, side2: 1 | -1 = 1, axis?: 'center') {
+    const f = floorWith({ a: [0, 0], m: [1000, 0], b: [2000, 0] });
+    const w1 = createWall('a', 'm', 0, t1, 1);
+    const w2 = createWall('m', 'b', 0, t2, side2);
+    if (axis) w1.axis = w2.axis = axis;
+    f.walls[w1.id] = w1;
+    f.walls[w2.id] = w2;
+    return { f, w1: w1.id, w2: w2.id };
+  }
+
+  it('hrana odskoku patří silnější stěně (její čelo je odkryté), tenčí stěna ji nemá', () => {
+    const { f, w1, w2 } = pair(300, 200);
+    expect(stepEdges(f, w1)).toEqual([[200, 300]]);
+    expect(stepEdges(f, w2)).toEqual([]);
+  });
+
+  it('osa uprostřed: odskok na obou stranách po 50 mm', () => {
+    const { f, w1 } = pair(300, 200, 1, 'center');
+    expect(stepEdges(f, w1)).toEqual([
+      [-150, -100],
+      [100, 150]
+    ]);
+  });
+
+  it('stejná tloušťka, opačná strana těla: každá stěna má odkryté čelo celé', () => {
+    const { f, w1, w2 } = pair(300, 300, -1);
+    expect(stepEdges(f, w1)).toEqual([[0, 300]]);
+    expect(stepEdges(f, w2)).toEqual([[-300, 0]]);
+  });
+
+  it('stejná tloušťka a strana: žádná hrana v rohu (stěny se slévají)', () => {
+    const { f, w1, w2 } = pair(300, 300);
+    expect(stepEdges(f, w1)).toEqual([]);
+    expect(stepEdges(f, w2)).toEqual([]);
+  });
+
+  it('dva oblouky na jedné kružnici s různou tloušťkou: hrana odskoku radiálně v rohu', async () => {
+    const { splitArcSagittas } = await import('./arc');
+    // půlkruh (0,0)–(2000,0), střed (1000,0), r = 1000, rozdělený ve vrcholu m = (1000, 1000)
+    const f = floorWith({ a: [0, 0], m: [1000, 1000], b: [2000, 0] });
+    const [s1, s2] = splitArcSagittas({ x: 0, y: 0 }, { x: 2000, y: 0 }, 1000, { x: 1000, y: 1000 })!;
+    const w1 = createWall('a', 'm', s1, 300, 1);
+    const w2 = createWall('m', 'b', s2, 200, 1);
+    f.walls[w1.id] = w1;
+    f.walls[w2.id] = w2;
+    // hrana patří silnější stěně w1, leží radiálně mezi lícem 200 a 300 od čáry oblouku
+    expect(stepEdges(f, w2.id)).toEqual([]);
+    const s = stepEdges(f, w1.id).map(([y0, y1]) => [Math.round(y0), Math.round(y1)]);
+    expect(s).toHaveLength(1);
+    expect([
+      [700, 800],
+      [1200, 1300]
+    ]).toContainEqual(s[0]);
+  });
+
+  /**
+   * Obrys stěny nesmí ležet za rohem x = 1000 (líc protažený za roh do sousední stěny). Hrana odskoku sama
+   * končí na rohu líce sousední stěny, proto se měří jen obrys.
+   */
+  const maxX = (f: Floor, id: string) => Math.max(...wallBodies(f).get(id)!.poly.map(p => p.x));
+
+  for (const deg of [1, -1, 3, 5.7, -5.7]) {
+    it(`stěny skoro v přímce (odklon ${deg}°, naměřené): odskok se nakreslí, líc se neprotáhne za roh`, () => {
+      const r = (deg * Math.PI) / 180;
+      const f = floorWith({ a: [0, 0], m: [1000, 0], b: [1000 + 1000 * Math.cos(r), 1000 * Math.sin(r)] });
+      const w1 = createWall('a', 'm', 0, 300, 1);
+      const w2 = createWall('m', 'b', 0, 200, 1);
+      f.walls[w1.id] = w1;
+      f.walls[w2.id] = w2;
+      expect(maxX(f, w1.id)).toBeLessThan(1000.5);
+      const near = (p: Pt, x: number, y: number) => Math.hypot(p.x - x, p.y - y) < 25;
+      const step = wallBodies(f).get(w1.id)!.edges.some(([p, q]) => (near(p, 1000, 300) && near(q, 1000, 200)) || (near(q, 1000, 300) && near(p, 1000, 200)));
+      expect(step).toBe(true);
+    });
+  }
+
+  for (const c of [2000, -2000]) {
+    it(`rovná stěna 300 a tečně navazující oblouk 200 (${c > 0 ? 'tělo ke středu' : 'tělo ven'}): odskok, líc se neprotáhne`, async () => {
+      const { arcGeometry } = await import('./arc');
+      const m = { x: 1000, y: 0 };
+      const b = { x: 2000, y: c - c * Math.cos(Math.PI / 6) };
+      const s = [68.148, -68.148].find(v => {
+        const g = arcGeometry(m, b, v);
+        return !!g && Math.abs(g.center.x - 1000) < 2 && Math.abs(g.center.y - c) < 2;
+      })!;
+      expect(s).toBeDefined();
+      const f = floorWith({ a: [0, 0], m: [1000, 0], b: [b.x, b.y] });
+      const w1 = createWall('a', 'm', 0, 300, 1);
+      const w2 = createWall('m', 'b', s, 200, 1);
+      f.walls[w1.id] = w1;
+      f.walls[w2.id] = w2;
+      expect(maxX(f, w1.id)).toBeLessThan(1000.5);
+      expect(stepEdges(f, w1.id).map(([y0, y1]) => [Math.round(y0), Math.round(y1)])).toEqual([[200, 300]]);
+    });
+  }
+});
