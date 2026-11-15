@@ -2,7 +2,7 @@
  * Panel otvoru (dveře, okno, francouzské okno, průchod, nika), ostění a zárubeň / rám.
  */
 import { openingThickness, revealPartValue, type RevealPart } from '../../core/doorLayout';
-import { openingCornerWarning } from '../../core/openingCorner';
+import { openingCornerWarning } from '../../core/cornerOverlap';
 import { hasLeaf, isWindowKind, OPENING_DEFAULTS } from '../../model/factory';
 import type { Opening } from '../../model/types';
 import { applyNumpadValue, deleteSelection, duplicateSelection, setOpeningRef, setRevealEnabled, setRevealSides, setWindowKind, updateOpening } from '../../store/actions';

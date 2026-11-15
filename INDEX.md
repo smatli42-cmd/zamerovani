@@ -20,6 +20,7 @@
 | `src/core/wallFace.ts`, `src/core/wallBody.ts`, `src/core/wallSide.ts` | Stěna s tloušťkou: tvar a líce / výpočet těl, napojení a ořez hran / strana těla |
 | `src/canvas/drawPlan.ts`, `src/canvas/drawOpenings.ts` | Kreslení stěn a rohů / kreslení otvorů |
 | `src/core/carried.ts`, `src/store/carried.test.ts` | Prvky nesené stěnou při zkrácení, dělení a smazání stěny (F4) – jediné místo pravidla |
+| `src/core/cornerOverlap.ts` | Prvek blízko rohu (F7) – upozornění pro otvory i výstupky, jediné místo pravidla |
 | `src/sizeGuard.test.ts` | Hlídání velikosti zdrojových souborů (nad 700 řádků selže, nad 500 upozorní) |
 | `prototyp/` | Starý první prototyp (jen inspirace) |
 | `.claude/agents/reviewer.md` | Agent pro nezávislou kontrolu kroku |

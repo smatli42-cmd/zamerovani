@@ -7,11 +7,20 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-15 (6) – F7 i pro výstupky a vybrání (rozhodnutí uživatele)
+- **Co se změnilo:** Kontrola „prvek blízko rohu“ je na jednom místě `core/cornerOverlap.ts` (přejmenováno z `openingCorner.ts`) pro všechny prvky nesené stěnou: otvor hlídá oba líce, nika, výstupek a vybrání jen svůj líc; příčka napojená doprostřed stěny se hlásí, když se dotýká hlídaného líce. Po kontrole revieweru a dalších rozhodnutích uživatele: hlídá se i výstupek / vybrání na obloukové stěně (souřadnice stěny `wallFrame`), vybrání přes celou tloušťku hlídá oba líce, tolerance 1,5 mm (jako při kreslení výstupku – u volného konce se nehlásí falešný přesah). Testy `core/cornerOverlap.test.ts` (24). Pravidlo v `CLAUDE.md`, katalog F7 doplněn.
+- **Viditelně v aplikaci:** žluté upozornění i v panelu výstupku / vybrání („Výstupek zasahuje do rohu A o 200 mm – …“); u niky „Nika zasahuje …“ a jen na líci, ze kterého je přístupná. Ověřeno v prohlížeči (i strana niky podle kresby).
+- **Rozhodnuto uživatelem:** upozornění platí i pro výstupky a vybrání; nika jen svůj líc; i na obloukové stěně; vybrání přes celou tloušťku oba líce.
+- **Rozhodnuto samostatně:** text „Otvor“ pro dveře / okna / průchod (gramaticky jednotně), „Nika“ pro niku; konec textu „– překrývá se se sousední stěnou nebo vede za konec stěny“.
+- **Tabulka pravidlo × prvek:** dveře ✔, okno ✔, francouzské okno ✔, průchod ✔ (oba líce), nika ✔ (svůj líc), výstupek ✔ (svůj líc, rovná i oblouková stěna), vybrání ✔ (svůj líc; průraz oba líce; rovná i oblouková); stěna / příčka, text, místnost – netýká se. Otvor na obloukové stěně (vznikne přepnutím stěny s otvorem na oblouk, F6) se nehlídá – poloha otvoru se měří po tětivě. Kruhová stěna se nehlídá (nemá rohy). Pravidlo jinde zvlášť neplatí (jen dva panely ho zobrazují).
+- **Otevřené:** jako v (5) – oddělený konec, velmi ostrý úhel, křížení.
+- **Soubory nad 500 řádků:** žádné.
+
 ### 2026-11-15 (5) – F7: upozornění u otvoru blízko rohu
 - **Co se změnilo:** Nová kontrola `core/openingCorner.ts`: otvor jde skrz celé tělo, takže má ležet tam, kde jsou vidět oba líce stěny; když zasahuje za začátek / konec líce (do těla napojené stěny v rohu), spočítá se o kolik mm. Po kontrole revieweru doplněno: otvor přes příčku napojenou doprostřed stěny (T) se hlásí také. Testy `core/openingCorner.test.ts` (8).
 - **Viditelně v aplikaci:** v panelu vybraného otvoru se u rohu ukáže žluté upozornění „Otvor zasahuje do rohu A o 300 mm – překrývá se s tělem sousední stěny.“ (u příčky „… do napojené příčky o 100 mm …“). Ověřeno v prohlížeči. Úpravu nic nezakazuje (F7: upozornění, ne zákaz).
 - **Rozhodnuto samostatně:** upozornění jen v panelu otvoru (ne na výkresu); hlídají se rovné stěny s tloušťkou (otvory na oblouku zatím nejsou); měří se proti oběma lícům (rozhoduje ten, který začíná dál od rohu).
-- **Otevřené:** vyzkoušet na tabletu. Nehlídá se: oddělený konec (C1.13, těla se překrývají bez napojení), velmi ostrý úhel rohu (pod ~20°, napojení „natupo“), křížení stěn přes otvor. **Otázka na uživatele:** má se upozornění „blízko rohu“ týkat i výstupku / vybrání (katalog F7 mluví jen o otvoru)?
+- **Otevřené:** vyzkoušet na tabletu. Nehlídá se: oddělený konec (C1.13, těla se překrývají bez napojení), velmi ostrý úhel rohu (pod ~20°, napojení „natupo“), křížení stěn přes otvor. Otázka „i výstupky?“ – uživatel: ano, viz (6).
 - **Soubory nad 500 řádků:** žádné.
 
 ### 2026-11-15 (4) – C1.11: hrana odskoku u stěn v přímce s různou tloušťkou
@@ -321,7 +330,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Hotovo 2026-11-15:** výstupek při přehození strany stěny (Deník 2026-11-15 (1)) – I1.7 ověřeno, oprava zrcadlení výstupku na oblouku po uzavření místnosti. Testy 356 + 1 `it.fails`.
 
-**Hotovo 2026-11-15:** F4 – prvky nesené stěnou při zkrácení / dělení / smazání (Deník 2026-11-15 (2)), centrálně v `core/carried.ts`; úklid velkých souborů + test velikosti (3); C1.11 hrana odskoku (4); F7 upozornění u otvoru blízko rohu (5). Testy 389, žádný `it.fails`.
+**Hotovo 2026-11-15:** F4 – prvky nesené stěnou při zkrácení / dělení / smazání (Deník 2026-11-15 (2)), centrálně v `core/carried.ts`; úklid velkých souborů + test velikosti (3); C1.11 hrana odskoku (4); F7 upozornění u prvku blízko rohu – otvory i výstupky (5, 6). Testy 405, žádný `it.fails`.
 
 **Fronta kroků:**
 1. Z auditu: D4 (ruční dělení stěny), A2 / A10 / B6 (řetěz, délka a tloušťka číslem během kreslení); výstupek přes roh / kopie v řadě (I1.11).

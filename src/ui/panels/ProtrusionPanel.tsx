@@ -2,6 +2,7 @@
  * Panel výstupku / vybrání stěny (KATALOG-STEN.md, sekce I): rozměry, výška, název, materiál, poznámka.
  */
 import { protrusionDims } from '../../core/protrusionEdit';
+import { protrusionCornerWarning } from '../../core/cornerOverlap';
 import type { Floor, Protrusion } from '../../model/types';
 import { applyNumpadValue, deleteSelection, updateProtrusion } from '../../store/actions';
 import { close } from './common';
@@ -9,10 +10,13 @@ import { NumField, Panel, TextField } from './fields';
 
 export function ProtrusionPanel({ floor, p }: { floor: Floor; p: Protrusion }) {
   const d = protrusionDims(floor, p);
+  // F7: výstupek / vybrání blízko rohu – jen upozornění
+  const cornerWarn = protrusionCornerWarning(floor, p.id);
   const dim = (k: 'width' | 'depth', v: number | null) => v !== null && applyNumpadValue({ kind: 'protrusion-dim', protrusionId: p.id, dim: k }, v);
   return (
     <Panel title={p.mode === 'subtract' ? 'Vybrání stěny' : 'Výstupek stěny'} onClose={close}>
       <p class="muted small">Patří ke stěně a pohybuje se s ní. Rozměry a odstupy jdou zadat i ťuknutím na kóty.</p>
+      {cornerWarn && <div class="panel-warn">⚠️ {cornerWarn}</div>}
       <div class="field-grid">
         <NumField label="Šířka" value={d ? Math.round(d.width) : null} min={10} onCommit={v => dim('width', v)} />
         <NumField label="Hloubka" value={d ? Math.round(d.depth) : null} min={1} onCommit={v => dim('depth', v)} />
