@@ -110,6 +110,15 @@ export function duplicateSelection(): void {
       const np = { ...clone(pr), id: newId('pr'), wallId: target };
       floor.protrusions![np.id] = np;
     }
+    // výstupek přes roh se kopíruje, když se kopírují obě jeho stěny (a tím i roh)
+    for (const cp of Object.values(floor.cornerProtrusions ?? {})) {
+      const w1 = wallMap.get(cp.walls[0]);
+      const w2 = wallMap.get(cp.walls[1]);
+      const node = nodeMap.get(cp.node);
+      if (!w1 || !w2 || !node) continue;
+      const nc = { ...clone(cp), id: newId('pc'), walls: [w1, w2] as [Id, Id], node };
+      (floor.cornerProtrusions ??= {})[nc.id] = nc;
+    }
     for (const it of items) {
       if (it.kind === 'room' && floor.rooms[it.id]) {
         const r = { ...clone(floor.rooms[it.id]!), id: newId('rm') };

@@ -64,6 +64,13 @@ export function splitWallAt(floor: Floor, wallId: Id, nodeId: Id): [Id, Id] | nu
   // příznak „nespojovat“ patří původním koncům; nový roh uprostřed ho nemá
   if (wall.noJoinA) wA.noJoinA = true;
   if (wall.noJoinB) wB.noJoinB = true;
+  // prvky nesené stěnou přejdou na část, na které leží, a zůstanou na místě; prvek přes dělicí bod
+  // zanikne (F4, I1.13 – rozhodnutí uživatele 2026-11-15; core/carried.ts). Ještě před odebráním původní
+  // stěny – výstupek přes roh potřebuje její polohu.
+  redistributeCarried(floor, wallId, len, [
+    { wallId: wA.id, from: 0, to: uAt },
+    { wallId: wB.id, from: uAt, to: frame.len }
+  ], uOf);
   delete floor.walls[wallId];
   floor.walls[wA.id] = wA;
   // zamčená délka / tloušťka celé stěny → zamčené i obě části (celek zůstane držený); zámek celku zanikne
@@ -79,13 +86,6 @@ export function splitWallAt(floor: Floor, wallId: Id, nodeId: Id): [Id, Id] | nu
     }
   }
   floor.walls[wB.id] = wB;
-
-  // prvky nesené stěnou přejdou na část, na které leží, a zůstanou na místě; prvek přes dělicí bod
-  // zanikne (F4, I1.13 – rozhodnutí uživatele 2026-11-15; core/carried.ts)
-  redistributeCarried(floor, wallId, len, [
-    { wallId: wA.id, from: 0, to: uAt },
-    { wallId: wB.id, from: uAt, to: frame.len }
-  ], uOf);
   return [wA.id, wB.id];
 }
 
@@ -165,6 +165,16 @@ export function mergeStraightAt(floor: Floor, wallId: Id, nodeId: Id, throughT =
     else delete o.noJoinB;
   }
   delete floor.walls[w.id];
+  // výstupky přes roh na slučované části přejdou na sloučenou stěnu (obrácený směr = líc a směr na druhou stranu)
+  for (const cp of Object.values(floor.cornerProtrusions ?? {})) {
+    const i = cp.walls.indexOf(w.id);
+    if (i < 0) continue;
+    cp.walls[i] = o.id;
+    if (!wSameDir) {
+      cp.sides[i] = cp.sides[i] === 1 ? -1 : 1;
+      cp.dirs[i] = cp.dirs[i] === 1 ? -1 : 1;
+    }
+  }
   // rohy napojené na slučovanou část teď leží na sloučené stěně; přes T zůstává roh napojený
   for (const n of Object.values(floor.nodes)) {
     if (n.host !== w.id) continue;

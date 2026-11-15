@@ -6,6 +6,7 @@ import type { Floor, Id, Pt } from '../model/types';
 import { add, dist, scale, sub } from './geometry';
 import { faceOffset, protrusionExtent, protrusionOutline, protrusionPolygon, protrusionsOf, wallFrame, type Frame } from './protrusion';
 import { pointInPolygon, type WallBody } from './wallBody';
+import { cornerFaceCover, cornerOutline, cornerPolygon, cornerProtrusionsOf } from './cornerProtrusion';
 
 /**
  * Výstupky a vybrání: líc se v jejich šířce nekreslí, přidá se jejich obrys; plochy se vyplní (výstupek)
@@ -25,6 +26,48 @@ export function applyProtrusions(floor: Floor, bodies: Map<Id, WallBody>): void 
     (p.mode === 'add' ? body.adds : body.holes).push(area);
     for (const q of outline) body.snaps.push(q);
   }
+  // výstupky přes roh (I1.11): líce obou stěn se od rohu po obrys nekreslí, obrys a plocha patří první stěně
+  for (const cp of cornerProtrusionsOf(floor)) {
+    // těla se právě počítají – kontrola rohu dostane rozpracovaná (jinak by se volal výpočet znovu)
+    const outline = cornerOutline(floor, cp, bodies);
+    const area = cornerPolygon(floor, cp, bodies);
+    const owner = bodies.get(cp.walls[0]);
+    if (!outline || !area || !owner) continue;
+    for (const i of [0, 1] as const) {
+      const w = floor.walls[cp.walls[i]];
+      const body = bodies.get(cp.walls[i]);
+      const f = w && wallFrame(floor, w);
+      const cover = cornerFaceCover(floor, cp, i);
+      if (!w || !body || !f || !cover) continue;
+      const [ua, ub] = cover.map(p => f.project(p).u) as [number, number];
+      body.edges = cutAlongFace(body.edges, f, faceOffset(w, cp.sides[i]), Math.min(ua, ub), Math.max(ua, ub));
+    }
+    for (let i = 0; i + 1 < outline.length; i++) owner.edges.push([outline[i]!, outline[i + 1]!]);
+    owner.adds.push(area);
+    for (const q of outline) owner.snaps.push(q);
+  }
+  clipEdgesAtAdds(bodies);
+}
+
+/**
+ * Výstupek přiložený k sousední stěně (např. tvar U nakreslený v rohu, chyba od uživatele 2026-11-15): čára,
+ * která má z obou stran tělo stěny nebo plochu výstupku, se nekreslí – u stěn, jejichž výstupek se dotýká
+ * jiného těla, a u těl, kterých se dotýká cizí výstupek.
+ */
+function clipEdgesAtAdds(bodies: Map<Id, WallBody>): void {
+  const ids = new Set<Id>();
+  const all = [...bodies.values()].map(b => ({ b, box: boxOf(b.poly) }));
+  for (const { b } of all) {
+    for (const a of b.adds) {
+      const ab = boxOf(a);
+      for (const { b: o, box } of all) {
+        if (o.wallId === b.wallId || !boxesOverlap(ab, box, 1)) continue;
+        ids.add(b.wallId);
+        ids.add(o.wallId);
+      }
+    }
+  }
+  if (ids.size) clipInsideEdges(bodies, ids, true);
 }
 
 /**
@@ -70,9 +113,15 @@ const boxOf = (pts: readonly Pt[]): Box => ({
 const boxesOverlap = (a: Box, b: Box, pad: number) => a.minX - pad <= b.maxX && b.minX - pad <= a.maxX && a.minY - pad <= b.maxY && b.minY - pad <= a.maxY;
 
 /** Ořízne hrany stěn `ids` o těla ostatních stěn (kusy, které mají obě strany uvnitř těl, se nekreslí). */
-export function clipInsideEdges(bodies: Map<Id, WallBody>, ids: Set<Id>): void {
-  const polys = [...bodies.values()].map(b => ({ id: b.wallId, poly: b.poly, box: boxOf(b.poly) }));
-  const insideAny = (p: Pt, cands: typeof polys) => cands.some(c => p.x >= c.box.minX && p.x <= c.box.maxX && p.y >= c.box.minY && p.y <= c.box.maxY && pointInPolygon(p, c.poly));
+export function clipInsideEdges(bodies: Map<Id, WallBody>, ids: Set<Id>, withAdds = false): void {
+  // withAdds: i plochy výstupků se počítají jako tělo (patří své stěně)
+  // vybrání (holes) se z těla vyřezávají – bod ve vybrání je „venku“ (jeho obrys se kreslí dál)
+  const polys = [...bodies.values()].flatMap(b => [
+    { id: b.wallId, poly: b.poly, box: boxOf(b.poly), holes: withAdds ? b.holes : [] },
+    ...(withAdds ? b.adds : []).map(poly => ({ id: b.wallId, poly, box: boxOf(poly), holes: [] as Pt[][] }))
+  ]);
+  const insideAny = (p: Pt, cands: typeof polys) =>
+    cands.some(c => p.x >= c.box.minX && p.x <= c.box.maxX && p.y >= c.box.minY && p.y <= c.box.maxY && pointInPolygon(p, c.poly) && !c.holes.some(h => pointInPolygon(p, h)));
   for (const id of ids) {
     const body = bodies.get(id);
     if (!body) continue;

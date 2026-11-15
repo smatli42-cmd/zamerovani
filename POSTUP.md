@@ -7,6 +7,17 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-15 (7) – výstupek přes roh (I1.11) a oprava čáry u výstupku v rohu
+- **Chyby / požadavek od uživatele:** výstupek v rohu šel udělat jen tvarem U jako uprostřed stěny a na sousední stěně, ke které je jen přisazený, zůstala uvnitř čára; přání: v rohu výstupek jen dvěma čarami přes roh.
+- **Co se změnilo:** Nový prvek výstupek přes roh (`Floor.cornerProtrusions`, SCHEMA_VERSION 15 bez převodu dat, `core/cornerProtrusion.ts`): lomená čára z líce jedné stěny na líc druhé stěny téhož rohu (líce se v rohu potkávají) vedená mimo těla se sama změní na výstupek. Obrys je v souřadnicích rohu (průsečík líců + směry stěn), takže se drží rohu. Kreslení (`core/wallBodyEdges.ts`): líce obou stěn se pod ním nekreslí; obecně se nekreslí čára, která má z obou stran tělo stěny nebo plochu výstupku (oprava tvaru U v rohu). Výběr, panel (rozměry podél obou stěn, výška, název…), smazání, kopie se stěnami, pravidlo F4 (`core/carried.ts`: zkrácení, dělení, smazání). Předtím čistý přesun `wallBody.ts` → `wallBodyEdges.ts` (samostatný commit). Testy `store/cornerProtrusion.test.ts` (21).
+- **Viditelně v aplikaci:** nástrojem Čára: dvě čáry přes vnitřní roh (např. 600 od rohu po jedné stěně, pak k druhé stěně) = šedý výstupek v rohu bez čar uvnitř – i v rohu u příčky napojené doprostřed stěny; kolem vnějšího rohu stejně třemi a více čarami. Ťuknutím se vybere, panel „Výstupek v rohu“. Výstupek tvaru U nakreslený v rohu už nemá čáru podél sousední stěny. Ověřeno v prohlížeči.
+- **Rozhodnuto uživatelem:** vnitřní i vnější roh; drží se rohu; vybrání v rohu zatím ne. Po kontrole revieweru: i roh u napojení T; sousední výstupky se slévají (čára mezi nimi se nekreslí); když stěny přestanou tvořit roh (rozpojení, oblouk, čára bez tloušťky, třetí stěna napojená do rohu), výstupek se jen nekreslí a vrátí se, až roh znovu vznikne; smaže se se stěnou.
+- **Rozhodnuto samostatně:** obrys a plocha patří první stěně (od které se kreslilo), výběr jako výstupek; rozměry v panelu = délka podél líce každé stěny od rohu (změna mění jen tu část obrysu, která leží podél dané stěny); kóty na výkrese u výstupku v rohu zatím nejsou (jen panel).
+- **Po kontrole revieweru opraveno:** sloučení stěny rohu s rovným pokračováním výstupek zachová (dřív zanikl); roh přetažený na jiný roh – výstupek patří spojenému rohu (dřív zůstal neviditelný záznam); zkrácení stěny kótou pod rozměr výstupku se neprovede (pravidlo prvků nesených stěnou); vybrání hned vedle výstupku si nechá boční čáru; roh se kontroluje při každém kreslení (třetí stěna v rohu ho skryje).
+- **Tabulka pravidlo × prvek (nový druh – výstupek přes roh):** F4 zkrácení Do rohu ✔, dělení ✔, smazání stěny ✔ (testy); změna délky stěny kótou ✔ (na vzdáleném konci na místě, zkrácení pod rozměr se neprovede – testy; s rohem jede – rozhodnutí uživatele); sloučení stěn ✔, spojení rohů ✔ (testy); kopie ✔; posun / otočení skupiny ✔ (souřadnice vůči rohu); F7 – netýká se (leží v rohu záměrně, výjimka).
+- **Otevřené:** kóty výstupku v rohu na výkrese; vybrání v rohu; výstupek přes konec stěny a kopírování v řadě (I1.11).
+- **Soubory nad 500 řádků:** žádné.
+
 ### 2026-11-15 (6) – F7 i pro výstupky a vybrání (rozhodnutí uživatele)
 - **Co se změnilo:** Kontrola „prvek blízko rohu“ je na jednom místě `core/cornerOverlap.ts` (přejmenováno z `openingCorner.ts`) pro všechny prvky nesené stěnou: otvor hlídá oba líce, nika, výstupek a vybrání jen svůj líc; příčka napojená doprostřed stěny se hlásí, když se dotýká hlídaného líce. Po kontrole revieweru a dalších rozhodnutích uživatele: hlídá se i výstupek / vybrání na obloukové stěně (souřadnice stěny `wallFrame`), vybrání přes celou tloušťku hlídá oba líce, tolerance 1,5 mm (jako při kreslení výstupku – u volného konce se nehlásí falešný přesah). Testy `core/cornerOverlap.test.ts` (24). Pravidlo v `CLAUDE.md`, katalog F7 doplněn.
 - **Viditelně v aplikaci:** žluté upozornění i v panelu výstupku / vybrání („Výstupek zasahuje do rohu A o 200 mm – …“); u niky „Nika zasahuje …“ a jen na líci, ze kterého je přístupná. Ověřeno v prohlížeči (i strana niky podle kresby).
@@ -330,10 +341,10 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Hotovo 2026-11-15:** výstupek při přehození strany stěny (Deník 2026-11-15 (1)) – I1.7 ověřeno, oprava zrcadlení výstupku na oblouku po uzavření místnosti. Testy 356 + 1 `it.fails`.
 
-**Hotovo 2026-11-15:** F4 – prvky nesené stěnou při zkrácení / dělení / smazání (Deník 2026-11-15 (2)), centrálně v `core/carried.ts`; úklid velkých souborů + test velikosti (3); C1.11 hrana odskoku (4); F7 upozornění u prvku blízko rohu – otvory i výstupky (5, 6). Testy 405, žádný `it.fails`.
+**Hotovo 2026-11-15:** F4 – prvky nesené stěnou při zkrácení / dělení / smazání (Deník 2026-11-15 (2)), centrálně v `core/carried.ts`; úklid velkých souborů + test velikosti (3); C1.11 hrana odskoku (4); F7 upozornění u prvku blízko rohu – otvory i výstupky (5, 6); výstupek přes roh I1.11 (7). Testy 426, žádný `it.fails`.
 
 **Fronta kroků:**
-1. Z auditu: D4 (ruční dělení stěny), A2 / A10 / B6 (řetěz, délka a tloušťka číslem během kreslení); výstupek přes roh / kopie v řadě (I1.11).
+1. Z auditu: D4 (ruční dělení stěny), A2 / A10 / B6 (řetěz, délka a tloušťka číslem během kreslení); výstupek přes konec stěny / kopie v řadě (I1.11).
 2. D3 doplnit: zkrátit jen jednu stěnu k hraně druhé (T místo L); případně řetězová kóta užšího otvoru při vypnutém vnitřním ostění.
 3. Napojení na líc obloukové stěny (zatím jen rovné stěny).
 4. Kóty: volná kóta / úhlopříčka (POZADAVKY.md) – zámek je připravený; později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) spolu s exportem DXF / PDF.

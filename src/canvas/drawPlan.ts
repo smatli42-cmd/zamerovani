@@ -13,6 +13,7 @@ import { wallBodies } from '../core/wallBody';
 import { addHitBox } from './hitTargets';
 import { protrusionArcHandles } from '../core/protrusionEdit';
 import { protrusionPolygon, protrusionsOf } from '../core/protrusion';
+import { cornerPolygon, cornerProtrusionsOf } from '../core/cornerProtrusion';
 
 export const COLORS = {
   wall: '#0f172a',
@@ -92,6 +93,15 @@ export function drawWalls(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
     if (!outline) continue;
     ctx.fillStyle = sel ? 'rgba(37,99,235,0.35)' : 'rgba(147,197,253,0.4)';
     path(outline);
+    ctx.fill();
+  }
+  for (const cp of cornerProtrusionsOf(floor)) {
+    const sel = isSel(selection, 'protrusion', cp.id);
+    const hov = isSel(hover, 'protrusion', cp.id);
+    const area = (sel || hov) && cornerPolygon(floor, cp);
+    if (!area) continue;
+    ctx.fillStyle = sel ? 'rgba(37,99,235,0.35)' : 'rgba(147,197,253,0.4)';
+    path(area);
     ctx.fill();
   }
   for (const body of bodies.values()) {

@@ -4,8 +4,9 @@
  * se po dokončení sama změní na výstupek nebo vybrání.
  */
 import { newId } from '../../model/factory';
-import type { Floor, Id, Protrusion, Pt, Wall } from '../../model/types';
+import type { CornerProtrusion, Floor, Id, Protrusion, Pt, Wall } from '../../model/types';
 import { findFaceNear, profileFromLoop, profileFromPolyline } from '../../core/protrusion';
+import { cornerFromPolyline, setCornerDim } from '../../core/cornerProtrusion';
 import { setProtrusionDim, setProtrusionSagitta, type ProtrusionDim } from '../../core/protrusionEdit';
 import { store } from '../store';
 import { cleanup } from './shared';
@@ -112,9 +113,19 @@ export function convertChain(floor: Floor, wallId: Id): Id | null {
     }
   }
   const prof = chain && profileFromPolyline(floor, chain.pts);
-  if (!chain || !prof) return null;
-  return addProtrusion(floor, prof, chain.walls);
+  if (chain && prof) return addProtrusion(floor, prof, chain.walls);
+  // výstupek přes roh: dvě čáry přes vnitřní roh / tři a víc kolem vnějšího, z líce jedné stěny na líc druhé (I1.11)
+  const corner = chain && cornerFromPolyline(floor, chain.pts);
+  if (!chain || !corner) return null;
+  for (const id of chain.walls) delete floor.walls[id];
+  const cp: CornerProtrusion = { id: newId('pc'), ...corner, name: '', material: '', note: '' };
+  (floor.cornerProtrusions ??= {})[cp.id] = cp;
+  cleanup(floor);
+  return cp.id;
 }
+
+/** Existuje výstupek (i přes roh) s tímto ID? */
+export const protrusionExists = (floor: Floor | null, id: Id): boolean => !!floor && !!(floor.protrusions?.[id] ?? floor.cornerProtrusions?.[id]);
 
 /** Čáry `lines` nahradí výstupkem `prof` (vybere se). */
 function addProtrusion(floor: Floor, prof: NonNullable<ReturnType<typeof profileFromPolyline>>, lines: Id[]): Id {
@@ -136,7 +147,7 @@ export function addLine(start: Pt, startNodeId: Id | null, end: Pt, endNodeId: I
     if (id) prot = convertChain(floor, id);
     if (id && !prot) dropLineOverProtrusion(floor, id);
   });
-  if (prot && store.floor()?.protrusions?.[prot]) store.set({ selection: { kind: 'protrusion', id: prot } });
+  if (prot && protrusionExists(store.floor(), prot)) store.set({ selection: { kind: 'protrusion', id: prot } });
 }
 
 /**
@@ -170,14 +181,19 @@ export function setProtrusionArc(id: Id, seg: number, s: number): void {
   });
 }
 
-/** Vlastnosti výstupku (výška, název, materiál, poznámka). */
+/** Vlastnosti výstupku i výstupku přes roh (výška, název, materiál, poznámka). */
 export function updateProtrusion(id: Id, patch: Partial<Pick<Protrusion, 'height' | 'name' | 'material' | 'note'>>): void {
   store.edit(floor => {
-    const p = floor.protrusions?.[id];
+    const p = floor.protrusions?.[id] ?? floor.cornerProtrusions?.[id];
     if (!p) return;
     Object.assign(p, patch);
     if (p.height === undefined || !(p.height > 0)) delete p.height;
   });
+}
+
+/** Rozměr výstupku přes roh podél líce první (`a`) / druhé (`b`) stěny (panel). */
+export function setCornerProtrusionDim(id: Id, dim: 'a' | 'b', value: number): void {
+  store.edit(floor => setCornerDim(floor, id, dim, value));
 }
 
 /** Kóta výstupku z NumPadu (mění jen výstupek, ne stěnu). */

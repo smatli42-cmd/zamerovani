@@ -15,7 +15,7 @@ import { hasBody } from '../../core/wallFace';
 import { initialSide, orientLoopOutward } from '../../core/wallSide';
 import { store, type EditOptions } from '../store';
 import { cleanup, getOrCreateNode, MERGE_TOL, nodeHasNoJoin } from './shared';
-import { convertChain } from './protrusions';
+import { convertChain, protrusionExists } from './protrusions';
 
 /** Je tu už stejná stěna (stejné rohy a stejný tvar)? Dvě půlkružnice mezi týmiž rohy jsou různé stěny. */
 function findSameWall(floor: Floor, a: Id, b: Id, sagitta: number): Wall | undefined {
@@ -107,7 +107,7 @@ export function addRectWalls(p: Pt, q: Pt, style: LineStyle): void {
     // plný obdélník přiložený stranou k líci stěny = výstupek / vybrání (čárkovaný překlad zůstane čarami)
     if (sides[0] && style === 'solid') prot = convertChain(floor, sides[0]);
   });
-  if (prot && store.floor()?.protrusions?.[prot]) store.set({ selection: { kind: 'protrusion', id: prot } });
+  if (prot && protrusionExists(store.floor(), prot)) store.set({ selection: { kind: 'protrusion', id: prot } });
 }
 
 /** Kruh: jedna stěna se středovým rohem a poloměrem. */
@@ -352,6 +352,8 @@ export function mergeNodeIfCoincident(nodeId: Id): void {
       attachAtNode(floor, nodeId);
       return;
     }
+    // výstupek přes roh v přetaženém rohu patří spojenému rohu
+    for (const cp of Object.values(floor.cornerProtrusions ?? {})) if (cp.node === nodeId) cp.node = other.id;
     for (const w of Object.values(floor.walls)) {
       if (w.a === nodeId) w.a = other.id;
       if (w.b === nodeId) w.b = other.id;

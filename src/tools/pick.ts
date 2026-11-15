@@ -7,6 +7,7 @@ import { dot, projectToSegment, sub } from '../core/geometry';
 import { bodyNormal, bodyStart, hasBody } from '../core/wallFace';
 import { findBodyAt, pointInPolygon } from '../core/wallBody';
 import { protrusionOutline, protrusionPolygon, protrusionsOf } from '../core/protrusion';
+import { cornerOutline, cornerPolygon, cornerProtrusionsOf } from '../core/cornerProtrusion';
 import type { Floor, Pt } from '../model/types';
 import type { Camera, Selection } from '../store/store';
 import { HIT_PX } from './types';
@@ -81,6 +82,14 @@ export function pickProtrusion(floor: Floor, p: Pt, cam: Camera): string | null 
     if (!outline || !area) continue;
     if (pointInPolygon(p, area)) return pr.id;
     for (let i = 0; i + 1 < outline.length; i++) if (projectToSegment(p, outline[i]!, outline[i + 1]!).distance <= tol) return pr.id;
+  }
+  // výstupky přes roh (I1.11)
+  for (const cp of cornerProtrusionsOf(floor)) {
+    const outline = cornerOutline(floor, cp);
+    const area = cornerPolygon(floor, cp);
+    if (!outline || !area) continue;
+    if (pointInPolygon(p, area)) return cp.id;
+    for (let i = 0; i + 1 < outline.length; i++) if (projectToSegment(p, outline[i]!, outline[i + 1]!).distance <= tol) return cp.id;
   }
   return null;
 }

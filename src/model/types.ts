@@ -10,7 +10,7 @@
 
 import type { DimTarget } from '../core/dimLock';
 
-export const SCHEMA_VERSION = 14;
+export const SCHEMA_VERSION = 15;
 
 export type Id = string;
 
@@ -188,6 +188,39 @@ export interface Protrusion {
   note: string;
 }
 
+/** Bod obrysu výstupku přes roh: p = X + s·e1 + t·e2 (X = průsečík líců v rohu, e1 / e2 podél stěn od rohu). */
+export interface CornerPt {
+  s: number;
+  t: number;
+}
+
+/**
+ * Výstupek přes roh dvou rovných stěn (KATALOG-STEN.md I1.11, rozhodnutí uživatele 2026-11-15): vnitřní i vnější roh,
+ * drží se rohu – obrys je v souřadnicích rohu (průsečík líců `sides` obou stěn a směry stěn od rohu), takže při posunu
+ * stěn nebo změně tloušťky zůstane přilepený na lících obou stěn se stejnými rozměry.
+ */
+export interface CornerProtrusion {
+  id: Id;
+  /** Společný roh obou stěn. */
+  node: Id;
+  /** Stěny rohu; obrys začíná na líci první a končí na líci druhé. */
+  walls: [Id, Id];
+  /** Líce obou stěn, které se v rohu potkávají (1 / −1 vůči normal(a→b) dané stěny, jako `Protrusion.side`). */
+  sides: [1 | -1, 1 | -1];
+  /**
+   * Směr od rohu podél stěny vůči jejímu a→b (1 = k b, −1 = k a). Rozhoduje jen u průběžné stěny, na kterou je roh
+   * napojený doprostřed (T bez dělení); u stěny, která v rohu končí, se směr bere od jejího konce.
+   */
+  dirs: [1 | -1, 1 | -1];
+  /** Otevřený obrys od líce první stěny (t = 0) k líci druhé (s = 0); roh X uzavírá plochu. */
+  pts: CornerPt[];
+  /** Výška (mm); chybí = neurčeno. */
+  height?: number;
+  name: string;
+  material: string;
+  note: string;
+}
+
 /** Podlaží = jeden půdorys. */
 export interface Floor {
   id: Id;
@@ -199,6 +232,8 @@ export interface Floor {
   texts: Record<Id, TextNote>;
   /** Výstupky a vybrání stěn (od verze 10; chybí = žádné). */
   protrusions?: Record<Id, Protrusion>;
+  /** Výstupky přes roh dvou stěn (I1.11, od verze 15; chybí = žádné). */
+  cornerProtrusions?: Record<Id, CornerProtrusion>;
   /**
    * Zamčené kóty (KOTY-ZAMEK-EXPORT.md, A): klíč = `dimKey(kóta)`, hodnota = popis kóty. Chybí = vše odemčeno.
    * Zamčená kóta drží hodnotu – úprava, která by ji změnila, se neprovede (core/dimLock.ts).
