@@ -13,6 +13,14 @@ Požadavky a plán po fázích: `POZADAVKY.md`. Kde co leží: `INDEX.md`. Star�
 - **Deník změn:** v `POSTUP.md` veď sekci „Deník změn“. Po každém dokončeném kroku a při `/konec` přidej **nahoru** záznam: datum; co se změnilo (česky, 1–2 věty); co se změnilo viditelně v aplikaci; rozhodnutí udělaná samostatně; co zůstává otevřené. Chyby nahlášené uživatelem při testování zapiš také (co nefungovalo, jak je opraveno). Starší záznamy nemaž.
 - Příkazy `/pokracuji` (začátek sezení) a `/konec` (konec sezení) jsou v `.claude/commands/`.
 
+## Pravidlo pro průřezové funkce
+Když se funkce týká více druhů prvků (stěna, otvor, ostění, výstupek, překlad, úhlopříčka, volná kóta…):
+1. Pravidlo implementuj JEDNOU na jednom centrálním místě, prvky ho jen využívají. Žádné kopie chování pro každý prvek zvlášť.
+2. Před koncem sestav tabulku „pravidlo × typ prvku“, každou buňku ověř (test nebo průchod kódem), nic nevynechej.
+3. Nic nerozhoduj sám. Pokud se pravidlo u prvku nedá dodržet nebo je ve sporu s katalogem, tento prvek NEMĚŇ, zastav se a vypiš otázku.
+4. Do závěrečné zprávy dej tabulku ✔/✗ pro každý prvek a seznam míst, kde pravidlo dosud platí zvlášť.
+5. „Všude / všechny prvky“ platí opravdu pro všechny. Výjimku vypiš s důvodem, neponechávej ji potichu.
+
 ## Předávání mezi počítači
 Uživatel střídá dva počítače (projekt je na OneDrive). **Na začátku sezení přečti `POSTUP.md`** a na konci práce / po větším kroku ho aktualizuj (poslední stav, rozpracované, další kroky) a změny commitni. Uživatelův postup přepnutí je v `PREPNUTI-POCITACE.md`; když řekne „končím“, udělej aktualizaci POSTUP.md + commit + push.
 
