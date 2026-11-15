@@ -15,6 +15,8 @@ export function ToolOptions() {
   const clipboard = useStore(s => s.clipboard);
   const project = useStore(s => s.project);
   const toolMsg = useStore(s => s.toolMsg);
+  // tlačítko Ukončit jen při běžícím řetězu: roh existuje na aktuálním podlaží (po Zpět / na jiném podlaží ne)
+  const chainNode = useStore(s => (s.chainNode && store.floor()?.nodes[s.chainNode] ? s.chainNode : null));
   if (tool === 'wall') {
     // menu Stěny: předvolby tloušťky, aktuální je označená (stačí zkontrolovat a kreslit)
     const active = activeWallThickness(project);
@@ -37,6 +39,23 @@ export function ToolOptions() {
           value={settings.wallAxis}
           onChange={v => store.updateSettings({ wallAxis: v })}
         />
+        <span class="muted small">Řetěz</span>
+        <Seg
+          options={[
+            { v: 'off', label: 'Vyp' },
+            { v: 'on', label: 'Zap' }
+          ]}
+          value={settings.wallChain ? 'on' : 'off'}
+          onChange={v => {
+            store.updateSettings({ wallChain: v === 'on' });
+            store.set({ chainNode: null });
+          }}
+        />
+        {chainNode && (
+          <button class="btn btn-sm" onClick={() => store.set({ chainNode: null })} title="Další stěna začne tam, kde perem začnete">
+            ⏹ Ukončit řetěz
+          </button>
+        )}
         {settings.wallShape === 'arc' && (
           <NumField label="Výška oblouku" value={activeWallArcHeight(project)} min={10} onCommit={v => v !== null && setWallArcHeight(v)} />
         )}

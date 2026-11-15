@@ -35,7 +35,7 @@ export function Toolbar() {
           title={t.title}
           onClick={() => {
             tools[store.get().tool].cancel?.();
-            store.set({ tool: t.id, hover: null, toolMsg: t.id === 'trim' ? TRIM_MSG_FIRST : null });
+            store.set({ tool: t.id, hover: null, chainNode: null, toolMsg: t.id === 'trim' ? TRIM_MSG_FIRST : null });
           }}
         >
           <span class="tool-icon">{t.icon}</span>

@@ -7,6 +7,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-15 (8) – kreslení řetězem (A2, A10, B6)
+- **Co se změnilo:** Nástroj Stěna umí kreslit řetězem (`Settings.wallChain`, stav `chainNode` v `store.ts`, `tools/wallTool.ts`): další tah začne v konci poslední stěny a tah perem se přenese odkudkoli na plátně. Řetěz končí, když konec dosedne na existující roh nebo stěnu (uzavření místnosti), ťuknutím bez tažení, tlačítkem Ukončit řetěz nebo změnou nástroje; po Zpět (roh řetězu zmizel) začne další stěna zase u pera. Předtím čistý přesun `wallTool.ts` → `wallToolSnap.ts` (samostatný commit). Testy `tools/wallChain.test.ts` (12). Po kontrole revieweru opraveno: napojení konce na líc stěny (a zvláštní bod) řetěz také ukončí; tlačítko Ukončit se ukazuje jen při běžícím řetězu na aktuálním podlaží; Esc řetěz ukončí.
+- **Viditelně v aplikaci:** v liště Stěny přepínač **Řetěz Vyp / Zap**; při běžícím řetězu zelený kroužek v konci poslední stěny a tlačítko **⏹ Ukončit řetěz**. Délka se zadává ťuknutím na kótu (jako dřív), tloušťka tlačítky mezi tahy. Ověřeno v prohlížeči.
+- **Rozhodnuto uživatelem:** další tah navazuje (odkudkoli); NumPad délky se sám neotevírá; tloušťka tlačítky mezi tahy.
+- **Rozhodnuto samostatně:** řetěz je ve výchozím stavu vypnutý (nemění dosavadní kreslení; volba se pamatuje); řetěz končí i napojením na existující stěnu (T), nejen uzavřením do rohu; jen nástroj Stěna (ne Čára).
+- **Otevřené:** vyzkoušet na tabletu (lišta Stěny je delší – na užším displeji se zalomí). Známá omezení: tah začatý perem přímo na klikací kótě otevře NumPad místo kreslení (jako dřív – začít kousek vedle); po Zpět řetěz končí úplně (nepokračuje z předchozí stěny).
+- **Soubory nad 500 řádků:** žádné.
+
 ### 2026-11-15 (7) – výstupek přes roh (I1.11) a oprava čáry u výstupku v rohu
 - **Chyby / požadavek od uživatele:** výstupek v rohu šel udělat jen tvarem U jako uprostřed stěny a na sousední stěně, ke které je jen přisazený, zůstala uvnitř čára; přání: v rohu výstupek jen dvěma čarami přes roh.
 - **Co se změnilo:** Nový prvek výstupek přes roh (`Floor.cornerProtrusions`, SCHEMA_VERSION 15 bez převodu dat, `core/cornerProtrusion.ts`): lomená čára z líce jedné stěny na líc druhé stěny téhož rohu (líce se v rohu potkávají) vedená mimo těla se sama změní na výstupek. Obrys je v souřadnicích rohu (průsečík líců + směry stěn), takže se drží rohu. Kreslení (`core/wallBodyEdges.ts`): líce obou stěn se pod ním nekreslí; obecně se nekreslí čára, která má z obou stran tělo stěny nebo plochu výstupku (oprava tvaru U v rohu). Výběr, panel (rozměry podél obou stěn, výška, název…), smazání, kopie se stěnami, pravidlo F4 (`core/carried.ts`: zkrácení, dělení, smazání). Předtím čistý přesun `wallBody.ts` → `wallBodyEdges.ts` (samostatný commit). Testy `store/cornerProtrusion.test.ts` (21).
@@ -342,10 +350,10 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Hotovo 2026-11-15:** výstupek při přehození strany stěny (Deník 2026-11-15 (1)) – I1.7 ověřeno, oprava zrcadlení výstupku na oblouku po uzavření místnosti. Testy 356 + 1 `it.fails`.
 
-**Hotovo 2026-11-15:** F4 – prvky nesené stěnou při zkrácení / dělení / smazání (Deník 2026-11-15 (2)), centrálně v `core/carried.ts`; úklid velkých souborů + test velikosti (3); C1.11 hrana odskoku (4); F7 upozornění u prvku blízko rohu – otvory i výstupky (5, 6); výstupek přes roh I1.11 (7). Testy 426, žádný `it.fails`.
+**Hotovo 2026-11-15:** F4 – prvky nesené stěnou při zkrácení / dělení / smazání (Deník 2026-11-15 (2)), centrálně v `core/carried.ts`; úklid velkých souborů + test velikosti (3); C1.11 hrana odskoku (4); F7 upozornění u prvku blízko rohu – otvory i výstupky (5, 6); výstupek přes roh I1.11 (7); kreslení řetězem A2/A10/B6 (8). Testy 438, žádný `it.fails`.
 
 **Fronta kroků:**
-1. Z auditu: D4 (ruční dělení stěny), A2 / A10 / B6 (řetěz, délka a tloušťka číslem během kreslení); výstupek přes konec stěny / kopie v řadě (I1.11).
+1. Z auditu: D4 (ruční dělení stěny); výstupek přes konec stěny / kopie v řadě (I1.11).
 2. D3 doplnit: zkrátit jen jednu stěnu k hraně druhé (T místo L); případně řetězová kóta užšího otvoru při vypnutém vnitřním ostění.
 3. Napojení na líc obloukové stěny (zatím jen rovné stěny).
 4. Kóty: volná kóta / úhlopříčka (POZADAVKY.md) – zámek je připravený; později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) spolu s exportem DXF / PDF.

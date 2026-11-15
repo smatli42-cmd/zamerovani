@@ -74,6 +74,8 @@ export interface Settings {
   wallShape: 'straight' | 'arc';
   /** Nástroj Stěna: osa nové stěny = líc nebo střed tloušťky (B1, B10). */
   wallAxis: 'face' | 'center';
+  /** Nástroj Stěna: kreslení řetězem – další tah navazuje na konec poslední stěny (A2). */
+  wallChain: boolean;
   /** Nevypínat displej, dokud je aplikace otevřená (Screen Wake Lock, input/wakeLock.ts). */
   keepAwake: boolean;
 }
@@ -103,6 +105,8 @@ export interface AppState {
   canRedo: boolean;
   /** Krátká zpráva aktivního nástroje v liště voleb (např. nástroj Do rohu: co ťuknout, proč to nešlo). */
   toolMsg: string | null;
+  /** Kreslení řetězem: roh, ve kterém začne další stěna (null = řetěz neběží). */
+  chainNode: string | null;
   /**
    * Úprava se neprovedla: zamčená kóta, která brání (klíč pro zvýraznění, `target` pro tlačítko Odemknout),
    * nebo jiný důvod (bez `target`, např. otvor by vyjel ze stěny). Hlášení dole na plátně.
@@ -119,7 +123,7 @@ export interface EditOptions {
 const SETTINGS_KEY = 'zamerovani.settings';
 
 function loadSettings(): Settings {
-  const defaults: Settings = { snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', windowKind: 'window', wallShape: 'straight', wallAxis: 'face', keepAwake: true };
+  const defaults: Settings = { snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', windowKind: 'window', wallShape: 'straight', wallAxis: 'face', wallChain: false, keepAwake: true };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     return raw ? { ...defaults, ...JSON.parse(raw) } : defaults;
@@ -153,6 +157,7 @@ class Store {
     canUndo: false,
     canRedo: false,
     toolMsg: null,
+    chainNode: null,
     lockBlock: null
   };
 
@@ -199,6 +204,7 @@ class Store {
     this.inGesture = false;
     this.set({
       screen: 'editor',
+      chainNode: null,
       project: freeze(project, true),
       floorId: project.floors[0]?.id ?? null,
       selection: null,

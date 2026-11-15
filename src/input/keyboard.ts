@@ -50,7 +50,8 @@ export function attachKeyboard(): () => void {
       deleteSelection();
     } else if (e.key === 'Escape') {
       tools[state.tool].cancel?.();
-      store.set({ selection: null, numpad: null });
+      // Esc ukončí i kreslení řetězem
+      store.set({ selection: null, numpad: null, chainNode: null });
     }
   };
   window.addEventListener('keydown', onKey);

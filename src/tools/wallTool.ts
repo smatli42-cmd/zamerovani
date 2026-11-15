@@ -36,7 +36,19 @@ interface Drawing {
   lines: DragLine[];
   lock: string | null;
   guide: { line: DragLine | null; point: Pt; lines: DragLine[] } | null;
+  /** Kreslení řetězem: posun od místa dotyku ke konci poslední stěny (pero kreslí odkudkoli, tah se přenese). */
+  shift: Pt | null;
 }
+
+/** Roh, ve kterém má navázat další stěna řetězu (nástroj Stěna, zapnutý řetěz, roh existuje); jinak null. */
+function chainStart(floor: Floor): SnapResult | null {
+  const { settings, chainNode } = store.get();
+  const n = !lineMode && settings.wallChain && chainNode ? floor.nodes[chainNode] : undefined;
+  return n ? { pt: { x: n.x, y: n.y }, node: n, wallHit: null, guides: [] } : null;
+}
+
+/** Bod pera přenesený do řetězu (posun od místa dotyku ke konci poslední stěny). */
+const shifted = (d: Drawing, p: PointerInput): PointerInput => (d.shift ? { ...p, world: add(p.world, d.shift) } : p);
 
 /** Poloměr zachycení pomocné čáry (px) a vzdálenost, do které se nabízí kolmice ke stěně. */
 const capturePx = (p: PointerInput) => (p.device === 'touch' ? 16 : 10);
@@ -181,17 +193,21 @@ export const wallTool: Tool = {
     // Středový bod vybraného oblouku se dá táhnout i při kreslení stěn
     handleDrag = grabArcHandle(p);
     if (handleDrag) return;
-    const start = startSnap(floor, p.world);
-    drawing = { start, end: start, downAt: p.world, side: null, lines: drawLinesFrom(floor, start.pt, start.node?.id ?? null), lock: null, guide: null };
+    // řetěz (A2): další stěna začne v konci poslední, tah perem se přenese odkudkoli na plátně
+    const chained = chainStart(floor);
+    const start = chained ?? startSnap(floor, p.world);
+    const shift = chained ? sub(chained.pt, p.world) : null;
+    drawing = { start, end: start, downAt: p.world, side: null, lines: drawLinesFrom(floor, start.pt, start.node?.id ?? null), lock: null, guide: null, shift };
     hoverSnap = null;
     store.set({ selection: null, numpad: null });
     requestRender();
   },
 
-  drag(p: PointerInput) {
-    if (handleDrag) return selectTool.drag?.(p);
+  drag(pen: PointerInput) {
+    if (handleDrag) return selectTool.drag?.(pen);
     const floor = store.floor();
     if (!floor || !drawing) return;
+    const p = shifted(drawing, pen);
     const end = guidedEnd(floor, drawing, p);
     drawing.end = end;
     if (lineMode) return requestRender();
@@ -225,22 +241,28 @@ export const wallTool: Tool = {
     } else if (!lineMode && dist(d.start.pt, d.end.pt) >= 50) {
       // Při kreslení se panel vlastností neotevírá (nepřekáží v kreslení)
       const sagitta = drawingSagitta(d);
-      addWall(d.start.pt, d.start.node?.id ?? null, d.end.pt, d.end.node?.id ?? null, false, {
+      const id = addWall(d.start.pt, d.start.node?.id ?? null, d.end.pt, d.end.node?.id ?? null, false, {
         thickness: activeWallThickness(store.get().project),
         ...(d.side ? { side: d.side } : {}),
         ...(sagitta ? { sagitta } : {}),
         ...(store.get().settings.wallAxis === 'center' ? { axis: 'center' as const } : {})
       });
+      store.set({ chainNode: id ? nextChainNode(d) : store.get().chainNode });
     } else {
-      // Ťuknutí bez tažení = výběr prvku pod perem (otevře jeho vlastnosti)
+      // Ťuknutí bez tažení = výběr prvku pod perem (otevře jeho vlastnosti); řetěz tím končí
       const floor = store.floor();
-      if (floor) store.set({ selection: pickAny(floor, d.downAt, store.get().camera, store.get().selection) });
+      if (floor) store.set({ selection: pickAny(floor, d.downAt, store.get().camera, store.get().selection), chainNode: null });
     }
     requestRender();
   },
 
   hover(p: PointerInput) {
     const floor = store.floor();
+    // řetěz: nabízí se konec poslední stěny (značka v drawOverlay), ne roh pod perem
+    if (floor && chainStart(floor)) {
+      hoverSnap = null;
+      return requestRender();
+    }
     if (!floor) return;
     lineMode = store.get().tool === 'line';
     const s = startSnap(floor, p.world);
@@ -258,6 +280,9 @@ export const wallTool: Tool = {
 
   drawOverlay(ctx, cam) {
     if (hoverSnap && !drawing) drawSnapMarker(ctx, cam, hoverSnap);
+    const floor = store.floor();
+    const chained = !drawing && floor ? chainStart(floor) : null;
+    if (chained) drawChainMarker(ctx, toScreen(chained.pt, cam));
     if (!drawing) return;
     const a = toScreen(drawing.start.pt, cam);
     const b = toScreen(drawing.end.pt, cam);
@@ -355,6 +380,30 @@ export const wallTool: Tool = {
     drawLengthBadge(ctx, a, b, Math.round(dist(drawing.start.pt, drawing.end.pt)));
   }
 };
+
+/**
+ * Řetěz po nakreslení stěny: pokračuje z jejího konce; končí, když konec dosedl na existující roh nebo stěnu
+ * (uzavření místnosti, napojení na stávající stěny – i na líc stěny nebo zvláštní bod).
+ */
+function nextChainNode(d: Drawing): string | null {
+  if (!store.get().settings.wallChain || d.end.node || d.end.wallHit || d.end.special) return null;
+  const floor = store.floor();
+  const n = floor && Object.values(floor.nodes).find(q => dist(q, d.end.pt) < 1);
+  return n ? n.id : null;
+}
+
+/** Značka „tady pokračuje řetěz“: zelený kroužek v konci poslední stěny. */
+function drawChainMarker(ctx: CanvasRenderingContext2D, s: Pt): void {
+  ctx.save();
+  ctx.strokeStyle = '#16a34a';
+  ctx.fillStyle = 'rgba(22,163,74,0.18)';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, 14, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
 
 /** Nástroj Čára: kreslí čáry bez tloušťky; výstupek / vybrání vznikne samo (KATALOG-STEN.md, I1.10). */
 export const lineTool: Tool = wallTool;

@@ -15,7 +15,7 @@ Navazuje na `KRESLENI-STEN-NAVRH.md` (tam jsou dříve schválená rozhodnutí) 
 | # | Chování | Revit | Archicad | Návrh | Stav v aplikaci | Rozhodnutí |
 |---|---|---|---|---|---|---|
 | A1 | Přímá stěna dvěma body | ano, Line | ano, Straight / Single | MVP | hotovo | ✔ |
-| A2 | Řetěz navazujících stěn (konec = začátek další) | volba **Chain** | Straight / Chained | MVP, zapnutelné | audit | ✔ |
+| A2 | Řetěz navazujících stěn (konec = začátek další) | volba **Chain** | Straight / Chained | MVP, zapnutelné; **přepínač Řetěz v liště Stěny: další tah navazuje na konec poslední stěny (perem odkudkoli), končí uzavřením na rohu / stěně, ťuknutím, tlačítkem Ukončit nebo změnou nástroje** (vy, 2026-11-15) | hotovo (2026-11-15) | ✔ |
 | A3 | Obdélník jedním tahem | ano (Rectangle) | ano (Rectangular, Rotated Rectangular) | MVP | hotovo | ✔ |
 | A4 | Oblouk, kruh | ano (Arc) | ano (Curved) | MVP | hotovo | ✔ |
 | A5 | Lichoběžníková stěna (proměnná tloušťka po délce) | ne přímo | **ano, Trapezoid**: pro staré budovy | původně ? | ne | ✗ (vy) |
@@ -23,7 +23,7 @@ Navazuje na `KRESLENI-STEN-NAVRH.md` (tam jsou dříve schválená rozhodnutí) 
 | A7 | Šikmé stěny (ve svislém řezu) | slanted | Slanted | NE | ne | ✗ |
 | A8 | Odsazení při kreslení (zadané číslo) | volba **Offset** | Offset | POZ | audit | ↷ |
 | A9 | Označit celou řetězovou linii (Tab) a vytvořit stěny podél ní | ano | magic wand | POZ | ne | ↷ |
-| A10 | Přesná délka číslem při kreslení | ano | ano (Tracker) | MVP | hotovo | ✔ |
+| A10 | Přesná délka číslem při kreslení | ano | ano (Tracker) | MVP; **v řetězu ťuknutím na kótu nakreslené stěny (NumPad se sám neotevírá – vy, 2026-11-15); řetěz pokračuje z posunutého konce** | hotovo | ✔ |
 | A11 | Náhled stěny při kreslení (tloušťka, líc, směr) | ano | ano | MVP | audit | ✔ |
 | A12 | Zrušení rozkreslené stěny (Esc / klepnutí mimo) | ano | ano | MVP | audit | ✔ |
 | A13 | Nová stěna přebírá naposled zvolenou tloušťku | typ se pamatuje | nastavení nástroje | rozhodnuto dříve | návrh schválen, audit | ✔ |
@@ -38,7 +38,7 @@ Navazuje na `KRESLENI-STEN-NAVRH.md` (tam jsou dříve schválená rozhodnutí) 
 | B3 | Změna tloušťky po nakreslení | čára se drží, tělo se přizpůsobí | ref. čára zůstane, kontury se přesunou | líc zůstane, tělo se rozšíří/zúží | rozhodnuto dříve | ✔ |
 | B4 | Změna osy nakreslené stěny (líc ↔ střed) | změna vlastnosti stěnu nepřesune | Modify Wall Reference Line | **osa (čára) zůstane na místě, tělo se posune** (uzly, rohy a napojení se nehýbou) | chybí | ✔ (vy) |
 | B5 | Předvolby tloušťek + vlastní | typy stěn | typy / kompozity | 100/150/200/300 + vlastní | rozhodnuto dříve | ✔ |
-| B6 | Zadání tloušťky číslem při kreslení | typ stěny | Info Box | MVP | audit | ✔ |
+| B6 | Zadání tloušťky číslem při kreslení | typ stěny | Info Box | MVP; **tlačítka tloušťky (i Vlastní) mezi tahy řetězu platí pro další stěnu, řetěz se nepřeruší** (vy, 2026-11-15) | hotovo (2026-11-15) | ✔ |
 | B7 | Příznak „tloušťka odhadnutá / změřená“ | – | – | původně ? | audit | ✗ (vy) |
 | B8 | Vícevrstvé stěny (skladba, jádro) | ano | kompozity | NE | – | ✗ |
 | B9 | Tloušťka se přebírá z ostění | – | – | NE | rozhodnuto dříve | ✗ |
