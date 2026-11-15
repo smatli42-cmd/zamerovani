@@ -7,7 +7,7 @@ Požadavky a plán po fázích: `POZADAVKY.md`. Kde co leží: `INDEX.md`. Star�
 ## Pracovní postup (závazné)
 - **`KATALOG-STEN.md` je závazný.** Testy ani katalog nikdy neměň kvůli tomu, aby něco prošlo. Selhávající test = nález → `it.fails` / `it.todo` s důvodem.
 - Pracuj přímo na `main`: commit + push, **bez pull requestů**. Odpovídej česky, stručně, pro nekodéra.
-- **Samostatnost:** pracuj bez uživatele, dokud to jde – plánuj, implementuj, testuj, spusť agenta `reviewer` a nálezy oprav sám. Rozhodnutí, která nejsou v katalogu, udělej podle nejrozumnější varianty, zapiš do `POSTUP.md` (sekce „Rozhodnuto samostatně“) a pokračuj.
+- **Samostatnost:** pracuj bez uživatele, dokud to jde – plánuj, implementuj, testuj, spusť agenta `reviewer` a nálezy oprav sám. Rozhodnutí, která nejsou v katalogu, udělej podle nejrozumnější varianty, zapiš do `POSTUP.md` (sekce „Rozhodnuto samostatně“) a pokračuj. **Neplatí pro průřezové funkce** – tam se zastav a zeptej (viz „Pravidlo pro průřezové funkce“).
 - **Zeptej se jen u:** (a) nevratných věcí, (b) rozporu katalogu a požadavku uživatele, (c) testu, který nejde opravit bez změny zadání.
 - **Zastav se jen po krocích, které mění viditelné chování aplikace** – napiš na 3 řádky, co má uživatel vyzkoušet. Technické kroky dělej souvisle dál.
 - **Deník změn:** v `POSTUP.md` veď sekci „Deník změn“. Po každém dokončeném kroku a při `/konec` přidej **nahoru** záznam: datum; co se změnilo (česky, 1–2 věty); co se změnilo viditelně v aplikaci; rozhodnutí udělaná samostatně; co zůstává otevřené. Chyby nahlášené uživatelem při testování zapiš také (co nefungovalo, jak je opraveno). Starší záznamy nemaž.
