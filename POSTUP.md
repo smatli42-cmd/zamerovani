@@ -8,7 +8,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
 ### 2026-11-15 (10) – kopírování výstupku v řadě (I1.11)
-- **Co se změnilo:** Akce  (): kopie výstupku / vybrání podél stěny po zadané rozteči (osová vzdálenost) směrem k rohu B nebo A; kopie, která by vyjela ze stěny nebo se překryla s jiným výstupkem na stejném líci, se nevloží (). Jeden krok Zpět. Testy  (4).
+- **Co se změnilo:** Akce `copyProtrusionRow` (`store/actions/protrusions.ts`): kopie výstupku / vybrání podél stěny po zadané rozteči (osová vzdálenost) směrem k rohu B nebo A; kopie, která by vyjela ze stěny nebo se překryla s jiným výstupkem na stejném líci, se nevloží (`protrusionFits`). Jeden krok Zpět. Testy `store/protrusionRow.test.ts` (4).
 - **Viditelně v aplikaci:** v panelu výstupku část **Kopírovat v řadě**: Počet kopií, Rozteč, Směr k B / k A, tlačítko 📄 Kopírovat a hlášení, kolik kopií se vložilo. Ověřeno v prohlížeči.
 - **Rozhodnuto uživatelem:** tlačítko v panelu (počet + rozteč).
 - **Rozhodnuto samostatně:** výchozí 2 kopie, rozteč 2× šířka (nejméně 1000 mm); směr volbou k B / k A; jen výstupky na jedné stěně (výstupek přes roh se v řadě nekopíruje).
