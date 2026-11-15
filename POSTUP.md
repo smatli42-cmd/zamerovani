@@ -12,6 +12,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Viditelně v aplikaci:** v liště Stěny přepínač **Řetěz Vyp / Zap**; při běžícím řetězu zelený kroužek v konci poslední stěny a tlačítko **⏹ Ukončit řetěz**. Délka se zadává ťuknutím na kótu (jako dřív), tloušťka tlačítky mezi tahy. Ověřeno v prohlížeči.
 - **Rozhodnuto uživatelem:** další tah navazuje (odkudkoli); NumPad délky se sám neotevírá; tloušťka tlačítky mezi tahy.
 - **Rozhodnuto samostatně:** řetěz je ve výchozím stavu vypnutý (nemění dosavadní kreslení; volba se pamatuje); řetěz končí i napojením na existující stěnu (T), nejen uzavřením do rohu; jen nástroj Stěna (ne Čára).
+- **Uživatel vyzkoušel na PC (2026-11-15):** „funguje to“.
 - **Otevřené:** vyzkoušet na tabletu (lišta Stěny je delší – na užším displeji se zalomí). Známá omezení: tah začatý perem přímo na klikací kótě otevře NumPad místo kreslení (jako dřív – začít kousek vedle); po Zpět řetěz končí úplně (nepokračuje z předchozí stěny).
 - **Soubory nad 500 řádků:** žádné.
 
