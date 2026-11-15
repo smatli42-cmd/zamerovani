@@ -11,7 +11,7 @@ export { addRoom, updateRoom, moveRoom } from './rooms';
 export { takeFreshTextId, addText, updateText, moveText } from './texts';
 export { addFloor, renameFloor, deleteFloor } from './floors';
 export { numpadInitialValue, applyNumpadValue } from './numpad';
-export { addLine, updateProtrusion, lineChain, setProtrusionArc, setCornerProtrusionDim } from './protrusions';
+export { addLine, updateProtrusion, lineChain, setProtrusionArc, setCornerProtrusionDim, copyProtrusionRow } from './protrusions';
 export { setActiveWallThickness, addWallPreset, removeWallPreset, setWallArcHeight } from './project';
 export { splitWall, cutWallSegment, splitPoint, canSplit, type SplitResult } from './split';
 export { toggleDimLock, setDimLock, setWallDimsLocked, setRoomDimsLocked, wallLockState, roomLockState } from './locks';

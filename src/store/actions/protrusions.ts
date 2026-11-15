@@ -7,7 +7,7 @@ import { newId } from '../../model/factory';
 import type { CornerProtrusion, Floor, Id, Protrusion, Pt, Wall } from '../../model/types';
 import { findFaceNear, profileFromLoop, profileFromPolyline } from '../../core/protrusion';
 import { cornerFromPolyline, setCornerDim } from '../../core/cornerProtrusion';
-import { setProtrusionDim, setProtrusionSagitta, type ProtrusionDim } from '../../core/protrusionEdit';
+import { protrusionFits, setProtrusionDim, setProtrusionSagitta, type ProtrusionDim } from '../../core/protrusionEdit';
 import { store } from '../store';
 import { cleanup } from './shared';
 import { insertWall } from './walls';
@@ -199,4 +199,29 @@ export function setCornerProtrusionDim(id: Id, dim: 'a' | 'b', value: number): v
 /** Kóta výstupku z NumPadu (mění jen výstupek, ne stěnu). */
 export function applyProtrusionDim(floor: Floor, id: Id, dim: ProtrusionDim, value: number): boolean {
   return setProtrusionDim(floor, id, dim, value);
+}
+
+/**
+ * Kopie výstupku / vybrání v řadě podél stěny (I1.11, rozhodnutí uživatele 2026-11-15 – tlačítko v panelu):
+ * `count` kopií po `spacing` mm (osová vzdálenost sousedních) směrem k rohu B (`dir` 1) nebo A (−1). Kopie, která
+ * by vyjela ze stěny nebo se překryla s jiným výstupkem na stejném líci, se nevloží. Vrací počet vložených; jeden
+ * krok Zpět.
+ */
+export function copyProtrusionRow(id: Id, count: number, spacing: number, dir: 1 | -1): number {
+  let placed = 0;
+  if (!(count >= 1) || !(spacing > 0)) return 0;
+  store.edit(floor => {
+    const src = floor.protrusions?.[id];
+    if (!src) return false;
+    for (let k = 1; k <= Math.min(100, Math.floor(count)); k++) {
+      const shift = dir * spacing * k;
+      const p: Protrusion = { ...JSON.parse(JSON.stringify(src)), id: newId('pr') };
+      p.pts = p.pts.map(q => ({ ...q, u: Math.round((q.u + shift) * 10) / 10 }));
+      floor.protrusions![p.id] = p;
+      if (protrusionFits(floor, p)) placed++;
+      else delete floor.protrusions![p.id];
+    }
+    if (!placed) return false;
+  });
+  return placed;
 }
