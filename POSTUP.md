@@ -15,6 +15,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Rozhodnuto samostatně:** obrys a plocha patří první stěně (od které se kreslilo), výběr jako výstupek; rozměry v panelu = délka podél líce každé stěny od rohu (změna mění jen tu část obrysu, která leží podél dané stěny); kóty na výkrese u výstupku v rohu zatím nejsou (jen panel).
 - **Po kontrole revieweru opraveno:** sloučení stěny rohu s rovným pokračováním výstupek zachová (dřív zanikl); roh přetažený na jiný roh – výstupek patří spojenému rohu (dřív zůstal neviditelný záznam); zkrácení stěny kótou pod rozměr výstupku se neprovede (pravidlo prvků nesených stěnou); vybrání hned vedle výstupku si nechá boční čáru; roh se kontroluje při každém kreslení (třetí stěna v rohu ho skryje).
 - **Tabulka pravidlo × prvek (nový druh – výstupek přes roh):** F4 zkrácení Do rohu ✔, dělení ✔, smazání stěny ✔ (testy); změna délky stěny kótou ✔ (na vzdáleném konci na místě, zkrácení pod rozměr se neprovede – testy; s rohem jede – rozhodnutí uživatele); sloučení stěn ✔, spojení rohů ✔ (testy); kopie ✔; posun / otočení skupiny ✔ (souřadnice vůči rohu); F7 – netýká se (leží v rohu záměrně, výjimka).
+- **Uživatel vyzkoušel na PC (2026-11-15):** „všechno funguje“.
 - **Otevřené:** kóty výstupku v rohu na výkrese; vybrání v rohu; výstupek přes konec stěny a kopírování v řadě (I1.11).
 - **Soubory nad 500 řádků:** žádné.
 
