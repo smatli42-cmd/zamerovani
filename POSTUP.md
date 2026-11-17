@@ -11,6 +11,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Co se změnilo:** Stěna se dá napojit i na líc obloukové stěny (dřív jen na čáru oblouku). Líc oblouku je soustředný oblouk (`offsetAxis` v `core/floorQueries.ts`), roh na něm má `Node.hostFace` jako u rovné stěny a drží se ho při změně vzepětí, tloušťky, strany i osy (`core/hosting.ts`). Platí pro oba líce i osu uprostřed; stěna vedoucí z líce přes tělo se nenapojí (křížení). Sloučení oblouku (migrace) roh na líci zachová. Opravena chyba v tělech stěn (`core/wallBody.ts`): konce ve spoji se počítají každý od svého bodu – u rovné stěny se to neprojevilo, u oblouku by se líc na ose v místě napojení přerušil. Testy `store/hostArcFace.test.ts` (11, na starém kódu selhávají). Po kontrole revieweru: nástroj Rozdělit v místě stěny napojené na líc oblouku posune dělicí bod na okraj jejího těla a stěna zůstane napojená (jako u rovné stěny, `avoidFaceTees` teď v souřadnicích stěny); vnitřní líc velmi malého oblouku (tloušťka ≥ poloměr) se k napojení nenabízí; F7 (`core/cornerOverlap.ts`) a F4 počítají v souřadnicích stěny, platí i pro oblouk.
 - **Viditelně v aplikaci:** stěna kreslená k vnějšímu (i vnitřnímu) líci obloukové stěny se přichytí na líc a začne na něm; líc oblouku je pod ní přerušený. Ověřeno v prohlížeči.
 - **Rozhodnuto samostatně:** nic nového – pravidlo je stejné jako u rovné stěny.
+- **Uživatel vyzkoušel na PC (2026-11-18):** „funguje“.
 - **Otevřené:** vyzkoušet na tabletu; kóta polohy napojení (řetězová) zatím jen u rovné stěny; nástroj Do rohu / K hraně oblouky odmítá.
 
 ### 2026-11-17 (7) – D3 doplněno: zkrátit / prodloužit jednu stěnu k hraně druhé (T)
@@ -426,7 +427,20 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Otevřené:** vyzkoušet na tabletu; další krok tažení a posun jako blok (D2, D11–D14).
 - **Chyby od uživatele:** zatím žádné.
 
-## Poslední stav (2026-11-15, konec sezení)
+## Poslední stav (2026-11-18)
+
+**Hotové (na webu, uživatel vyzkoušel na PC):** kresba – samostatná Čára, Dvojitá, Obdélník / Kruh / Oblouk jako kresba, šrafy a barvy (Deník 2026-11-17 (1)–(6)); D3 K hraně – zkrátit / prodloužit jednu stěnu k líci druhé (2026-11-17 (7)); napojení stěny na líc obloukové stěny (2026-11-18 (1)). Testy 536, typecheck a build OK. SCHEMA_VERSION 18.
+
+**Rozpracované:** nic.
+
+**Čeká na vyzkoušení na tabletu:** vše od 2026-11-14.
+
+**Fronta kroků:**
+1. Kóty výstupku v rohu a na konci stěny na výkrese (dnes jen v panelu); vybrání v rohu.
+2. Kóty: volná kóta / úhlopříčka (POZADAVKY.md, i kóta přiřazená k čarám kresby) – zámek je připravený; později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) spolu s exportem DXF / PDF.
+3. Drobnosti: řetězová kóta polohy napojení i u oblouku; Do rohu / K hraně pro oblouky; řetězová kóta užšího otvoru při vypnutém vnitřním ostění.
+
+## Předchozí stav (2026-11-15, konec sezení)
 
 **Hotové (na webu, uživatel vyzkoušel na PC a potvrdil „vše funguje“):** výstupek při přehození strany (Deník 2026-11-15 (1)); F4 – prvky nesené stěnou při zkrácení / dělení / smazání, centrálně `core/carried.ts` (2); úklid velkých souborů + test velikosti `src/sizeGuard.test.ts` (3); C1.11 hrana odskoku (4); F7 upozornění u prvku blízko rohu – otvory i výstupky (5, 6); výstupek přes roh I1.11 (7); kreslení řetězem A2 / A10 / B6 (8); nástroj Rozdělit D4 (9); kopírování výstupku v řadě (10); výstupek přes volný konec stěny (11). Testy 476, žádný `it.fails`, typecheck a build OK. SCHEMA_VERSION 16.
 
