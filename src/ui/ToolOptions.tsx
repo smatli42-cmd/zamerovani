@@ -8,7 +8,7 @@ import { useStore } from '../store/useStore';
 import { NumField, Seg } from './panels/fields';
 import { DRAW_LINE_STYLES } from './panels/common';
 import { DRAW_COLOR_LABELS } from '../core/drawing';
-import { TRIM_MSG_FIRST } from '../tools/trimTool';
+import { trimMsg, trimTool } from '../tools/trimTool';
 import { tools } from '../tools/registry';
 import { splitMsg, splitTool } from '../tools/splitTool';
 
@@ -178,7 +178,19 @@ export function ToolOptions() {
   if (tool === 'trim') {
     return (
       <div class="tool-options">
-        <span class="small">⌐ {toolMsg ?? TRIM_MSG_FIRST}</span>
+        <Seg
+          options={[
+            { v: 'corner', label: 'Do rohu' },
+            { v: 'edge', label: 'K hraně' }
+          ]}
+          value={settings.trimEdge ? 'edge' : 'corner'}
+          onChange={v => {
+            trimTool.cancel?.();
+            store.updateSettings({ trimEdge: v === 'edge' });
+            store.set({ toolMsg: trimMsg(v === 'edge') });
+          }}
+        />
+        <span class="small">⌐ {toolMsg ?? trimMsg(settings.trimEdge)}</span>
       </div>
     );
   }

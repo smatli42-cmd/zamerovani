@@ -2,7 +2,7 @@
  * Akce: stěny (kreslení, tvary, oblouky, tloušťka, popisky) a posun rohů / skupin.
  */
 import { placeDrawing } from '../../core/drawing';
-import { trimExtendToCorner, type TrimResult } from '../../core/trimExtend';
+import { trimExtendToCorner, trimExtendToEdge, type TrimResult } from '../../core/trimExtend';
 import { createCircleWall, createWall, newId } from '../../model/factory';
 import type { Floor, Id, LineStyle, Pt, Wall, WallLabel } from '../../model/types';
 import { setChainSagitta } from '../../core/arcChain';
@@ -385,5 +385,14 @@ export function trimToCorner(w1: Id, keep1: Pt, w2: Id, keep2: Pt): TrimResult {
   // nejdřív nanečisto, ať se do historie nezapíše neúspěšný pokus
   res = trimExtendToCorner(structuredClone(floor), w1, keep1, w2, keep2);
   if (res === 'ok' && !store.edit(f => void trimExtendToCorner(f, w1, keep1, w2, keep2))) return 'locked';
+  return res;
+}
+
+/** D3 doplnění: zkrátí / prodlouží jen stěnu `w1` k hraně (líci) stěny `w2` a napojí ji (T). Jeden krok Zpět. */
+export function trimToEdge(w1: Id, keep1: Pt, w2: Id): TrimResult {
+  const floor = store.floor();
+  if (!floor) return 'same';
+  const res = trimExtendToEdge(structuredClone(floor), w1, keep1, w2);
+  if (res === 'ok' && !store.edit(f => void trimExtendToEdge(f, w1, keep1, w2))) return 'locked';
   return res;
 }

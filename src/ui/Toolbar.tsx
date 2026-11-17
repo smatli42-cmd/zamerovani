@@ -4,13 +4,13 @@
 import { store, type ToolId } from '../store/store';
 import { useStore } from '../store/useStore';
 import { tools } from '../tools/registry';
-import { TRIM_MSG_FIRST } from '../tools/trimTool';
+import { trimMsg } from '../tools/trimTool';
 import { splitMsg } from '../tools/splitTool';
 
 const TOOLS: { id: ToolId; icon: string; label: string; title: string }[] = [
   { id: 'select', icon: '👆', label: 'Vybrat', title: 'Vybrat prvek, posunout roh / otvor, ťuknutím na stěnu zadat délku' },
   { id: 'wall', icon: '✏️', label: 'Stěna', title: 'Kreslit stěny tažením pera; v menu Stěny i Čára (výstupky a vybrání stěn)' },
-  { id: 'trim', icon: '⌐', label: 'Do rohu', title: 'Zkrátit / prodloužit dvě stěny do rohu: ťukni na obě stěny na části, které mají zůstat' },
+  { id: 'trim', icon: '⌐', label: 'Do rohu', title: 'Zkrátit / prodloužit dvě stěny do rohu, nebo jednu stěnu k hraně druhé: ťukni na části, které mají zůstat' },
   { id: 'split', icon: '✂️', label: 'Rozdělit', title: 'Ťuknutím rozdělit stěnu na dvě; v režimu S mezerou dvěma ťuknutími vyjmout úsek stěny' },
   { id: 'door', icon: '🚪', label: 'Dveře', title: 'Ťuknutím na stěnu vložit dveře' },
   { id: 'window', icon: '🪟', label: 'Okno', title: 'Ťuknutím na stěnu vložit okno' },
@@ -38,7 +38,7 @@ export function Toolbar() {
           title={t.title}
           onClick={() => {
             tools[store.get().tool].cancel?.();
-            store.set({ tool: t.id, hover: null, chainNode: null, toolMsg: t.id === 'trim' ? TRIM_MSG_FIRST : t.id === 'split' ? splitMsg(store.get().settings.splitGap) : null });
+            store.set({ tool: t.id, hover: null, chainNode: null, toolMsg: t.id === 'trim' ? trimMsg(store.get().settings.trimEdge) : t.id === 'split' ? splitMsg(store.get().settings.splitGap) : null });
           }}
         >
           <span class="tool-icon">{t.icon}</span>

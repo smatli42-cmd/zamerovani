@@ -87,6 +87,8 @@ export interface Settings {
   wallChain: boolean;
   /** Nástroj Rozdělit: dvěma ťuknutími vyjme úsek stěny (D4 „s mezerou“). */
   splitGap: boolean;
+  /** Nástroj Do rohu: zkrátit / prodloužit jen první stěnu k hraně druhé (T) místo společného rohu (D3). */
+  trimEdge: boolean;
   /** Nevypínat displej, dokud je aplikace otevřená (Screen Wake Lock, input/wakeLock.ts). */
   keepAwake: boolean;
 }
@@ -134,7 +136,7 @@ export interface EditOptions {
 const SETTINGS_KEY = 'zamerovani.settings';
 
 function loadSettings(): Settings {
-  const defaults: Settings = { snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', drawColor: 'black', doubleWidth: 250, doubleEnds: 'open', doubleStyle: 'dashdot2', windowKind: 'window', wallShape: 'straight', wallAxis: 'face', wallChain: false, splitGap: false, keepAwake: true };
+  const defaults: Settings = { snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', drawColor: 'black', doubleWidth: 250, doubleEnds: 'open', doubleStyle: 'dashdot2', windowKind: 'window', wallShape: 'straight', wallAxis: 'face', wallChain: false, splitGap: false, trimEdge: false, keepAwake: true };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     return raw ? { ...defaults, ...JSON.parse(raw) } : defaults;

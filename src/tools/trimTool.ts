@@ -1,26 +1,33 @@
 /**
  * Nástroj „Do rohu“ (KATALOG-STEN.md D3): zkrátit / prodloužit dvě rovné stěny do společného rohu.
  * Ťukne se na první stěnu a pak na druhou – vždy na tu část, která má zůstat (jako Trim/Extend v Revitu).
+ * Režim „K hraně“ (`Settings.trimEdge`): upraví se jen první stěna – její konec dosedne na líc druhé a napojí se (T).
  */
 import { requestRender } from '../canvas/invalidate';
 import { toScreen } from '../canvas/view';
-import { trimCorner, type TrimResult } from '../core/trimExtend';
+import { trimCorner, trimEdgePoint, type TrimResult } from '../core/trimExtend';
 import { findWallNear } from '../core/floorQueries';
 import { findBodyAt } from '../core/wallBody';
 import type { Id, Pt } from '../model/types';
-import { trimToCorner } from '../store/actions';
+import { trimToCorner, trimToEdge } from '../store/actions';
 import { store, type Camera } from '../store/store';
 import { HIT_PX, type PointerInput, type Tool } from './types';
 
 export const TRIM_MSG_FIRST = 'Ťukni na první stěnu – na část, která má zůstat.';
 const MSG_SECOND = 'Ťukni na druhou stěnu – na část, která má zůstat.';
+const EDGE_MSG_FIRST = 'Ťukni na stěnu, kterou zkrátit / prodloužit – na část, která má zůstat.';
+const EDGE_MSG_SECOND = 'Ťukni na stěnu, ke které ji zkrátit / prodloužit (ta se nezmění).';
+/** Úvodní návod podle režimu (Do rohu / K hraně). */
+export const trimMsg = (edge: boolean) => (edge ? EDGE_MSG_FIRST : TRIM_MSG_FIRST);
+const edgeMode = () => store.get().settings.trimEdge;
 const FAIL: Record<Exclude<TrimResult, 'ok'>, string> = {
   curved: 'Oblouk ani kruh do rohu zkrátit nejde – vyber rovné stěny.',
   parallel: 'Stěny jsou rovnoběžné, roh mezi nimi nevznikne.',
   same: 'Vyber dvě různé stěny.',
   tooShort: 'Stěna by byla příliš krátká – ťukni na delší část.',
   joined: 'Stěny už jsou v rohu spojené.',
-  locked: 'Brání zamčená kóta (viz hlášení nahoře).'
+  locked: 'Brání zamčená kóta (viz hlášení nahoře).',
+  outside: 'Stěna by nedosedla na druhou stěnu (minula by její konec).'
 };
 
 let first: { wallId: Id; keep: Pt } | null = null;
@@ -38,17 +45,19 @@ export const trimTool: Tool = {
     const id = wallAt(p);
     if (!id) {
       first = null;
-      store.set({ selection: null, toolMsg: TRIM_MSG_FIRST });
+      store.set({ selection: null, toolMsg: trimMsg(edgeMode()) });
       return requestRender();
     }
     if (!first) {
       first = { wallId: id, keep: p.world };
-      store.set({ selection: { kind: 'wall', id }, numpad: null, toolMsg: MSG_SECOND });
+      store.set({ selection: { kind: 'wall', id }, numpad: null, toolMsg: edgeMode() ? EDGE_MSG_SECOND : MSG_SECOND });
       return requestRender();
     }
-    const res = trimToCorner(first.wallId, first.keep, id, p.world);
+    const edge = edgeMode();
+    const res = edge ? trimToEdge(first.wallId, first.keep, id) : trimToCorner(first.wallId, first.keep, id, p.world);
     first = null;
-    store.set({ selection: null, toolMsg: res === 'ok' ? TRIM_MSG_FIRST : `⚠️ ${FAIL[res]} ${TRIM_MSG_FIRST}` });
+    const msg = trimMsg(edge);
+    store.set({ selection: null, toolMsg: res === 'ok' ? msg : `⚠️ ${FAIL[res]} ${msg}` });
     requestRender();
   },
   hover(p) {
@@ -61,14 +70,14 @@ export const trimTool: Tool = {
   cancel() {
     first = null;
     hoverPt = null;
-    store.set({ selection: null, toolMsg: TRIM_MSG_FIRST });
+    store.set({ selection: null, toolMsg: trimMsg(edgeMode()) });
   },
-  /** Náhled: bod budoucího rohu (kroužek) a čárkované spojení k němu od místa první volby. */
+  /** Náhled: bod budoucího rohu / napojení (kroužek) a čárkované spojení k němu od místa první volby. */
   drawOverlay(ctx: CanvasRenderingContext2D, cam: Camera) {
     const floor = store.floor();
     const h = store.get().hover;
     if (!first || !floor || h?.kind !== 'wall' || h.id === first.wallId) return;
-    const x = trimCorner(floor, first.wallId, h.id);
+    const x = edgeMode() ? trimEdgePoint(floor, first.wallId, first.keep, h.id) : trimCorner(floor, first.wallId, h.id);
     if (!x) return;
     const s = toScreen(x, cam);
     ctx.save();

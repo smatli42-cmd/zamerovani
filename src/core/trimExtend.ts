@@ -13,12 +13,12 @@
  */
 import { newId } from '../model/factory';
 import type { Floor, Id, Pt, Wall } from '../model/types';
-import { add, dist, dot, scale, sub } from './geometry';
-import { isCurved, wallNodes } from './floorQueries';
+import { add, dist, dot, normal, scale, sub, unit } from './geometry';
+import { canHostOnFace, isCurved, wallFaceOffset, wallNodes } from './floorQueries';
 import { redistributeCarried } from './carried';
 
 /** 'locked' = úprava by změnila zamčenou kótu (hlídá store.edit, ne tato funkce). */
-export type TrimResult = 'ok' | 'curved' | 'parallel' | 'same' | 'tooShort' | 'joined' | 'locked';
+export type TrimResult = 'ok' | 'curved' | 'parallel' | 'same' | 'tooShort' | 'joined' | 'locked' | 'outside';
 
 const MIN_LEN = 10; // mm – kratší stěna po úpravě se nepřipustí
 
@@ -144,5 +144,91 @@ export function trimExtendToCorner(floor: Floor, w1: Id, keep1: Pt, w2: Id, keep
   // rohy, které po zkrácení nenese žádná stěna, zmizí
   const used = new Set(Object.values(floor.walls).flatMap(w => [w.a, w.b]));
   for (const id of Object.keys(floor.nodes)) if (!used.has(id)) delete floor.nodes[id];
+  return 'ok';
+}
+
+/** Kam dosedne konec stěny `w1` u hrany stěny `w2` (režim K hraně): bod, líc a ponechaný konec. */
+interface EdgePlan {
+  x: Pt;
+  face?: 1 | -1;
+  end: 'a' | 'b';
+}
+
+/** Líc stěny `w2`, ke kterému se stěna `w1` zkrátí / prodlouží (strana, na které leží její ponechaný konec). */
+function planEdge(floor: Floor, w1: Id, keep1: Pt, w2: Id): EdgePlan | Exclude<TrimResult, 'ok'> {
+  if (w1 === w2) return 'same';
+  const A = floor.walls[w1];
+  const B = floor.walls[w2];
+  if (!A || !B) return 'same';
+  if (isCurved(A) || isCurved(B)) return 'curved';
+  const nA = wallNodes(floor, A);
+  const nB = wallNodes(floor, B);
+  if (!nA || !nB || dist(nB[0], nB[1]) < 1) return 'same';
+  const dA = sub(nA[1], nA[0]);
+  const dB = sub(nB[1], nB[0]);
+  const x0 = intersect(nA[0], dA, nB[0], dB);
+  if (!x0) return 'parallel';
+  // ponechaný konec podle průsečíku s čárou stěny B (strana B, na které zůstane)
+  const pl0 = planEnd(A, nA[0], nA[1], x0, keep1);
+  const fixed = pl0 ? (pl0.end === 'a' ? nA[1] : nA[0]) : dist(nA[0], x0) < 1 ? nA[1] : nA[0];
+  const nrm = normal(unit(nB[0], nB[1]));
+  const at = dot(sub(fixed, nB[0]), nrm);
+  // líc B: u stěny s tloušťkou ten, na jehož straně leží ponechaný konec; jinak čára stěny
+  let face: 1 | -1 | undefined;
+  let off = 0;
+  // strana B, na které zůstane ponechaný konec (u stěny s tloušťkou podle středu těla)
+  let s: 1 | -1 = at >= 0 ? 1 : -1;
+  if (canHostOnFace(B)) {
+    const r0 = wallFaceOffset(B, -1);
+    const r1 = wallFaceOffset(B, 1);
+    s = at > (r0 + r1) / 2 ? 1 : -1;
+    off = wallFaceOffset(B, s);
+    if (Math.abs(off) > 0.5) face = s;
+    else off = 0;
+  }
+  // bod napojení se nezaokrouhluje – leží přesně na líci (syncHosted ho nemusí dorovnávat)
+  const x = intersect(nA[0], dA, add(nB[0], scale(nrm, off)), dB)!;
+  // konec musí dosednout na stěnu B (ne za její konec)
+  const lenB = Math.sqrt(dot(dB, dB));
+  const tB = dot(sub(x, nB[0]), dB) / lenB;
+  if (tB < 5 || tB > lenB - 5) return 'outside';
+  // ponechaný konec leží za lícem (ne v těle B) a stěna nebude kratší než MIN_LEN
+  if ((at - off) * s < MIN_LEN || dist(fixed, x) < MIN_LEN) return 'tooShort';
+  const end: 'a' | 'b' = fixed === nA[0] ? 'b' : 'a';
+  return { x, face, end };
+}
+
+/** Bod, do kterého dosedne konec stěny `w1` u hrany stěny `w2` (náhled nástroje); null = nejde. */
+export function trimEdgePoint(floor: Floor, w1: Id, keep1: Pt, w2: Id): Pt | null {
+  const pl = planEdge(floor, w1, keep1, w2);
+  return typeof pl === 'string' ? null : pl.x;
+}
+
+/**
+ * Zkrátí / prodlouží jen stěnu `w1` k hraně stěny `w2` (D3 „jeden prvek“, T místo L). `keep1` = místo ťuknutí
+ * (část, která zůstane). Konec dosedne na bližší líc `w2` (strana ponechané části; u stěny bez tloušťky na její čáru)
+ * a napojí se na ni (`Node.host` / `hostFace`), stěna `w2` se nemění. Prvky nesené stěnou podle F4.
+ * Mění `floor` jen při výsledku 'ok'.
+ */
+export function trimExtendToEdge(floor: Floor, w1: Id, keep1: Pt, w2: Id): TrimResult {
+  const pl = planEdge(floor, w1, keep1, w2);
+  if (typeof pl === 'string') return pl;
+  const w = floor.walls[w1]!;
+  const [a0, b0] = wallNodes(floor, w)!;
+  const cur = floor.nodes[w[pl.end]]!;
+  if (dist(cur, pl.x) < 1 && cur.host === w2 && cur.hostFace === pl.face) return 'joined';
+  const oldA = { x: a0.x, y: a0.y };
+  const oldLen = dist(a0, b0);
+  const dir = scale(sub(b0, a0), 1 / oldLen);
+  const id = newId('n');
+  floor.nodes[id] = { id, x: pl.x.x, y: pl.x.y, host: w2, ...(pl.face ? { hostFace: pl.face } : {}) };
+  w[pl.end] = id;
+  if (pl.end === 'a') delete w.noJoinA;
+  else delete w.noJoinB;
+  const [a1, b1] = wallNodes(floor, w)!;
+  const shift = dot(sub(a1, oldA), dir);
+  redistributeCarried(floor, w.id, oldLen, [{ wallId: w.id, from: shift, to: shift + dist(a1, b1) }], p => dot(sub(p, oldA), dir));
+  const used = new Set(Object.values(floor.walls).flatMap(x => [x.a, x.b]));
+  for (const nid of Object.keys(floor.nodes)) if (!used.has(nid)) delete floor.nodes[nid];
   return 'ok';
 }
