@@ -5,6 +5,7 @@ import { hostedChain } from '../core/hosting';
 import { evaluateExpression } from '../core/geometry';
 import { nextWallInChain, openingsOnWall, wallsAtNode } from '../core/floorQueries';
 import { componentGap } from '../core/components';
+import { endDims } from '../core/endProtrusion';
 import type { Id } from '../model/types';
 import { applyNumpadValue, numpadInitialValue, toggleDimLock } from './actions';
 import { isDimLocked } from '../core/dimLock';
@@ -33,7 +34,7 @@ export function openTarget(target: NumPadTarget): void {
   }
   const v = numpadInitialValue(floor, target);
   const selection =
-    target.kind === 'protrusion-dim' || target.kind === 'protrusion-sagitta'
+    target.kind === 'protrusion-dim' || target.kind === 'protrusion-sagitta' || target.kind === 'corner-dim' || target.kind === 'end-dim'
       ? ({ kind: 'protrusion', id: target.protrusionId } as const)
       : target.kind === 'junction-gap' ||
           target.kind === 'wall-length' || target.kind === 'wall-sagitta' || target.kind === 'circle-diameter' || target.kind === 'wall-thickness' || target.kind === 'wall-face-length' || target.kind === 'comp-gap'
@@ -198,6 +199,15 @@ function commitAndNext(): void {
   }
 
   if (t.kind === 'protrusion-sagitta') return store.set({ numpad: null });
+
+  // Výstupek v rohu: podél 1. stěny → podél 2. stěny; na konci stěny: podél líce → přesah → podél protějšího → hloubky
+  if (t.kind === 'corner-dim') return t.dim === 'a' ? openTarget({ ...t, dim: 'b' }) : store.set({ numpad: null });
+  if (t.kind === 'end-dim') {
+    const ep = floor.endProtrusions?.[t.protrusionId];
+    const order = (['along0', 'over', 'along1', 'depth0', 'depth1'] as const).filter(d => ep && endDims(ep)[d] > 0);
+    const next = order[order.indexOf(t.dim) + 1];
+    return next ? openTarget({ ...t, dim: next }) : store.set({ numpad: null });
+  }
 
   // Poloha napojení: další úsek řetězu (poslední k rohu B), pak konec
   if (t.kind === 'junction-gap') {

@@ -5,8 +5,10 @@ import { protrusionDims } from '../../core/protrusionEdit';
 import { protrusionCornerWarning } from '../../core/cornerOverlap';
 import type { CornerProtrusion, EndProtrusion, Floor, Protrusion } from '../../model/types';
 import { cornerDims } from '../../core/cornerProtrusion';
+import { endDims, type EndDim } from '../../core/endProtrusion';
+import { END_DIM_LABEL } from '../../core/dimLock';
 import { useState } from 'preact/hooks';
-import { applyNumpadValue, copyProtrusionRow, deleteSelection, setCornerProtrusionDim, updateProtrusion } from '../../store/actions';
+import { applyNumpadValue, copyProtrusionRow, deleteSelection, updateProtrusion } from '../../store/actions';
 import { close } from './common';
 import { NumField, Panel, Seg, TextField } from './fields';
 
@@ -78,10 +80,10 @@ export function CornerProtrusionPanel({ cp }: { cp: CornerProtrusion }) {
   const d = cornerDims(cp);
   return (
     <Panel title="Výstupek v rohu" onClose={close}>
-      <p class="muted small">Drží se rohu dvou stěn – při posunu stěn zůstane na jejich lících se stejnými rozměry.</p>
+      <p class="muted small">Drží se rohu dvou stěn – při posunu stěn zůstane na jejich lících se stejnými rozměry. Rozměry jdou zadat i ťuknutím na kóty.</p>
       <div class="field-grid">
-        <NumField label="Podél 1. stěny" value={Math.round(d.a)} min={10} onCommit={v => v !== null && setCornerProtrusionDim(cp.id, 'a', v)} />
-        <NumField label="Podél 2. stěny" value={Math.round(d.b)} min={10} onCommit={v => v !== null && setCornerProtrusionDim(cp.id, 'b', v)} />
+        <NumField label="Podél 1. stěny" value={Math.round(d.a)} min={10} onCommit={v => v !== null && applyNumpadValue({ kind: 'corner-dim', protrusionId: cp.id, dim: 'a' }, v)} />
+        <NumField label="Podél 2. stěny" value={Math.round(d.b)} min={10} onCommit={v => v !== null && applyNumpadValue({ kind: 'corner-dim', protrusionId: cp.id, dim: 'b' }, v)} />
         <NumField label="Výška" value={cp.height ?? null} allowEmpty onCommit={v => updateProtrusion(cp.id, { height: v ?? undefined })} />
       </div>
       <TextField label="Název" value={cp.name} placeholder="např. sloupek, šachta" presets={['sloupek', 'šachta', 'pilíř']} onCommit={v => updateProtrusion(cp.id, { name: v })} />
@@ -94,12 +96,17 @@ export function CornerProtrusionPanel({ cp }: { cp: CornerProtrusion }) {
   );
 }
 
-/** Panel výstupku na konci stěny (I1.11): výška, název, materiál, poznámka. */
+/** Panel výstupku na konci stěny (I1.11): rozměry, výška, název, materiál, poznámka. */
 export function EndProtrusionPanel({ ep }: { ep: EndProtrusion }) {
+  const d = endDims(ep);
+  const dims = (Object.keys(END_DIM_LABEL) as EndDim[]).filter(k => d[k] > 0);
   return (
     <Panel title="Výstupek na konci stěny" onClose={close}>
-      <p class="muted small">Obtáčí čelo volného konce stěny a drží se ho. Tvar se mění nakreslením znovu.</p>
+      <p class="muted small">Obtáčí čelo volného konce stěny a drží se ho. Rozměry jdou zadat i ťuknutím na kóty.</p>
       <div class="field-grid">
+        {dims.map(k => (
+          <NumField key={k} label={END_DIM_LABEL[k][0]!.toUpperCase() + END_DIM_LABEL[k].slice(1)} value={Math.round(d[k])} min={k === 'over' ? 1 : 10} onCommit={v => v !== null && applyNumpadValue({ kind: 'end-dim', protrusionId: ep.id, dim: k }, v)} />
+        ))}
         <NumField label="Výška" value={ep.height ?? null} allowEmpty onCommit={v => updateProtrusion(ep.id, { height: v ?? undefined })} />
       </div>
       <TextField label="Název" value={ep.name} placeholder="např. přizdívka, pilíř" presets={['přizdívka', 'pilíř', 'obklad']} onCommit={v => updateProtrusion(ep.id, { name: v })} />

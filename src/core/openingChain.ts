@@ -18,7 +18,8 @@ import { setWallLength } from './solver';
 import { dot, sub, unit } from './geometry';
 import { protrusionExtent } from './protrusion';
 import { cornerOverhang } from './cornerProtrusion';
-import { endClash, endOverhang } from './endProtrusion';
+import { endOverhang } from './endProtrusion';
+import { wallOverlap } from './wallSpans';
 import { hostedChain, shiftHosted } from './hosting';
 
 const locked = (floor: Floor, key: string) => !!floor.dimLocks?.[key];
@@ -254,7 +255,8 @@ export function keepOpeningsOnResizedWalls(before: Floor, floor: Floor): true | 
     if (cornerOverhang(floor, w1.id) > cornerOverhang(before, w0.id) + 0.5) return 'misfit';
     // výstupek na konci stěny jede s koncem; nesmí sahat za druhý konec
     if (endOverhang(floor, w1.id) > endOverhang(before, w0.id) + 0.5) return 'misfit';
-    if (endClash(floor, w1.id) > endClash(before, w0.id) + 0.5) return 'misfit';
+    // výstupky na stěně, na konci a v rohu se nesmí překrýt víc než předtím (core/wallSpans.ts)
+    if (wallOverlap(floor, w1.id) > wallOverlap(before, w0.id) + 0.5) return 'misfit';
     // stěna nese otvory, výstupky nebo napojené příčky (prvky „hostované“ stěnou)
     const hosts = Object.values(before.openings).some(o => o.wallId === w0.id) || Object.values(before.protrusions ?? {}).some(p => p.wallId === w0.id) || hostedChain(before, w0.id).length > 0;
     if (!hosts) continue;

@@ -3,11 +3,13 @@
  * Čára = stěna bez tloušťky; lomená čára z čar, jejíž oba konce leží na stejném líci téže stěny,
  * se po dokončení sama změní na výstupek nebo vybrání.
  */
+import { current, isDraft } from 'immer';
 import { newId } from '../../model/factory';
 import type { CornerProtrusion, EndProtrusion, Floor, Id, Protrusion, Pt, Wall } from '../../model/types';
-import { endFromPolyline } from '../../core/endProtrusion';
+import { endFromPolyline, endOverhang, setEndDim, type EndDim } from '../../core/endProtrusion';
+import { wallOverlap } from '../../core/wallSpans';
 import { findFaceNear, profileFromLoop, profileFromPolyline } from '../../core/protrusion';
-import { cornerFromPolyline, setCornerDim } from '../../core/cornerProtrusion';
+import { cornerFromPolyline, cornerOverhang, setCornerDim } from '../../core/cornerProtrusion';
 import { protrusionFits, setProtrusionDim, setProtrusionSagitta, type ProtrusionDim } from '../../core/protrusionEdit';
 import { store } from '../store';
 import { cleanup } from './shared';
@@ -204,7 +206,46 @@ export function updateProtrusion(id: Id, patch: Partial<Pick<Protrusion, 'height
 
 /** Rozměr výstupku přes roh podél líce první (`a`) / druhé (`b`) stěny (panel). */
 export function setCornerProtrusionDim(id: Id, dim: 'a' | 'b', value: number): void {
-  store.edit(floor => setCornerDim(floor, id, dim, value));
+  store.edit(floor => (applyCornerDim(floor, id, dim, value) ? undefined : false));
+}
+
+/** Kopie výkresu i uvnitř `store.edit` (koncept immeru se strukturovaně kopírovat nedá). */
+const snapshot = (floor: Floor): Floor => (isDraft(floor) ? current(floor) : structuredClone(floor));
+
+/**
+ * Výstupky na stěnách `wallIds` po změně rozměru výstupku v rohu / na konci: nepřečnívají za konec stěny a nenajedou
+ * na jiný výstupek (výstupky na stěně, na konci stěny, v rohu). `before` = stav před změnou (horší být nesmí).
+ */
+function carriedStillFit(floor: Floor, before: Floor, wallIds: Id[]): boolean {
+  for (const wid of wallIds) {
+    if (cornerOverhang(floor, wid) > cornerOverhang(before, wid) + 0.5) return false;
+    if (endOverhang(floor, wid) > endOverhang(before, wid) + 0.5) return false;
+    // překryv výstupků na stěně, na konci a v rohu – jediné místo pravidla: core/wallSpans.ts
+    if (wallOverlap(floor, wid) > wallOverlap(before, wid) + 0.5) return false;
+  }
+  return true;
+}
+
+/** Kóta výstupku v rohu (podél 1. / 2. stěny); změna, po které by nesené prvky nepasovaly, se neprovede. */
+export function applyCornerDim(floor: Floor, id: Id, dim: 'a' | 'b', value: number): boolean {
+  const cp = floor.cornerProtrusions?.[id];
+  if (!cp) return false;
+  const before = snapshot(floor);
+  if (!setCornerDim(floor, id, dim, value)) return false;
+  if (carriedStillFit(floor, before, cp.walls)) return true;
+  cp.pts = before.cornerProtrusions![id]!.pts;
+  return false;
+}
+
+/** Kóta výstupku na konci stěny; změna, po které by nesené prvky nepasovaly, se neprovede. */
+export function applyEndDim(floor: Floor, id: Id, dim: EndDim, value: number): boolean {
+  const ep = floor.endProtrusions?.[id];
+  if (!ep) return false;
+  const before = snapshot(floor);
+  if (!setEndDim(floor, id, dim, value)) return false;
+  if (carriedStillFit(floor, before, [ep.wallId])) return true;
+  ep.pts = before.endProtrusions![id]!.pts;
+  return false;
 }
 
 /** Kóta výstupku z NumPadu (mění jen výstupek, ne stěnu). */

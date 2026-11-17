@@ -15,7 +15,7 @@ import { faceLength } from '../../core/wallBody';
 import { hasBody } from '../../core/wallFace';
 import { setHostedGap } from '../../core/hosting';
 import { defaultArcSign, setProtrusionSagitta } from '../../core/protrusionEdit';
-import { applyProtrusionDim } from './protrusions';
+import { applyCornerDim, applyEndDim, applyProtrusionDim } from './protrusions';
 
 /**
  * Míra líce u stěny s osou uprostřed (2b): délka osy se upraví tak, aby měl líc zadanou délku
@@ -163,6 +163,10 @@ export function applyNumpadValue(t: NumPadTarget, value: number, overrideLock = 
       ok = setProtrusionSagitta(floor, t.protrusionId, t.seg, (Math.sign(cur) || defaultArcSign(floor, t.protrusionId, t.seg)) * value);
     } else if (t.kind === 'protrusion-dim') {
       ok = applyProtrusionDim(floor, t.protrusionId, t.dim, value);
+    } else if (t.kind === 'corner-dim') {
+      ok = applyCornerDim(floor, t.protrusionId, t.dim, value);
+    } else if (t.kind === 'end-dim') {
+      ok = applyEndDim(floor, t.protrusionId, t.dim, value);
     } else if (t.kind === 'comp-gap') {
       ok = setComponentGap(floor, t.wallId, t.side, value);
     }

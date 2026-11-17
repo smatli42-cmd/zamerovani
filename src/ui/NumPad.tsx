@@ -5,7 +5,7 @@ import { wallNodes } from '../core/floorQueries';
 import { OPENING_DEFAULTS } from '../model/factory';
 import type { Floor } from '../model/types';
 import { numpadValue, pressKey, setMoveTarget, toggleCurrentLock, type NumKey } from '../store/numpadController';
-import { isDimLocked } from '../core/dimLock';
+import { END_DIM_LABEL, isDimLocked } from '../core/dimLock';
 import { store, type NumPadTarget } from '../store/store';
 import { useStore } from '../store/useStore';
 
@@ -18,6 +18,8 @@ function title(floor: Floor | null, t: NumPadTarget): string {
   if (t.kind === 'wall-face-length') return 'Délka stěny po líci';
   if (t.kind === 'junction-gap') return t.to === 'prev' ? 'Poloha napojení – od předchozího' : 'Poloha napojení – k rohu B';
   if (t.kind === 'protrusion-sagitta') return 'Výstupek – vzepětí oblouku';
+  if (t.kind === 'corner-dim') return `Výstupek v rohu – podél ${t.dim === 'a' ? '1.' : '2.'} stěny`;
+  if (t.kind === 'end-dim') return `Výstupek na konci stěny – ${END_DIM_LABEL[t.dim]}`;
   if (t.kind === 'protrusion-dim') {
     const p = floor?.protrusions?.[t.protrusionId];
     const name = p?.mode === 'subtract' ? 'Vybrání' : 'Výstupek';

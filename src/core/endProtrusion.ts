@@ -8,7 +8,7 @@
  */
 import type { EndProtrusion, EndPt, Floor, Id, Pt, Wall } from '../model/types';
 import { add, dist, dot, normal, scale, sub, unit } from './geometry';
-import { faceOffset, findFaceNear, protrusionExtent, protrusionsOf, wallFrame } from './protrusion';
+import { faceOffset, findFaceNear, wallFrame } from './protrusion';
 import { hasBody } from './wallFace';
 import { findBodyAt } from './wallBody';
 
@@ -117,19 +117,39 @@ export function endSpan(floor: Floor, ep: EndProtrusion): [number, number] | nul
   return ep.end === 'a' ? [0, r] : [fr.len - r, fr.len];
 }
 
+
+/** Kóty výstupku na konci: podél líce 0 / 1 (od čela dovnitř), přesah za čelo, hloubka od líce 0 / 1. */
+export type EndDim = 'along0' | 'along1' | 'over' | 'depth0' | 'depth1';
+
+/** Hodnoty kót výstupku na konci stěny (rozměry obrysu v souřadnicích konce; 0 = kóta není). */
+export function endDims(ep: EndProtrusion): Record<EndDim, number> {
+  const depth = (fi: 0 | 1) => Math.max(0, ...ep.pts.filter(q => q.f === fi).map(q => q.v));
+  return {
+    along0: Math.max(0, ep.pts[0]!.s),
+    along1: Math.max(0, ep.pts[ep.pts.length - 1]!.s),
+    over: Math.max(0, ...ep.pts.map(q => -q.s)),
+    depth0: depth(0),
+    depth1: depth(1)
+  };
+}
+
 /**
- * Jak moc se výstupky na koncích stěny `wallId` překrývají mezi sebou a s výstupky na stěně (součet mm) – pro změnu
- * délky kótou (výstupek na konci jede s koncem a nesmí najet na jiný). Otvory se nepočítají (I1.14).
+ * Změní kótu výstupku na konci (mění se jen výstupek): body na dané straně rozměru se zvětší v poměru – podél líce
+ * kladné `s` bodů toho líce, přesah záporné `s` všech bodů, hloubka kladné `v` bodů toho líce. false = nesmyslná hodnota.
  */
-export function endClash(floor: Floor, wallId: Id): number {
-  const ends = endProtrusionsOf(floor).filter(ep => ep.wallId === wallId);
-  const spans = ends.map(ep => endSpan(floor, ep)).filter((s): s is [number, number] => !!s);
-  const others = protrusionsOf(floor).filter(p => p.wallId === wallId).map(p => protrusionExtent(p)).map(e => [e.u0, e.u1] as [number, number]);
-  const ov = (x: [number, number], y: [number, number]) => Math.max(0, Math.min(x[1], y[1]) - Math.max(x[0], y[0]));
-  let sum = 0;
-  spans.forEach((s, i) => {
-    for (let j = i + 1; j < spans.length; j++) sum += ov(s, spans[j]!);
-    for (const o of others) sum += ov(s, o);
+export function setEndDim(floor: Floor, id: Id, dim: EndDim, value: number): boolean {
+  const ep = floor.endProtrusions?.[id];
+  if (!ep || !Number.isFinite(value) || value < (dim === 'over' ? 1 : 10)) return false;
+  const cur = endDims(ep)[dim];
+  if (cur < 1e-6) return false;
+  const k = value / cur;
+  const r1 = (x: number) => Math.round(x * 10) / 10;
+  const fi = dim.endsWith('0') ? 0 : 1;
+  ep.pts = ep.pts.map(q => {
+    if (dim === 'over') return q.s < 0 ? { ...q, s: r1(q.s * k) } : q;
+    if (q.f !== fi) return q;
+    if (dim === 'along0' || dim === 'along1') return q.s > 0 ? { ...q, s: r1(q.s * k) } : q;
+    return q.v > 0 ? { ...q, v: r1(q.v * k) } : q;
   });
-  return sum;
+  return true;
 }

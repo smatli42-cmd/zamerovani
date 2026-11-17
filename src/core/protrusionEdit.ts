@@ -6,8 +6,7 @@
 import type { Floor, Id, ProfilePt, Protrusion, Pt } from '../model/types';
 import { add, dist, dot, normal, scale, sub, unit } from './geometry';
 import { cornersOf, faceOffset, protrusionExtent, protrusionsOf, r1, wallFrame } from './protrusion';
-import { endProtrusionsOf, endSpan } from './endProtrusion';
-import { cornerFaceCover, cornerProtrusionsOf } from './cornerProtrusion';
+import { wallOverlap } from './wallSpans';
 
 /** Úchyty vzepětí: vrchol (střed) každého úseku obrysu, který neleží na líci; `seg` = index úseku. */
 export function protrusionArcHandles(floor: Floor, p: Protrusion): { seg: number; at: Pt; chordMid: Pt }[] {
@@ -150,24 +149,8 @@ export function protrusionFits(floor: Floor, p: Protrusion): boolean {
   const f = w && wallFrame(floor, w);
   if (!w || !f) return false;
   const ext = protrusionExtent(p);
-  const overlaps = protrusionsOf(floor).some(o => {
-    if (o.id === p.id || o.wallId !== p.wallId || o.side !== p.side) return false;
-    const e = protrusionExtent(o);
-    return e.u0 < ext.u1 - 0.5 && e.u1 > ext.u0 + 0.5;
-  });
-  // výstupek na konci stěny (oba líce) a výstupek v rohu (svůj líc) – obsazené úseky stěny
-  const taken: [number, number][] = [];
-  for (const ep of endProtrusionsOf(floor)) {
-    const s = ep.wallId === p.wallId ? endSpan(floor, ep) : null;
-    if (s) taken.push(s);
-  }
-  for (const cp of cornerProtrusionsOf(floor)) {
-    const i = cp.walls.indexOf(p.wallId);
-    const cover = i >= 0 && cp.sides[i] === p.side ? cornerFaceCover(floor, cp, i as 0 | 1) : null;
-    if (cover) taken.push([Math.min(...cover.map(q => f.project(q).u)), Math.max(...cover.map(q => f.project(q).u))]);
-  }
-  const blocked = taken.some(([a, b]) => a < ext.u1 - 0.5 && b > ext.u0 + 0.5);
-  if (overlaps || blocked || ext.u0 < -0.5 || ext.u1 > f.len + 0.5) return false;
+  // překryv s jiným výstupkem (na stěně, na konci stěny, v rohu) – jediné místo pravidla: core/wallSpans.ts
+  if (wallOverlap(floor, p.wallId, p.id) > 0 || ext.u0 < -0.5 || ext.u1 > f.len + 0.5) return false;
   return !(p.mode === 'subtract' && ext.depth > w.thickness + 0.5);
 }
 

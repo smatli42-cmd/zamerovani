@@ -21,6 +21,17 @@ import { faceLength } from './wallBody';
 import { hasBody } from './wallFace';
 import { hostedChain } from './hosting';
 import { protrusionDims, protrusionNeighbors } from './protrusionEdit';
+import { cornerDims } from './cornerProtrusion';
+import { endDims, type EndDim } from './endProtrusion';
+
+/** Názvy kót výstupku na konci stěny (NumPad, hlášení zámku). */
+export const END_DIM_LABEL: Record<EndDim, string> = {
+  along0: 'podél líce',
+  along1: 'podél protějšího líce',
+  over: 'přesah za čelo',
+  depth0: 'hloubka od líce',
+  depth1: 'hloubka od protějšího líce'
+};
 
 /** Kóta (to, co se zadává v NumPadu). */
 export type DimTarget =
@@ -46,7 +57,11 @@ export type DimTarget =
   /** Poloha napojení na průběžné stěně: od předchozího napojení / rohu A ('prev') nebo k rohu B ('next'). */
   | { kind: 'junction-gap'; wallId: Id; nodeId: Id; to: 'prev' | 'next' }
   /** Vzepětí oblouku v obrysu výstupku (úsek `seg`). */
-  | { kind: 'protrusion-sagitta'; protrusionId: Id; seg: number };
+  | { kind: 'protrusion-sagitta'; protrusionId: Id; seg: number }
+  /** Kóta výstupku v rohu: podél líce 1. stěny ('a') / 2. stěny ('b') od rohu. */
+  | { kind: 'corner-dim'; protrusionId: Id; dim: 'a' | 'b' }
+  /** Kóta výstupku na konci stěny: podél líců, přesah za čelo, hloubka od líců. */
+  | { kind: 'end-dim'; protrusionId: Id; dim: EndDim };
 
 /** Jednoznačný klíč kóty (u délky stěny nezáleží na tom, který roh se posouvá). */
 export function dimKey(t: DimTarget): string {
@@ -69,6 +84,8 @@ export function dimKey(t: DimTarget): string {
     case 'opening-reveal':
       return `${t.kind}:${t.openingId}:${t.part}`;
     case 'protrusion-dim':
+    case 'corner-dim':
+    case 'end-dim':
       return `${t.kind}:${t.protrusionId}:${t.dim}`;
     case 'protrusion-sagitta':
       return `${t.kind}:${t.protrusionId}:${t.seg}`;
@@ -89,6 +106,10 @@ function ownersExist(floor: Floor, t: DimTarget): boolean {
     case 'protrusion-dim':
     case 'protrusion-sagitta':
       return !!floor.protrusions?.[t.protrusionId];
+    case 'corner-dim':
+      return !!floor.cornerProtrusions?.[t.protrusionId];
+    case 'end-dim':
+      return !!floor.endProtrusions?.[t.protrusionId];
     case 'junction-gap':
       return !!floor.walls[t.wallId] && !!floor.nodes[t.nodeId];
     default:
@@ -147,6 +168,14 @@ export function dimValue(floor: Floor, t: DimTarget): number | null {
     case 'protrusion-sagitta': {
       const pt = floor.protrusions?.[t.protrusionId]?.pts[t.seg];
       return pt ? Math.abs(pt.s ?? 0) : null;
+    }
+    case 'corner-dim': {
+      const cp = floor.cornerProtrusions?.[t.protrusionId];
+      return cp ? cornerDims(cp)[t.dim] : null;
+    }
+    case 'end-dim': {
+      const ep = floor.endProtrusions?.[t.protrusionId];
+      return ep ? endDims(ep)[t.dim] : null;
     }
     case 'junction-gap': {
       const w = floor.walls[t.wallId];
@@ -271,6 +300,10 @@ export function describeDim(floor: Floor, t: DimTarget): string {
         return t.dim === 'width' ? 'šířka výstupku' : t.dim === 'depth' ? 'hloubka výstupku' : 'odstup výstupku';
       case 'protrusion-sagitta':
         return 'vzepětí výstupku';
+      case 'corner-dim':
+        return `výstupek v rohu podél ${t.dim === 'a' ? '1.' : '2.'} stěny`;
+      case 'end-dim':
+        return `výstupek na konci – ${END_DIM_LABEL[t.dim]}`;
       case 'junction-gap':
         return 'poloha napojení';
     }
