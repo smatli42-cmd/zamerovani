@@ -2,8 +2,8 @@
  * Panel kresby (samostatná čára, obdélník, kruh, oblouk, dvojitá čára): styl a barva čáry, šrafa u uzavřeného
  * tvaru (pravidlo canHatch v core/drawing.ts), rozměry podle tvaru.
  */
-import { rectSize } from '../../core/drawing';
-import type { Drawing } from '../../model/types';
+import { canHatch, DRAW_COLOR_LABELS, HATCH_LABELS, rectSize } from '../../core/drawing';
+import type { Drawing, HatchKind } from '../../model/types';
 import { deleteSelection, duplicateSelection, flipDrawingSide, setDrawingBulge, setDrawingRadius, setDrawingRect, setDrawingWidth, updateDrawing } from '../../store/actions';
 import { close, DRAW_LINE_STYLES } from './common';
 import { NumField, Panel, Seg } from './fields';
@@ -16,8 +16,11 @@ const TITLES: Record<Drawing['shape'], string> = {
   double: 'Dvojitá čára'
 };
 
+const NO_HATCH = 'none' as const;
+
 export function DrawingPanel({ d }: { d: Drawing }) {
   const size = rectSize(d);
+  const hatchOk = canHatch(d);
   return (
     <Panel title={TITLES[d.shape]} onClose={close}>
       <p class="muted small">Kresba – jen čáry, nikdy stěna ani výstupek.</p>
@@ -67,10 +70,34 @@ export function DrawingPanel({ d }: { d: Drawing }) {
           />
         </div>
       )}
-      <div class="field field-inline">
+      <div class="field">
         <span>Styl čáry</span>
         <Seg options={DRAW_LINE_STYLES} value={d.style ?? 'solid'} onChange={v => updateDrawing(d.id, { style: v })} />
       </div>
+      <div class="field">
+        <span>Barva čáry</span>
+        <Seg options={DRAW_COLOR_LABELS} value={d.color ?? 'black'} onChange={v => updateDrawing(d.id, { color: v })} />
+      </div>
+      {hatchOk ? (
+        <>
+          <div class="field">
+            <span>Šrafa</span>
+            <Seg<HatchKind | typeof NO_HATCH>
+              options={[{ v: NO_HATCH, label: 'Žádná' }, ...HATCH_LABELS]}
+              value={d.hatch ?? NO_HATCH}
+              onChange={v => updateDrawing(d.id, { hatch: v === NO_HATCH ? null : v })}
+            />
+          </div>
+          {d.hatch && (
+            <div class="field">
+              <span>Barva šrafy</span>
+              <Seg options={DRAW_COLOR_LABELS} value={d.hatchColor ?? d.color ?? 'black'} onChange={v => updateDrawing(d.id, { hatchColor: v })} />
+            </div>
+          )}
+        </>
+      ) : (
+        <p class="muted small">Šrafu jde zapnout jen u uzavřeného tvaru.</p>
+      )}
       <div class="panel-actions">
         <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
         <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>

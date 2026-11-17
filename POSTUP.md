@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-17 (4) – krok 3: šrafy uzavřených tvarů a barvy kresby
+- **Co se změnilo:** V panelu kresby **Šrafa**: Žádná (výchozí) / Šikmá / Křížová / Tečky / Plná a **Barva šrafy**; **Barva čáry** u každé kresby a v liště nástrojů kresby (černá, šedá, červená, modrá, zelená). Šrafa jde zapnout jen u uzavřeného tvaru (obdélník, kruh, uzavřená čára, dvojitá čára s uzavřenými konci – pravidlo `canHatch` v `core/drawing.ts`); otevřením tvaru šrafa zmizí. Šrafa se kreslí po stěnách a otvorech, tedy **nad šedou výplní** (`canvas/drawDrawings.ts`). Export zatím není – šrafa je uložená jako údaj tvaru (`hatch`, `hatchColor`), názvy hladin pro budoucí DXF/PDF `DRAWING_LAYER` / `HATCH_LAYER`. Testy `store/drawings.test.ts`.
+- **Viditelně v aplikaci:** vybraný obdélník / kruh / uzavřená čára / dvojitá čára s uzavřenými konci má v panelu Šrafu a barvy; u otevřené čáry a oblouku věta „Šrafu jde zapnout jen u uzavřeného tvaru“.
+- **Rozhodnuto uživatelem:** šrafy šikmá, křížová, tečky + plná výplň (bez vlnovky), bez úhlu a rozteče, výběr základních barev u šraf i tvarů.
+- **Rozhodnuto samostatně:** sada 5 barev (černá, šedá, červená, modrá, zelená); šrafa má stejnou hustotu na obrazovce při každém přiblížení (rozteč 10 px) – v exportu se rozteč určí až s exportem; barva šrafy výchozí = barva čáry.
+- **Otevřené:** export DXF/PDF (až vznikne export).
+
 ### 2026-11-17 (3) – krok 2: samostatná Čára; Obdélník, Kruh, Oblouk jsou kresba
 - **Co se změnilo:** Nový nástroj ╱ **Čára** v liště (vedle Dvojité, Obdélníku…) – lomená čára jako kresba (`Drawing.shape = 'line'`): další úsek navazuje na volný konec, úsek zpět do počátku čáru uzavře; oblouky úchytem uprostřed úseku. Obdélník, Kruh a Oblouk kreslí kresbu místo stěn (rozhodnutí uživatele) – nikdy stěna ani výstupek, stěnu nedělí, nenapojují se. Migrace 17 → 18 (`persistence/migrateDrawings.ts`) převede staré obdélníky, kruhy a volné oblouky tloušťky 0 na kresbu. Katalog I1.2, I1.10, př. 12 a 14 a `CLAUDE.md` upraveny podle rozhodnutí uživatele. Dva testy migrace přepsané na nové zadání (tvary → kresba). Testy `store/drawings.test.ts`.
 - **Viditelně v aplikaci:** samostatná Čára a tvary se přichytí ke stěnám a bodům, ale zůstanou čárami (ani na líci stěny nevznikne výstupek, nic se nevyplní šedou). Vybraná kresba má úchyty: vrcholy (u obdélníku zůstane obdélníkem), oblouky, poloměr kruhu. Panel kresby: rozměry (obdélník šířka × výška, průměr, vzepětí), styl čáry, uzavřít / otevřít lomenou čáru.

@@ -7,6 +7,7 @@ import { store } from '../store/store';
 import { useStore } from '../store/useStore';
 import { NumField, Seg } from './panels/fields';
 import { DRAW_LINE_STYLES } from './panels/common';
+import { DRAW_COLOR_LABELS } from '../core/drawing';
 import { TRIM_MSG_FIRST } from '../tools/trimTool';
 import { tools } from '../tools/registry';
 import { splitMsg, splitTool } from '../tools/splitTool';
@@ -127,6 +128,8 @@ export function ToolOptions() {
       <div class="tool-options">
         <span class="muted small">Styl čáry</span>
         <Seg options={DRAW_LINE_STYLES} value={settings.shapeStyle} onChange={v => store.updateSettings({ shapeStyle: v })} />
+        <span class="muted small">Barva</span>
+        <Seg options={DRAW_COLOR_LABELS} value={settings.drawColor} onChange={v => store.updateSettings({ drawColor: v })} />
       </div>
     );
   }
@@ -152,6 +155,8 @@ export function ToolOptions() {
         />
         <span class="muted small">Styl</span>
         <Seg options={DRAW_LINE_STYLES} value={settings.doubleStyle} onChange={v => store.updateSettings({ doubleStyle: v })} />
+        <span class="muted small">Barva</span>
+        <Seg options={DRAW_COLOR_LABELS} value={settings.drawColor} onChange={v => store.updateSettings({ drawColor: v })} />
       </div>
     );
   }

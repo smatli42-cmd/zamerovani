@@ -12,7 +12,7 @@ import { createWall } from '../model/factory';
 import { pickAny } from '../tools/pick';
 import { selectTool } from '../tools/selectTool';
 import type { PointerInput, Tool } from '../tools/types';
-import { addDrawDouble, addOpening, addWall, deleteSelection, duplicateSelection, groupOrigin, moveGroup, rotateSelection, updateDrawing } from './actions';
+import { addDrawArc, addDrawCircle, addDrawDouble, addDrawRect, addOpening, addWall, deleteSelection, duplicateSelection, groupOrigin, moveGroup, rotateSelection, updateDrawing } from './actions';
 import { store } from './store';
 
 const f = (): Floor => store.floor()!;
@@ -231,5 +231,57 @@ describe('migrace 17 → 18: tvary ze stěn na kresbu', () => {
     });
     expect(Object.keys(out.walls)).toHaveLength(4 + 2 + 4);
     expect(Object.values(out.drawings ?? {})).toHaveLength(0);
+  });
+});
+
+describe('šrafy uzavřených tvarů (krok 3)', () => {
+  const ids = () => {
+    const rect = addDrawRect({ x: 0, y: 0 }, { x: 400, y: 300 });
+    const circ = addDrawCircle({ x: 2000, y: 0 }, 300);
+    const arc = addDrawArc({ x: 0, y: 2000 }, { x: 1000, y: 2000 }, 200);
+    const dOpen = addDrawDouble({ x: 0, y: 4000 }, { x: 1000, y: 4000 }, 250, 1);
+    updateDrawing(dOpen, { closedEnds: false });
+    const dClosed = addDrawDouble({ x: 0, y: 5000 }, { x: 1000, y: 5000 }, 250, 1);
+    return { rect, circ, arc, dOpen, dClosed };
+  };
+
+  it('výchozí bez šrafy; zapne se jen u uzavřeného tvaru (obdélník, kruh, dvojitá s uzavřenými konci)', () => {
+    const k = ids();
+    for (const d of drawings()) expect(d.hatch).toBeUndefined();
+    for (const id of Object.values(k)) updateDrawing(id, { hatch: 'cross', hatchColor: 'red' });
+    const d = f().drawings!;
+    expect([d[k.rect]!.hatch, d[k.circ]!.hatch, d[k.dClosed]!.hatch]).toEqual(['cross', 'cross', 'cross']);
+    expect(d[k.dClosed]!.hatchColor).toBe('red');
+    expect(d[k.arc]!.hatch).toBeUndefined();
+    expect(d[k.dOpen]!.hatch).toBeUndefined();
+  });
+
+  it('otevřením tvaru šrafa zmizí; vypnutí šrafy', () => {
+    const k = ids();
+    updateDrawing(k.dClosed, { hatch: 'dots' });
+    updateDrawing(k.dClosed, { closedEnds: false });
+    expect(f().drawings![k.dClosed]!.hatch).toBeUndefined();
+    updateDrawing(k.rect, { hatch: 'solid' });
+    updateDrawing(k.rect, { hatch: null });
+    expect(f().drawings![k.rect]!.hatch).toBeUndefined();
+  });
+
+  it('šrafovaný tvar přes stěnu: stěna se nemění, ťuknutí dovnitř tvaru mimo stěnu ho vybere', () => {
+    wallS();
+    const before = structure();
+    const id = addDrawRect({ x: 1000, y: -500 }, { x: 1600, y: 200 });
+    updateDrawing(id, { hatch: 'diag', color: 'blue' });
+    expect(structure()).toBe(before);
+    expect(pickAny(f(), { x: 1300, y: -300 }, store.get().camera)).toEqual({ kind: 'drawing', id });
+  });
+
+  it('šrafa a barvy se uloží a projdou migrací; kopie je převezme', () => {
+    const id = addDrawCircle({ x: 0, y: 0 }, 300);
+    updateDrawing(id, { hatch: 'diag', hatchColor: 'green', color: 'gray' });
+    store.set({ selection: { kind: 'drawing', id } });
+    duplicateSelection();
+    expect(drawings()[1]).toMatchObject({ hatch: 'diag', hatchColor: 'green', color: 'gray' });
+    const p = migrateProject(JSON.parse(JSON.stringify(store.get().project)));
+    expect(p.floors[0]!.drawings![id]).toMatchObject({ hatch: 'diag', hatchColor: 'green', color: 'gray' });
   });
 });
