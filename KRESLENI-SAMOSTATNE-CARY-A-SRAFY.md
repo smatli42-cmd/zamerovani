@@ -1,6 +1,6 @@
 # Samostatná čára a šrafy uzavřených tvarů – návrh (2026-11-16)
 
-Stav: **návrh, nenaprogramováno.** Repo má přednost. Průřezová funkce (šrafy se týkají více druhů prvků) → postup podle `METODA-PRUCHOZI-FUNKCE.md`.
+Stav: **naprogramováno 2026-11-17** (kroky 0–3, POSTUP.md). Repo má přednost. Průřezová funkce (šrafy se týkají více druhů prvků) → postup podle `METODA-PRUCHOZI-FUNKCE.md`.
 
 ## Rozhodnuto uživatelem
 1. **Dva různé nástroje čáry:**
@@ -31,6 +31,22 @@ Sloupce: Obdélník | Kruh/oblouk | Samostatná čára | Dvojitá čára | Čár
 7. Mazání, kopírování, zpět/vpřed.
 8. Uložení + migrace (stávající čáry).
 9. Export (hladina, atribut).
+
+
+### Vyplněno 2026-11-17 (Code)
+✔ = platí a je ověřeno (test nebo průchod kódem), ✗ = neplatí (u stěnových prvků záměrně), ◐ = jen v datech.
+
+| Pravidlo | Obdélník | Kruh / oblouk | Samostatná čára | Dvojitá čára | Čára ve stěnách (výstupek) | Stěna |
+|---|---|---|---|---|---|---|
+| 1. Nikdy stěna ani výstupek | ✔ test | ✔ test | ✔ test (gesto výstupku) | ✔ test | ✗ záměrně (dělá výstupek) | ✗ (je stěna) |
+| 2. Nevyplňuje se šedou | ✔ | ✔ | ✔ | ✔ | ✗ záměrně (výstupek šedý) | ✗ záměrně |
+| 3. Šrafa jde zapnout (jen uzavřený) | ✔ test | ✔ kruh / ✗ oblouk (otevřený) test | ✔ jen uzavřená, test | ✔ jen s uzavřenými konci, test | ✗ (podklad: dělá výstupek) | ✗ (mimo zadání) |
+| 4. Šrafa nad šedou výplní | ✔ pořadí v renderer.ts | ✔ | ✔ | ✔ | – | – |
+| 5. Přichytávání jen pomůcka | ✔ test | ✔ test | ✔ test | ✔ test | ✗ záměrně (napojuje se) | ✗ záměrně (napojení) |
+| 6. Výběr, posun, tažení bodů | ✔ test (zůstane obdélníkem) | ✔ poloměr / vzepětí úchytem | ✔ vrcholy, oblouky úsek | ✔ test (konce, vzdálenost čar) | ✔ beze změny | ✔ beze změny |
+| 7. Mazání, kopie, Zpět/Vpřed | ✔ | ✔ test (kopie) | ✔ | ✔ test | ✔ beze změny | ✔ beze změny |
+| 8. Uložení + migrace | ✔ test 17→18 | ✔ test 17→18 | ✔ test | ✔ test | ✔ čáry zůstávají stěnami, test | ✔ beze změny |
+| 9. Export (hladina, atribut) | ◐ data + `DRAWING_LAYER`/`HATCH_LAYER` | ◐ | ◐ | ◐ | export neexistuje | export neexistuje |
 
 ## Otevřené
 - Sada základních šraf (kolik, jaké) – doladíme.

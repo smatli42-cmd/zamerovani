@@ -23,9 +23,15 @@
 | `src/core/cornerProtrusion.ts`, `src/store/cornerProtrusion.test.ts` | Výstupek přes roh dvou stěn (I1.11) – geometrie v souřadnicích rohu, rozpoznání z čar |
 | `src/core/wallBodyEdges.ts` | Výstupky v těle stěny a ořez hran uvnitř spojů (i čáry mezi výstupkem a sousední stěnou) |
 | `src/core/cornerOverlap.ts` | Prvek blízko rohu (F7) – upozornění pro otvory i výstupky, jediné místo pravidla |
-| `src/tools/wallTool.ts`, `src/tools/wallToolSnap.ts`, `src/tools/wallChain.test.ts` | Nástroje Stěna a Čára, přichycení na líce, kreslení řetězem (A2) |
+| `src/tools/wallTool.ts`, `src/tools/wallToolSnap.ts`, `src/tools/wallChain.test.ts` | Nástroje Stěna a Čára ve stěnách (menu Stěny), přichycení na líce, kreslení řetězem (A2) |
 | `src/tools/splitTool.ts`, `src/store/actions/split.ts`, `src/store/split.test.ts` | Nástroj Rozdělit (D4): rozdělení stěny a vyjmutí úseku |
 | `src/core/endProtrusion.ts`, `src/store/endProtrusion.test.ts` | Výstupek přes volný konec stěny (I1.11) |
+| `src/core/drawing.ts`, `src/core/drawing.test.ts` | **Kresba** (samostatná čára, obdélník, kruh, oblouk, dvojitá čára) – jediné místo pravidel: uzavřený tvar, šrafa, obrys, zásah, úchyty, hladiny exportu |
+| `src/store/actions/drawings.ts`, `src/store/drawings.test.ts` | Akce kresby (přidání, navazování čáry, úpravy, šrafa) a testy tabulky „pravidlo × prvek“ |
+| `src/tools/drawTools.ts`, `src/tools/drawSnap.ts`, `src/tools/drawingEdit.ts` | Nástroje Čára a Dvojitá; přichytávání kresby (jen pomůcka); úchyty vybrané kresby |
+| `src/canvas/drawDrawings.ts`, `src/ui/panels/DrawingPanel.tsx` | Kreslení kresby a šraf (nad stěnami) / panel kresby |
+| `src/persistence/migrateDrawings.ts` | Migrace 17 → 18: staré obdélníky, kruhy a volné oblouky tloušťky 0 → kresba |
+| `KRESLENI-PREKLADU.md`, `KRESLENI-SAMOSTATNE-CARY-A-SRAFY.md` | Podklady: dvojitá čára / překlady; samostatná čára a šrafy |
 | `src/store/protrusionRow.test.ts` | Kopírování výstupku v řadě (I1.11) |
 | `src/sizeGuard.test.ts` | Hlídání velikosti zdrojových souborů (nad 700 řádků selže, nad 500 upozorní) |
 | `prototyp/` | Starý první prototyp (jen inspirace) |

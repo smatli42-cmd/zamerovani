@@ -55,10 +55,37 @@ export function addDrawLine(a: Pt, b: Pt): Id | null {
       if (d.pts.length >= 3) d.closed = true;
       return d.pts.length >= 3 ? undefined : false;
     }
-    if (atLast) d.pts.push(P(to));
-    else d.pts.unshift(P(to));
+    // úsek končí na volném konci jiné lomené čáry → obě čáry se spojí do jedné
+    const other2 = Object.values(f.drawings!).find(o => o.id !== d.id && (() => {
+      const e = openLineEnds(o);
+      return !!e && (near(e[0], to) || near(e[1], to));
+    })());
+    if (!atLast) {
+      // přidávání na začátek = obrátit, přidat na konec (vzepětí se přenesou na správné úseky)
+      reverseLine(d);
+    }
+    if (other2) {
+      const tail = other2.pts.map(q => ({ ...q }));
+      if (near(tail[tail.length - 1]!, to)) reverseLine({ ...other2, pts: tail });
+      delete d.pts[d.pts.length - 1]!.s;
+      d.pts.push(...tail);
+      delete f.drawings![other2.id];
+    } else d.pts.push(P(to));
   });
   return host.id;
+}
+
+/** Obrátí pořadí bodů lomené čáry (vzepětí úseků se přenesou a otočí znaménko). */
+function reverseLine(d: Pick<Drawing, 'pts'>): void {
+  const n = d.pts.length;
+  const s = d.pts.map(p => p.s);
+  d.pts.reverse();
+  for (let i = 0; i < n; i++) {
+    // úsek i nové čáry = úsek n-2-i původní, opačným směrem
+    const v = i < n - 1 ? s[n - 2 - i] : undefined;
+    if (v) d.pts[i]!.s = -v;
+    else delete d.pts[i]!.s;
+  }
 }
 
 /** Obdélník (strany rovnoběžné s osami) z rohu p do protějšího rohu q. */
@@ -115,7 +142,11 @@ export function updateDrawing(
     if (patch.hatchColor !== undefined) d.hatchColor = patch.hatchColor;
     if (patch.closed !== undefined && d.shape === 'line') {
       if (patch.closed && d.pts.length >= 3) d.closed = true;
-      else delete d.closed;
+      else if (d.closed) {
+        delete d.closed;
+        // vzepětí patřilo uzavíracímu úseku, který zmizel
+        delete d.pts[d.pts.length - 1]!.s;
+      }
     }
     if (patch.closedEnds !== undefined && d.shape === 'double') {
       if (patch.closedEnds) d.closedEnds = true;

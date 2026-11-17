@@ -8,7 +8,7 @@
  * - oblouk: jedna oblouková stěna tloušťky 0 s oběma konci volnými.
  * Zůstane stěnou (čára ve stěnách, jako dnes), když: na stěně je otvor nebo výstupek, něco je na ni nebo na její
  * roh napojené, roh je napojený doprostřed jiné stěny, uvnitř tvaru je štítek místnosti, stěna má vyplněný popisek
- * (typ / materiál / poznámka), nebo strany obdélníku mají různý styl. Rovné čáry zůstávají stěnami vždy.
+ * (typ / materiál / poznámka), má zamčenou kótu, nebo strany obdélníku mají různý styl. Rovné čáry zůstávají stěnami vždy.
  */
 import { pruneLocks } from '../core/dimLock';
 import { drawingOutline, rectSize } from '../core/drawing';
@@ -28,10 +28,12 @@ export function shapesToDrawings(src: Floor): Floor {
     ...Object.values(f.cornerProtrusions ?? {}).flatMap(c => c.walls),
     ...Object.values(f.endProtrusions ?? {}).map(e => e.wallId)
   ]);
+  // stěna se zamčenou kótou zůstane stěnou (zámek by s převodem tiše zmizel)
+  const lockedWalls = new Set(Object.values(f.dimLocks ?? {}).flatMap(t => ('wallId' in t ? [t.wallId] : [])));
   const labelled = (w: Wall) => !!(w.label?.type || w.label?.material?.trim() || w.label?.note?.trim());
   /** Stěna, kterou jde převést (tloušťka 0, nic na ní nezávisí, roh není napojený doprostřed jiné stěny). */
   const free = (w: Wall) =>
-    w.thickness === 0 && !used.has(w.id) && !hostedOn.has(w.id) && !labelled(w) && !f.nodes[w.a]?.host && !f.nodes[w.b]?.host;
+    w.thickness === 0 && !used.has(w.id) && !hostedOn.has(w.id) && !labelled(w) && !lockedWalls.has(w.id) && !f.nodes[w.a]?.host && !f.nodes[w.b]?.host;
   const roomInside = (d: Drawing) => {
     const o = drawingOutline(d);
     return !!o && Object.values(f.rooms).some(r => pointInPolygon(r, o));

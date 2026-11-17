@@ -12,7 +12,7 @@ import { createWall } from '../model/factory';
 import { pickAny } from '../tools/pick';
 import { selectTool } from '../tools/selectTool';
 import type { PointerInput, Tool } from '../tools/types';
-import { addDrawArc, addDrawCircle, addDrawDouble, addDrawRect, addOpening, addWall, deleteSelection, duplicateSelection, groupOrigin, moveGroup, rotateSelection, updateDrawing } from './actions';
+import { addDrawArc, addDrawCircle, addDrawDouble, addDrawRect, addOpening, addWall, deleteSelection, duplicateSelection, groupOrigin, moveGroup, rotateSelection, setDrawingBulge, updateDrawing } from './actions';
 import { store } from './store';
 
 const f = (): Floor => store.floor()!;
@@ -180,6 +180,42 @@ describe('samostatná čára a tvary (krok 2) – nikdy stěna ani výstupek', (
   });
 });
 
+describe('lomená čára – navazování (nálezy kontroly)', () => {
+  it('po otevření uzavřené čáry s ohnutým uzavíracím úsekem je nově navázaný úsek rovný', () => {
+    store.set({ tool: 'drawLine' });
+    stroke(drawLineTool, [{ x: 0, y: 0 }, { x: 1000, y: 0 }]);
+    stroke(drawLineTool, [{ x: 1000, y: 0 }, { x: 1000, y: 800 }]);
+    stroke(drawLineTool, [{ x: 1000, y: 800 }, { x: 0, y: 0 }]);
+    const id = drawings()[0]!.id;
+    setDrawingBulge(id, 2, 200);
+    updateDrawing(id, { closed: false });
+    stroke(drawLineTool, [{ x: 1000, y: 800 }, { x: 2000, y: 800 }]);
+    expect(drawings()[0]!.pts.every(p => !p.s)).toBe(true);
+  });
+
+  it('úsek z konce jedné čáry na konec druhé obě spojí do jedné', () => {
+    store.set({ tool: 'drawLine' });
+    stroke(drawLineTool, [{ x: 0, y: 0 }, { x: 1000, y: 0 }]);
+    stroke(drawLineTool, [{ x: 0, y: 2000 }, { x: 1000, y: 2000 }]);
+    stroke(drawLineTool, [{ x: 1000, y: 0 }, { x: 1000, y: 2000 }]);
+    expect(drawings()).toHaveLength(1);
+    const chain = [{ x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 2000 }, { x: 0, y: 2000 }];
+    const pts = drawings()[0]!.pts;
+    expect([chain, [...chain].reverse()]).toContainEqual(pts);
+    // a uzavřít
+    stroke(drawLineTool, [{ x: 0, y: 2000 }, { x: 0, y: 0 }]);
+    expect(drawings()[0]!.closed).toBe(true);
+  });
+
+  it('nástroj Čára: tah z konce vybrané čáry kreslí dál (úchyt kresby bere jen nástroj Vybrat)', () => {
+    store.set({ tool: 'drawLine' });
+    stroke(drawLineTool, [{ x: 0, y: 0 }, { x: 1000, y: 0 }]);
+    store.set({ selection: { kind: 'drawing', id: drawings()[0]!.id } });
+    stroke(drawLineTool, [{ x: 1000, y: 0 }, { x: 1000, y: 500 }, { x: 1000, y: 1000 }]);
+    expect(drawings()[0]!.pts).toHaveLength(3);
+  });
+});
+
 describe('migrace 17 → 18: tvary ze stěn na kresbu', () => {
   function legacy(build: (fl: Floor) => void) {
     store.openProject(createProject({ name: 'old' }));
@@ -217,7 +253,7 @@ describe('migrace 17 → 18: tvary ze stěn na kresbu', () => {
     expect(ds.find(d => d.shape === 'arc')).toMatchObject({ style: 'dashed', pts: [{ x: 0, y: 1000, s: 200 }, { x: 1000, y: 1000 }] });
   });
 
-  it('zůstane stěnami: obdélník se štítkem místnosti uvnitř, oblouk napojený na jinou čáru, obdélník s otvorem', () => {
+  it('zůstane stěnami: obdélník se štítkem místnosti uvnitř, oblouk napojený na jinou čáru, obdélník s otvorem, kruh se zámkem kóty', () => {
     const out = legacy(fl => {
       rectLoop(fl, 'r', 0, 0, 4000, 3000);
       fl.rooms.rm = { ...Object.values(fl.rooms)[0], id: 'rm', x: 2000, y: 1500 } as Floor['rooms'][string];
@@ -228,8 +264,13 @@ describe('migrace 17 → 18: tvary ze stěn na kresbu', () => {
       wall(fl, 'tail', 'a2', 'a3');
       rectLoop(fl, 'q', 8000, 0, 2000, 2000);
       fl.openings.op = { id: 'op', wallId: 'qw1' } as Floor['openings'][string];
+      // kruh se zamčeným průměrem (zámek by převodem zmizel)
+      node(fl, 'c', 20000, 0);
+      fl.walls.circ = { ...createWall('c', 'c'), id: 'circ', radius: 250 };
+      fl.dimLocks = { 'circle-diameter:circ': { kind: 'circle-diameter', wallId: 'circ' } };
     });
-    expect(Object.keys(out.walls)).toHaveLength(4 + 2 + 4);
+    expect(Object.keys(out.walls)).toHaveLength(4 + 2 + 4 + 1);
+    expect(out.dimLocks?.['circle-diameter:circ']).toBeDefined();
     expect(Object.values(out.drawings ?? {})).toHaveLength(0);
   });
 });

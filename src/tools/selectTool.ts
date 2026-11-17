@@ -155,8 +155,9 @@ export function protArcUnderPen(p: PointerInput): { id: Id; seg: number } | null
   return best;
 }
 
-export function grabArcHandle(p: PointerInput): boolean {
-  const dh = drawingHandleUnderPen(p);
+/** `drawing` = i úchyty vybrané kresby (jen nástroj Vybrat – v nástrojích kreslení tah z konce čáry kreslí dál). */
+export function grabArcHandle(p: PointerInput, drawing = false): boolean {
+  const dh = drawing ? drawingHandleUnderPen(p) : null;
   if (dh) {
     drag = { kind: 'draw', h: dh };
     downScreen = p.screen;
@@ -183,7 +184,7 @@ export const selectTool: Tool = {
     const floor = store.floor();
     if (!floor) return;
     resetGuides(); // žádný časovač ani zámek z minulého gesta
-    if (grabArcHandle(p) || grabLeaderHandle(p)) return;
+    if (grabArcHandle(p, true) || grabLeaderHandle(p)) return;
     const cam = store.get().camera;
     const before = store.get().selection;
     const hit = pickAny(floor, p.world, cam, before);

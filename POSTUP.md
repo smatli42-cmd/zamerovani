@@ -7,6 +7,12 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-17 (5) – opravy po kontrole revieweru, tabulka „pravidlo × prvek“
+- **Co se změnilo:** Migrace 17→18 nechá stěnou i tvar se zamčenou kótou (zámek by zmizel). Otevření uzavřené čáry smaže vzepětí zrušeného uzavíracího úseku (další navázaný úsek je rovný). Úsek z konce jedné čáry na konec druhé obě spojí do jedné (pak jde uzavřít a šrafovat). Úchyty vybrané kresby bere jen nástroj Vybrat – v nástrojích kreslení tah z konce vybrané čáry kreslí dál. Tabulka „pravidlo × typ prvku“ vyplněna v `KRESLENI-SAMOSTATNE-CARY-A-SRAFY.md`. Testy 508.
+- **Viditelně v aplikaci:** čáry se spojují; vrcholy kresby se tahají jen nástrojem Vybrat.
+- **Rozhodnuto samostatně:** pořadí výběru ťuknutím: roh → čára kresby → otvor, text, místnost, výstupek, stěna → vnitřek šrafovaného tvaru → tělo stěny (překlad nad otvorem jde vybrat; text pod čárou kresby se vybere ťuknutím mimo čáru). Migrace nepozná, čím tvar vznikl – volný pravoúhlý čtyřúhelník nebo volný oblouk nakreslený starou Čárou se převede také.
+- **Otevřené:** klikací kóty kresby na plátně (vzdálenost čar, délky úseků); tloušťka čáry kresby je pevná (2 px), „tlustá čerchovaná“ z KRESLENI-PREKLADU.md zatím ne; konečné názvy dvou „Čár“; testy př. 12/14 katalogu kreslené nástrojem Čára ve stěnách (dnes přes `addRectWalls`).
+
 ### 2026-11-17 (4) – krok 3: šrafy uzavřených tvarů a barvy kresby
 - **Co se změnilo:** V panelu kresby **Šrafa**: Žádná (výchozí) / Šikmá / Křížová / Tečky / Plná a **Barva šrafy**; **Barva čáry** u každé kresby a v liště nástrojů kresby (černá, šedá, červená, modrá, zelená). Šrafa jde zapnout jen u uzavřeného tvaru (obdélník, kruh, uzavřená čára, dvojitá čára s uzavřenými konci – pravidlo `canHatch` v `core/drawing.ts`); otevřením tvaru šrafa zmizí. Šrafa se kreslí po stěnách a otvorech, tedy **nad šedou výplní** (`canvas/drawDrawings.ts`). Export zatím není – šrafa je uložená jako údaj tvaru (`hatch`, `hatchColor`), názvy hladin pro budoucí DXF/PDF `DRAWING_LAYER` / `HATCH_LAYER`. Testy `store/drawings.test.ts`.
 - **Viditelně v aplikaci:** vybraný obdélník / kruh / uzavřená čára / dvojitá čára s uzavřenými konci má v panelu Šrafu a barvy; u otevřené čáry a oblouku věta „Šrafu jde zapnout jen u uzavřeného tvaru“.
