@@ -150,8 +150,8 @@ export function ToolOptions() {
             { v: 'open', label: 'Otevřené' },
             { v: 'closed', label: 'Uzavřené' }
           ]}
-          value={settings.doubleClosed ? 'closed' : 'open'}
-          onChange={v => store.updateSettings({ doubleClosed: v === 'closed' })}
+          value={settings.doubleEnds}
+          onChange={v => store.updateSettings({ doubleEnds: v })}
         />
         <span class="muted small">Styl</span>
         <Seg options={DRAW_LINE_STYLES} value={settings.doubleStyle} onChange={v => store.updateSettings({ doubleStyle: v })} />

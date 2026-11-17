@@ -105,13 +105,13 @@ export function addDrawArc(a: Pt, b: Pt, s: number): Id {
 
 /** Dvojitá čára a→b (druhá čára o `width` na stranu `side`). */
 export function addDrawDouble(a: Pt, b: Pt, width: number, side: 1 | -1): Id {
-  const { doubleClosed, doubleStyle, drawColor } = store.get().settings;
+  const { doubleEnds, doubleStyle, drawColor } = store.get().settings;
   return insert({
     shape: 'double',
     pts: [P(a), P(b)],
     width,
     side,
-    ...(doubleClosed ? { closedEnds: true as const } : {}),
+    ...(doubleEnds === 'closed' ? { closedEnds: true as const } : {}),
     ...(doubleStyle !== 'solid' ? { style: doubleStyle } : {}),
     ...(drawColor !== 'black' ? { color: drawColor } : {})
   });

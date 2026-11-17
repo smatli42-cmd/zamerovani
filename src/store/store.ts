@@ -74,7 +74,8 @@ export interface Settings {
   drawColor: DrawColor;
   /** Dvojitá čára: vzdálenost čar (mm), uzavřené konce, styl čáry. */
   doubleWidth: number;
-  doubleClosed: boolean;
+  /** Konce nové dvojité čáry; výchozí otevřené = jen dvě čáry (připomínka uživatele 2026-11-17). */
+  doubleEnds: 'open' | 'closed';
   doubleStyle: LineStyle;
   /** Nástroj Okno: vkládá běžné nebo francouzské okno. */
   windowKind: 'window' | 'french';
@@ -133,7 +134,7 @@ export interface EditOptions {
 const SETTINGS_KEY = 'zamerovani.settings';
 
 function loadSettings(): Settings {
-  const defaults: Settings = { snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', drawColor: 'black', doubleWidth: 250, doubleClosed: true, doubleStyle: 'dashdot2', windowKind: 'window', wallShape: 'straight', wallAxis: 'face', wallChain: false, splitGap: false, keepAwake: true };
+  const defaults: Settings = { snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', drawColor: 'black', doubleWidth: 250, doubleEnds: 'open', doubleStyle: 'dashdot2', windowKind: 'window', wallShape: 'straight', wallAxis: 'face', wallChain: false, splitGap: false, keepAwake: true };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     return raw ? { ...defaults, ...JSON.parse(raw) } : defaults;

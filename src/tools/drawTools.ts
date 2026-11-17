@@ -44,7 +44,7 @@ function makeDrawTool(kind: 'line' | 'double'): Tool {
     const { settings } = store.get();
     if (kind === 'line') return { id: '', shape: 'line', pts: [st.start.pt, st.end.pt], style: settings.shapeStyle, color: settings.drawColor };
     const p = doubleParams(st);
-    return { id: '', shape: 'double', pts: [st.start.pt, st.end.pt], ...p, style: settings.doubleStyle, color: settings.drawColor, ...(settings.doubleClosed ? { closedEnds: true as const } : {}) };
+    return { id: '', shape: 'double', pts: [st.start.pt, st.end.pt], ...p, style: settings.doubleStyle, color: settings.drawColor, ...(settings.doubleEnds === 'closed' ? { closedEnds: true as const } : {}) };
   };
 
   return {

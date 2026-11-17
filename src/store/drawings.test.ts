@@ -5,6 +5,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createProject } from '../model/factory';
 import type { Floor, Pt } from '../model/types';
+import { drawingPaths } from '../core/drawing';
 import { migrateProject } from '../persistence/migrate';
 import { drawDoubleTool, drawLineTool } from '../tools/drawTools';
 import { arcTool, circleTool, rectTool } from '../tools/shapeTools';
@@ -37,7 +38,7 @@ const structure = () => JSON.stringify({ n: f().nodes, w: f().walls, o: f().open
 beforeEach(() => {
   store.openProject(createProject({ name: 't' }));
   store.set({ camera: { x: 0, y: 0, zoom: Z }, selection: null, tool: 'drawDouble' });
-  store.updateSettings({ snap: true, doubleWidth: 250, doubleClosed: true, doubleStyle: 'dashdot2', drawColor: 'black' });
+  store.updateSettings({ snap: true, doubleWidth: 250, doubleEnds: 'closed', doubleStyle: 'dashdot2', drawColor: 'black' });
 });
 
 describe('dvojitá čára (krok 0, KRESLENI-PREKLADU.md)', () => {
@@ -177,6 +178,41 @@ describe('samostatná čára a tvary (krok 2) – nikdy stěna ani výstupek', (
     store.set({ tool: 'select', selection: { kind: 'drawing', id } });
     stroke(selectTool, [{ x: 400, y: 300 }, { x: 500, y: 400 }, { x: 600, y: 500 }]);
     expect(drawings()[0]!.pts).toEqual([{ x: 0, y: 0 }, { x: 600, y: 0 }, { x: 600, y: 500 }, { x: 0, y: 500 }]);
+  });
+});
+
+describe('připomínky uživatele 2026-11-17', () => {
+  /** Místnost mezi dvěma stěnami: S (líc y = 0, tělo nahoru), T (líc y = 3000, tělo dolů). */
+  function twoWalls() {
+    addWall({ x: 0, y: 0 }, null, { x: 5000, y: 0 }, null, false, { thickness: 300, side: -1 });
+    addWall({ x: 0, y: 3000 }, null, { x: 5000, y: 3000 }, null, false, { thickness: 300, side: 1 });
+  }
+
+  it('dvojitá čára je ve výchozím stavu jen dvě čáry (otevřené konce, bez šrafy)', () => {
+    store.updateSettings({ doubleEnds: 'open' });
+    stroke(drawDoubleTool, [{ x: 0, y: 5000 }, { x: 1000, y: 5000 }]);
+    const [d] = drawings();
+    expect(d!.closedEnds).toBeUndefined();
+    expect(drawingPaths(d!)).toHaveLength(2);
+  });
+
+  for (const tool of ['drawDouble', 'drawLine'] as const) {
+    it(`${tool}: od líce jedné stěny kolmo k protější – pomocná čára platí až k líci, konec kolmo na líci`, () => {
+      twoWalls();
+      store.set({ tool });
+      const t = tool === 'drawDouble' ? drawDoubleTool : drawLineTool;
+      // pero se mírně odchyluje od svislice (12 mm) a končí kousek před lícem
+      stroke(t, [{ x: 1000, y: 0 }, { x: 1006, y: 1500 }, { x: 1012, y: 2985 }]);
+      expect(drawings()[0]!.pts).toEqual([{ x: 1000, y: 0 }, { x: 1000, y: 3000 }]);
+    });
+  }
+
+  it('totéž ke stěně bez tloušťky (čára stěny)', () => {
+    addWall({ x: 0, y: 0 }, null, { x: 5000, y: 0 }, null, false, { thickness: 300, side: -1 });
+    addWall({ x: 0, y: 3000 }, null, { x: 5000, y: 3000 }, null, false, {});
+    store.set({ tool: 'drawLine' });
+    stroke(drawLineTool, [{ x: 1000, y: 0 }, { x: 1006, y: 1500 }, { x: 1012, y: 2985 }]);
+    expect(drawings()[0]!.pts).toEqual([{ x: 1000, y: 0 }, { x: 1000, y: 3000 }]);
   });
 });
 

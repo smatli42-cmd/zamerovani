@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-17 (6) – připomínky uživatele po zkoušce: dvojitá čára, kolmo k protější stěně
+- **Chyby od uživatele:** (1) dvojitá čára se kreslila jako obdélník – má být jen dvě čáry vedle sebe, bez výplně (ta jen u uzavřených prvků); (2) čára od jedné stěny ke druhé: pomocná kolmice zmizela, jakmile pero dojelo k protější stěně, a čára nešla napojit kolmo – u všech čar kresby.
+- **Co se změnilo:** nová dvojitá čára má výchozí **otevřené konce** (nastavení `doubleEnds`, dřívější volba „uzavřené“ se nepřenáší); uzavřít jde dál v panelu. Přichytávání kresby (`tools/drawSnap.ts`): zachycená pomocná čára platí až ke stěně – u líce i u čáry stěny se konec dá na jejich průsečík s pomocnou čárou (ne na nejbližší bod líce); pomocná čára má držení (hystereze). Platí pro Čáru, Dvojitou i Obdélník/Kruh/Oblouk (společné místo). Stěna a Čára ve stěnách to uměly už dřív (ověřeno). Testy v `store/drawings.test.ts` (na starém kódu selhávají).
+- **Viditelně v aplikaci:** dvojitá čára = dvě čáry; tah kolmo přes místnost dosedne přesně kolmo na protější líc.
+- **Rozhodnuto uživatelem:** kóty kresby vyřeší budoucí prvek Kóta s přiřazením k jednotlivým čarám (zapsáno v POZADAVKY.md); do té doby rozměry v panelu.
+- **Otevřené:** vyzkoušet na tabletu.
+
 ### 2026-11-17 (5) – opravy po kontrole revieweru, tabulka „pravidlo × prvek“
 - **Co se změnilo:** Migrace 17→18 nechá stěnou i tvar se zamčenou kótou (zámek by zmizel). Otevření uzavřené čáry smaže vzepětí zrušeného uzavíracího úseku (další navázaný úsek je rovný). Úsek z konce jedné čáry na konec druhé obě spojí do jedné (pak jde uzavřít a šrafovat). Úchyty vybrané kresby bere jen nástroj Vybrat – v nástrojích kreslení tah z konce vybrané čáry kreslí dál. Tabulka „pravidlo × typ prvku“ vyplněna v `KRESLENI-SAMOSTATNE-CARY-A-SRAFY.md`. Testy 508.
 - **Viditelně v aplikaci:** čáry se spojují; vrcholy kresby se tahají jen nástrojem Vybrat.
