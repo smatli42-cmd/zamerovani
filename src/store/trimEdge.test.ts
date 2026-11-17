@@ -147,13 +147,13 @@ describe('D3 – zkrátit / prodloužit k hraně druhé stěny (T)', () => {
     const prot = (y: number) => [{ x: 2000, y }, { x: 2200, y }, { x: 2200, y: y + 400 }, { x: 2000, y: y + 400 }].forEach((p, i, a) => i + 1 < a.length && addLine(p, null, a[i + 1]!, null));
     prot(-1500);
     prot(2000);
-    expect(Object.keys(f().protrusions)).toHaveLength(2);
+    expect(Object.keys(f().protrusions ?? {})).toHaveLength(2);
     const T = addWall({ x: 2000, y: -1000 }, null, { x: 3500, y: -1000 }, null, false, { thickness: 100 })!; // příčka napojená nahoře
     const tn = f().walls[T]!.a;
     expect(f().nodes[tn]!.host).toBe(B);
     expect(trimToEdge(B, { x: 2000, y: 2500 }, A)).toBe('ok');
     expect(ends(B)[0]).toEqual({ x: 2000, y: 300 });
-    const left = Object.values(f().protrusions);
+    const left = Object.values(f().protrusions ?? {});
     expect(left).toHaveLength(1);
     expect(f().walls[T]).toBeDefined();
     expect(f().nodes[f().walls[T]!.a]!.host).toBeUndefined();
