@@ -32,7 +32,8 @@ export const isSel = (s: Selection, kind: SingleSelection['kind'], id: string) =
 export const LINE_DASH: Record<LineStyle, number[]> = {
   solid: [],
   dashed: [14, 8],
-  dashdot: [18, 7, 4, 7]
+  dashdot: [18, 7, 4, 7],
+  dashdot2: [18, 6, 3, 6, 3, 6]
 };
 
 /** Cesta stěny (úsečka nebo oblouk) v souřadnicích obrazovky. */

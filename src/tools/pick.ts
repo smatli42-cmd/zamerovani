@@ -9,6 +9,7 @@ import { findBodyAt, pointInPolygon, wallBodies } from '../core/wallBody';
 import { protrusionOutline, protrusionPolygon, protrusionsOf } from '../core/protrusion';
 import { cornerOutline, cornerPolygon, cornerProtrusionsOf } from '../core/cornerProtrusion';
 import { endOutline, endProtrusionsOf } from '../core/endProtrusion';
+import { pickDrawing } from '../core/drawing';
 import type { Floor, Pt } from '../model/types';
 import type { Camera, Selection } from '../store/store';
 import { HIT_PX } from './types';
@@ -111,12 +112,16 @@ export function nodePrefer(current: Selection): NodePrefer {
 }
 
 /**
- * Prvek pod bodem v pořadí priority: roh, otvor, text, místnost, stěna.
+ * Prvek pod bodem v pořadí priority: roh, čára kresby, otvor, text, místnost, výstupek, stěna, vnitřek šrafy, tělo stěny.
  * `current` = aktuální výběr: u překrývajících se rohů má přednost konec vybrané stěny / vybraný roh (D14).
  */
 export function pickAny(floor: Floor, p: Pt, cam: Camera, current: Selection = null): Selection {
   const node = chooseNodeAt(floor, p, HIT_PX.node / cam.zoom, nodePrefer(current));
   if (node) return { kind: 'node', id: node.id };
+  // kresba leží nad stěnami a otvory (překlad nad otvorem) – její čára má přednost
+  const tol = HIT_PX.wall / cam.zoom;
+  const drawEdge = pickDrawing(floor, p, tol * 0.8, true);
+  if (drawEdge) return { kind: 'drawing', id: drawEdge };
   const op = pickOpening(floor, p, cam);
   if (op) return { kind: 'opening', id: op };
   const text = pickText(floor, p, cam);
@@ -125,8 +130,11 @@ export function pickAny(floor: Floor, p: Pt, cam: Camera, current: Selection = n
   if (room) return { kind: 'room', id: room };
   const prot = pickProtrusion(floor, p, cam);
   if (prot) return { kind: 'protrusion', id: prot };
-  const wall = findWallNear(floor, p, HIT_PX.wall / cam.zoom);
+  const wall = findWallNear(floor, p, tol);
   if (wall) return { kind: 'wall', id: wall.wall.id };
+  // ťuknutí dovnitř šrafovaného tvaru
+  const drawIn = pickDrawing(floor, p, 0, false);
+  if (drawIn) return { kind: 'drawing', id: drawIn };
   // ťuknutí do těla stěny s tloušťkou
   const body = findBodyAt(floor, p);
   if (body) return { kind: 'wall', id: body.id };

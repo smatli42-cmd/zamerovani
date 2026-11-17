@@ -1,0 +1,80 @@
+/**
+ * Panel kresby (samostatná čára, obdélník, kruh, oblouk, dvojitá čára): styl a barva čáry, šrafa u uzavřeného
+ * tvaru (pravidlo canHatch v core/drawing.ts), rozměry podle tvaru.
+ */
+import { rectSize } from '../../core/drawing';
+import type { Drawing } from '../../model/types';
+import { deleteSelection, duplicateSelection, flipDrawingSide, setDrawingBulge, setDrawingRadius, setDrawingRect, setDrawingWidth, updateDrawing } from '../../store/actions';
+import { close, DRAW_LINE_STYLES } from './common';
+import { NumField, Panel, Seg } from './fields';
+
+const TITLES: Record<Drawing['shape'], string> = {
+  line: 'Čára',
+  rect: 'Obdélník',
+  circle: 'Kruh',
+  arc: 'Oblouk',
+  double: 'Dvojitá čára'
+};
+
+export function DrawingPanel({ d }: { d: Drawing }) {
+  const size = rectSize(d);
+  return (
+    <Panel title={TITLES[d.shape]} onClose={close}>
+      <p class="muted small">Kresba – jen čáry, nikdy stěna ani výstupek.</p>
+      {d.shape === 'circle' && (
+        <NumField label="Průměr" value={Math.round((d.r ?? 0) * 2)} min={2} onCommit={v => v !== null && setDrawingRadius(d.id, v / 2)} />
+      )}
+      {size && (
+        <div class="field-grid">
+          <NumField label="Šířka" value={Math.round(size.w)} min={1} onCommit={v => v !== null && setDrawingRect(d.id, v, size.h)} />
+          <NumField label="Výška" value={Math.round(size.h)} min={1} onCommit={v => v !== null && setDrawingRect(d.id, size.w, v)} />
+        </div>
+      )}
+      {d.shape === 'arc' && (
+        <NumField label="Vzepětí" value={Math.round(Math.abs(d.pts[0]?.s ?? 0))} min={10} onCommit={v => v !== null && setDrawingBulge(d.id, 0, (Math.sign(d.pts[0]?.s ?? 1) || 1) * v)} />
+      )}
+      {d.shape === 'double' && (
+        <>
+          <div class="field-grid">
+            <NumField label="Vzdálenost čar" value={d.width ?? null} min={1} onCommit={v => v !== null && setDrawingWidth(d.id, v)} />
+            <button class="btn" onClick={() => flipDrawingSide(d.id)}>
+              ⇅ Přehodit stranu
+            </button>
+          </div>
+          <div class="field field-inline">
+            <span>Konce</span>
+            <Seg
+              options={[
+                { v: 'open', label: 'Otevřené' },
+                { v: 'closed', label: 'Uzavřené' }
+              ]}
+              value={d.closedEnds ? 'closed' : 'open'}
+              onChange={v => updateDrawing(d.id, { closedEnds: v === 'closed' })}
+            />
+          </div>
+        </>
+      )}
+      {d.shape === 'line' && d.pts.length >= 3 && (
+        <div class="field field-inline">
+          <span>Tvar</span>
+          <Seg
+            options={[
+              { v: 'open', label: 'Otevřená' },
+              { v: 'closed', label: 'Uzavřená' }
+            ]}
+            value={d.closed ? 'closed' : 'open'}
+            onChange={v => updateDrawing(d.id, { closed: v === 'closed' })}
+          />
+        </div>
+      )}
+      <div class="field field-inline">
+        <span>Styl čáry</span>
+        <Seg options={DRAW_LINE_STYLES} value={d.style ?? 'solid'} onChange={v => updateDrawing(d.id, { style: v })} />
+      </div>
+      <div class="panel-actions">
+        <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
+        <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
+      </div>
+    </Panel>
+  );
+}

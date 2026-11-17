@@ -4,6 +4,7 @@
 import type { ToolId } from '../store/store';
 import { doorTool, nicheTool, openingTool, roomTool, windowTool } from './placeTools';
 import { arcTool, circleTool, rectTool } from './shapeTools';
+import { drawDoubleTool, drawLineTool } from './drawTools';
 import { pasteTool } from './pasteTool';
 import { leaderTool } from './leaderTool';
 import { textTool } from './textTool';
@@ -27,6 +28,8 @@ export const tools: Record<ToolId, Tool> = {
   rect: rectTool,
   circle: circleTool,
   arc: arcTool,
+  drawLine: drawLineTool,
+  drawDouble: drawDoubleTool,
   text: textTool,
   leader: leaderTool,
   paste: pasteTool,

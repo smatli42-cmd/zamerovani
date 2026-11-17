@@ -18,6 +18,7 @@ const TOOLS: { id: ToolId; icon: string; label: string; title: string }[] = [
   { id: 'opening', icon: '⬜', label: 'Otvor', title: 'Ťuknutím na stěnu vložit průchod bez dveří' },
   { id: 'niche', icon: '◫', label: 'Nika', title: 'Ťuknutím na stěnu vložit niku' },
   { id: 'room', icon: '🏷️', label: 'Místnost', title: 'Ťuknutím vložit štítek místnosti' },
+  { id: 'drawDouble', icon: '═', label: 'Dvojitá', title: 'Dvojitá čára (překlad): dvě rovnoběžné čáry; od líce podél stěny přes celou její tloušťku' },
   { id: 'rect', icon: '▭', label: 'Obdélník', title: 'Tažením nakreslit obdélník (sloup, komín, překlad…)' },
   { id: 'circle', icon: '◯', label: 'Kruh', title: 'Tažením od středu nakreslit kruh' },
   { id: 'arc', icon: '◠', label: 'Oblouk', title: 'Tažením mezi krajními body nakreslit oblouk, vzepětí se upřesní kótou' },
@@ -33,7 +34,7 @@ export function Toolbar() {
       {TOOLS.map(t => (
         <button
           key={t.id}
-          class={`tool-btn ${active === t.id ? 'active' : ''}`}
+          class={`tool-btn ${active === t.id || (t.id === 'wall' && active === 'line') ? 'active' : ''}`}
           title={t.title}
           onClick={() => {
             tools[store.get().tool].cancel?.();

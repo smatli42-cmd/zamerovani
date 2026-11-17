@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-17 (1) – krok 0: dvojitá čára zpět jako kresba
+- **Co se změnilo:** Nový druh prvku **kresba** (`Floor.drawings`, `SCHEMA_VERSION` 17 bez převodu dat) – čistě grafické prvky, jejichž pravidla jsou na jednom místě v `core/drawing.ts` (uzavřený tvar, šrafa, obrys, zásah, úchyty, obdélník). Kresba nikdy není stěnou ani výstupkem (kód stěn ji nevidí). Přichytávání kresby na jednom místě `tools/drawSnap.ts` (body kresby, rohy, líce, čáry stěn, pomocné čáry – jen pomůcka, nic se nepamatuje). Vrácena **dvojitá čára** (`KRESLENI-PREKLADU.md`) jako samostatný nástroj ═ Dvojitá: dvě rovnoběžné čáry jako jeden objekt, styl i „čerchovaná se dvěma tečkami“ (výchozí), konce otevřené / uzavřené (výchozí uzavřené), bez výplně, nad stěnami i otvory. Výběr, posun, úchyty (konce, vzdálenost čar), mazání, kopie, otočení, Zpět. Testy `core/drawing.test.ts`, `store/drawings.test.ts`.
+- **Viditelně v aplikaci:** v liště ═ **Dvojitá**; nahoře vzdálenost čar (předvolby jako tloušťky stěn), konce, styl. Tah od líce stěny podél ní = čáry přes celou tloušťku stěny (překlad). Panel „Dvojitá čára“.
+- **Rozhodnuto uživatelem:** dvojitá čára zůstává samostatným nástrojem nezávislým na stěnách (KRESLENI-PREKLADU.md).
+- **Rozhodnuto samostatně:** výchozí vzdálenost 250 mm, konce uzavřené, styl čerchovaná se dvěma tečkami; tah od líce podél stěny (do ~2°) vezme tloušťku stěny a druhou čáru dá do těla, jinak strana podle odchýlení pera.
+- **Otevřené:** kóta vzdálenosti čar na plátně (zatím jen v panelu).
+
 ### 2026-11-15 (konec sezení)
 - **Co se změnilo:** Sezení ukončeno; za den kroky (1)–(11) níže. Uživatel vše vyzkoušel na PC: „vše funguje“. Přidán dokument `metoda-pruchozi-funkce.md` (metoda pro funkce, které ovlivňují více prvků – od uživatele).
 - **Viditelně v aplikaci:** viz záznamy (1)–(11).

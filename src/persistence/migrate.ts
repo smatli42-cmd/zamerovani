@@ -28,6 +28,7 @@ export function migrateProject(raw: unknown): Project {
   // 13 → 14: roh napojený na líc průběžné stěny (Node.hostFace) – nepovinné pole, bez převodu
   // 14 → 15: výstupky přes roh (floor.cornerProtrusions) – nepovinné pole, bez převodu
   // 15 → 16: výstupky přes volný konec stěny (floor.endProtrusions) – nepovinné pole, bez převodu
+  // 16 → 17: kresba – grafické prvky (floor.drawings: dvojitá čára…) – nepovinné pole, bez převodu
   const old = p.schema ?? 1;
   const floors = p.floors.map(f => {
     const j = joinSemicircles(convertShapesToWalls(f));

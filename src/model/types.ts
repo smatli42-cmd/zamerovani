@@ -10,7 +10,7 @@
 
 import type { DimTarget } from '../core/dimLock';
 
-export const SCHEMA_VERSION = 16;
+export const SCHEMA_VERSION = 17;
 
 export type Id = string;
 
@@ -141,7 +141,8 @@ export interface Room {
 }
 
 /** Styl čáry stěny (výchozí plná; čárkovaná / čerchovaná např. pro překlad nebo konstrukci nad řezem). */
-export type LineStyle = 'solid' | 'dashed' | 'dashdot';
+/** Styl čáry; `dashdot2` = čerchovaná se dvěma tečkami (překlad, prvky nad rovinou řezu – KRESLENI-PREKLADU.md). */
+export type LineStyle = 'solid' | 'dashed' | 'dashdot' | 'dashdot2';
 
 /** Samostatný text na výkresu (poznámka, popis). Poloha = střed textu, velikost = výška písma v mm. */
 export interface TextNote {
@@ -249,6 +250,46 @@ export interface EndProtrusion {
   note: string;
 }
 
+/** Šrafa uzavřeného tvaru (bez nastavení úhlu a rozteče – rozhodnutí uživatele 2026-11-17). */
+export type HatchKind = 'diag' | 'cross' | 'dots' | 'solid';
+
+/** Základní barvy kresby (čára i šrafa). */
+export type DrawColor = 'black' | 'gray' | 'red' | 'blue' | 'green';
+
+/** Bod kresby; `s` = vzepětí úseku k dalšímu bodu (znaménko jako `Wall.sagitta`), chybí = rovný úsek. */
+export interface DrawPt {
+  x: number;
+  y: number;
+  s?: number;
+}
+
+/**
+ * Kresba = čistě grafický prvek (KRESLENI-SAMOSTATNE-CARY-A-SRAFY.md): samostatná čára, obdélník, kruh, oblouk,
+ * dvojitá čára. Nikdy není stěnou ani výstupkem, nevyplňuje se šedou, s ničím není svázaná (přichycení při
+ * kreslení je jen pomůcka). Geometrie a všechna pravidla kresby: `core/drawing.ts`.
+ */
+export interface Drawing {
+  id: Id;
+  /** Čím vznikla (název v panelu, chování úchytů): `line` lomená čára, `rect`, `circle`, `arc`, `double` dvojitá čára. */
+  shape: 'line' | 'rect' | 'circle' | 'arc' | 'double';
+  /** Body: lomená čára / obdélník = vrcholy; oblouk = 2 body; kruh = [střed]; dvojitá čára = 2 body první čáry. */
+  pts: DrawPt[];
+  /** Lomená čára se vrací do prvního bodu (obdélník je uzavřený vždy). */
+  closed?: true;
+  /** Kruh: poloměr (mm). */
+  r?: number;
+  /** Dvojitá čára: vzdálenost čar (mm), strana druhé čáry vůči směru pts[0]→pts[1] (1 = normal), uzavřené konce. */
+  width?: number;
+  side?: 1 | -1;
+  closedEnds?: true;
+  /** Styl a barva čáry; chybí = plná, černá. */
+  style?: LineStyle;
+  color?: DrawColor;
+  /** Šrafa (jen uzavřený tvar); chybí = bez šrafy. Barva šrafy; chybí = barva čáry. */
+  hatch?: HatchKind;
+  hatchColor?: DrawColor;
+}
+
 /** Podlaží = jeden půdorys. */
 export interface Floor {
   id: Id;
@@ -264,6 +305,8 @@ export interface Floor {
   cornerProtrusions?: Record<Id, CornerProtrusion>;
   /** Výstupky přes volný konec stěny (I1.11, od verze 16; chybí = žádné). */
   endProtrusions?: Record<Id, EndProtrusion>;
+  /** Kresba – grafické prvky (čáry, tvary, dvojité čáry; od verze 17; chybí = žádné). */
+  drawings?: Record<Id, Drawing>;
   /**
    * Zamčené kóty (KOTY-ZAMEK-EXPORT.md, A): klíč = `dimKey(kóta)`, hodnota = popis kóty. Chybí = vše odemčeno.
    * Zamčená kóta drží hodnotu – úprava, která by ji změnila, se neprovede (core/dimLock.ts).

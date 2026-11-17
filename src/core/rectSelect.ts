@@ -5,6 +5,7 @@
 import type { Floor, Pt } from '../model/types';
 import { arcPolyline, circlePolyline } from './arc';
 import { openingsOnWall } from './floorQueries';
+import { drawingPolylines, drawingsOf } from './drawing';
 
 export interface Rect {
   x1: number;
@@ -13,7 +14,7 @@ export interface Rect {
   y2: number;
 }
 
-export type RectItem = { kind: 'wall' | 'opening' | 'room' | 'text'; id: string };
+export type RectItem = { kind: 'wall' | 'opening' | 'room' | 'text' | 'drawing'; id: string };
 
 export const normRect = (a: Pt, b: Pt): Rect => ({ x1: Math.min(a.x, b.x), y1: Math.min(a.y, b.y), x2: Math.max(a.x, b.x), y2: Math.max(a.y, b.y) });
 const inside = (r: Rect, p: Pt) => p.x >= r.x1 && p.x <= r.x2 && p.y >= r.y1 && p.y <= r.y2;
@@ -58,5 +59,11 @@ export function selectInRect(floor: Floor, r: Rect, crossing: boolean): RectItem
   }
   for (const room of Object.values(floor.rooms)) if (inside(r, room)) out.push({ kind: 'room', id: room.id });
   for (const t of Object.values(floor.texts)) if (inside(r, t)) out.push({ kind: 'text', id: t.id });
+  for (const d of drawingsOf(floor)) {
+    const lines = drawingPolylines(d);
+    const pts = lines.flat();
+    const hit = crossing ? lines.some(pl => pl.some((p, i) => inside(r, p) || (i > 0 && segHitsRect(r, pl[i - 1]!, p)))) : pts.length > 0 && pts.every(p => inside(r, p));
+    if (hit) out.push({ kind: 'drawing', id: d.id });
+  }
   return out;
 }

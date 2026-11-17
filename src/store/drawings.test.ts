@@ -1,0 +1,114 @@
+/**
+ * Kresba (core/drawing.ts, store/actions/drawings.ts): dvojitá čára, samostatná čára, tvary.
+ * Tabulka „pravidlo × typ prvku“ – KRESLENI-SAMOSTATNE-CARY-A-SRAFY.md. Osa Y míří dolů.
+ */
+import { beforeEach, describe, expect, it } from 'vitest';
+import { createProject } from '../model/factory';
+import type { Floor, Pt } from '../model/types';
+import { migrateProject } from '../persistence/migrate';
+import { drawDoubleTool } from '../tools/drawTools';
+import { pickAny } from '../tools/pick';
+import { selectTool } from '../tools/selectTool';
+import type { PointerInput, Tool } from '../tools/types';
+import { addDrawDouble, addOpening, addWall, deleteSelection, duplicateSelection, groupOrigin, moveGroup, rotateSelection, updateDrawing } from './actions';
+import { store } from './store';
+
+const f = (): Floor => store.floor()!;
+const drawings = () => Object.values(f().drawings ?? {});
+const Z = 0.2; // px na mm
+const at = (p: Pt): PointerInput => ({ world: p, screen: { x: p.x * Z, y: p.y * Z }, device: 'pen' });
+
+function stroke(tool: Tool, pts: Pt[]) {
+  tool.down?.(at(pts[0]!));
+  for (const p of pts.slice(1)) tool.drag?.(at(p));
+  tool.up?.(at(pts[pts.length - 1]!));
+}
+
+/** Stěna S z (0,0) do (5000,0), tloušťka 300, tělo y ∈ [0, 300]. */
+function wallS(): string {
+  return addWall({ x: 0, y: 0 }, null, { x: 5000, y: 0 }, null, false, { thickness: 300, side: 1 })!;
+}
+
+/** Stěny, rohy a výstupky – to, co kresba nikdy nesmí změnit. */
+const structure = () => JSON.stringify({ n: f().nodes, w: f().walls, o: f().openings, p: f().protrusions ?? {}, c: f().cornerProtrusions ?? {}, e: f().endProtrusions ?? {} });
+
+beforeEach(() => {
+  store.openProject(createProject({ name: 't' }));
+  store.set({ camera: { x: 0, y: 0, zoom: Z }, selection: null, tool: 'drawDouble' });
+  store.updateSettings({ snap: true, doubleWidth: 250, doubleClosed: true, doubleStyle: 'dashdot2', drawColor: 'black' });
+});
+
+describe('dvojitá čára (krok 0, KRESLENI-PREKLADU.md)', () => {
+  it('od líce podél stěny: vzdálenost čar = tloušťka stěny, druhá čára v těle; stěna, rohy a výstupky beze změny', () => {
+    wallS();
+    const before = structure();
+    stroke(drawDoubleTool, [{ x: 1000, y: 0 }, { x: 1500, y: 0 }, { x: 2200, y: 0 }]);
+    expect(structure()).toBe(before);
+    const [d] = drawings();
+    expect(d).toMatchObject({ shape: 'double', width: 300, side: 1, closedEnds: true, style: 'dashdot2' });
+    expect(d!.pts).toEqual([{ x: 1000, y: 0 }, { x: 2200, y: 0 }]);
+  });
+
+  it('ve volném místě: vzdálenost z volby nástroje, strana podle odchýlení pera', () => {
+    // konec se přichytí vodorovně (do 4°), pero je o 60 mm nad čarou
+    stroke(drawDoubleTool, [{ x: 0, y: 2000 }, { x: 1000, y: 2000 }, { x: 1000, y: 1940 }]);
+    const [d] = drawings();
+    expect(d).toMatchObject({ shape: 'double', width: 250 });
+    // pero nad čarou (−y) = proti normal(a→b) = (0, 1)
+    expect(d!.side).toBe(-1);
+  });
+
+  it('ťuknutí na čáru překladu nad otvorem vybere překlad (kresba leží nad otvorem)', () => {
+    const w = wallS();
+    addOpening(w, 'door', 0.4);
+    const id = addDrawDouble({ x: 1500, y: 0 }, { x: 2600, y: 0 }, 300, 1);
+    expect(pickAny(f(), { x: 2000, y: 0 }, store.get().camera)).toEqual({ kind: 'drawing', id });
+  });
+
+  it('mazání, kopírování, Zpět / Vpřed', () => {
+    const id = addDrawDouble({ x: 0, y: 0 }, { x: 1000, y: 0 }, 250, 1);
+    store.set({ selection: { kind: 'drawing', id } });
+    duplicateSelection();
+    expect(drawings()).toHaveLength(2);
+    expect(drawings()[1]!.pts[0]).toEqual({ x: 300, y: 300 });
+    store.set({ selection: { kind: 'drawing', id } });
+    deleteSelection();
+    expect(f().drawings![id]).toBeUndefined();
+    store.undo();
+    expect(f().drawings![id]).toBeDefined();
+    store.redo();
+    expect(f().drawings![id]).toBeUndefined();
+  });
+
+  it('posun tažením (výběr, skupina) a otočení', () => {
+    const id = addDrawDouble({ x: 0, y: 0 }, { x: 1000, y: 0 }, 250, 1);
+    moveGroup(groupOrigin(f(), [{ kind: 'drawing', id }]), 100, 200);
+    expect(f().drawings![id]!.pts).toEqual([{ x: 100, y: 200 }, { x: 1100, y: 200 }]);
+    store.set({ selection: { kind: 'drawing', id } });
+    rotateSelection(90);
+    const p = f().drawings![id]!.pts;
+    expect(p[0]!.x).toBeCloseTo(p[1]!.x);
+  });
+
+  it('tažení už vybrané kresby nástrojem Vybrat ji posune', () => {
+    const id = addDrawDouble({ x: 0, y: 0 }, { x: 1000, y: 0 }, 250, 1);
+    store.set({ tool: 'select', selection: { kind: 'drawing', id } });
+    stroke(selectTool, [{ x: 500, y: 0 }, { x: 500, y: 300 }, { x: 500, y: 500 }]);
+    expect(f().drawings![id]!.pts[0]).toEqual({ x: 0, y: 500 });
+  });
+
+  it('úchyt druhé čáry mění vzdálenost čar (a stranu)', () => {
+    const id = addDrawDouble({ x: 0, y: 0 }, { x: 1000, y: 0 }, 250, 1);
+    store.set({ tool: 'select', selection: { kind: 'drawing', id } });
+    stroke(selectTool, [{ x: 500, y: 250 }, { x: 500, y: 300 }, { x: 500, y: 400 }]);
+    expect(f().drawings![id]).toMatchObject({ width: 400, side: 1 });
+  });
+
+  it('uložení: kresba projde migrací beze změny (schéma 17+)', () => {
+    const id = addDrawDouble({ x: 0, y: 0 }, { x: 1000, y: 0 }, 250, 1);
+    updateDrawing(id, { closedEnds: false });
+    const p = migrateProject(JSON.parse(JSON.stringify(store.get().project)));
+    expect(p.floors[0]!.drawings![id]).toEqual(f().drawings![id]);
+    expect(p.schema).toBeGreaterThanOrEqual(17);
+  });
+});

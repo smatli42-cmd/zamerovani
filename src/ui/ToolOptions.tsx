@@ -7,6 +7,7 @@ import { store } from '../store/store';
 import { useStore } from '../store/useStore';
 import { NumField, Seg } from './panels/fields';
 import { LINE_STYLES } from './panels/SidePanel';
+import { DRAW_LINE_STYLES } from './panels/common';
 import { TRIM_MSG_FIRST } from '../tools/trimTool';
 import { splitMsg, splitTool } from '../tools/splitTool';
 
@@ -103,6 +104,31 @@ export function ToolOptions() {
       <div class="tool-options">
         <span class="muted small">Styl čáry nových stěn</span>
         <Seg options={LINE_STYLES} value={settings.shapeStyle} onChange={v => store.updateSettings({ shapeStyle: v })} />
+      </div>
+    );
+  }
+  if (tool === 'drawDouble') {
+    return (
+      <div class="tool-options">
+        <NumField label="Vzdálenost čar" value={settings.doubleWidth} min={1} onCommit={v => v !== null && store.updateSettings({ doubleWidth: v })} />
+        <div class="chips">
+          {wallPresets(project).map(t => (
+            <button key={t} class={`chip ${t === settings.doubleWidth ? 'active' : ''}`} onClick={() => store.updateSettings({ doubleWidth: t })}>
+              {t}
+            </button>
+          ))}
+        </div>
+        <span class="muted small">Konce</span>
+        <Seg
+          options={[
+            { v: 'open', label: 'Otevřené' },
+            { v: 'closed', label: 'Uzavřené' }
+          ]}
+          value={settings.doubleClosed ? 'closed' : 'open'}
+          onChange={v => store.updateSettings({ doubleClosed: v === 'closed' })}
+        />
+        <span class="muted small">Styl</span>
+        <Seg options={DRAW_LINE_STYLES} value={settings.doubleStyle} onChange={v => store.updateSettings({ doubleStyle: v })} />
       </div>
     );
   }

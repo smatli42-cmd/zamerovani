@@ -16,6 +16,7 @@ import { store } from '../store/store';
 import { protrusionArcHandles, sagittaFromPoint } from '../core/protrusionEdit';
 import { openTarget } from '../store/numpadController';
 import { pickAny } from './pick';
+import { dragDrawingHandle, drawingHandleUnderPen, type DrawHandleDrag } from './drawingEdit';
 import { HIT_PX, type PointerInput, type Tool } from './types';
 
 type DragKind = { kind: 'node'; id: Id; lines: DragLine[] } | { kind: 'wall'; id: Id; origin: GroupOrigin; grab: Pt; lines: DragLine[] } | { kind: 'opening'; id: Id; grabOffset: number } | { kind: 'room'; id: Id; dx: number; dy: number }
@@ -24,6 +25,8 @@ type DragKind = { kind: 'node'; id: Id; lines: DragLine[] } | { kind: 'wall'; id
   /** Úchyt vzepětí úseku obrysu vybraného výstupku (I1.10). */
   | { kind: 'protArc'; id: Id; seg: number }
   | { kind: 'leader'; id: Id }
+  /** Úchyt vybrané kresby (tools/drawingEdit.ts). */
+  | { kind: 'draw'; h: DrawHandleDrag }
   | { kind: 'group'; origin: GroupOrigin; start: Pt };
 
 /** Rámeček výběru: zleva doprava okno (modře), zprava doleva křížení (zeleně, čárkovaně). */
@@ -132,7 +135,7 @@ export function grabLeaderHandle(p: PointerInput): boolean {
 }
 
 /** Je pod perem úchyt oblouku stěny nebo výstupku? (má přednost před kótami) */
-export const anyHandleUnderPen = (p: PointerInput): boolean => !!protArcUnderPen(p) || !!arcUnderPen(p);
+export const anyHandleUnderPen = (p: PointerInput): boolean => !!drawingHandleUnderPen(p) || !!protArcUnderPen(p) || !!arcUnderPen(p);
 
 /** Úchyt oblouku v obrysu vybraného výstupku pod perem. */
 export function protArcUnderPen(p: PointerInput): { id: Id; seg: number } | null {
@@ -153,6 +156,13 @@ export function protArcUnderPen(p: PointerInput): { id: Id; seg: number } | null
 }
 
 export function grabArcHandle(p: PointerInput): boolean {
+  const dh = drawingHandleUnderPen(p);
+  if (dh) {
+    drag = { kind: 'draw', h: dh };
+    downScreen = p.screen;
+    dragging = false;
+    return true;
+  }
   const ph = protArcUnderPen(p);
   if (ph) {
     drag = { kind: 'protArc', id: ph.id, seg: ph.seg };
@@ -207,6 +217,8 @@ export const selectTool: Tool = {
     if (hit.kind === 'wall' && before?.kind === 'wall' && before.id === hit.id && floor.walls[hit.id]?.radius === undefined && !(chain && chain.pieces.length > 1)) {
       drag = { kind: 'wall', id: hit.id, origin: groupOrigin(floor, [hit]), grab: p.world, lines: wallMoveLines(floor, hit.id, p.world) };
     }
+    // tažení už vybrané kresby ji posune celou
+    if (hit.kind === 'drawing' && before?.kind === 'drawing' && before.id === hit.id) drag = { kind: 'group', origin: groupOrigin(floor, [hit]), start: p.world };
     if (hit.kind === 'room') {
       const r = floor.rooms[hit.id]!;
       drag = { kind: 'room', id: hit.id, dx: p.world.x - r.x, dy: p.world.y - r.y };
@@ -245,7 +257,9 @@ export const selectTool: Tool = {
     if (!floor) return;
     const cam = store.get().camera;
 
-    if (drag.kind === 'leader') {
+    if (drag.kind === 'draw') {
+      dragDrawingHandle(drag.h, p);
+    } else if (drag.kind === 'leader') {
       updateText(drag.id, { leader: { x: Math.round(p.world.x / 10) * 10, y: Math.round(p.world.y / 10) * 10 } });
     } else if (drag.kind === 'group') {
       moveGroup(drag.origin, p.world.x - drag.start.x, p.world.y - drag.start.y);

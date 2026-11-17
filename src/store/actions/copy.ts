@@ -1,6 +1,7 @@
 /**
  * Akce: otočení výběru, kopírování a vkládání otvorů ze schránky.
  */
+import { drawingExtentPoints, rotateDrawing } from '../../core/drawing';
 import { newId, nextOpeningNumber } from '../../model/factory';
 import { endFrame } from '../../core/endProtrusion';
 import type { Id, Opening, Pt, Wall } from '../../model/types';
@@ -18,7 +19,7 @@ export function rotateSelection(deg: number): void {
   const items = sel.kind === 'multi' ? sel.items : [sel];
   store.edit(floor => {
     const o = groupOrigin(floor, items);
-    const pts = [...Object.values(o.nodes), ...Object.values(o.rooms), ...Object.values(o.texts)];
+    const pts = [...Object.values(o.nodes), ...Object.values(o.rooms), ...Object.values(o.texts), ...Object.keys(o.drawings).flatMap(id => drawingExtentPoints(floor.drawings![id]!))];
     if (!pts.length) return;
     const xs = pts.map(p => p.x);
     const ys = pts.map(p => p.y);
@@ -30,6 +31,9 @@ export function rotateSelection(deg: number): void {
     const rot = (p: Pt): Pt => ({ x: Math.round(cx + (p.x - cx) * cos - (p.y - cy) * sin), y: Math.round(cy + (p.x - cx) * sin + (p.y - cy) * cos) });
     for (const [id, p] of Object.entries(o.nodes)) Object.assign(floor.nodes[id]!, rot(p));
     for (const [id, p] of Object.entries(o.rooms)) Object.assign(floor.rooms[id]!, rot(p));
+    // kresba: přesně (bez zaokrouhlení na mm by se obdélník po otočení o úhel přestal být obdélníkem)
+    const rotExact = (p: Pt): Pt => ({ x: cx + (p.x - cx) * cos - (p.y - cy) * sin, y: cy + (p.x - cx) * sin + (p.y - cy) * cos });
+    for (const id of Object.keys(o.drawings)) rotateDrawing(floor.drawings![id]!, rotExact);
     for (const [id, p] of Object.entries(o.texts)) {
       const t = floor.texts[id]!;
       Object.assign(t, rot(p));
@@ -57,7 +61,7 @@ export function duplicateSelection(): void {
     copyOpenings(items.map(i => i.id));
     return;
   }
-  const created: { kind: 'wall' | 'opening' | 'room' | 'text'; id: Id }[] = [];
+  const created: { kind: 'wall' | 'opening' | 'room' | 'text' | 'drawing'; id: Id }[] = [];
   store.edit(floor => {
     const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
     const nodeMap = new Map<Id, Id>();
@@ -135,6 +139,14 @@ export function duplicateSelection(): void {
         r.y += COPY_OFFSET;
         floor.rooms[r.id] = r;
         created.push({ kind: 'room', id: r.id });
+      } else if (it.kind === 'drawing' && floor.drawings?.[it.id]) {
+        const d = { ...clone(floor.drawings[it.id]!), id: newId('dr') };
+        for (const p of d.pts) {
+          p.x += COPY_OFFSET;
+          p.y += COPY_OFFSET;
+        }
+        floor.drawings[d.id] = d;
+        created.push({ kind: 'drawing', id: d.id });
       } else if (it.kind === 'text' && floor.texts[it.id]) {
         const t = { ...clone(floor.texts[it.id]!), id: newId('tx') };
         t.x += COPY_OFFSET;

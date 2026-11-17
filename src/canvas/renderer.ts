@@ -7,6 +7,7 @@ import { drawBodyDims, drawDims, drawProtrusionDims, setDimLockContext } from '.
 import { drawGrid, drawScaleBar } from './drawGrid';
 import { drawArcHandle, drawFlipArrow, drawNodes, drawWalls } from './drawPlan';
 import { drawOpenings } from './drawOpenings';
+import { drawDrawingHandles, drawDrawings } from './drawDrawings';
 import { drawRooms } from './drawRooms';
 import { drawTexts } from './drawTexts';
 import { drawComponentDims } from './drawComponentDims';
@@ -79,6 +80,8 @@ function render(): void {
   if (floor) {
     drawWalls(ctx, floor, cam, state.selection, state.hover);
     drawOpenings(ctx, floor, cam, state.selection, state.hover);
+    // kresba a její šrafy nad výplní stěn i otvory (překlad nad otvorem)
+    drawDrawings(ctx, floor, cam, state.selection, state.hover);
     drawNodes(ctx, floor, cam, state.selection, state.hover);
     drawRooms(ctx, floor, cam, state.selection);
     drawTexts(ctx, floor, cam, state.selection);
@@ -89,6 +92,7 @@ function render(): void {
     if (state.settings.showDims) drawBodyDims(ctx, floor, cam, state.settings.dimScale, state.selection);
     if (state.settings.showDims) drawProtrusionDims(ctx, floor, cam, state.settings.dimScale, state.selection);
     drawArcHandle(ctx, floor, cam, state.selection);
+    drawDrawingHandles(ctx, floor, cam, state.selection);
     drawFlipArrow(ctx, floor, cam, state.selection);
     drawMoveMarker(ctx);
   }

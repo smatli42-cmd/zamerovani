@@ -1,6 +1,7 @@
 /**
  * Akce: stěny (kreslení, tvary, oblouky, tloušťka, popisky) a posun rohů / skupin.
  */
+import { placeDrawing } from '../../core/drawing';
 import { trimExtendToCorner, type TrimResult } from '../../core/trimExtend';
 import { createCircleWall, createWall, newId } from '../../model/factory';
 import type { Floor, Id, LineStyle, Pt, Wall, WallLabel } from '../../model/types';
@@ -295,10 +296,12 @@ export interface GroupOrigin {
   texts: Record<Id, Pt>;
   /** Hroty odkazových šipek textů. */
   leaders: Record<Id, Pt>;
+  /** Body kresby (core/drawing.ts). */
+  drawings: Record<Id, Pt[]>;
 }
 
 export function groupOrigin(floor: Floor, items: readonly { kind: string; id: Id }[]): GroupOrigin {
-  const o: GroupOrigin = { nodes: {}, rooms: {}, texts: {}, leaders: {} };
+  const o: GroupOrigin = { nodes: {}, rooms: {}, texts: {}, leaders: {}, drawings: {} };
   for (const it of items) {
     if (it.kind === 'wall') {
       const w = floor.walls[it.id];
@@ -306,7 +309,8 @@ export function groupOrigin(floor: Floor, items: readonly { kind: string; id: Id
         const n = floor.nodes[id];
         if (n) o.nodes[id] = { x: n.x, y: n.y };
       }
-    } else if (it.kind === 'room' && floor.rooms[it.id]) o.rooms[it.id] = { x: floor.rooms[it.id]!.x, y: floor.rooms[it.id]!.y };
+    } else if (it.kind === 'drawing' && floor.drawings?.[it.id]) o.drawings[it.id] = floor.drawings[it.id]!.pts.map(p => ({ x: p.x, y: p.y }));
+    else if (it.kind === 'room' && floor.rooms[it.id]) o.rooms[it.id] = { x: floor.rooms[it.id]!.x, y: floor.rooms[it.id]!.y };
     else if (it.kind === 'text' && floor.texts[it.id]) {
       const t = floor.texts[it.id]!;
       o.texts[it.id] = { x: t.x, y: t.y };
@@ -326,6 +330,7 @@ export function moveGroup(origin: GroupOrigin, dx: number, dy: number, step = 10
     for (const [id, p] of Object.entries(origin.rooms)) if (floor.rooms[id]) Object.assign(floor.rooms[id]!, { x: p.x + mx, y: p.y + my });
     for (const [id, p] of Object.entries(origin.texts)) if (floor.texts[id]) Object.assign(floor.texts[id]!, { x: p.x + mx, y: p.y + my });
     for (const [id, p] of Object.entries(origin.leaders)) if (floor.texts[id]) floor.texts[id]!.leader = { x: p.x + mx, y: p.y + my };
+    for (const [id, pts] of Object.entries(origin.drawings)) if (floor.drawings?.[id]) placeDrawing(floor.drawings[id]!, pts, mx, my);
   });
 }
 

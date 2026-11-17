@@ -9,12 +9,12 @@
  */
 import { produce, freeze } from 'immer';
 import type { Floor, Id, Opening, Project } from '../model/types';
-import type { LineStyle } from '../model/types';
+import type { DrawColor, LineStyle } from '../model/types';
 import { syncHosted } from '../core/hosting';
 import { syncProtrusions } from '../core/protrusion';
 import { describeDim, dimKey, lockViolation, pruneLocks, reboundLocks, type DimTarget } from '../core/dimLock';
 
-export type ToolId = 'select' | 'wall' | 'line' | 'trim' | 'split' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'text' | 'leader' | 'paste' | 'pan';
+export type ToolId = 'select' | 'wall' | 'line' | 'trim' | 'split' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'drawLine' | 'drawDouble' | 'text' | 'leader' | 'paste' | 'pan';
 
 export type SingleSelection =
   | { kind: 'wall'; id: Id }
@@ -23,7 +23,9 @@ export type SingleSelection =
   | { kind: 'room'; id: Id }
   | { kind: 'text'; id: Id }
   /** Výstupek / vybrání stěny (KATALOG-STEN.md, sekce I). */
-  | { kind: 'protrusion'; id: Id };
+  | { kind: 'protrusion'; id: Id }
+  /** Kresba – grafický prvek (čára, tvar, dvojitá čára; core/drawing.ts). */
+  | { kind: 'drawing'; id: Id };
 
 /** Výběr: jeden prvek, skupina prvků (výběr obdélníkem) nebo nic. */
 export type Selection = SingleSelection | { kind: 'multi'; items: SingleSelection[] } | null;
@@ -66,8 +68,14 @@ export interface Settings {
   fingerPan: boolean;
   /** Velikost písma kót (1 = výchozí). */
   dimScale: number;
-  /** Styl čáry nově kreslených tvarů (obdélník, kruh, oblouk). */
+  /** Styl čáry nově kreslené kresby (čára, obdélník, kruh, oblouk). */
   shapeStyle: LineStyle;
+  /** Barva čáry nově kreslené kresby. */
+  drawColor: DrawColor;
+  /** Dvojitá čára: vzdálenost čar (mm), uzavřené konce, styl čáry. */
+  doubleWidth: number;
+  doubleClosed: boolean;
+  doubleStyle: LineStyle;
   /** Nástroj Okno: vkládá běžné nebo francouzské okno. */
   windowKind: 'window' | 'french';
   /** Nástroj Stěna: kreslí rovnou nebo obloukovou stěnu. */
@@ -125,7 +133,7 @@ export interface EditOptions {
 const SETTINGS_KEY = 'zamerovani.settings';
 
 function loadSettings(): Settings {
-  const defaults: Settings = { snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', windowKind: 'window', wallShape: 'straight', wallAxis: 'face', wallChain: false, splitGap: false, keepAwake: true };
+  const defaults: Settings = { snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', drawColor: 'black', doubleWidth: 250, doubleClosed: true, doubleStyle: 'dashdot2', windowKind: 'window', wallShape: 'straight', wallAxis: 'face', wallChain: false, splitGap: false, keepAwake: true };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     return raw ? { ...defaults, ...JSON.parse(raw) } : defaults;

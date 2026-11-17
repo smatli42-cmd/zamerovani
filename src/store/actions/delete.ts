@@ -27,6 +27,9 @@ export function deleteSelection(): void {
         case 'text':
           delete floor.texts[sel.id];
           break;
+        case 'drawing':
+          if (floor.drawings) delete floor.drawings[sel.id];
+          break;
         case 'protrusion':
           if (floor.protrusions) delete floor.protrusions[sel.id];
           if (floor.cornerProtrusions) delete floor.cornerProtrusions[sel.id];
