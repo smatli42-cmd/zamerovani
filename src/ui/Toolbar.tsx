@@ -9,8 +9,7 @@ import { splitMsg } from '../tools/splitTool';
 
 const TOOLS: { id: ToolId; icon: string; label: string; title: string }[] = [
   { id: 'select', icon: '👆', label: 'Vybrat', title: 'Vybrat prvek, posunout roh / otvor, ťuknutím na stěnu zadat délku' },
-  { id: 'wall', icon: '✏️', label: 'Stěna', title: 'Kreslit stěny tažením pera' },
-  { id: 'line', icon: '╱', label: 'Čára', title: 'Kreslit čáru (bez tloušťky); čára od líce stěny zpět na týž líc vytvoří výstupek nebo vybrání' },
+  { id: 'wall', icon: '✏️', label: 'Stěna', title: 'Kreslit stěny tažením pera; v menu Stěny i Čára (výstupky a vybrání stěn)' },
   { id: 'trim', icon: '⌐', label: 'Do rohu', title: 'Zkrátit / prodloužit dvě stěny do rohu: ťukni na obě stěny na části, které mají zůstat' },
   { id: 'split', icon: '✂️', label: 'Rozdělit', title: 'Ťuknutím rozdělit stěnu na dvě; v režimu S mezerou dvěma ťuknutími vyjmout úsek stěny' },
   { id: 'door', icon: '🚪', label: 'Dveře', title: 'Ťuknutím na stěnu vložit dveře' },

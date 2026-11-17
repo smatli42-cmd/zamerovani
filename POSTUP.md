@@ -7,6 +7,12 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-17 (2) – krok 1: Čára ve stěnách přesunuta do menu Stěny
+- **Co se změnilo:** Dnešní nástroj Čára (stěnový: výstupky, vybrání, napojení na stěnu, šedá výplň) zmizel z lišty a je v menu Stěny jako přepínač **Stěna | Čára** (ToolId `line` beze změny, chování beze změny).
+- **Viditelně v aplikaci:** v liště už není ╱ Čára; po ťuknutí na ✏️ Stěna je nahoře přepínač Stěna | Čára. U Čáry krátká nápověda (výstupek / vybrání).
+- **Rozhodnuto samostatně:** název zatím „Čára“ (doladí se, dle zadání); přepnutím se ukončí řetěz stěn.
+- **Otevřené:** konečný název.
+
 ### 2026-11-17 (1) – krok 0: dvojitá čára zpět jako kresba
 - **Co se změnilo:** Nový druh prvku **kresba** (`Floor.drawings`, `SCHEMA_VERSION` 17 bez převodu dat) – čistě grafické prvky, jejichž pravidla jsou na jednom místě v `core/drawing.ts` (uzavřený tvar, šrafa, obrys, zásah, úchyty, obdélník). Kresba nikdy není stěnou ani výstupkem (kód stěn ji nevidí). Přichytávání kresby na jednom místě `tools/drawSnap.ts` (body kresby, rohy, líce, čáry stěn, pomocné čáry – jen pomůcka, nic se nepamatuje). Vrácena **dvojitá čára** (`KRESLENI-PREKLADU.md`) jako samostatný nástroj ═ Dvojitá: dvě rovnoběžné čáry jako jeden objekt, styl i „čerchovaná se dvěma tečkami“ (výchozí), konce otevřené / uzavřené (výchozí uzavřené), bez výplně, nad stěnami i otvory. Výběr, posun, úchyty (konce, vzdálenost čar), mazání, kopie, otočení, Zpět. Testy `core/drawing.test.ts`, `store/drawings.test.ts`.
 - **Viditelně v aplikaci:** v liště ═ **Dvojitá**; nahoře vzdálenost čar (předvolby jako tloušťky stěn), konce, styl. Tah od líce stěny podél ní = čáry přes celou tloušťku stěny (překlad). Panel „Dvojitá čára“.

@@ -9,6 +9,7 @@ import { NumField, Seg } from './panels/fields';
 import { LINE_STYLES } from './panels/SidePanel';
 import { DRAW_LINE_STYLES } from './panels/common';
 import { TRIM_MSG_FIRST } from '../tools/trimTool';
+import { tools } from '../tools/registry';
 import { splitMsg, splitTool } from '../tools/splitTool';
 
 export function ToolOptions() {
@@ -19,11 +20,34 @@ export function ToolOptions() {
   const toolMsg = useStore(s => s.toolMsg);
   // tlačítko Ukončit jen při běžícím řetězu: roh existuje na aktuálním podlaží (po Zpět / na jiném podlaží ne)
   const chainNode = useStore(s => (s.chainNode && store.floor()?.nodes[s.chainNode] ? s.chainNode : null));
+  // menu Stěny: Stěna / Čára (dnešní čára ve stěnách – výstupky a vybrání; KRESLENI-SAMOSTATNE-CARY-A-SRAFY.md)
+  const wallOrLine = (
+    <Seg
+      options={[
+        { v: 'wall', label: 'Stěna' },
+        { v: 'line', label: 'Čára' }
+      ]}
+      value={tool === 'line' ? 'line' : 'wall'}
+      onChange={v => {
+        tools[tool].cancel?.();
+        store.set({ tool: v, hover: null, chainNode: null });
+      }}
+    />
+  );
+  if (tool === 'line') {
+    return (
+      <div class="tool-options wall-options">
+        {wallOrLine}
+        <span class="small">Čára ve stěnách: od líce stěny zpět na týž líc vytvoří výstupek nebo vybrání.</span>
+      </div>
+    );
+  }
   if (tool === 'wall') {
     // menu Stěny: předvolby tloušťky, aktuální je označená (stačí zkontrolovat a kreslit)
     const active = activeWallThickness(project);
     return (
       <div class="tool-options wall-options">
+        {wallOrLine}
         <Seg
           options={[
             { v: 'straight', label: 'Rovná' },
