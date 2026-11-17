@@ -7,6 +7,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-18 (konec sezení)
+- **Co se změnilo:** Sezení ukončeno; za 2026-11-17/18: D3 K hraně (17 (7)), napojení na líc oblouku (18 (1)), kóty výstupku v rohu a na konci stěny + sjednocený překryv výstupků `core/wallSpans.ts` (18 (2)). Testy 546, typecheck a build OK.
+- **Viditelně v aplikaci:** viz záznamy níže.
+- **Rozhodnuto samostatně:** viz (2).
+- **Otevřené:** vyzkoušet kóty výstupku v rohu / na konci (uživatel zatím nezkoušel); vše na tabletu.
+- **Chyby od uživatele:** žádné nové.
+- **Soubory nad 500 řádků:** žádné (největší `canvas/drawDims.ts` 464, `tools/selectTool.ts` 454, `tools/wallTool.ts` 446).
+
 ### 2026-11-18 (2) – kóty výstupku v rohu a na konci stěny (fronta bod 1)
 - **Co se změnilo:** Vybraný výstupek v rohu a výstupek na konci stěny mají klikací kóty na výkrese jako obyčejný výstupek (`canvas/drawCornerEndDims.ts`): v rohu rozměr podél 1. a 2. stěny od rohu; na konci stěny podél každého líce od čela, přesah za čelo a hloubka od každého líce. Ťuknutím NumPad (Další projde kóty v řadě), mění se jen výstupek, kóty jdou zamknout (`corner-dim`, `end-dim` v `core/dimLock.ts`). Změna, po které by výstupek vyjel za konec stěny nebo najel na jiný výstupek, se neprovede (`applyCornerDim` / `applyEndDim` v `store/actions/protrusions.ts`). Rozměry i v panelech (u výstupku na konci nově). Testy `store/cornerEndDims.test.ts` (10). Po kontrole revieweru: pravidlo „výstupky na stěně se nepřekrývají“ sjednoceno na jedno místo `core/wallSpans.ts` (dřív na třech místech a bez dvojic roh × konec a roh × roh) – používá ho vkládání výstupku, kóty i změna délky stěny; kóty u vnějšího rohu leží vně výstupku (dřív uvnitř); minimum polí v panelu podle kóty.
 - **Viditelně v aplikaci:** po ťuknutí na výstupek v rohu / na konci stěny kóty kolem něj; panel výstupku na konci má pole rozměrů.
@@ -434,16 +442,16 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Otevřené:** vyzkoušet na tabletu; další krok tažení a posun jako blok (D2, D11–D14).
 - **Chyby od uživatele:** zatím žádné.
 
-## Poslední stav (2026-11-18)
+## Poslední stav (2026-11-18, konec sezení)
 
-**Hotové (na webu, uživatel vyzkoušel na PC):** kresba – samostatná Čára, Dvojitá, Obdélník / Kruh / Oblouk jako kresba, šrafy a barvy (Deník 2026-11-17 (1)–(6)); D3 K hraně – zkrátit / prodloužit jednu stěnu k líci druhé (2026-11-17 (7)); napojení stěny na líc obloukové stěny (2026-11-18 (1)). Testy 536, typecheck a build OK. SCHEMA_VERSION 18.
+**Hotové (na webu):** kresba – samostatná Čára, Dvojitá, Obdélník / Kruh / Oblouk jako kresba, šrafy a barvy (Deník 2026-11-17 (1)–(6)); D3 K hraně (2026-11-17 (7)); napojení stěny na líc obloukové stěny (2026-11-18 (1)) – vše uživatel vyzkoušel na PC. Kóty výstupku v rohu a na konci stěny (2026-11-18 (2)) – **čeká na vyzkoušení**. Testy 546, typecheck a build OK. SCHEMA_VERSION 18.
 
 **Rozpracované:** nic.
 
-**Čeká na vyzkoušení na tabletu:** vše od 2026-11-14.
+**Čeká na vyzkoušení:** kóty výstupku v rohu / na konci (PC); na tabletu vše od 2026-11-14.
 
 **Fronta kroků:**
-1. Kóty výstupku v rohu a na konci stěny na výkrese (dnes jen v panelu); vybrání v rohu.
+1. Vybrání v rohu (výstupek v rohu jen jako vybrání – zeptat se na podobu).
 2. Kóty: volná kóta / úhlopříčka (POZADAVKY.md, i kóta přiřazená k čarám kresby) – zámek je připravený; později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) spolu s exportem DXF / PDF.
 3. Drobnosti: řetězová kóta polohy napojení i u oblouku; Do rohu / K hraně pro oblouky; řetězová kóta užšího otvoru při vypnutém vnitřním ostění.
 
@@ -529,6 +537,8 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Rozhodnuto samostatně
 (Rozhodnutí mimo katalog, udělaná bez uživatele – nejnovější nahoře. Uživatel je může kdykoli změnit.)
+- 2026-11-18: Kóty výstupku v rohu / na konci: změna rozměru mění v poměru jen dotčenou část obrysu; přesah za čelo se kótuje u prvního líce; odstupy od sousedů se u nich nekótují. Napojení na líc platí i pro oblouk (líc = soustředný oblouk). D3 K hraně: nejdřív upravovaná stěna, pak hrana; konec mimo délku druhé stěny se neprovede.
+- 2026-11-17: Kresba – viz Deník 2026-11-17 (1)–(6) (výchozí hodnoty dvojité čáry, sada barev, pořadí výběru, rozsah migrace).
 - 2026-11-15: Výstupek při přehození strany stěny: platí I1.7 beze změny (zůstane na své straně, posune se s lícem); jen při automatickém překlopení oblouku po uzavření místnosti se výstupek zrcadlí s obloukem (zůstane na vnějším líci).
 - 2026-11-14: Napojení na líc jen u rovných stěn a jen pro stěnu vedoucí od líce ven; po přehození strany / změně tloušťky průběžné stěny jede roh s lícem (napojená stěna se prodlouží / zkrátí). Šířka okna bez migrace dat (existující okna se zúží o 100 mm, i u zamčených kót); okno s rámem min. 200 mm.
 - 2026-11-14: Zámek kót – přepsání zamčené kóty v NumPadu po druhém potvrzení, zámek zůstane (dokument navrhoval zrušení – uživatel nerozhodl); tažení prvku se zamčenou kótou se blokuje průběžně; další drobná rozhodnutí v Deníku změn (10).
