@@ -243,6 +243,9 @@ export function mergeArcAt(floor: Floor, nodeId: Id): boolean {
       // části musí z rohu pokračovat na opačné strany (výseče se nepřekrývají): součet výsečí = výseč celku
       const whole = arcGeometry(p, q, sagitta);
       if (!whole || Math.abs(Math.abs(g1.sweep) + Math.abs(g2.sweep) - Math.abs(whole.sweep)) > 1e-3) continue;
+      // směr částí vůči p → roh → q (1 = stejný); podle něj se otáčí strana líce napojených rohů
+      const w1Dir = w1.b === nodeId ? 1 : -1;
+      const w2Dir = w2.a === nodeId ? 1 : -1;
       const farNoJoin1 = w1.a === nodeId ? w1.noJoinB : w1.noJoinA;
       const farNoJoin2 = w2.a === nodeId ? w2.noJoinB : w2.noJoinA;
       w1.a = p.id;
@@ -254,10 +257,14 @@ export function mergeArcAt(floor: Floor, nodeId: Id): boolean {
       if (farNoJoin2) w1.noJoinB = true;
       else delete w1.noJoinB;
       delete floor.walls[w2.id];
-      // oblouk nenese rohy na líci (Node.hostFace jen u rovné stěny) – napojení na oblouk je vždy na ose
-      for (const x of Object.values(floor.nodes)) if (x.host === w2.id) {
+      // rohy napojené na části leží na sloučeném oblouku p → q; strana líce se otočí u části vedené opačně
+      const flip1 = w1Dir !== 1;
+      const flip2 = w2Dir !== 1;
+      for (const x of Object.values(floor.nodes)) {
+        const fromW2 = x.host === w2.id;
+        if (!fromW2 && x.host !== w1.id) continue;
         x.host = w1.id;
-        delete x.hostFace;
+        if (x.hostFace && (fromW2 ? flip2 : flip1)) x.hostFace = x.hostFace === 1 ? -1 : 1;
       }
       if (Object.values(floor.walls).some(x => x.a === nodeId || x.b === nodeId)) {
         node.host = w1.id;

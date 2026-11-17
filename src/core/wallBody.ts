@@ -193,9 +193,10 @@ function computeWallBodies(floor: Floor): Map<Id, WallBody> {
   const steps: { wallId: Id; a: Pt; b: Pt }[] = [];
   for (const all of byNode.values()) {
     const node = all[0]!.node;
+    // každý konec od svého bodu: virtuální konce průběžné stěny leží na její ose, konec napojený na líc na líci
     const closeFree = (e: End) => {
-      e.loPt = add(node, scale(e.n, e.lo));
-      e.hiPt = add(node, scale(e.n, e.hi));
+      e.loPt = add(e.node, scale(e.n, e.lo));
+      e.hiPt = add(e.node, scale(e.n, e.hi));
       e.free = true;
     };
     // „nespojovat konec“: takový konec má vlastní čelo a do napojení ostatních nevstupuje
@@ -212,8 +213,8 @@ function computeWallBodies(floor: Floor): Map<Id, WallBody> {
     for (let i = 0; i < ends.length; i++) {
       const e = ends[i]!;
       const next = ends[(i + 1) % ends.length]!;
-      const p = add(node, scale(e.n, e.hi));
-      const q = add(node, scale(next.n, next.lo));
+      const p = add(e.node, scale(e.n, e.hi));
+      const q = add(next.node, scale(next.n, next.lo));
       // u obloukové stěny se počítá se skutečnou kružnicí líce (ne s tečnou)
       const x = intersectBoundaries(boundaryOf(e, e.hi), boundaryOf(next, next.lo), node);
       // (téměř) rovné pokračování – i naměřené stěny skoro v přímce a rovná stěna s tečně navazujícím obloukem:

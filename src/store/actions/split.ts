@@ -74,31 +74,29 @@ export function splitPoint(floor: Floor, wallId: Id, p: Pt, alignTol = 0): { pt:
 }
 
 /**
- * Příčka napojená na líc rovné stěny v místě dělení: dělicí bod se posune na vzdálenější okraj jejího těla
+ * Příčka napojená na líc stěny (rovné i oblouku) v místě dělení: dělicí bod se posune na vzdálenější okraj jejího těla
  * (příčka i její roh zůstanou na jedné části, napojení se nezruší).
  */
 function avoidFaceTees(floor: Floor, wallId: Id, sp: { pt: Pt; at: number; len: number }): { pt: Pt; at: number; len: number } {
   const w = floor.walls[wallId];
-  const n = w && !w.sagitta ? wallNodes(floor, w) : null;
-  if (!w || !n) return sp;
-  const [A, B] = n;
-  const d = unit(A, B);
-  const u = (p: Pt) => dot(sub(p, A), d);
+  // souřadnice stěny (u podél osy, across od osy) – rovná i oblouková stěna
+  const fr = w ? wallFrame(floor, w) : null;
+  if (!w || !fr) return sp;
   const bodies = wallBodies(floor);
   for (const node of Object.values(floor.nodes)) {
     if (node.host !== wallId || !node.hostFace) continue;
     const tee = Object.values(floor.walls).find(x => x.id !== wallId && (x.a === node.id || x.b === node.id));
     const poly = tee && bodies.get(tee.id)?.poly;
     if (!poly) continue;
-    // část těla příčky u líce (do 1 mm od roviny líce kolmo ke stěně) promítnutá na osu
-    const nu = u(node);
-    const near = poly.filter(p => Math.abs(dot(sub(p, node), { x: -d.y, y: d.x })) <= 1).map(u);
+    // část těla příčky u líce (do 1 mm od líce kolmo ke stěně) promítnutá na osu
+    const at = fr.project(node);
+    const near = poly.map(p => fr.project(p)).filter(q => Math.abs(q.across - at.across) <= 1).map(q => q.u);
     if (near.length < 2) continue;
     const lo = Math.min(...near);
     const hi = Math.max(...near);
     if (sp.at < lo - MIN_PART || sp.at > hi + MIN_PART) continue;
-    const at = Math.abs(hi - nu) >= Math.abs(lo - nu) ? hi : lo;
-    return { pt: add(A, scale(d, at)), at, len: sp.len };
+    const u = Math.abs(hi - at.u) >= Math.abs(lo - at.u) ? hi : lo;
+    return { pt: fr.at(u).p, at: u, len: sp.len };
   }
   return sp;
 }

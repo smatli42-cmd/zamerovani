@@ -187,9 +187,29 @@ export function nextWallInChain(floor: Floor, wallId: Id, fromNodeId: Id): { wal
   return { wall: w, nodeId: otherEnd(w, fromNodeId) };
 }
 
-/** Může mít stěna roh napojený na líc (rovná stěna s tloušťkou, ne oblouk / kruh)? */
+/** Může mít stěna roh napojený na líc (rovná i oblouková stěna s tloušťkou, ne kruh)? */
 export const canHostOnFace = (w: Wall | undefined): w is Wall =>
-  !!w && w.thickness > 0 && w.radius === undefined && !w.sagitta && w.a !== w.b;
+  !!w && w.thickness > 0 && w.radius === undefined && w.a !== w.b;
+
+/**
+ * Osa stěny a–b (vzepětí `sagitta`) posunutá o `off` podél normály k ní (normal(směr a→b), u oblouku v každém bodě
+ * kolmo k tečně): rovná stěna = rovnoběžka, oblouk = soustředný oblouk (stejný střed, konce na stejných paprscích).
+ * Tak leží líc stěny, na kterém je napojený roh (`Node.hostFace`).
+ */
+export function offsetAxis(a: Pt, b: Pt, sagitta: number, off: number): { a: Pt; b: Pt; sagitta: number; ok: boolean } {
+  if (!off) return { a, b, sagitta, ok: true };
+  const g = arcGeometry(a, b, sagitta);
+  if (!g) {
+    const u = unit(a, b);
+    const n = { x: -u.y * off, y: u.x * off };
+    return { a: { x: a.x + n.x, y: a.y + n.y }, b: { x: b.x + n.x, y: b.y + n.y }, sagitta: 0, ok: true };
+  }
+  // normála k tečně míří u oblouku se sweep > 0 ke středu (viz facePath v core/wallFace.ts)
+  const k = (g.r - (Math.sign(g.sweep) || 1) * off) / g.r;
+  const sc = (p: Pt) => ({ x: g.center.x + (p.x - g.center.x) * k, y: g.center.y + (p.y - g.center.y) * k });
+  // ok = false: vnitřní líc velmi malého oblouku by prošel středem (tloušťka ≥ poloměr) – na něj se nenapojuje
+  return { a: sc(a), b: sc(b), sagitta: sagitta * k, ok: k * g.r > 1 };
+}
 
 /**
  * Posun líce `side` od osy stěny podél normal(a→b) (stejně jako `faceOffset` v core/protrusion.ts – tady
@@ -214,6 +234,7 @@ export function hostAxisPoint(floor: Floor, node: Node): Pt {
   const a = h && floor.nodes[h.a];
   const b = h && floor.nodes[h.b];
   if (!off || !a || !b || dist(a, b) < 1e-9) return node;
+  if (h.sagitta) return nearestOnArc(node, a, b, h.sagitta).point; // oblouk: radiálně na osu
   const u = unit(a, b);
   return { x: node.x + u.y * off, y: node.y - u.x * off };
 }

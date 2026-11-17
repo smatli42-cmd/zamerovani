@@ -11,13 +11,19 @@ import type { Floor, Id, Pt, Wall } from '../model/types';
 import { add, dist, dot, normal, scale, sub, unit } from './geometry';
 import { arcGeometry, nearestOnArc } from './arc';
 export { hostedOn, wallSegments } from './floorQueries';
-import { canHostOnFace, hostOffset, openingsOnWall, wallFaceOffset } from './floorQueries';
+import { canHostOnFace, hostOffset, offsetAxis, openingsOnWall, wallFaceOffset } from './floorQueries';
 
-/** Přímka líce průběžné stěny: konce a, b posunuté o `off` podél normal(a→b) (u rohu na ose beze změny). */
-function shifted(a: Pt, b: Pt, off: number): [Pt, Pt] {
-  if (!off) return [a, b];
-  const n = scale(normal(unit(a, b)), off);
-  return [add(a, n), add(b, n)];
+/** Čára líce průběžné stěny `h` (osa a–b posunutá o `off`; rovná = rovnoběžka, oblouk = soustředný oblouk) a její vzepětí. */
+function shifted(h: Wall, a: Pt, b: Pt, off: number): [Pt, Pt, number, boolean] {
+  const o = offsetAxis(a, b, h.sagitta ?? 0, off);
+  return [o.a, o.b, o.sagitta, o.ok];
+}
+
+/** Normála k ose stěny v místě bodu `p` (normal(směr a→b); u oblouku kolmo k tečně v nejbližším bodě). */
+function normalAt(h: Wall, a: Pt, b: Pt, p: Pt): Pt {
+  const g = h.sagitta ? arcGeometry(a, b, h.sagitta) : null;
+  if (!g) return normal(unit(a, b));
+  return scale(unit(g.center, p), -(Math.sign(g.sweep) || 1));
 }
 
 /** Jak blízko (mm) musí roh ležet u stěny, aby se na ni napojil / zůstal napojený. */
@@ -27,9 +33,9 @@ export const ON_HOST_TOL = 1;
 export const canHost = (w: Wall | undefined): w is Wall => !!w && w.radius === undefined && w.a !== w.b;
 
 /** Poloha bodu podél stěny a–b (0 = a, 1 = b), vzdálenost od ní a nejbližší bod (u oblouku na oblouku). */
-function onHost(p: Pt, h: Wall, a: Pt, b: Pt): { t: number; off: number; foot: Pt } {
-  if (h.sagitta) {
-    const r = nearestOnArc(p, a, b, h.sagitta);
+function onHost(p: Pt, sagitta: number, a: Pt, b: Pt): { t: number; off: number; foot: Pt } {
+  if (sagitta) {
+    const r = nearestOnArc(p, a, b, sagitta);
     return { t: r.t, off: r.distance, foot: r.point };
   }
   const e = sub(b, a);
@@ -40,8 +46,8 @@ function onHost(p: Pt, h: Wall, a: Pt, b: Pt): { t: number; off: number; foot: P
 }
 
 /** Průsečík přímky (o, d) se stěnou (přímka / kružnice oblouku) nejblíž bodu `near`; null = žádný. */
-function lineWithHost(o: Pt, d: Pt, h: Wall, a: Pt, b: Pt, near: Pt): Pt | null {
-  const g = arcGeometry(a, b, h.sagitta ?? 0);
+function lineWithHost(o: Pt, d: Pt, sagitta: number, a: Pt, b: Pt, near: Pt): Pt | null {
+  const g = arcGeometry(a, b, sagitta);
   if (!g) {
     const e = sub(b, a);
     const den = d.x * e.y - d.y * e.x;
@@ -61,7 +67,7 @@ function lineWithHost(o: Pt, d: Pt, h: Wall, a: Pt, b: Pt, near: Pt): Pt | null 
 
 /**
  * Roh `nodeId` leží uvnitř jiné stěny (rovné i oblouku): napojí se na ni, stěna zůstane v celku.
- * U rovné stěny s tloušťkou i na kterýkoli z obou líců (`Node.hostFace`) – napojená stěna pak začíná na líci.
+ * U stěny s tloušťkou (rovné i oblouku) i na kterýkoli z obou líců (`Node.hostFace`) – napojená stěna pak začíná na líci.
  */
 export function attachAtNode(floor: Floor, nodeId: Id): void {
   const node = floor.nodes[nodeId];
@@ -72,10 +78,10 @@ export function attachAtNode(floor: Floor, nodeId: Id): void {
     const b = floor.nodes[w.b];
     if (!a || !b) continue;
     const len = dist(a, b);
-    // osa (čára) stěny, pak líce (jen rovná stěna s tloušťkou; líc totožný s osou se bere jako osa)
+    // osa (čára) stěny, pak líce (stěna s tloušťkou, rovná i oblouk; líc totožný s osou se bere jako osa)
     const faces: (1 | -1 | undefined)[] = [undefined];
     // líc jen pro stěny vedoucí od líce ven (ne do těla a přes osu – to by bylo křížení)
-    const nrm = normal(unit(a, b));
+    const nrm = normalAt(w, a, b, node);
     const away = (s: 1 | -1) =>
       Object.values(floor.walls).every(x => {
         if (x.id === w.id || (x.a !== nodeId && x.b !== nodeId)) return true;
@@ -84,8 +90,9 @@ export function attachAtNode(floor: Floor, nodeId: Id): void {
       });
     if (canHostOnFace(w)) for (const s of [1, -1] as const) if (Math.abs(wallFaceOffset(w, s)) > 0.5 && away(s)) faces.push(s);
     for (const face of faces) {
-      const [fa, fb] = shifted(a, b, face ? wallFaceOffset(w, face) : 0);
-      const r = onHost(node, w, fa, fb);
+      const [fa, fb, fs, fok] = shifted(w, a, b, face ? wallFaceOffset(w, face) : 0);
+      if (!fok) continue;
+      const r = onHost(node, fs, fa, fb);
       if (r.off > ON_HOST_TOL || r.t * len < 5 || (1 - r.t) * len < 5) continue;
       node.x = r.foot.x;
       node.y = r.foot.y;
@@ -128,9 +135,11 @@ export function syncHosted(before: Floor | undefined, floor: Floor): void {
       continue;
     }
     // roh na líci: líc průběžné stěny (posun od osy podle tloušťky, strany a osy – i po jejich změně)
-    if (node.hostFace && !canHostOnFace(h)) delete node.hostFace; // z rovné stěny s tloušťkou se stal oblouk / čára → osa
+    if (node.hostFace && !canHostOnFace(h)) delete node.hostFace; // ze stěny s tloušťkou se stala čára → osa
+    // vnitřní líc velmi malého oblouku (tloušťka ≥ poloměr) neexistuje → roh na osu
+    if (node.hostFace && !offsetAxis(a, b, h.sagitta ?? 0, hostOffset(floor, node)).ok) delete node.hostFace;
     const off = hostOffset(floor, node);
-    const [fa, fb] = shifted(a, b, off);
+    const [fa, fb, fs] = shifted(h, a, b, off);
     const n0 = before?.nodes[node.id];
     const a0 = before?.nodes[h.a];
     const b0 = before?.nodes[h.b];
@@ -145,12 +154,12 @@ export function syncHosted(before: Floor | undefined, floor: Floor): void {
       // průsečík přímky napojené stěny (přes její vzdálený konec) se stěnou / jejím lícem (přímka / oblouk)
       const att = Object.values(floor.walls).find(w => (w.a === node.id || w.b === node.id) && w.id !== h.id);
       const far = att && floor.nodes[att.a === node.id ? att.b : att.a];
-      let p: Pt | null = far && dist(far, n0) > 1 ? lineWithHost(far, unit(far, n0), h, fa, fb, n0) : null;
-      if (!p) p = onHost(n0, h, fa, fb).foot;
+      let p: Pt | null = far && dist(far, n0) > 1 ? lineWithHost(far, unit(far, n0), fs, fa, fb, n0) : null;
+      if (!p) p = onHost(n0, fs, fa, fb).foot;
       node.x = p.x;
       node.y = p.y;
     }
-    const r = onHost(node, h, fa, fb);
+    const r = onHost(node, fs, fa, fb);
     const len = dist(a, b);
     // pohnulo-li se obojí (posun / otočení výběru), konce i roh se zaokrouhlily každý zvlášť → větší tolerance
     const tol = nodeMoved && hostMoved ? 5 : ON_HOST_TOL;
@@ -210,9 +219,9 @@ export function shiftHosted(floor: Floor, nodeId: Id, delta: number): void {
     if (fh && fa && fb && canHost(fh)) {
       // konec napojený na jinou stěnu (i šikmou / oblouk, i na její líc): průsečík přímky příčky z posunutého rohu s ní
       const moved = add(far, v);
-      const [ga, gb] = shifted(fa, fb, hostOffset(floor, far as typeof node));
-      const p = dist(far, from) > 1 ? lineWithHost(node, unit(from, far), fh, ga, gb, moved) : null;
-      Object.assign(far, p ?? onHost(moved, fh, ga, gb).foot);
+      const [ga, gb, gs] = shifted(fh, fa, fb, hostOffset(floor, far as typeof node));
+      const p = dist(far, from) > 1 ? lineWithHost(node, unit(from, far), gs, ga, gb, moved) : null;
+      Object.assign(far, p ?? onHost(moved, gs, ga, gb).foot);
     } else if (others.length === 0) moveNode(far);
   }
 }

@@ -11,7 +11,7 @@ import { store } from '../store/store';
 import { HIT_PX } from './types';
 
 /**
- * Nástroj Stěna: konec (i začátek) u líce rovné stěny s tloušťkou – i protějšího, i u osy uprostřed – se přichytí
+ * Nástroj Stěna: konec (i začátek) u líce stěny s tloušťkou (rovné i oblouku) – i protějšího, i u osy uprostřed – se přichytí
  * přesně na líc a nová stěna se na něj napojí (`Node.hostFace`): začne na líci, její délka je viditelná délka.
  * Roh a zvláštní bod mají přednost; napojení na čáru stěny jen, je-li pero blíž k ní než k líci.
  * Na pomocné čáře / ve směru kreslení se bere průsečík s lícem.
