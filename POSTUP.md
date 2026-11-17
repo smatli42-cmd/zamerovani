@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-17 (3) – krok 2: samostatná Čára; Obdélník, Kruh, Oblouk jsou kresba
+- **Co se změnilo:** Nový nástroj ╱ **Čára** v liště (vedle Dvojité, Obdélníku…) – lomená čára jako kresba (`Drawing.shape = 'line'`): další úsek navazuje na volný konec, úsek zpět do počátku čáru uzavře; oblouky úchytem uprostřed úseku. Obdélník, Kruh a Oblouk kreslí kresbu místo stěn (rozhodnutí uživatele) – nikdy stěna ani výstupek, stěnu nedělí, nenapojují se. Migrace 17 → 18 (`persistence/migrateDrawings.ts`) převede staré obdélníky, kruhy a volné oblouky tloušťky 0 na kresbu. Katalog I1.2, I1.10, př. 12 a 14 a `CLAUDE.md` upraveny podle rozhodnutí uživatele. Dva testy migrace přepsané na nové zadání (tvary → kresba). Testy `store/drawings.test.ts`.
+- **Viditelně v aplikaci:** samostatná Čára a tvary se přichytí ke stěnám a bodům, ale zůstanou čárami (ani na líci stěny nevznikne výstupek, nic se nevyplní šedou). Vybraná kresba má úchyty: vrcholy (u obdélníku zůstane obdélníkem), oblouky, poloměr kruhu. Panel kresby: rozměry (obdélník šířka × výška, průměr, vzepětí), styl čáry, uzavřít / otevřít lomenou čáru.
+- **Rozhodnuto uživatelem:** tvary jsou grafické prvky; staré tvary převést na kresbu.
+- **Rozhodnuto samostatně:** migrace převádí jen jednoznačné tvary – zůstane stěnou: tvar s otvorem / výstupkem / napojenou stěnou, se štítkem místnosti uvnitř, s vyplněným popiskem (typ, materiál, poznámka – kresba popisek nemá), obdélník se stranami různého stylu, rovné čáry vždy; dlouhá kliknutelná kóta stěn na kresbě není (rozměry v panelu).
+- **Otevřené:** kóty kresby na plátně (klikací) – zatím jen v panelu; kopírování v řadě pro kresbu.
+
 ### 2026-11-17 (2) – krok 1: Čára ve stěnách přesunuta do menu Stěny
 - **Co se změnilo:** Dnešní nástroj Čára (stěnový: výstupky, vybrání, napojení na stěnu, šedá výplň) zmizel z lišty a je v menu Stěny jako přepínač **Stěna | Čára** (ToolId `line` beze změny, chování beze změny).
 - **Viditelně v aplikaci:** v liště už není ╱ Čára; po ťuknutí na ✏️ Stěna je nahoře přepínač Stěna | Čára. U Čáry krátká nápověda (výstupek / vybrání).

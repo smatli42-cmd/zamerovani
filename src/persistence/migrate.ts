@@ -5,6 +5,7 @@
 import { createCircleWall, createWall, DEFAULT_WALL_THICKNESS, isWindowKind, newId, WINDOW_FRAME } from '../model/factory';
 import { hasBody } from '../core/wallFace';
 import { orientLoopOutward } from '../core/wallSide';
+import { shapesToDrawings } from './migrateDrawings';
 import { mergeArcAt, mergeStraightAt } from '../core/topology';
 import { SCHEMA_VERSION, type Floor, type LineStyle, type Project, type Pt, type Reveal } from '../model/types';
 
@@ -29,12 +30,14 @@ export function migrateProject(raw: unknown): Project {
   // 14 → 15: výstupky přes roh (floor.cornerProtrusions) – nepovinné pole, bez převodu
   // 15 → 16: výstupky přes volný konec stěny (floor.endProtrusions) – nepovinné pole, bez převodu
   // 16 → 17: kresba – grafické prvky (floor.drawings: dvojitá čára…) – nepovinné pole, bez převodu
+  // 17 → 18: obdélníky, kruhy a volné oblouky tloušťky 0 se převedou na kresbu (persistence/migrateDrawings.ts)
   const old = p.schema ?? 1;
   const floors = p.floors.map(f => {
     const j = joinSemicircles(convertShapesToWalls(f));
     const r = removePairing(addWallThickness({ ...j, texts: j.texts ?? {} }));
     const out = old < 9 ? joinSplitWalls(r) : r;
-    return fixWindowFrames(revealSides({ ...out, protrusions: out.protrusions ?? {} }));
+    const fixed = fixWindowFrames(revealSides({ ...out, protrusions: out.protrusions ?? {} }));
+    return old < 18 ? shapesToDrawings(fixed) : fixed;
   });
   return { ...p, floors, schema: SCHEMA_VERSION };
 }

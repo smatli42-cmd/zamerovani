@@ -6,7 +6,6 @@ import { addWallPreset, endPaste, removeWallPreset, setActiveWallThickness, setW
 import { store } from '../store/store';
 import { useStore } from '../store/useStore';
 import { NumField, Seg } from './panels/fields';
-import { LINE_STYLES } from './panels/SidePanel';
 import { DRAW_LINE_STYLES } from './panels/common';
 import { TRIM_MSG_FIRST } from '../tools/trimTool';
 import { tools } from '../tools/registry';
@@ -123,11 +122,11 @@ export function ToolOptions() {
       </div>
     );
   }
-  if (tool === 'rect' || tool === 'circle' || tool === 'arc') {
+  if (tool === 'drawLine' || tool === 'rect' || tool === 'circle' || tool === 'arc') {
     return (
       <div class="tool-options">
-        <span class="muted small">Styl čáry nových stěn</span>
-        <Seg options={LINE_STYLES} value={settings.shapeStyle} onChange={v => store.updateSettings({ shapeStyle: v })} />
+        <span class="muted small">Styl čáry</span>
+        <Seg options={DRAW_LINE_STYLES} value={settings.shapeStyle} onChange={v => store.updateSettings({ shapeStyle: v })} />
       </div>
     );
   }

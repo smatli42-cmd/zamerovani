@@ -18,7 +18,9 @@ describe('migrace', () => {
     expect(Object.keys(p.floors[1]!.texts)).toEqual(['t']);
   });
 
-  it('obdélník, kruh a oblouk z verze 2 se převedou na stěny', () => {
+  // 17 → 18 (rozhodnutí uživatele 2026-11-17): kruh a volný oblouk jsou dál kresba; obdélník s popiskem (Sloup)
+  // zůstává stěnami, aby se popisek neztratil (persistence/migrateDrawings.ts)
+  it('obdélník, kruh a oblouk z verze 2: obdélník s popiskem zůstane stěnami, kruh a oblouk se stanou kresbou', () => {
     const p = migrateProject({
       schema: 2,
       id: 'p',
@@ -33,17 +35,16 @@ describe('migrace', () => {
     });
     const f = p.floors[0]!;
     const walls = Object.values(f.walls);
-    expect(walls).toHaveLength(4 + 1 + 1);
+    expect(walls).toHaveLength(4);
     expect(walls.filter(w => w.style === 'dashed')).toHaveLength(4);
-    const circle = walls.find(w => w.radius === 250)!;
-    expect(circle.a).toBe(circle.b);
-    expect(f.nodes[circle.a]).toMatchObject({ x: 3000, y: 1000 });
-    expect(walls.find(w => w.sagitta === -200)).toBeTruthy();
+    const ds = Object.values(f.drawings ?? {});
+    expect(ds.find(d => d.shape === 'circle')).toMatchObject({ r: 250, pts: [{ x: 3000, y: 1000 }] });
+    expect(ds.find(d => d.shape === 'arc')!.pts[0]!.s).toBe(-200);
     expect(walls.find(w => w.label.note === 'Sloup')).toBeTruthy();
     expect('shapes' in f).toBe(false);
   });
 
-  it('dvě půlkruhové stěny z verze 3 se sloučí na jeden kruh', () => {
+  it('dvě půlkruhové stěny z verze 3 se sloučí na jeden kruh (od verze 18 kresba)', () => {
     const f = {
       id: 'f',
       name: '1.NP',
@@ -56,10 +57,11 @@ describe('migrace', () => {
       rooms: {}
     };
     const p = migrateProject({ schema: 3, id: 'p', floors: [f] });
-    const walls = Object.values(p.floors[0]!.walls);
-    expect(walls).toHaveLength(1);
-    expect(walls[0]!.radius).toBe(500);
-    expect(Object.values(p.floors[0]!.nodes)).toEqual([expect.objectContaining({ x: 500, y: 0 })]);
+    expect(Object.values(p.floors[0]!.walls)).toHaveLength(0);
+    const ds = Object.values(p.floors[0]!.drawings ?? {});
+    expect(ds).toHaveLength(1);
+    expect(ds[0]).toMatchObject({ shape: 'circle', r: 500, pts: [{ x: 500, y: 0 }] });
+    expect(Object.values(p.floors[0]!.nodes)).toEqual([]);
   });
 
   it('novější verzi odmítne', () => {

@@ -10,7 +10,7 @@
 
 import type { DimTarget } from '../core/dimLock';
 
-export const SCHEMA_VERSION = 17;
+export const SCHEMA_VERSION = 18;
 
 export type Id = string;
 

@@ -1,36 +1,28 @@
 /**
- * Nástroje „Obdélník“, „Kruh“ a „Oblouk“. Tvary jsou skutečné stěny:
- * obdélník = 4 stěny, kruh = 2 půlkruhové stěny, oblouk = jedna oblouková stěna.
- * Body se přichytávají k rohům a stěnám; stěny, o které se tvar opírá, se v místě napojení rozdělí.
- * Ťuknutí bez tažení vybere prvek pod perem. Středový bod vybraného oblouku jde táhnout.
+ * Nástroje „Obdélník“, „Kruh“ a „Oblouk“. Tvary jsou KRESBA (core/drawing.ts, rozhodnutí uživatele 2026-11-17):
+ * nikdy stěna ani výstupek, nevyplňují se šedou. Body se přichytávají jako u ostatní kresby (tools/drawSnap.ts) –
+ * jen pomůcka, se stěnou se nic nespojí ani nerozdělí.
+ * Ťuknutí bez tažení vybere prvek pod perem. Úchyty vybrané kresby / oblouku stěny jde táhnout.
  */
 import { requestRender } from '../canvas/invalidate';
 import { toScreen } from '../canvas/view';
 import { arcGeometry } from '../core/arc';
-import { findNodeNear, findWallNear } from '../core/floorQueries';
 import { dist, roundTo } from '../core/geometry';
-import { snapEnd, snapPoint, type SnapResult } from '../core/snapping';
+import type { SnapResult } from '../core/snapping';
 import type { Pt } from '../model/types';
-import { addCircleWalls, addRectWalls, addWall } from '../store/actions';
+import { addDrawArc, addDrawCircle, addDrawRect } from '../store/actions';
 import { store } from '../store/store';
 import { pickAny } from './pick';
 import { grabArcHandle, selectTool } from './selectTool';
-import { HIT_PX, type PointerInput, type Tool } from './types';
-import { drawSnapMarker, snapOptions } from './wallTool';
+import type { PointerInput, Tool } from './types';
+import { drawSnapMarker } from './wallTool';
+import { drawSnap } from './drawSnap';
 
 const MIN_SIZE = 50; // mm – menší tažení se bere jako ťuknutí
 
 function snap(p: Pt): Pt {
   const floor = store.floor();
-  const { camera, settings } = store.get();
-  if (floor && settings.snap) {
-    const n = findNodeNear(floor, p, HIT_PX.snapNode / camera.zoom);
-    if (n) return { x: n.x, y: n.y };
-    // Na stěnu se bod přichytí přesně (bez zaokrouhlení), aby tvar opravdu navazoval
-    const w = findWallNear(floor, p, (HIT_PX.snapNode * 0.8) / camera.zoom);
-    if (w) return { x: Math.round(w.point.x), y: Math.round(w.point.y) };
-  }
-  return { x: roundTo(p.x, 10), y: roundTo(p.y, 10) };
+  return floor ? drawSnap(floor, p, null).pt : { x: roundTo(p.x, 10), y: roundTo(p.y, 10) };
 }
 
 function badge(ctx: CanvasRenderingContext2D, at: Pt, text: string): void {
@@ -120,7 +112,7 @@ export const rectTool = makeTool({
   begin: snap,
   move: (_s, p) => snap(p),
   commit: (a, b) => {
-    if (Math.abs(b.x - a.x) >= MIN_SIZE && Math.abs(b.y - a.y) >= MIN_SIZE) addRectWalls(a, b, store.get().settings.shapeStyle);
+    if (Math.abs(b.x - a.x) >= MIN_SIZE && Math.abs(b.y - a.y) >= MIN_SIZE) addDrawRect(a, b);
   },
   preview(ctx, a, b, cam) {
     const p = toScreen(a, cam);
@@ -134,7 +126,7 @@ export const rectTool = makeTool({
 export const circleTool = makeTool({
   begin: snap,
   move: (_s, p) => snap(p),
-  commit: (c, e) => addCircleWalls(c, Math.round(dist(c, e)), store.get().settings.shapeStyle),
+  commit: (c, e) => addDrawCircle(c, Math.round(dist(c, e))),
   preview(ctx, c, e, cam) {
     const p = toScreen(c, cam);
     ctx.beginPath();
@@ -154,18 +146,17 @@ let arcEnd: SnapResult | null = null;
 const arcBase = makeTool({
   begin: p => {
     const floor = store.floor();
-    arcStart = floor ? snapPoint(floor, p, snapOptions()) : null;
+    arcStart = floor ? drawSnap(floor, p, null) : null;
     arcEnd = arcStart;
     return arcStart?.pt ?? p;
   },
   move: (s, p) => {
     const floor = store.floor();
-    if (floor && arcStart) arcEnd = snapEnd(floor, s, p, snapOptions(arcStart.node?.id));
+    if (floor && arcStart) arcEnd = drawSnap(floor, p, s);
     return arcEnd?.pt ?? p;
   },
   commit: (a, b) => {
-    const { settings } = store.get();
-    addWall(a, arcStart?.node?.id ?? null, b, arcEnd?.node?.id ?? null, true, { sagitta: defaultSagitta(a, b), style: settings.shapeStyle });
+    addDrawArc(a, b, defaultSagitta(a, b));
   },
   preview(ctx, a, b, cam) {
     const g = arcGeometry(a, b, defaultSagitta(a, b));

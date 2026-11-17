@@ -73,7 +73,7 @@ export function addDrawCircle(c: Pt, r: number): Id {
 
 /** Oblouk mezi a a b se vzepětím s (výběr nového oblouku, aby šel hned upravit úchytem). */
 export function addDrawArc(a: Pt, b: Pt, s: number): Id {
-  return insert({ shape: 'arc', pts: [{ ...P(a), s }, P(b)], ...look(store.get().settings.shapeStyle) });
+  return insert({ shape: 'arc', pts: [{ ...P(a), s }, P(b)], ...look(store.get().settings.shapeStyle) }, true);
 }
 
 /** Dvojitá čára a→b (druhá čára o `width` na stranu `side`). */

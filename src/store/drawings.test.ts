@@ -6,7 +6,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createProject } from '../model/factory';
 import type { Floor, Pt } from '../model/types';
 import { migrateProject } from '../persistence/migrate';
-import { drawDoubleTool } from '../tools/drawTools';
+import { drawDoubleTool, drawLineTool } from '../tools/drawTools';
+import { arcTool, circleTool, rectTool } from '../tools/shapeTools';
+import { createWall } from '../model/factory';
 import { pickAny } from '../tools/pick';
 import { selectTool } from '../tools/selectTool';
 import type { PointerInput, Tool } from '../tools/types';
@@ -110,5 +112,124 @@ describe('dvojitá čára (krok 0, KRESLENI-PREKLADU.md)', () => {
     const p = migrateProject(JSON.parse(JSON.stringify(store.get().project)));
     expect(p.floors[0]!.drawings![id]).toEqual(f().drawings![id]);
     expect(p.schema).toBeGreaterThanOrEqual(17);
+  });
+});
+
+describe('samostatná čára a tvary (krok 2) – nikdy stěna ani výstupek', () => {
+  it('čára od líce stěny zpět na týž líc (gesto výstupku) zůstane kresbou: žádný výstupek, stěna beze změny', () => {
+    wallS();
+    const before = structure();
+    store.set({ tool: 'drawLine' });
+    stroke(drawLineTool, [{ x: 2350, y: 0 }, { x: 2350, y: -200 }]);
+    stroke(drawLineTool, [{ x: 2350, y: -200 }, { x: 2650, y: -200 }]);
+    stroke(drawLineTool, [{ x: 2650, y: -200 }, { x: 2650, y: 0 }]);
+    expect(structure()).toBe(before);
+    const [d] = drawings();
+    expect(d).toMatchObject({ shape: 'line' });
+    expect(d!.pts).toEqual([{ x: 2350, y: 0 }, { x: 2350, y: -200 }, { x: 2650, y: -200 }, { x: 2650, y: 0 }]);
+  });
+
+  it('přichycení na protější líc stěny je jen pomůcka – bod přesně na líci, nic se nenapojí', () => {
+    wallS();
+    const before = structure();
+    store.set({ tool: 'drawLine' });
+    stroke(drawLineTool, [{ x: 1000, y: 1000 }, { x: 1000, y: 600 }, { x: 1000, y: 305 }]);
+    expect(structure()).toBe(before);
+    expect(drawings()[0]!.pts[1]).toEqual({ x: 1000, y: 300 });
+  });
+
+  it('lomená čára navazuje na svůj konec; úsek zpět do počátku ji uzavře (šrafa pak jde zapnout)', () => {
+    store.set({ tool: 'drawLine' });
+    stroke(drawLineTool, [{ x: 0, y: 0 }, { x: 1000, y: 0 }]);
+    stroke(drawLineTool, [{ x: 1000, y: 0 }, { x: 1000, y: 800 }]);
+    stroke(drawLineTool, [{ x: 1000, y: 800 }, { x: 0, y: 0 }]);
+    expect(drawings()).toHaveLength(1);
+    expect(drawings()[0]).toMatchObject({ shape: 'line', closed: true });
+    updateDrawing(drawings()[0]!.id, { hatch: 'diag' });
+    expect(drawings()[0]!.hatch).toBe('diag');
+  });
+
+  it('obdélník přiložený k líci stěny (dřív výstupek, katalog I1.2) je kresba – stěna i výstupky beze změny', () => {
+    wallS();
+    const before = structure();
+    store.set({ tool: 'rect' });
+    stroke(rectTool, [{ x: 2350, y: 0 }, { x: 2500, y: -100 }, { x: 2650, y: -200 }]);
+    expect(structure()).toBe(before);
+    expect(drawings()[0]).toMatchObject({ shape: 'rect' });
+  });
+
+  it('kruh a oblouk jsou kresba; stěna, na kterou dosednou, se nerozdělí', () => {
+    wallS();
+    const before = structure();
+    store.set({ tool: 'circle' });
+    stroke(circleTool, [{ x: 1000, y: -1000 }, { x: 1300, y: -1000 }, { x: 1500, y: -1000 }]);
+    store.set({ tool: 'arc' });
+    stroke(arcTool, [{ x: 3000, y: 0 }, { x: 3500, y: -100 }, { x: 4000, y: 0 }]);
+    expect(structure()).toBe(before);
+    expect(drawings().map(d => d.shape)).toEqual(['circle', 'arc']);
+    expect(drawings()[0]!.r).toBe(500);
+  });
+
+  it('úchyt rohu obdélníku: obdélník zůstane obdélníkem', () => {
+    store.set({ tool: 'rect' });
+    stroke(rectTool, [{ x: 0, y: 0 }, { x: 400, y: 300 }]);
+    const id = drawings()[0]!.id;
+    store.set({ tool: 'select', selection: { kind: 'drawing', id } });
+    stroke(selectTool, [{ x: 400, y: 300 }, { x: 500, y: 400 }, { x: 600, y: 500 }]);
+    expect(drawings()[0]!.pts).toEqual([{ x: 0, y: 0 }, { x: 600, y: 0 }, { x: 600, y: 500 }, { x: 0, y: 500 }]);
+  });
+});
+
+describe('migrace 17 → 18: tvary ze stěn na kresbu', () => {
+  function legacy(build: (fl: Floor) => void) {
+    store.openProject(createProject({ name: 'old' }));
+    const fl = JSON.parse(JSON.stringify(f())) as Floor;
+    build(fl);
+    const raw = { ...JSON.parse(JSON.stringify(store.get().project)), schema: 17, floors: [fl] };
+    return migrateProject(raw).floors[0]!;
+  }
+  const node = (fl: Floor, id: string, x: number, y: number) => (fl.nodes[id] = { id, x, y });
+  const wall = (fl: Floor, id: string, a: string, b: string, extra: object = {}) => (fl.walls[id] = { ...createWall(a, b), id, ...extra });
+  function rectLoop(fl: Floor, k: string, x: number, y: number, w: number, h: number) {
+    node(fl, k + 1, x, y);
+    node(fl, k + 2, x + w, y);
+    node(fl, k + 3, x + w, y + h);
+    node(fl, k + 4, x, y + h);
+    for (let i = 1; i <= 4; i++) wall(fl, `${k}w${i}`, k + i, k + ((i % 4) + 1));
+  }
+
+  it('volný obdélník, kruh a oblouk → kresba; rovná čára zůstane stěnou', () => {
+    const out = legacy(fl => {
+      rectLoop(fl, 'r', 0, 0, 400, 300);
+      node(fl, 'c', 2000, 0);
+      fl.walls.circ = { ...createWall('c', 'c'), id: 'circ', radius: 250 };
+      node(fl, 'a1', 0, 1000);
+      node(fl, 'a2', 1000, 1000);
+      wall(fl, 'arc', 'a1', 'a2', { sagitta: 200, style: 'dashed' });
+      node(fl, 'l1', 0, 2000);
+      node(fl, 'l2', 1000, 2000);
+      wall(fl, 'line', 'l1', 'l2');
+    });
+    expect(Object.keys(out.walls)).toEqual(['line']);
+    expect(Object.keys(out.nodes).sort()).toEqual(['l1', 'l2']);
+    const ds = Object.values(out.drawings ?? {});
+    expect(ds.map(d => d.shape).sort()).toEqual(['arc', 'circle', 'rect']);
+    expect(ds.find(d => d.shape === 'arc')).toMatchObject({ style: 'dashed', pts: [{ x: 0, y: 1000, s: 200 }, { x: 1000, y: 1000 }] });
+  });
+
+  it('zůstane stěnami: obdélník se štítkem místnosti uvnitř, oblouk napojený na jinou čáru, obdélník s otvorem', () => {
+    const out = legacy(fl => {
+      rectLoop(fl, 'r', 0, 0, 4000, 3000);
+      fl.rooms.rm = { ...Object.values(fl.rooms)[0], id: 'rm', x: 2000, y: 1500 } as Floor['rooms'][string];
+      node(fl, 'a1', 0, 5000);
+      node(fl, 'a2', 1000, 5000);
+      node(fl, 'a3', 1000, 6000);
+      wall(fl, 'arc', 'a1', 'a2', { sagitta: 200 });
+      wall(fl, 'tail', 'a2', 'a3');
+      rectLoop(fl, 'q', 8000, 0, 2000, 2000);
+      fl.openings.op = { id: 'op', wallId: 'qw1' } as Floor['openings'][string];
+    });
+    expect(Object.keys(out.walls)).toHaveLength(4 + 2 + 4);
+    expect(Object.values(out.drawings ?? {})).toHaveLength(0);
   });
 });
