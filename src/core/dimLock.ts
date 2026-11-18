@@ -100,7 +100,7 @@ export function dimKey(t: DimTarget): string {
 }
 
 /** Existují ještě prvky, ke kterým kóta patří? (Smazaný prvek bere zámek s sebou.) */
-function ownersExist(floor: Floor, t: DimTarget): boolean {
+export function ownersExist(floor: Floor, t: DimTarget): boolean {
   switch (t.kind) {
     case 'opening-offset':
     case 'opening-width':

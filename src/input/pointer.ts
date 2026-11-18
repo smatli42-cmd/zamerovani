@@ -6,13 +6,15 @@
  * - 2 prsty                    → zoom + posun
  * - Pravé/prostřední tl., mezerník, tlačítko na peru → posun
  * - Dotyk dlaně během kreslení perem se ignoruje
+ * - Ťuknutí na číslo kóty otevře NumPad, tažení za číslo kótu posune (core/dimPlace.ts)
  */
-import { hitTest } from '../canvas/hitTargets';
+import { hitTest, type HitBox } from '../canvas/hitTargets';
 import { toWorld, zoomAt } from '../canvas/view';
 import { chooseNodeAt, findNodeNear } from '../core/floorQueries';
 import type { Pt } from '../model/types';
 import { openTarget, setMoveTarget } from '../store/numpadController';
-import { flipWallSide, toggleDimLock } from '../store/actions';
+import { beginDimDrag, dragDim, flipWallSide, toggleDimLock } from '../store/actions';
+import type { DragStart } from '../core/dimPlace';
 import { store } from '../store/store';
 import { tools } from '../tools/registry';
 import { anyHandleUnderPen } from '../tools/selectTool';
@@ -25,12 +27,27 @@ interface Active {
 }
 
 const active = new Map<number, Active>();
-let mode: 'none' | 'tool' | 'pan' | 'pinch' = 'none';
+let mode: 'none' | 'tool' | 'pan' | 'pinch' | 'dim' = 'none';
 let toolPointerId: number | null = null;
 let panStart: { screen: Pt; cam: { x: number; y: number } } | null = null;
 let pinchLast: { dist: number; center: Pt } | null = null;
 let penDown = false;
 let spaceDown = false;
+/** Stisk na čísle kóty: po ťuknutí NumPad, po tažení posun kóty. */
+let dimPress: { pointerId: number; start: Pt; box: HitBox; begin: DragStart | null; moving: boolean } | null = null;
+/** Od kolika px pohybu je stisk na čísle kóty tažení (prst víc). */
+const DIM_DRAG_PX = { touch: 10, other: 5 };
+/** Do kolika px od výchozí polohy se tažená kóta vrátí na výchozí. */
+const DIM_SNAP_PX = 8;
+
+/** Konec stisku na čísle kóty; `cancel` = tažení přerušené (druhý prst, zrušení) – posun se vrátí. */
+function endDimPress(cancel = false): void {
+  if (dimPress?.moving) {
+    if (cancel) store.cancelGesture();
+    else store.endGesture();
+  }
+  dimPress = null;
+}
 
 function local(canvas: HTMLCanvasElement, e: PointerEvent | WheelEvent): Pt {
   const r = canvas.getBoundingClientRect();
@@ -58,8 +75,8 @@ function cancelTool(): void {
   toolPointerId = null;
 }
 
-/** Ťuknutí na klikací kótu nebo na roh při otevřeném NumPadu. Vrací true, pokud bylo obslouženo. */
-function handleOverlayTap(p: PointerInput): boolean {
+/** Ťuknutí na klikací kótu nebo na roh při otevřeném NumPadu. Vrací true, pokud bylo obslouženo; 'dim' = stisk na čísle kóty. */
+function handleOverlayTap(p: PointerInput): boolean | 'dim' {
   const state = store.get();
   const floor = store.floor();
   if (!floor) return false;
@@ -84,8 +101,9 @@ function handleOverlayTap(p: PointerInput): boolean {
   const box = hitTest(p.screen, p.device === 'touch' ? 8 : 4);
   if (box?.action.type === 'numpad') {
     cancelTool();
-    openTarget(box.action.target);
-    return true;
+    // NumPad se otevře až po puštění bez tažení; tažení kótu posune
+    dimPress = { pointerId: -1, start: p.screen, box, begin: null, moving: false };
+    return 'dim';
   }
   if (box?.action.type === 'lock') {
     cancelTool();
@@ -113,6 +131,7 @@ export function attachPointer(canvas: HTMLCanvasElement): () => void {
     // Dva prsty = zoom (zruší rozdělanou akci)
     if (touches().length >= 2) {
       if (mode === 'tool') cancelTool();
+      if (mode === 'dim') endDimPress(true);
       mode = 'pinch';
       startPinch();
       return;
@@ -131,9 +150,15 @@ export function attachPointer(canvas: HTMLCanvasElement): () => void {
       return;
     }
 
-    if (mode === 'tool') return; // už kreslíme jiným ukazatelem
+    if (mode === 'tool' || mode === 'dim') return; // už kreslíme / táhneme kótu jiným ukazatelem
     const p = input(canvas, e);
-    if (handleOverlayTap(p)) {
+    const overlay = handleOverlayTap(p);
+    if (overlay === 'dim' && dimPress) {
+      dimPress.pointerId = e.pointerId;
+      mode = 'dim';
+      return;
+    }
+    if (overlay) {
       mode = 'none';
       return;
     }
@@ -167,6 +192,22 @@ export function attachPointer(canvas: HTMLCanvasElement): () => void {
       return;
     }
 
+    if (mode === 'dim' && dimPress && e.pointerId === dimPress.pointerId) {
+      const d = { x: pos.x - dimPress.start.x, y: pos.y - dimPress.start.y };
+      const drag = dimPress.box.drag;
+      if (!dimPress.moving) {
+        if (!drag || Math.hypot(d.x, d.y) < DIM_DRAG_PX[e.pointerType === 'touch' ? 'touch' : 'other']) return;
+        dimPress.begin = beginDimDrag(drag);
+        if (!dimPress.begin) return;
+        dimPress.moving = true;
+        store.beginGesture();
+      }
+      if (!drag || !dimPress.begin) return;
+      const zoom = store.get().camera.zoom;
+      dragDim(drag, dimPress.begin, (d.x * drag.out.x + d.y * drag.out.y) / zoom, (d.x * drag.u.x + d.y * drag.u.y) / zoom, DIM_SNAP_PX / zoom);
+      return;
+    }
+
     const tool = tools[store.get().tool];
     if (mode === 'tool' && e.pointerId === toolPointerId) {
       tool.drag?.(input(canvas, e));
@@ -179,6 +220,13 @@ export function attachPointer(canvas: HTMLCanvasElement): () => void {
     active.delete(e.pointerId);
     if (e.pointerType === 'pen') penDown = false;
 
+    if (mode === 'dim' && dimPress && e.pointerId === dimPress.pointerId) {
+      const { box, moving } = dimPress;
+      endDimPress(e.type === 'pointercancel');
+      mode = 'none';
+      if (!moving && e.type !== 'pointercancel' && box.action.type === 'numpad') openTarget(box.action.target);
+      return;
+    }
     if (mode === 'tool' && e.pointerId === toolPointerId) {
       if (e.type === 'pointercancel') cancelTool();
       else tools[store.get().tool].up?.(input(canvas, e));
@@ -228,6 +276,7 @@ export function attachPointer(canvas: HTMLCanvasElement): () => void {
     window.removeEventListener('keydown', onKeyDown);
     window.removeEventListener('keyup', onKeyUp);
     active.clear();
+    endDimPress(true);
     mode = 'none';
   };
 }

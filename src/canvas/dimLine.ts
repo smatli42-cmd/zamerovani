@@ -2,10 +2,11 @@
  * Kreslení jedné kóty (vynášecí čáry, kótovací čára, klikací číslo) a ikona zámku kóty.
  * Používají ji všechny druhy kót (stěny, otvory, výstupky, volné kóty…).
  */
-import { add, lerp, scale, unit } from '../core/geometry';
+import { add, dist, lerp, scale, unit } from '../core/geometry';
 import type { Floor, Pt } from '../model/types';
 import { addHitBox, type HitAction } from './hitTargets';
 import { dimKey } from '../core/dimLock';
+import { dimShift, rowOf, type DimDrag, type DimRow } from '../core/dimPlace';
 
 export interface DimStyle {
   color: string;
@@ -30,8 +31,20 @@ export function drawDimLine(
   subText: string | undefined,
   style: DimStyle,
   s: number,
-  action: HitAction | null
+  action: HitAction | null,
+  /**
+   * Řada kót, která se tažením posouvá společně (chybí = kóta sama), a `alongKey` = rozlišení čísla, když se
+   * stejná kóta kreslí víckrát (zárubeň vlevo / vpravo); core/dimPlace.ts.
+   */
+  place: { row?: DimRow; alongKey?: string } = {}
 ): void {
+  // posun kóty tažením za číslo (core/dimPlace.ts): kolmo celá řada (i úsek bez čísla), číslo podél jen tato kóta
+  const target = action?.type === 'numpad' && action.target.kind !== 'field' ? action.target : null;
+  const dimRow = place.row ?? (target ? rowOf(target) : null);
+  const shift = dimRow ? dimShift(placeCtx.place, dimRow, target, place.alongKey) : { off: 0, along: 0 };
+  offsetPx += shift.off * placeCtx.zoom;
+  // vynášecí čáry začínají kousek od měřeného bodu na straně, kde kóta leží
+  const side = offsetPx < 0 ? -1 : 1;
   const o = scale(out, offsetPx);
   const q1 = { x: p1.x + o.x, y: p1.y + o.y };
   const q2 = { x: p2.x + o.x, y: p2.y + o.y };
@@ -46,8 +59,9 @@ export function drawDimLine(
     [p1, q1],
     [p2, q2]
   ] as const) {
-    ctx.moveTo(p.x + out.x * 4, p.y + out.y * 4);
-    ctx.lineTo(q.x + out.x * 4, q.y + out.y * 4);
+    if (Math.abs(offsetPx) <= 4) continue;
+    ctx.moveTo(p.x + out.x * 4 * side, p.y + out.y * 4 * side);
+    ctx.lineTo(q.x + out.x * 4 * side, q.y + out.y * 4 * side);
   }
   ctx.stroke();
 
@@ -82,8 +96,22 @@ export function drawDimLine(
   }
   const boxW = Math.max(tw, sw) + 10;
   const boxH = fontPx + 6 + (subText ? subPx + 2 : 0);
-  const mid = lerp(q1, q2, 0.5);
+  const along = shift.along * placeCtx.zoom;
+  const mid = add(lerp(q1, q2, 0.5), scale(u, along));
   const angle = readableAngle(u);
+
+  // číslo posunuté za konec kótovací čáry: čára se k němu prodlouží
+  if (Math.abs(along) > dist(q1, q2) / 2) {
+    const end = along > 0 ? q2 : q1;
+    ctx.save();
+    ctx.strokeStyle = style.color;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(end.x, end.y);
+    ctx.lineTo(mid.x, mid.y);
+    ctx.stroke();
+    ctx.restore();
+  }
 
   ctx.translate(mid.x, mid.y);
   ctx.rotate(angle);
@@ -106,7 +134,8 @@ export function drawDimLine(
   }
   ctx.restore();
 
-  if (action) addHitBox({ x: mid.x, y: mid.y, halfW: boxW / 2, halfH: boxH / 2, angle, action });
+  const drag: DimDrag | undefined = target && dimRow ? { row: dimRow, target, out, u, alongKey: place.alongKey } : undefined;
+  if (action) addHitBox({ x: mid.x, y: mid.y, halfW: boxW / 2, halfH: boxH / 2, angle, action, drag });
 
   // Zámek kóty: modrá ikona hned za číslem (pomocná – jen v editoru)
   if (action?.type === 'numpad' && action.target.kind !== 'field' && lockCtx.helpers) {
@@ -118,6 +147,13 @@ export function drawDimLine(
       addHitBox({ x: c.x, y: c.y, halfW: r, halfH: r, angle, action: { type: 'lock', target: action.target } });
     }
   }
+}
+
+/** Posunuté kóty a měřítko pro aktuální vykreslení (nastaví renderer před kreslením kót). */
+let placeCtx: { place: Floor['dimPlace']; zoom: number } = { place: undefined, zoom: 1 };
+
+export function setDimPlaceContext(place: Floor['dimPlace'], zoom: number): void {
+  placeCtx = { place, zoom };
 }
 
 /** Zámky kót pro aktuální vykreslení (nastaví renderer před kreslením kót). */

@@ -10,6 +10,7 @@ import { add, dot, normal, scale, sub, unit } from '../core/geometry';
 import type { CornerPt, Floor, Pt } from '../model/types';
 import type { Camera, Selection } from '../store/store';
 import { drawDimLine, type DimStyle } from './dimLine';
+import { endRow } from '../core/dimPlace';
 import { toScreen } from './view';
 
 const STYLE: DimStyle = { color: '#334155', bg: '#ffffff', bold: false };
@@ -71,8 +72,8 @@ export function drawCornerEndDims(ctx: CanvasRenderingContext2D, floor: Floor, c
         const depth = fi === 0 ? d.depth0 : d.depth1;
         const reach = depth * cam.zoom + 22 * dimScale;
         // řetěz po líci: přesah za čelo (jen u líce 0, aby se neopakoval) a podél líce od čela
-        if (along >= 0.5) drawDimLine(ctx, scr(O), scr(add(O, scale(f.e1, along))), dirS(O, n), reach, String(Math.round(along)), 'podél líce', STYLE, dimScale, act(fi === 0 ? 'along0' : 'along1'));
-        if (fi === 0 && d.over >= 0.5) drawDimLine(ctx, scr(add(O, scale(f.e1, -d.over))), scr(O), dirS(O, n), reach, String(Math.round(d.over)), 'přesah', STYLE, dimScale, act('over'));
+        if (along >= 0.5) drawDimLine(ctx, scr(O), scr(add(O, scale(f.e1, along))), dirS(O, n), reach, String(Math.round(along)), 'podél líce', STYLE, dimScale, act(fi === 0 ? 'along0' : 'along1'), fi === 0 ? { row: endRow(ep.id) } : {});
+        if (fi === 0 && d.over >= 0.5) drawDimLine(ctx, scr(add(O, scale(f.e1, -d.over))), scr(O), dirS(O, n), reach, String(Math.round(d.over)), 'přesah', STYLE, dimScale, act('over'), { row: endRow(ep.id) });
         // hloubka od líce u začátku obrysu na líci
         if (depth >= 0.5) {
           const base = add(O, scale(f.e1, along));

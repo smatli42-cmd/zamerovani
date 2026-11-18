@@ -7,6 +7,7 @@
  * Data projektu jsou neměnná (immer): každá změna vytvoří novou verzi a nezměněné části se sdílí.
  * Díky tomu je historie levná a překreslení/uložení se pozná podle změny odkazu.
  */
+import { prunePlaces } from '../core/dimPlace';
 import { produce, freeze, current } from 'immer';
 import type { Floor, Id, Opening, Project } from '../model/types';
 import type { DrawColor, LineStyle } from '../model/types';
@@ -286,6 +287,7 @@ class Store {
         rescueFreeDims(before, f);
         pruneFreeDims(f);
         pruneLocks(f);
+        prunePlaces(f);
         // zamčená volná kóta = pevné spojení: prvek na druhém konci se posune s tím, co se pohnulo (core/dimFollow.ts)
         const hasFreeLock = !!before?.dimLocks && Object.keys(before.dimLocks).some(k => k.startsWith('free-dim:'));
         const preFollow = hasFreeLock ? (current(f) as Floor) : null;
@@ -324,6 +326,16 @@ class Store {
   beginGesture(): void {
     this.inGesture = true;
     this.gestureStart = this.state.project;
+  }
+
+  /** Zrušení tažení: projekt se vrátí do stavu na začátku gesta, bez kroku Zpět. */
+  cancelGesture(): void {
+    if (!this.inGesture) return;
+    const start = this.gestureStart;
+    this.inGesture = false;
+    this.gestureStart = null;
+    if (start && start !== this.state.project) this.set({ project: start, saveStatus: 'dirty' });
+    this.set({ canUndo: this.undoStack.length > 0, canRedo: this.redoStack.length > 0 });
   }
 
   endGesture(): void {

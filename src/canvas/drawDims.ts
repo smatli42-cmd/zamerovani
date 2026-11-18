@@ -13,6 +13,7 @@ import { OPENING_DEFAULTS } from '../model/factory';
 import type { Floor, Id, Pt } from '../model/types';
 import type { Camera, NumPadTarget, Selection } from '../store/store';
 import { drawDimLine, type DimStyle } from './dimLine';
+import { protrusionRow, wallChainRow } from '../core/dimPlace';
 import type { HitAction } from './hitTargets';
 import { toScreen } from './view';
 import { bodyNormal, bodyStart, facePointAt, faceSpan, hasBody } from '../core/wallFace';
@@ -112,7 +113,7 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
 
     // 1. řada: řetězová kóta otvorů
     if (placed.length > 0) {
-      const marks: { at: number; target: NumPadTarget | null; text: string; sub?: string }[] = [];
+      const marks: { at: number; target: NumPadTarget | null; text: string; sub?: string; alongKey?: string }[] = [];
       let cursor = 0;
       placed.forEach((po, i) => {
         const prev = placed[i - 1];
@@ -129,24 +130,25 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
         if (rv) marks.push({ at: po.start, text: String(Math.round(rv.left)), target: { kind: 'opening-reveal', openingId: po.op.id, part: 'left' } });
         // zárubeň dveří je klikací kóta; rám okna leží uvnitř šířky okna a kótu nemá
         const fw = frameOutside(po.op);
-        const frameMark = (at: number) =>
-          marks.push({ at, text: String(Math.round(fw)), target: { kind: 'opening-reveal', openingId: po.op.id, part: 'frameWidth' } });
-        if (fw) frameMark(po.start + (rv?.left ?? 0));
+        const frameMark = (at: number, side: 'L' | 'R') =>
+          marks.push({ at, text: String(Math.round(fw)), target: { kind: 'opening-reveal', openingId: po.op.id, part: 'frameWidth' }, alongKey: `opening-reveal:${po.op.id}:frameWidth:${side}` });
+        if (fw) frameMark(po.start + (rv?.left ?? 0), 'L');
         marks.push({ at: po.start + (rv?.left ?? 0) + fw, text: String(Math.round(po.op.width)), sub: sub || kindInfo.label, target: { kind: 'opening-width', openingId: po.op.id } });
-        if (fw) frameMark(po.end - (rv?.right ?? 0) - fw);
+        if (fw) frameMark(po.end - (rv?.right ?? 0) - fw, 'R');
         if (rv) marks.push({ at: po.end - rv.right, text: String(Math.round(rv.right)), target: { kind: 'opening-reveal', openingId: po.op.id, part: 'right' } });
         cursor = po.end;
       });
       const last = placed[placed.length - 1]!;
       marks.push({ at: cursor, text: String(Math.round(len - cursor)), target: { kind: 'opening-offset', openingId: last.op.id, ref: 'b' } });
 
+      const openRow = wallChainRow('openings', wall);
       for (let i = 0; i < marks.length; i++) {
         const m = marks[i]!;
         const endAt = i + 1 < marks.length ? marks[i + 1]!.at : len;
         if (endAt - m.at < 1) continue;
         const p1 = lerp(a, b, m.at / len);
         const p2 = lerp(a, b, endAt / len);
-        drawDimLine(ctx, p1, p2, out, offset, m.text, m.sub, { color: '#334155', bg: '#ffffff', bold: false }, s, m.target ? { type: 'numpad', target: m.target, wallId: wall.id } : null);
+        drawDimLine(ctx, p1, p2, out, offset, m.text, m.sub, { color: '#334155', bg: '#ffffff', bold: false }, s, m.target ? { type: 'numpad', target: m.target, wallId: wall.id } : null, { row: openRow, alongKey: m.alongKey });
       }
       offset += rowGap + (placed.length ? 8 * s : 0);
     }
@@ -164,7 +166,7 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
         const target: NumPadTarget = last
           ? { kind: 'junction-gap', wallId: wall.id, nodeId: chain[chain.length - 1]!.nodeId, to: 'next' }
           : { kind: 'junction-gap', wallId: wall.id, nodeId: chain[i]!.nodeId, to: 'prev' };
-        drawDimLine(ctx, lerp(a, b, from / len), lerp(a, b, to / len), out, offset, String(Math.round(to - from)), undefined, { color: '#334155', bg: '#ffffff', bold: false }, s, { type: 'numpad', target, wallId: wall.id });
+        drawDimLine(ctx, lerp(a, b, from / len), lerp(a, b, to / len), out, offset, String(Math.round(to - from)), undefined, { color: '#334155', bg: '#ffffff', bold: false }, s, { type: 'numpad', target, wallId: wall.id }, { row: wallChainRow('junctions', wall) });
       }
       offset += rowGap;
     }
@@ -300,7 +302,7 @@ export function drawProtrusionDims(ctx: CanvasRenderingContext2D, floor: Floor, 
   ];
   for (const [a, b, dim] of chain) {
     if (b - a < 0.5) continue;
-    drawDimLine(ctx, at(a, 0), at(b, 0), out, reach, String(Math.round(b - a)), dim === 'width' ? 'šířka' : undefined, style, dimScale, act(dim));
+    drawDimLine(ctx, at(a, 0), at(b, 0), out, reach, String(Math.round(b - a)), dim === 'width' ? 'šířka' : undefined, style, dimScale, act(dim), { row: protrusionRow(p.id) });
   }
   const sign = p.mode === 'add' ? 1 : -1;
   drawDimLine(ctx, at(u1, 0), at(u1, sign * depth), f.at(u1).t, 16 * dimScale, String(Math.round(depth)), 'hloubka', style, dimScale, act('depth'));

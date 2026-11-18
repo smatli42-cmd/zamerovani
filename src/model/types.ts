@@ -10,7 +10,7 @@
 
 import type { DimTarget } from '../core/dimLock';
 
-export const SCHEMA_VERSION = 22;
+export const SCHEMA_VERSION = 23;
 
 export type Id = string;
 
@@ -346,6 +346,21 @@ export interface Floor {
    * Zamčená kóta drží hodnotu – úprava, která by ji změnila, se neprovede (core/dimLock.ts).
    */
   dimLocks?: Record<string, DimTarget>;
+  /**
+   * Poloha kót posunutých tažením za číslo (od verze 23; chybí = výchozí poloha, core/dimPlace.ts).
+   * Klíč = řada kót (`off`) nebo jedna kóta (`along`, posun čísla podél kótovací čáry).
+   */
+  dimPlace?: Record<string, DimPlace>;
+}
+
+/**
+ * Posun kóty proti výchozí poloze (mm): `off` = kolmo na kótu (kladně od prvku ven, celá řada),
+ * `along` = číslo podél kótovací čáry (jen tato kóta). `owner` = kóta, se kterou záznam zaniká.
+ */
+export interface DimPlace {
+  off?: number;
+  along?: number;
+  owner: DimTarget;
 }
 
 /** Projekt = jedna zakázka (budova). */

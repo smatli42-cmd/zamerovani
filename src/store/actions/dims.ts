@@ -6,6 +6,7 @@ import type { DimEnd, Id } from '../../model/types';
 import { dimPoints, sameEnd } from '../../core/freeDim';
 import { dist } from '../../core/geometry';
 import { store } from '../store';
+import { applyDrag, dragStart, type DimDrag, type DragStart } from '../../core/dimPlace';
 
 /** Přidá kótu mezi body `a` a `b` (vybere se). null = stejný bod / nulová délka. */
 export function addFreeDim(a: DimEnd, b: DimEnd, offset = 0): Id | null {
@@ -30,5 +31,21 @@ export function setFreeDimOffset(id: Id, offset: number): void {
     const d = f.dims?.[id];
     if (!d) return false;
     d.offset = Math.round(offset);
+  });
+}
+
+/** Začátek tažení kóty za číslo (core/dimPlace.ts); null = kóta už neexistuje. */
+export function beginDimDrag(drag: DimDrag): DragStart | null {
+  const floor = store.floor();
+  return floor ? dragStart(floor, drag) : null;
+}
+
+/**
+ * Posun tažené kóty: od začátku tažení o `dOff` mm kolmo a `dAlong` mm podél (volá se při každém pohybu
+ * během jednoho gesta = jeden krok Zpět). Blíž než `snap` mm k výchozí poloze = výchozí poloha.
+ */
+export function dragDim(drag: DimDrag, start: DragStart, dOff: number, dAlong: number, snap: number): void {
+  store.edit(f => {
+    applyDrag(f, drag, start, dOff, dAlong, snap);
   });
 }

@@ -5,6 +5,7 @@
 import type { Id, Pt } from '../model/types';
 import type { NumPadTarget } from '../store/store';
 import type { DimTarget } from '../core/dimLock';
+import type { DimDrag } from '../core/dimPlace';
 
 export type HitAction =
   | { type: 'numpad'; target: NumPadTarget; wallId?: Id }
@@ -23,6 +24,8 @@ export interface HitBox {
   /** Natočení (rad). */
   angle: number;
   action: HitAction;
+  /** Kóta, kterou jde tažením za číslo posunout (core/dimPlace.ts). */
+  drag?: DimDrag;
 }
 
 let boxes: HitBox[] = [];

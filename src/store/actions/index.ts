@@ -16,4 +16,4 @@ export { setActiveWallThickness, addWallPreset, removeWallPreset, setWallArcHeig
 export { splitWall, cutWallSegment, splitPoint, canSplit, type SplitResult } from './split';
 export { toggleDimLock, setDimLock, setWallDimsLocked, setRoomDimsLocked, wallLockState, roomLockState } from './locks';
 export { addDrawLine, addDrawRect, addDrawCircle, addDrawArc, addDrawDouble, updateDrawing, setDrawingVertex, setDrawingBulge, dragDrawingBulge, setDrawingRadius, setDrawingWidth, dragDrawingWidth, flipDrawingSide, setDrawingRect } from './drawings';
-export { addFreeDim, setFreeDimOffset } from './dims';
+export { addFreeDim, setFreeDimOffset, beginDimDrag, dragDim } from './dims';
