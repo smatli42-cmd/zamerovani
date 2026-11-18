@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-18 (6) – šířka okna se zámkem na jedné straně (chyba od uživatele)
+- **Chyba od uživatele:** změna šířky okna (úseky 1100 | okno 1200 | 700, úsek 700 k rohu zamčený) nešla – hlášení „brání zamčená kóta: kóta 800“, která s oknem nesouvisí (kóta mezi čtvercem kresby a spodní stěnou). Příčina: podle pravidla řetězu zámků se okno rozšiřovalo k zamčenému úseku → prodloužila se stěna → posunula se spodní stěna → změnila by se zamčená kóta 800.
+- **Co se změnilo:** Když je úsek na straně, kam otvor roste, zamčený (u otvoru měřeného od A celý řetěz až k rohu B, u otvoru od B úsek vlevo) a úsek na druhé straně volný, otvor se rozšíří / zúží na volnou stranu a stěna se neprodlužuje (`openingSideLocks` v `core/openingChain.ts`, větev v `store/actions/numpad.ts`; platí pro NumPad i panel). Zapsáno v `KOTY-ZAMEK-EXPORT.md`. Testy `store/openingWidthLocks.test.ts` (8).
+- **Viditelně v aplikaci:** u tvého okna: šířka 1300 → horní úsek 1000, zamčených 700 zůstane.
+- **Rozhodnuto uživatelem:** rozšířit na volnou stranu.
+- **Otevřené:** ostění vlevo / vpravo a šířka zárubně (také mění celkovou šířku otvoru) toto pravidlo nemají – při zámku na straně růstu se úprava jen zastaví hlášením (stěna se neprodlužuje); zeptat se uživatele, zda totéž i tam.
+
 ### 2026-11-18 (5) – kóta se přichytí k hranám (líce stěn, čáry, okraje otvorů), kolmá jako v CAD
 - **Chyby / požadavek od uživatele:** kóta se nepřichytávala ke všem prvkům (obě strany stěny, čáry, okna, dveře); při najetí myší nebylo vidět, k čemu se přichytí; kóta má být „rovnoběžná jako v CAD“ (první ťuknutí třeba na stěnu, druhé na čáru).
 - **Co se změnilo:** Podle zarovnané kóty v Revitu (Aligned Dimension: kóta mezi rovnoběžnými hranami nebo body, měří kolmo) může být konec kóty i **hrana**: líc rovné stěny (oba líce; u stěny bez tloušťky čára), rovný úsek čáry kresby (i obdélník, první čára dvojité), okraj otvoru napříč stěnou (dveře, okno, průchod, nika). Hledání a geometrie konců jen v `core/dimRefs.ts`. Hrana – rovnoběžná hrana a hrana – bod: kolmá vzdálenost; bod – bod: přímo; nerovnoběžné hrany: kóta nevznikne (hlášení). Zadaná délka: líc = posune se celá stěna (sousední se protáhnou), čára kresby = celá kresba (na téže kresbě jen úsek – obdélník zůstane obdélníkem), okraj otvoru = otvor po stěně (nesmí najet na jiný otvor ani vyjet ze stěny), oba okraje téhož otvoru = šířka otvoru (levý okraj stojí). Délka se ověřuje až po vrácení otvorů na místo. Po dělení / sloučení stěny kóta přejde na líc na stejné přímce. SCHEMA_VERSION 21. Testy v `store/freeDim.test.ts` (40). Po kontrole revieweru opraveno: posun okraje otvoru na sousední otvor, pořadí kontroly délky, dělení stěny mazalo kótu, akce přijala nerovnoběžné hrany, úseky otevřené čáry.
@@ -466,7 +473,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Poslední stav (2026-11-18, volná kóta)
 
-**Hotové (na webu):** kresba, D3 K hraně, napojení na líc oblouku – uživatel vyzkoušel na PC. Kóty výstupku v rohu a na konci stěny (2026-11-18 (2)), vybrání v rohu (3), volná kóta / úhlopříčka (4), kóta na hranách (5) – **čeká na vyzkoušení**. Testy 604, typecheck OK. SCHEMA_VERSION 21.
+**Hotové (na webu):** kresba, D3 K hraně, napojení na líc oblouku – uživatel vyzkoušel na PC. Kóty výstupku v rohu a na konci stěny (2026-11-18 (2)), vybrání v rohu (3), volná kóta / úhlopříčka (4), kóta na hranách (5), šířka okna se zámkem (6) – **čeká na vyzkoušení**. Testy 612, typecheck OK. SCHEMA_VERSION 21.
 
 **Rozpracované:** nic.
 

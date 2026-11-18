@@ -3,8 +3,8 @@
  */
 import type { Floor } from '../../model/types';
 import { arcChain, setChainSagitta } from '../../core/arcChain';
-import { minOpeningWidth, openingStartFromA, openingsOnWall, wallLength } from '../../core/floorQueries';
-import { chainEdge, chainIndex, keepOpeningsOnResizedWalls, pushChainRight } from '../../core/openingChain';
+import { minOpeningWidth, openingSpan, openingStartFromA, openingsOnWall, wallLength } from '../../core/floorQueries';
+import { chainEdge, chainIndex, keepOpeningsOnResizedWalls, openingSideLocks, pushChainRight } from '../../core/openingChain';
 import { setComponentGap } from '../../core/components';
 import { dimKey, dimValue } from '../../core/dimLock';
 import { store, type NumPadTarget } from '../store';
@@ -123,7 +123,24 @@ export function applyNumpadValue(t: NumPadTarget, value: number, overrideLock = 
       const wall = floor.walls[op.wallId];
       const len = wall ? wallLength(floor, wall) : 0;
       const delta = Math.round(value) - op.width;
-      if (op.ref === 'a' && wall && delta !== 0) {
+      // zamčený úsek na straně, kam by otvor rostl (vpravo až k rohu B / vlevo), a volný úsek na druhé straně:
+      // otvor se rozšíří / zúží na volnou stranu (rozhodnutí uživatele 2026-11-18), stěna se neprodlužuje
+      const sl = wall && delta !== 0 ? openingSideLocks(floor, op.id) : null;
+      const toFreeSide = !!sl && ((op.ref === 'a' && sl.rightToEnd && !sl.left) || (op.ref === 'b' && sl.left && !sl.right));
+      if (sl && toFreeSide) {
+        const start = openingStartFromA(op, len);
+        const end = start + openingSpan(op);
+        op.width = Math.round(value);
+        const span = openingSpan(op);
+        // ref a: drží pravý okraj (zamčený), roste doleva; ref b: drží levý okraj, roste doprava
+        const ns = op.ref === 'a' ? end - span : start;
+        if (ns < sl.leftEdge - 0.5 || ns + span > sl.rightEdge + 0.5) {
+          chainFail = true; // otvor by přesáhl souseda / konec stěny
+          return;
+        }
+        op.offset = op.ref === 'a' ? Math.round(ns) : Math.round(len - ns - span);
+        ok = true;
+      } else if (op.ref === 'a' && wall && delta !== 0) {
         // levý okraj zůstane, pravý se posune; zamčené úseky napravo se posunou s ním (řetěz otvorů)
         const placed = openingsOnWall(floor, wall);
         const j = placed.findIndex(p => p.op.id === op.id);

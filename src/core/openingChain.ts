@@ -30,6 +30,35 @@ function placeAt(op: Opening, start: number, len: number): void {
 }
 
 /**
+ * Zámky kolem otvoru: `left` / `right` = úsek hned vlevo (k rohu A) / vpravo (k rohu B) je zamčený; `rightToEnd` =
+ * vpravo jsou zamčené všechny úseky až k rohu B (změna by prodloužila stěnu); `leftEdge` / `rightEdge` = kam smí
+ * otvor sahat (konec souseda nebo stěny).
+ */
+export function openingSideLocks(floor: Floor, opId: Id): { left: boolean; right: boolean; rightToEnd: boolean; leftEdge: number; rightEdge: number } | null {
+  const op = floor.openings[opId];
+  const wall = op && floor.walls[op.wallId];
+  if (!op || !wall) return null;
+  const placed = openingsOnWall(floor, wall);
+  const j = placed.findIndex(p => p.op.id === opId);
+  if (j < 0) return null;
+  const gapLocked = (i: number) => {
+    const p = placed[i];
+    const q = placed[i + 1];
+    if (!p) return q ? locked(floor, `opening-offset:${q.op.id}:a`) : false;
+    return q ? locked(floor, `opening-gap:${p.op.id}:${q.op.id}`) : locked(floor, `opening-offset:${p.op.id}:b`);
+  };
+  let rightToEnd = true;
+  for (let i = j; i < placed.length && rightToEnd; i++) rightToEnd = gapLocked(i);
+  return {
+    left: gapLocked(j - 1),
+    right: gapLocked(j),
+    rightToEnd,
+    leftEdge: placed[j - 1]?.end ?? 0,
+    rightEdge: placed[j + 1]?.start ?? wallLength(floor, wall)
+  };
+}
+
+/**
  * Posune otvory stěny od indexu `from` (pořadí od rohu A) o `delta` mm směrem k rohu B, pokud jsou spojené
  * zamčenými meziostěními; za posledním spojeným se změna spolkne, nebo se prodlouží stěna.
  * `forceExtend` = měněný úsek je poslední (k rohu B) – posouvá se rovnou roh B.
