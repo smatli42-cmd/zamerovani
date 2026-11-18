@@ -9,7 +9,9 @@ import { createProject } from '../model/factory';
 import type { Project, Pt } from '../model/types';
 import { freeDimValue } from '../core/freeDim';
 import { dist } from '../core/geometry';
-import { addFreeDim, addWall, applyNumpadValue, setDimLock } from './actions';
+import { addFreeDim, addLine, addWall, applyNumpadValue, setDimLock } from './actions';
+import { protrusionsOf } from '../core/protrusion';
+import { endDims, endProtrusionsOf } from '../core/endProtrusion';
 import { openTarget } from './numpadController';
 import { store } from './store';
 
@@ -73,5 +75,52 @@ describe('posun celé stěny kótou u otevřeného půdorysu', () => {
     expect(applyNumpadValue({ kind: 'free-dim', dimId: id, move: 'a' }, Math.round(freeDimValue(f(), id)!) + 300)).toBe(false);
     expect(f()).toBe(snap);
     expect(store.get().lockBlock).not.toBeNull();
+  });
+
+  it('výkres uživatele se zamčenou délkou pravé stěny: stěna se pohnout nemůže → změní se hloubka výstupku', () => {
+    store.openProject(JSON.parse(JSON.stringify((data as { project: Project }).project)));
+    setDimLock({ kind: 'wall-length', wallId: 'w_mwmdoihn564yja', move: 'both' }, true);
+    const id = 'dim_mwmk39xmbxbita';
+    const p0 = JSON.stringify(f().nodes);
+    openTarget({ kind: 'free-dim', dimId: id, move: 'b' });
+    expect(applyNumpadValue(store.get().numpad!.target, 4800)).toBe(true);
+    expect(store.get().lockBlock).toBeNull();
+    expect(freeDimValue(f(), id)).toBeCloseTo(4800, 3);
+    expect(JSON.stringify(f().nodes)).toBe(p0); // stěny stojí
+    expect(Math.max(...f().protrusions!['pr_mwmk1qb5kzp128']!.pts.map(q => q.v))).toBeCloseTo(1100, 3);
+  });
+
+  it('příčka napojená do T se zamčenou délkou drží stěnu → změní se hloubka výstupku', () => {
+    store.openProject(createProject({ name: 't' }));
+    addWall({ x: 0, y: 0 }, null, { x: 6000, y: 0 }, null, false, { thickness: 300, side: -1 });
+    addWall({ x: 4000, y: 3000 }, null, { x: 4000, y: 0 }, null, false, { thickness: 100, side: 1 });
+    const top = Object.values(f().walls).find(w => w.thickness === 300)!;
+    const tee = Object.values(f().walls).find(w => w.thickness === 100)!;
+    setDimLock({ kind: 'wall-length', wallId: tee.id, move: 'both' }, true);
+    const P = [{ x: 1000, y: 0 }, { x: 1000, y: 400 }, { x: 2000, y: 400 }, { x: 2000, y: 0 }];
+    for (let i = 0; i < 3; i++) addLine(P[i]!, null, P[i + 1]!, null);
+    const p = protrusionsOf(f())[0]!;
+    const id = addFreeDim({ prot: p.id, i: 1, at: 500 }, { x: 1500, y: 2000 })!;
+    expect(applyNumpadValue({ kind: 'free-dim', dimId: id, move: 'a' }, 1400)).toBe(true);
+    expect(Math.max(...f().protrusions![p.id]!.pts.map(q => q.v))).toBeCloseTo(600, 3);
+    expect(nodeAt({ x: 0, y: 0 })).toBeDefined();
+    void top;
+  });
+
+  it('výstupek na konci stěny: čelní hrana, zamčená délka stěny → změní se hloubka', () => {
+    store.openProject(createProject({ name: 't' }));
+    addWall({ x: 0, y: 0 }, null, { x: 3000, y: 0 }, null, false, { thickness: 300, side: 1 });
+    addWall({ x: 0, y: 0 }, null, { x: 0, y: 3000 }, null, false, { thickness: 300, side: -1 });
+    const W = Object.values(f().walls).find(w => f().nodes[w.b]!.x === 3000)!;
+    const L = Object.values(f().walls).find(w => w.id !== W.id)!;
+    setDimLock({ kind: 'wall-length', wallId: L.id, move: 'both' }, true);
+    const P = [{ x: 2600, y: 0 }, { x: 2600, y: -200 }, { x: 3200, y: -200 }, { x: 3200, y: 500 }, { x: 2600, y: 500 }, { x: 2600, y: 300 }];
+    for (let i = 0; i + 1 < P.length; i++) addLine(P[i]!, null, P[i + 1]!, null);
+    const ep = endProtrusionsOf(f())[0]!;
+    const id = addFreeDim({ prot: ep.id, i: 1, at: 300 }, { x: 2900, y: -1000 })!;
+    expect(freeDimValue(f(), id)).toBeCloseTo(800, 6);
+    expect(applyNumpadValue({ kind: 'free-dim', dimId: id, move: 'a' }, 700)).toBe(true);
+    expect(endDims(f().endProtrusions![ep.id]!).depth0).toBeCloseTo(300, 3);
+    expect(nodeAt({ x: 0, y: 0 })).toBeDefined();
   });
 });

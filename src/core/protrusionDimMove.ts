@@ -5,7 +5,8 @@
  *
  * Hrany = rovné úseky otevřeného obrysu (oblouky ne; výstupek na obloukové stěně ne). Zadaná délka kóty (posun hrany):
  * - oba konce kóty na témž výstupku → posune se jen hrana (změní se rozměr výstupku),
- * - hrana rovnoběžná se stěnou výstupku na stěně / na konci stěny (čelní) → posune se celá stěna i s výstupkem,
+ * - hrana rovnoběžná se stěnou výstupku na stěně / na konci stěny (čelní) → posune se celá stěna i s výstupkem;
+ *   když posunu stěny brání zámek (délka sousední stěny…), posune se jen hrana (změní se hloubka),
  * - jinak (boční hrana, každá hrana výstupku v rohu, hrana za čelem stěny) → posune se jen hrana; když by tím
  *   změnila zamčený rozměr výstupku, posune se celek: výstupek na stěně po stěně, u rohu stěna, se kterou je hrana
  *   rovnoběžná (výstupek se drží rohu), u konce stěny konec stěny (stěna se prodlouží / zkrátí).
@@ -18,7 +19,9 @@ import { endDims, endFrame, endOutline } from './endProtrusion';
 import { cornersOf, protrusionExtent } from './protrusion';
 import { protrusionDims, protrusionFits, rescaleArcs } from './protrusionEdit';
 import { moveNodeWithRubberBand, moveWallStretch } from './solver';
-import { dimKey, type DimTarget } from './dimLock';
+import { dimKey, lockViolation, type DimTarget } from './dimLock';
+import { keepOpeningsOnResizedWalls } from './openingChain';
+import { syncHosted } from './hosting';
 import { parallel, protById, protSeg, type ProtKind } from './dimRefs';
 
 /**
@@ -62,6 +65,24 @@ function edgePointMoves(pts: Pt[], i: number, disp: Pt, faceFirst: Pt, faceLast:
   const m0 = along(i, i - 1, faceFirst);
   const m1 = along(i + 1, i + 2, faceLast);
   return m0 && m1 ? [m0, m1] : null;
+}
+
+/**
+ * Smí čelní hrana posunout celou stěnu? Zkusí to na kopii (i s prvky na protažených stěnách na místě) – když by
+ * posun změnil zamčenou kótu (délka sousední stěny, řetěz otvorů…), stěna se nepohne a změní se rozměr výstupku
+ * (rozhodnutí uživatele 2026-11-18: co se pohne, určují zámky). Zamčené volné kóty se nepočítají – ty dorovná
+ * pevné spojení (core/dimFollow.ts).
+ */
+function wallMoveAllowed(floor: Floor, wallId: Id, dx: number, dy: number): boolean {
+  if (!floor.dimLocks) return true;
+  const json = JSON.stringify(floor);
+  const before = JSON.parse(json) as Floor;
+  const trial = JSON.parse(json) as Floor;
+  if (!moveWallStretch(trial, wallId, dx, dy)) return false;
+  syncHosted(before, trial); // příčky napojené do T jedou se stěnou (jako ve store.edit)
+  // otvor přivázaný zámky k oběma koncům = zámek; „nevejde se“ (misfit) není zámek – posun stěny pak ohlásí store
+  if (keepOpeningsOnResizedWalls(before, trial) === 'tied') return false;
+  return !lockViolation(before, trial, undefined, key => key.startsWith('free-dim:'));
 }
 
 /** Zamčené rozměry výstupku (hodnoty) – pro rozhodnutí „posune se celek“. */
@@ -135,7 +156,7 @@ export function moveProtEdge(floor: Floor, id: Id, i: number, dx: number, dy: nu
     const c = cornersOf(floor, k.p);
     if (!c) return false;
     const d = unit(floor.nodes[c.w.a]!, floor.nodes[c.w.b]!);
-    if (!sameElement && parallel(ed, d)) return moveWallStretch(floor, c.w.id, dx, dy); // čelní hrana
+    if (!sameElement && parallel(ed, d) && wallMoveAllowed(floor, c.w.id, dx, dy)) return moveWallStretch(floor, c.w.id, dx, dy); // čelní hrana
     const du = dot(disp, d);
     const before = k.p.pts;
     const nd = normal(d);
@@ -181,7 +202,7 @@ export function moveProtEdge(floor: Floor, id: Id, i: number, dx: number, dy: nu
 
   const f = endFrame(floor, k.p);
   if (!f) return false;
-  if (!sameElement && parallel(ed, f.e1)) return moveWallStretch(floor, k.p.wallId, dx, dy); // čelní hrana (podél stěny)
+  if (!sameElement && parallel(ed, f.e1) && wallMoveAllowed(floor, k.p.wallId, dx, dy)) return moveWallStretch(floor, k.p.wallId, dx, dy); // čelní hrana (podél stěny)
   const before = k.p.pts;
   const last = before.length - 1;
   const edge = (): boolean => {

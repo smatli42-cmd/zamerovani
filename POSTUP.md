@@ -7,6 +7,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-18 (15) – čelní hrana výstupku: když stěnu drží zámek, změní se hloubka (požadavek uživatele)
+- **Hlášení uživatele:** se zamčenou délkou pravé stěny kóta výstupek – spodní stěna hlásila zamčenou délku stěny; má se zvětšit výstupek.
+- **Co se změnilo:** `wallMoveAllowed` v `core/protrusionDimMove.ts` – čelní hrana (výstupek na stěně i na konci stěny) nejdřív zkusí posun celé stěny na kopii (i s prvky na protažených stěnách na místě); když by změnil zamčenou kótu (kromě zamčených volných kót, ty dorovná pevné spojení), posune se jen hrana = změní se hloubka. `lockViolation` má nepovinný filtr `skip`. Zapsáno v KOTY-ZAMEK-EXPORT.md. Test s výkresem uživatele (`store/freeDimOpenPlan.test.ts`).
+- **Viditelně v aplikaci:** zamčená délka pravé stěny → kóta mezi výstupkem a spodní stěnou změní hloubku výstupku, stěny stojí.
+- **Rozhodnuto uživatelem:** co se pohne, určují zámky (zásada z (10)).
+- **Po kontrole revieweru:** zkouška na kopii dorovná i příčky napojené do T (`syncHosted`); „otvor se nevejde“ není zámek – hloubka se kvůli tomu nemění (ohlásí se jako dřív). Testy: příčka v T se zamčenou délkou, výstupek na konci stěny.
+- **Otevřené:** zamčené volné kóty se při rozhodování nepočítají (dorovná je pevné spojení; když dorovnání nejde, úprava se zastaví místo změny hloubky); při dorovnání (dimFollow) zkouška nezná právě přepisovanou kótu (okrajové).
+
 ### 2026-11-18 (14) – posun celé stěny kótou u otevřeného půdorysu (chyba od uživatele)
 - **Chyba od uživatele:** výkres s horní, pravou a spodní stěnou (levá chybí); kóta od čelní hrany výstupku na horní stěně ke spodní stěně – zadání délky hlásilo „zamčené kóty by úpravu vrátily zpět“, i když zamčená kóta nebránila. Příčina (rozbor na záloze výkresu uživatele): posun celé stěny bral s sebou „volné větve“ – u tvaru U celou zbývající místnost i se spodní stěnou, kóta se nezměnila a dorovnání zamčené kóty 1340 vyvolalo hlášení.
 - **Co se změnilo:** `moveWallStretch` v `core/solver.ts` – posun celé stěny kótou (konec kóty na líci stěny i čelní hrana výstupku) posune jen oba rohy stěny, sousední stěny se protáhnou. Jedno místo pro obě použití. Test s výkresem uživatele (`store/__fixtures__/protDimUser.json`) a tvar U s kótou mezi líci (`store/freeDimOpenPlan.test.ts`).
@@ -541,7 +549,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Poslední stav (2026-11-18, sezení 3)
 
-**Hotové (na webu):** opravy kótování od uživatele – výchozí posouvaný bod volné kóty (8), poslední kóta řetězu okna posune okno (10), **zamčená volná kóta = pevné spojení** (11, uživatel potvrdil), kóta ke druhé čáře dvojité čáry (12), kóta k hraně výstupku / vybrání (13), posun stěny kótou u otevřeného půdorysu (14). Testy 680, typecheck a build OK. SCHEMA_VERSION 22.
+**Hotové (na webu):** opravy kótování od uživatele – výchozí posouvaný bod volné kóty (8), poslední kóta řetězu okna posune okno (10), **zamčená volná kóta = pevné spojení** (11, uživatel potvrdil), kóta ke druhé čáře dvojité čáry (12), kóta k hraně výstupku / vybrání (13), posun stěny kótou u otevřeného půdorysu (14), čelní hrana se zámkem stěny mění hloubku (15). Testy 683, typecheck a build OK. SCHEMA_VERSION 22.
 
 **Rozpracované:** nic.
 

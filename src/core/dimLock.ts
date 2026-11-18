@@ -257,11 +257,11 @@ const LOCK_TOL = 0.5;
  * i když její prvky zůstaly). Kóty smazaných prvků a kóty v `after` odemčené se nekontrolují. `allowKey` = kóta,
  * kterou uživatel právě vědomě přepisuje (NumPad po potvrzení).
  */
-export function lockViolation(before: Floor | undefined, after: Floor, allowKey?: string): DimTarget | null {
+export function lockViolation(before: Floor | undefined, after: Floor, allowKey?: string, skip?: (key: string) => boolean): DimTarget | null {
   const locks = before?.dimLocks;
   if (!before || !locks) return null;
   for (const [key, t] of Object.entries(locks)) {
-    if (key === allowKey || !after.dimLocks?.[key] || !ownersExist(after, t)) continue;
+    if (key === allowKey || skip?.(key) || !after.dimLocks?.[key] || !ownersExist(after, t)) continue;
     if (dimAnchor(before, t) !== dimAnchor(after, t)) continue; // jiný soused = jiná kóta (reboundLocks)
     const v0 = dimValue(before, t);
     if (v0 === null) continue;
