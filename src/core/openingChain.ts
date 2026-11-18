@@ -5,8 +5,10 @@
  * Zamčené úseky spojují sousední otvory do celku. Pravidlo změny úseku:
  * - změna úseku posune všechno napravo (směrem k rohu B), co je s ním spojené zamčenými úseky;
  * - první nezamčený úsek napravo změnu „spolkne“ (přepíše se na novou délku);
- * - když nezamčený úsek napravo není (nebo se mění poslední úsek k rohu B), posune se roh B – stěna se
- *   prodlouží / zkrátí a otvory zůstanou ve výkresu na místě.
+ * - když nezamčený úsek napravo není, posune se roh B – stěna se prodlouží / zkrátí a otvory zůstanou ve výkresu
+ *   na místě;
+ * - poslední úsek k rohu B (rozhodnutí uživatele 2026-11-18) posune otvory k rohu A zrcadlově (`pushChainLeftFromEnd`);
+ *   stěnu prodlouží jen tehdy, když jsou otvory zámky přivázané až k rohu A.
  *
  * ZÁVAZNÉ PRAVIDLO (uživatel 2026-11-14, CLAUDE.md): při změně délky stěny kótou / NumPadem zůstanou VŠECHNY
  * prvky nesené stěnou na místě (otvory všech druhů, výstupky, napojené příčky). Nový druh prvku na stěně
@@ -110,6 +112,30 @@ export function pushChainRight(floor: Floor, wallId: Id, from: number, delta: nu
     const p = placed[j]!;
     placeAt(floor.openings[p.op.id]!, p.start + delta, newLen);
   }
+  return true;
+}
+
+/**
+ * Změna poslední kóty řetězu (odstup posledního otvoru k rohu B) o `delta` (rozhodnutí uživatele 2026-11-18):
+ * poslední otvor a otvory s ním spojené zamčenými meziostěními se posunou o `delta` k rohu A; první nezamčený úsek
+ * vlevo změnu spolkne, stěna zůstane. Když jsou otvory zámky přivázané až k rohu A (nemohou se pohnout), prodlouží
+ * se stěna jako dřív (`pushChainRight` s posunem rohu B). false = nejde (otvor by vyjel ze stěny / přesáhl souseda).
+ */
+export function pushChainLeftFromEnd(floor: Floor, wallId: Id, delta: number): boolean {
+  const wall = floor.walls[wallId];
+  if (!wall) return false;
+  const len = wallLength(floor, wall);
+  const placed = openingsOnWall(floor, wall);
+  const n = placed.length;
+  if (!n) return false;
+  let first = n - 1; // první (nejblíž k A) posunutý otvor
+  while (first > 0 && locked(floor, `opening-gap:${placed[first - 1]!.op.id}:${placed[first]!.op.id}`)) first--;
+  if (first === 0 && locked(floor, `opening-offset:${placed[0]!.op.id}:a`)) return pushChainRight(floor, wallId, n, delta, true);
+  if (placed[first]!.start - delta < -0.5) return false; // vyjel by ze stěny u rohu A
+  const before = placed[first - 1];
+  if (before && placed[first]!.start - delta < before.end - 0.5) return false; // přesáhl by souseda
+  if (placed[n - 1]!.end - delta > len + 0.5) return false; // zkrácení pod nulu u rohu B
+  for (let j = first; j < n; j++) placeAt(floor.openings[placed[j]!.op.id]!, placed[j]!.start - delta, len);
   return true;
 }
 

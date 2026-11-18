@@ -7,10 +7,18 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-18 (10) – poslední kóta řetězu okna posune okno (chyba od uživatele, mění (9))
+- **Chyba od uživatele:** automatická kóta okna 1900 (poslední úsek k rohu B) hlásila „brání zamčená kóta 1340“ (obdélník kresby – spodní stěna), ruční kóta 2200 okno posunula. Příčina: poslední úsek řetězu prodlužoval stěnu → posunula se spodní stěna. V (9) jsem otázku položil nesrozumitelně; po upřesnění uživatel rozhodl: kóta 1900 posune okno.
+- **Co se změnilo:** `pushChainLeftFromEnd` v `core/openingChain.ts` (zrcadlo `pushChainRight`): poslední otvor a otvory s ním spojené zamčenými meziostěními se posunou k rohu A, první nezamčený úsek vlevo změnu spolkne, stěna zůstane. Zapsáno v KOTY-ZAMEK-EXPORT.md. Testy v `store/openingChain.test.ts` upraveny podle nového rozhodnutí uživatele (poslední kóta, zamčená délka stěny, konec B v T) + nové; test podle obrázku v `store/freeDimMove.test.ts`.
+- **Viditelně v aplikaci:** ťuknutí na poslední úsek kóty okna (k rohu B) a zadání hodnoty posune okno, stěna zůstane.
+- **Rozhodnuto samostatně:** když jsou otvory zámky přivázané až k rohu A (nemohou se pohnout), poslední kóta prodlouží stěnu jako dřív.
+- **Rozhodnuto uživatelem (zásada):** co se pohne, určují zámky – zamčená kóta drží, ostatní se hýbe od ní / k ní; nesouvisející zamčená kóta nesmí blokovat. Postupné zadávání „Další“ bez výjimky (hodnoty, které mají zůstat, se zamknou). Zapsáno v KOTY-ZAMEK-EXPORT.md. Doplněny testy (zmenšení, otvor od B, zamčená délka stěny, přesah souseda).
+- **Otevřené:** posun otvorů řetězem nehlídá kolizi s výstupky a napojenými příčkami na stejné stěně (platí pro všechny úseky řetězu, ne nové).
+
 ### 2026-11-18 (9) – poslední úsek řetězové kóty otvorů (dotaz uživatele)
 - **Hlášení uživatele:** změna automatické kóty okna (poslední úsek řetězu k rohu B) okno neposune, ruční volná kóta ano.
 - **Co se změnilo:** nic v kódu – je to pravidlo z 2026-11-14 (11) (poslední kóta k rohu B prodlouží / zkrátí stěnu, otvory stojí; KOTY-ZAMEK-EXPORT.md).
-- **Rozhodnuto uživatelem:** pravidlo zůstává beze změny. Okno se posouvá první kótou řetězu (od rohu A), meziostěním, „Odstup od B“ v panelu otvoru nebo volnou kótou.
+- **Rozhodnuto uživatelem:** pravidlo zůstává beze změny (**zrušeno v (10)** – otázka byla nesrozumitelná). Okno se posouvá první kótou řetězu (od rohu A), meziostěním, „Odstup od B“ v panelu otvoru nebo volnou kótou.
 - **Otevřené:** nic.
 
 ### 2026-11-18 (8) – kóta k oknu posune okno, ne stěnu (chyba od uživatele)

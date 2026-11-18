@@ -4,7 +4,7 @@
 import type { Floor } from '../../model/types';
 import { arcChain, setChainSagitta } from '../../core/arcChain';
 import { minOpeningWidth, openingSpan, openingStartFromA, openingsOnWall, wallLength } from '../../core/floorQueries';
-import { chainEdge, chainIndex, keepOpeningsOnResizedWalls, openingSideLocks, pushChainRight } from '../../core/openingChain';
+import { chainEdge, chainIndex, keepOpeningsOnResizedWalls, openingSideLocks, pushChainLeftFromEnd, pushChainRight } from '../../core/openingChain';
 import { setComponentGap } from '../../core/components';
 import { dimKey, dimValue } from '../../core/dimLock';
 import { store, type NumPadTarget } from '../store';
@@ -107,8 +107,9 @@ export function applyNumpadValue(t: NumPadTarget, value: number, overrideLock = 
         ok = pushChainRight(floor, wall.id, 0, value - cur);
         chainFail = !ok;
       } else if (t.ref === 'b' && i === n - 1 && !t.move) {
-        // odstup k rohu B (poslední úsek řetězu): otvory zůstanou, stěna se prodlouží / zkrátí
-        ok = pushChainRight(floor, wall.id, n, value - cur, true);
+        // odstup k rohu B (poslední úsek řetězu): posune otvory k rohu A, stěna zůstane (rozhodnutí uživatele
+        // 2026-11-18); otvory přivázané zámky až k rohu A → stěna se prodlouží / zkrátí
+        ok = pushChainLeftFromEnd(floor, wall.id, value - cur);
         chainFail = !ok;
       } else {
         const len = wallLength(floor, wall);

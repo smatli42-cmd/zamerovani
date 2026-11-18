@@ -37,7 +37,7 @@ export const END_DIM_LABEL: Record<EndDim, string> = {
 /** Kóta (to, co se zadává v NumPadu). */
 export type DimTarget =
   | { kind: 'wall-length'; wallId: Id; move: MoveTarget }
-  /** `move` = z panelu otvoru: posunout jen otvor (z řetězové kóty se poslední úsek k B mění prodloužením stěny). */
+  /** `move` = z panelu otvoru: posunout jen otvor (z řetězové kóty posune poslední úsek k B otvory k rohu A, stěnu prodlouží jen při zámcích až k rohu A – core/openingChain.ts). */
   | { kind: 'opening-offset'; openingId: Id; ref: 'a' | 'b'; move?: true }
   | { kind: 'opening-width'; openingId: Id }
   | { kind: 'opening-gap'; firstId: Id; secondId: Id }

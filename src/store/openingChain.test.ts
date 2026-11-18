@@ -58,12 +58,68 @@ describe('řetězová kóta otvorů se zámky', () => {
     expect(Math.round(wallLength(f(), f().walls[w]!))).toBe(7000);
   });
 
-  it('změna poslední kóty vpravo: otvory zůstanou na místě, stěna se prodlouží', () => {
+  // rozhodnutí uživatele 2026-11-18 (mění pravidlo z 2026-11-14): poslední kóta k rohu B posune otvory, stěna zůstane
+  it('změna poslední kóty vpravo posune otvory spojené zámky k rohu A; první úsek se přepíše, stěna zůstane', () => {
     const { w, ids } = setup();
+    expect(applyNumpadValue({ kind: 'opening-offset', openingId: ids[2]!, ref: 'b' }, 1500)).toBe(true);
+    expect(chain(w)).toEqual([830, 1200, 730, 900, 1040, 800, 1500]);
+    expect(Math.round(wallLength(f(), f().walls[w]!))).toBe(7000);
+  });
+
+  it('bez zámků: změna poslední kóty posune jen poslední otvor (meziostění před ním se přepíše)', () => {
+    const { w, ids } = setup(false);
+    expect(applyNumpadValue({ kind: 'opening-offset', openingId: ids[2]!, ref: 'b' }, 1500)).toBe(true);
+    expect(chain(w)).toEqual([1050, 1200, 730, 900, 820, 800, 1500]);
+    expect(Math.round(wallLength(f(), f().walls[w]!))).toBe(7000);
+  });
+
+  it('poslední kóta: otvory zámky přivázané až k rohu A → stěna se prodlouží (otvory se pohnout nemohou)', () => {
+    const { w, ids } = setup();
+    setDimLock({ kind: 'opening-offset', openingId: ids[0]!, ref: 'a' }, true);
     expect(applyNumpadValue({ kind: 'opening-offset', openingId: ids[2]!, ref: 'b' }, 1500)).toBe(true);
     expect(chain(w)).toEqual([1050, 1200, 730, 900, 1040, 800, 1500]);
     expect(Math.round(wallLength(f(), f().walls[w]!))).toBe(7220);
     expect(f().nodes[f().walls[w]!.a]).toMatchObject({ x: 0, y: 0 });
+  });
+
+  it('poslední kóta zmenšená: otvory spojené zámky se posunou k rohu B', () => {
+    const { w, ids } = setup();
+    expect(applyNumpadValue({ kind: 'opening-offset', openingId: ids[2]!, ref: 'b' }, 1000)).toBe(true);
+    expect(chain(w)).toEqual([1330, 1200, 730, 900, 1040, 800, 1000]);
+    expect(Math.round(wallLength(f(), f().walls[w]!))).toBe(7000);
+  });
+
+  it('poslední kóta u otvoru měřeného od rohu B: otvor skončí na zadaném místě', () => {
+    const { w, ids } = setup(false);
+    store.edit(fl => {
+      const op = fl.openings[ids[2]!]!;
+      op.ref = 'b';
+      op.offset = 1280;
+    });
+    expect(applyNumpadValue({ kind: 'opening-offset', openingId: ids[2]!, ref: 'b' }, 1500)).toBe(true);
+    expect(chain(w)).toEqual([1050, 1200, 730, 900, 820, 800, 1500]);
+    expect(f().openings[ids[2]!]!.ref).toBe('b');
+  });
+
+  it('poslední kóta se zamčenou délkou stěny: otvory se posunou, stěna zůstane', () => {
+    const { w, ids } = setup();
+    setDimLock({ kind: 'wall-length', wallId: w, move: 'both' }, true);
+    expect(applyNumpadValue({ kind: 'opening-offset', openingId: ids[2]!, ref: 'b' }, 1500)).toBe(true);
+    expect(chain(w)).toEqual([830, 1200, 730, 900, 1040, 800, 1500]);
+  });
+
+  it('poslední kóta: skupina by přesáhla nepohnutého souseda → nic se nezmění', () => {
+    const { w, ids } = setup();
+    setDimLock({ kind: 'opening-gap', firstId: ids[0]!, secondId: ids[1]! }, false);
+    // dveře + dveře (spojené zámkem) o 800 k A: meziostění 730 k oknu nestačí
+    expect(applyNumpadValue({ kind: 'opening-offset', openingId: ids[2]!, ref: 'b' }, 2080)).toBe(false);
+    expect(chain(w)).toEqual([1050, 1200, 730, 900, 1040, 800, 1280]);
+  });
+
+  it('poslední kóta: skupina by vyjela ze stěny u rohu A → nic se nezmění', () => {
+    const { w, ids } = setup();
+    expect(applyNumpadValue({ kind: 'opening-offset', openingId: ids[2]!, ref: 'b' }, 2500)).toBe(false);
+    expect(chain(w)).toEqual([1050, 1200, 730, 900, 1040, 800, 1280]);
   });
 
   it('bez zámků: změna první kóty posune jen první otvor (další meziostění se přepíše)', () => {
@@ -92,6 +148,7 @@ describe('řetězová kóta otvorů se zámky', () => {
   it('zamčená délka stěny prodloužení zastaví s hlášením', () => {
     const { w, ids } = setup();
     setDimLock({ kind: 'wall-length', wallId: w, move: 'both' }, true);
+    setDimLock({ kind: 'opening-offset', openingId: ids[0]!, ref: 'a' }, true); // otvory přivázané k rohu A → prodloužení
     const snap = f();
     expect(applyNumpadValue({ kind: 'opening-offset', openingId: ids[2]!, ref: 'b' }, 1500)).toBe(false);
     expect(f()).toBe(snap);
@@ -168,6 +225,7 @@ describe('řetězová kóta otvorů se zámky', () => {
     const endB = [wall.a, wall.b].find(n => f().nodes[n]!.x === 7000)!;
     expect(f().nodes[endB]!.host).toBeDefined();
     if (endB !== wall.b) return; // stěna vede od rohu B – odstup k B je u rohu A, netýká se
+    setDimLock({ kind: 'opening-offset', openingId: id, ref: 'a' }, true); // otvor přivázaný k rohu A → prodloužení
     const snap = f();
     expect(applyNumpadValue({ kind: 'opening-offset', openingId: id, ref: 'b' }, 1500)).toBe(false);
     expect(f()).toBe(snap);

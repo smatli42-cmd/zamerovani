@@ -9,6 +9,7 @@ import { defaultFreeDimMove, freeDimValue } from '../core/freeDim';
 import { dist } from '../core/geometry';
 import { openingStartFromA, wallLength } from '../core/floorQueries';
 import { addDrawRect, addFreeDim, addOpening, addWall, applyNumpadValue, setDimLock, setRevealEnabled } from './actions';
+import { chainEdge } from '../core/openingChain';
 import { openTarget } from './numpadController';
 import { store } from './store';
 
@@ -69,5 +70,20 @@ describe('volná kóta: výchozí posouvaný konec', () => {
     setup();
     const id = addFreeDim({ node: nodeAt(C[0]!).id }, { node: nodeAt(C[2]!).id })!;
     expect(defaultFreeDimMove(f().dims![id]!)).toBe('b');
+  });
+
+  it('automatická kóta okna k rohu B (obrázek uživatele): posune okno, zamčená kóta kresby se nezmění', () => {
+    const { op, lk, startOf } = setup();
+    const o = () => f().openings[op]!;
+    const toB = chainEdge(f(), o(), 'b')!;
+    const s0 = startOf();
+    const lk0 = freeDimValue(f(), lk)!;
+    const len0 = wallLength(f(), f().walls[o().wallId]!);
+    expect(applyNumpadValue({ kind: 'opening-offset', openingId: op, ref: 'b' }, Math.round(toB) + 300)).toBe(true);
+    expect(store.get().lockBlock).toBeNull();
+    expect(chainEdge(f(), o(), 'b')).toBeCloseTo(Math.round(toB) + 300, 0);
+    expect(s0 - startOf()).toBeCloseTo(300, 0);
+    expect(wallLength(f(), f().walls[o().wallId]!)).toBeCloseTo(len0, 6);
+    expect(freeDimValue(f(), lk)).toBeCloseTo(lk0, 6);
   });
 });
