@@ -7,6 +7,12 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-18 (9) – poslední úsek řetězové kóty otvorů (dotaz uživatele)
+- **Hlášení uživatele:** změna automatické kóty okna (poslední úsek řetězu k rohu B) okno neposune, ruční volná kóta ano.
+- **Co se změnilo:** nic v kódu – je to pravidlo z 2026-11-14 (11) (poslední kóta k rohu B prodlouží / zkrátí stěnu, otvory stojí; KOTY-ZAMEK-EXPORT.md).
+- **Rozhodnuto uživatelem:** pravidlo zůstává beze změny. Okno se posouvá první kótou řetězu (od rohu A), meziostěním, „Odstup od B“ v panelu otvoru nebo volnou kótou.
+- **Otevřené:** nic.
+
 ### 2026-11-18 (8) – kóta k oknu posune okno, ne stěnu (chyba od uživatele)
 - **Chyba od uživatele:** okno s ostěním, volná kóta 2200 mezi okrajem okna a lícem spodní stěny; zadání délky hlásilo „brání zamčená kóta: kóta 1340“ (obdélník kresby – spodní stěna) a okno se neposunulo. Příčina: NumPad i panel kóty vždy předvybraly 2. bod – tady líc spodní stěny → posouvala se celá stěna. Se zapnutím ostění to nesouviselo (ve zkoušce se okno s ostěním posouvá správně).
 - **Co se změnilo:** výchozí posouvaný bod volné kóty určuje `defaultFreeDimMove` (`core/freeDim.ts`): když 2. konec hýbe stěnami (roh, líc stěny) a 1. ne (okraj otvoru, kresba, pevný bod), předvybere se 1. Použito v NumPadu (`openTarget`) i panelu Kóta. Testy `store/freeDimMove.test.ts` (4).
