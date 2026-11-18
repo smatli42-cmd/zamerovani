@@ -7,6 +7,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-18 (konec sezení 3)
+- **Co se změnilo:** Sezení ukončeno; za tuto část dne opravy kótování (8)–(15), posun kót tažením za číslo (16) a čísla kót nad čarami (17). Testy 703, typecheck a build OK.
+- **Viditelně v aplikaci:** viz (16), (17).
+- **Rozhodnuto samostatně:** viz (16).
+- **Otevřené:** vyzkoušet (17) a tažení kót na tabletu; fronta v „Poslední stav“.
+- **Chyby od uživatele:** číslo přetažené na čáru sousední kóty bylo přeškrtnuté – opraveno (17).
+- **Soubory nad 500 řádků:** žádné (největší `tools/selectTool.ts` 454, `tools/wallTool.ts` 446, `core/dimLock.ts` 424).
+
 ### 2026-11-18 (17) – čísla kót vždy nad čarami (chyba od uživatele)
 - **Chyba od uživatele:** posun kóty funguje; když se ale číslo přesune na čáru sousední kóty, ta čára vede přes číslo.
 - **Co se změnilo:** `drawDimLine` (`canvas/dimLine.ts`) kreslí hned jen čáry; čísla a ikony zámků se kreslí až po všech kótách (`flushDimLabels` v rendereru). Test v `canvas/dimPlace.test.ts`.
@@ -562,7 +570,21 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Otevřené:** vyzkoušet na tabletu; další krok tažení a posun jako blok (D2, D11–D14).
 - **Chyby od uživatele:** zatím žádné.
 
-## Poslední stav (2026-11-18, sezení 3)
+## Poslední stav (2026-11-18, konec sezení 3)
+
+**Hotové (na webu):** opravy kótování (8)–(15); **posun kóty tažením za číslo** (16 – kolmo celá řada, číslo podél, odkazové čáry k měřeným bodům; uživatel vyzkoušel na PC: funguje) a čísla kót vždy nad čarami (17). Testy 703, typecheck a build OK. SCHEMA_VERSION 23.
+
+**Rozpracované:** nic.
+
+**Čeká na vyzkoušení:** čísla nad čarami (17); kóta ke druhé čáře dvojité čáry (12), kóta k hranám výstupků (13); vybrání v rohu, kóty výstupku v rohu / na konci; na tabletu vše od 2026-11-14 (i tažení kót perem a prstem).
+
+**Fronta kroků:**
+1. **Chyby kótování od uživatele** – mají přednost.
+2. Volná kóta – doplnit: oblouky (i výstupky na oblouku) (líc obloukové stěny, oblouk kresby), kopie a výběr obdélníkem, úhlopříčka se zachováním délek stěn (řešič). Posun kót se nekopíruje s prvkem. Později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) s exportem DXF / PDF.
+3. Pevné spojení i pro ostatní zamčené kóty (stěny, výstupky, napojení)? – otázka pro uživatele.
+4. Drobnosti: řetězová kóta polohy napojení i u oblouku; Do rohu / K hraně pro oblouky; řetězová kóta užšího otvoru při vypnutém vnitřním ostění; posun otvorů řetězem nehlídá výstupky / napojené příčky.
+
+## Předchozí stav (2026-11-18, sezení 3)
 
 **Hotové (na webu):** opravy kótování od uživatele – výchozí posouvaný bod volné kóty (8), poslední kóta řetězu okna posune okno (10), **zamčená volná kóta = pevné spojení** (11, uživatel potvrdil), kóta ke druhé čáře dvojité čáry (12), kóta k hraně výstupku / vybrání (13), posun stěny kótou u otevřeného půdorysu (14), čelní hrana se zámkem stěny mění hloubku (15). Testy 683, typecheck a build OK. SCHEMA_VERSION 22.
 
