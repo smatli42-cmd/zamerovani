@@ -7,6 +7,15 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-18 (13) – volná kóta k hraně výstupku / vybrání (fronta bod 2, průřezové)
+- **Co se změnilo:** nový konec kóty `{ prot, i, at }` = rovný úsek obrysu výstupku / vybrání na stěně, v rohu i na konci stěny (SCHEMA_VERSION 22 bez převodu). Geometrie a přichycení v `core/dimRefs.ts` (hrana má přednost před lícem, na kterém leží; těla stěn se pro rohové výstupky počítají jednou), posun v novém `core/protrusionDimMove.ts`, volá `freeDim.ts`; pevné spojení (`dimFollow`) funguje stejně. Koncové body posouvané hrany jedou po sousedních hranách (krajní po líci) – funguje i šikmá hrana a zkosení. Kontrola výsledku: obrys se nepřetočí, výstupek se vejde na stěnu a nepřekryje souseda, rozměry ≥ 10 mm; jinak se nic nezmění. Hrana výstupku, který se dočasně nekreslí (neplatný roh, nevolný konec), kótu nesmaže. Testy `store/freeDimProt.test.ts` (21). Po kontrole revieweru opraveno: chyběla kontrola výsledku (výstupek za koncem stěny, překřížení hran), šikmé hrany nešly nastavit, kóta zanikala s dočasně neplatným rohem, výkon, geometrie přesunuta do dimRefs.
+- **Viditelně v aplikaci:** nástroj Kóta zvýrazní a přichytí hrany výstupků a vybrání (ověřeno v prohlížeči); zadání délky podle pravidel níže.
+- **Rozhodnuto uživatelem:** výstupek se chová jako část stěny – boční hrana: posune se jen hrana, se zamčeným rozměrem celek; čelní hrana: posune se celá stěna; v rohu: jen hrana (zamčený rozměr → stěna rovnoběžná s hranou); na konci: hrana za čelem mění přesah (zamčený → stěna se prodlouží); platí pro všechny 4 druhy.
+- **Rozhodnuto samostatně:** kóta mezi hranou a lícem / rohem vlastní stěny výstupku = jen rozměr (hloubka), jinak by se nic nezměnilo; vybrání: dno (čelní hrana) od jiného prvku posune stěnu jako u výstupku; kóta k hraně dočasně nekresleného výstupku zůstane (zanikne se smazáním výstupku).
+- **Tabulka pravidlo × druh (✔ test):** přichycení – výstupek ✔, vybrání ✔ (kód), roh ✔, konec ✔ (kód); jen hrana – výstupek ✔, vybrání ✔, roh ✔, zkosení vybrání v rohu ✔, konec (za čelem ✔, na líci ✔); šikmá hrana ✔; zamčený rozměr → celek – výstupek (šířka) ✔, roh (a ✔, b ✔), konec (přesah) ✔; čelní hrana → stěna – výstupek ✔, vybrání ✔, konec ✔; vlastní líc → hloubka ✔; kontrola výsledku (za konec stěny, překřížení) ✔; pevné spojení – výstupek ✔; dočasně neplatný roh ✔; Zpět ✔.
+- **Výjimky (zatím nejde):** výstupek na obloukové stěně a obloukové úseky obrysu (kóta se k nim nepřichytí).
+- **Otevřené:** vyzkoušet; výchozí posouvaný bod (`defaultFreeDimMove`) nebere čelní hranu jako „hýbe stěnou“.
+
 ### 2026-11-18 (12) – volná kóta ke druhé čáře dvojité čáry (fronta bod 2)
 - **Uživatel potvrdil:** pevné spojení zamčené kóty (11) funguje.
 - **Co se změnilo:** úseky dvojité čáry mají pro kóty pevné číslování na jednom místě (`drawSeg` / `drawSegCount` v `core/dimRefs.ts`): 0 = první čára, 1 = druhá čára, 2 / 3 = uzavřené konce (jen s uzavřenými konci). Kóta se přichytí i ke druhé čáře a ke koncům. Zadání délky: k jinému prvku se posune celá dvojitá čára; mezi čarami téže dvojité čáry se mění šířka (posouvaná čára jede, druhá stojí; strana se může přehodit); mezi konci se posune bod konce (`moveDoubleSeg` v `core/freeDim.ts`). Znovunapojení kót (`rescueFreeDims`) používá stejné číslování – kóta na druhé čáře nepřeskočí na první. Vypnutí uzavřených konců smaže kóty ke koncům. Testy `store/freeDimDouble.test.ts` (10). Po kontrole revieweru: šířka po 0,1 mm, přesnější test, test vypnutí konců a posunu o šířku.
@@ -525,15 +534,15 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Poslední stav (2026-11-18, sezení 3)
 
-**Hotové (na webu):** opravy kótování od uživatele – výchozí posouvaný bod volné kóty (8), poslední kóta řetězu okna posune okno (10), **zamčená volná kóta = pevné spojení** (11, uživatel potvrdil), kóta ke druhé čáře dvojité čáry (12). Testy 655, typecheck a build OK. SCHEMA_VERSION 21.
+**Hotové (na webu):** opravy kótování od uživatele – výchozí posouvaný bod volné kóty (8), poslední kóta řetězu okna posune okno (10), **zamčená volná kóta = pevné spojení** (11, uživatel potvrdil), kóta ke druhé čáře dvojité čáry (12), kóta k hraně výstupku / vybrání (13). Testy 676, typecheck a build OK. SCHEMA_VERSION 22.
 
 **Rozpracované:** nic.
 
-**Čeká na vyzkoušení:** kóta ke druhé čáře dvojité čáry (12); dříve: vybrání v rohu, kóty výstupku v rohu / na konci; na tabletu vše od 2026-11-14.
+**Čeká na vyzkoušení:** kóta ke druhé čáře dvojité čáry (12), kóta k hranám výstupků (13); dříve: vybrání v rohu, kóty výstupku v rohu / na konci; na tabletu vše od 2026-11-14.
 
 **Fronta kroků:**
 1. **Chyby kótování od uživatele** – mají přednost.
-2. Volná kóta – doplnit: hrany výstupků (co se posune zadáním délky = otázka pro uživatele, průřezové), oblouky (líc obloukové stěny, oblouk kresby), kopie a výběr obdélníkem, odsazení tažením i ve Vybrat, úhlopříčka se zachováním délek stěn (řešič). Později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) s exportem DXF / PDF.
+2. Volná kóta – doplnit: oblouky (i výstupky na oblouku) (líc obloukové stěny, oblouk kresby), kopie a výběr obdélníkem, odsazení tažením i ve Vybrat, úhlopříčka se zachováním délek stěn (řešič). Později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) s exportem DXF / PDF.
 3. Pevné spojení i pro ostatní zamčené kóty (stěny, výstupky, napojení)? – otázka pro uživatele.
 4. Drobnosti: řetězová kóta polohy napojení i u oblouku; Do rohu / K hraně pro oblouky; řetězová kóta užšího otvoru při vypnutém vnitřním ostění; posun otvorů řetězem nehlídá výstupky / napojené příčky.
 

@@ -130,7 +130,7 @@ export function setProtrusionDim(floor: Floor, id: Id, dim: ProtrusionDim, value
 }
 
 /** Vzepětí oblouků úměrně změně délky jejich tětivy, nejvýš půlkruh. */
-function rescaleArcs(old: ProfilePt[], pts: ProfilePt[]): ProfilePt[] {
+export function rescaleArcs(old: ProfilePt[], pts: ProfilePt[]): ProfilePt[] {
   return pts.map((q, i) => {
     if (!q.s || i + 1 >= pts.length) return q;
     const chord = (a: ProfilePt, b: ProfilePt) => Math.hypot(b.u - a.u, b.v - a.v);

@@ -8,6 +8,7 @@
  * - kresba (bod, úsek) ✔ – celá kresba (oba konce na téže kresbě: jen bod / úsek, u dvojité čáry šířka / konec),
  * - okraj otvoru ✔ – otvor po své stěně (jen když kóta vede podél stěny, jinak se délka nedorovná → zámek zastaví),
  * - roh stěny, líc stěny ✔ – roh / celá stěna (sousední stěny se protáhnou),
+ * - hrana výstupku / vybrání ✔ – podle core/protrusionDimMove.ts (hrana, čelní = stěna, zamčený rozměr = celek),
  * - pevný bod výkresu ✗ – zůstává (zámek zastaví).
  * Posouvá se jen konec, který se úpravou nepohnul; když se pohnuly oba (posun celé skupiny), kóta se nedorovnává.
  */

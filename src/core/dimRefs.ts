@@ -13,6 +13,11 @@ import { faceOffset } from './protrusion';
 import { bodyRange, hasBody } from './wallFace';
 import { openingSpan, openingStartFromA } from './floorQueries';
 import { doubleOffset } from './drawing';
+import { cornerOutline, cornerProtrusionsOf } from './cornerProtrusion';
+import { endOutline, endProtrusionsOf } from './endProtrusion';
+import { cornersOf, protrusionsOf } from './protrusion';
+import { wallBodies, type WallBody } from './wallBody';
+import type { CornerProtrusion, EndProtrusion, Id, Protrusion } from '../model/types';
 
 export type RefGeom = { kind: 'point'; p: Pt } | { kind: 'line'; p: Pt; d: Pt };
 
@@ -62,6 +67,46 @@ export function drawSeg(dr: Drawing | undefined, i: number): [Pt, Pt] | null {
   return [p, q];
 }
 
+// --- hrany výstupků a vybrání (na stěně, v rohu, na konci stěny); posun v core/protrusionDimMove.ts ---
+export type ProtKind = { kind: 'wall'; p: Protrusion } | { kind: 'corner'; p: CornerProtrusion } | { kind: 'end'; p: EndProtrusion };
+
+/** Výstupek podle id (hledá se ve všech třech seznamech). */
+export function protById(floor: Floor, id: Id): ProtKind | null {
+  const p = floor.protrusions?.[id];
+  if (p) return { kind: 'wall', p };
+  const c = floor.cornerProtrusions?.[id];
+  if (c) return { kind: 'corner', p: c };
+  const e = floor.endProtrusions?.[id];
+  return e ? { kind: 'end', p: e } : null;
+}
+
+/** Body obrysu výstupku ve výkresu (rohy obrysu, bez rozložení oblouků); null = nekreslí se. */
+function outlinePts(floor: Floor, k: ProtKind, bodies?: Map<Id, WallBody>): Pt[] | null {
+  if (k.kind === 'wall') {
+    const c = cornersOf(floor, k.p);
+    return c && !c.w.sagitta ? c.pts : null;
+  }
+  return k.kind === 'corner' ? cornerOutline(floor, k.p, bodies) : endOutline(floor, k.p);
+}
+
+/** Rovné úseky obrysu ve výkresu (obrys se počítá jednou); null v seznamu = oblouk / příliš krátký. */
+export function protSegs(floor: Floor, id: Id, bodies?: Map<Id, WallBody>): ([Pt, Pt] | null)[] {
+  const k = protById(floor, id);
+  const pts = k && outlinePts(floor, k, bodies);
+  if (!k || !pts) return [];
+  const out: ([Pt, Pt] | null)[] = [];
+  for (let i = 0; i + 1 < pts.length; i++) {
+    const arc = k.kind === 'wall' && !!k.p.pts[i]?.s;
+    out.push(!arc && dist(pts[i]!, pts[i + 1]!) >= 1 ? [pts[i]!, pts[i + 1]!] : null);
+  }
+  return out;
+}
+
+/** Rovný úsek `i` obrysu ve výkresu; null = oblouk, neexistuje, výstupek se nekreslí. */
+export function protSeg(floor: Floor, id: Id, i: number): [Pt, Pt] | null {
+  return protSegs(floor, id)[i] ?? null;
+}
+
 /** Okraj otvoru: poloha po ose od rohu A. */
 function openingEdgeU(op: Opening, edge: 'start' | 'end', len: number): number {
   const s = openingStartFromA(op, len);
@@ -90,6 +135,12 @@ export function refGeom(floor: Floor, e: DimEnd): RefGeom | null {
     const d = unit(sg[0], sg[1]);
     return { kind: 'line', p: add(sg[0], scale(d, e.at)), d };
   }
+  if ('prot' in e) {
+    const sg = protSeg(floor, e.prot, e.i);
+    if (!sg) return null;
+    const d = unit(sg[0], sg[1]);
+    return { kind: 'line', p: add(sg[0], scale(d, e.at)), d };
+  }
   if ('opening' in e) {
     const op = floor.openings[e.opening];
     const s = straight(floor, op && floor.walls[op.wallId]);
@@ -110,6 +161,7 @@ export function refSegment(floor: Floor, e: DimEnd): [Pt, Pt] | null {
     return [add(s.a, o), add(add(s.a, scale(s.d, s.len)), o)];
   }
   if ('seg' in e) return drawSeg(floor.drawings?.[e.seg], e.i);
+  if ('prot' in e) return protSeg(floor, e.prot, e.i);
   if ('opening' in e) {
     const op = floor.openings[e.opening];
     const w = op && floor.walls[op.wallId];
@@ -168,6 +220,17 @@ export function refAt(floor: Floor, p: Pt, tolPt: number, tolLine: number): DimE
       take({ opening: op.id, edge, at: r1(Math.max(lo, Math.min(hi, dot(sub(p, base), s.n)))) }, h.distance);
     }
   }
+  // hrany výstupků a vybrání (na stěně, v rohu, na konci stěny) – mají přednost před lícem, na kterém leží
+  // těla stěn (platnost výstupku v rohu) jen jednou pro všechny výstupky
+  const bodies = cornerProtrusionsOf(floor).length ? wallBodies(floor) : undefined;
+  for (const id of [...protrusionsOf(floor), ...cornerProtrusionsOf(floor), ...endProtrusionsOf(floor)].map(p => p.id)) {
+    protSegs(floor, id, bodies).forEach((sg, i) => {
+      if (!sg) return;
+      const h = projectToSegment(p, sg[0], sg[1]);
+      // o kousek bližší než líc stejné vzdálenosti (hrana na líci stěny)
+      take({ prot: id, i, at: r1(dist(sg[0], h.point)) }, Math.max(0, h.distance - 0.01));
+    });
+  }
   // líce rovných stěn (stěna bez tloušťky = její čára)
   for (const w of Object.values(floor.walls)) {
     const s = straight(floor, w);
@@ -217,5 +280,6 @@ export function refLabel(e: DimEnd): string {
   if ('wall' in e) return e.side === 0 ? 'stěna' : 'líc stěny';
   if ('seg' in e) return 'čára kresby';
   if ('opening' in e) return 'okraj otvoru';
+  if ('prot' in e) return 'hrana výstupku / vybrání';
   return 'bod výkresu';
 }

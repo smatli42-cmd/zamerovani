@@ -34,6 +34,7 @@ export function migrateProject(raw: unknown): Project {
   // 18 → 19: vybrání v rohu (CornerProtrusion.mode = 'subtract') – nepovinné pole, bez převodu
   // 19 → 20: volné kóty (floor.dims) – nepovinné pole, bez převodu
   // 20 → 21: konce volných kót i na hranách (líc stěny, čára kresby, okraj otvoru) – bez převodu
+  // 21 → 22: konec volné kóty na hraně výstupku / vybrání (`prot`) – bez převodu
   const old = p.schema ?? 1;
   const floors = p.floors.map(f => {
     const j = joinSemicircles(convertShapesToWalls(f));

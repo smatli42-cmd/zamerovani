@@ -11,13 +11,15 @@
  * - bod kresby / čára kresby: celá kresba; oba konce na téže kresbě → jen ten bod / úsek (obdélník zůstane obdélníkem;
  *   dvojitá čára: 1. / 2. čára = změna šířky, uzavřený konec = posun bodu na tom konci),
  * - okraj otvoru: otvor se posune po stěně,
+ * - hrana výstupku / vybrání: core/protrusionDimMove.ts (jen hrana; čelní hrana = celá stěna; zamčený rozměr = celek),
  * - pevný bod: jen bod.
  */
 import type { DimEnd, Drawing, Floor, FreeDim, Id, Node, Pt } from '../model/types';
 import { add, dist, dot, normal, projectToSegment, scale, sub, unit } from './geometry';
 import { DEFAULT_DOUBLE_WIDTH, moveDrawingVertex, placeDrawing } from './drawing';
 import { moveNodeWithRubberBand } from './solver';
-import { drawSeg, drawSegCount, measurePoints, refGeom } from './dimRefs';
+import { drawSeg, drawSegCount, measurePoints, protById, refGeom } from './dimRefs';
+import { moveProtEdge, ownProtEnd } from './protrusionDimMove';
 import { openingSpan, openingStartFromA } from './floorQueries';
 
 export const freeDimsOf = (floor: Floor): FreeDim[] => Object.values(floor.dims ?? {});
@@ -164,6 +166,10 @@ function moveEnd(floor: Floor, e: DimEnd, other: DimEnd, otherPt: Pt, dx: number
         dy
       );
     return true;
+  }
+  if ('prot' in e) {
+    // hrana výstupku / vybrání: pravidla v core/protrusionDimMove.ts (jen hrana, čelní hrana = stěna, zámek = celek)
+    return moveProtEdge(floor, e.prot, e.i, dx, dy, ownProtEnd(floor, e.prot, other));
   }
   if ('opening' in e) {
     const op = floor.openings[e.opening];
@@ -336,7 +342,9 @@ function wallThrough(floor: Floor, p: Pt): boolean {
 /** Úklid: kóty, jejichž konec zanikl (smazaný roh, stěna, otvor, kresba, bod kresby), se smažou. */
 export function pruneFreeDims(floor: Floor): void {
   if (!floor.dims) return;
-  for (const d of freeDimsOf(floor)) if (!refGeom(floor, d.a) || !refGeom(floor, d.b)) delete floor.dims[d.id];
+  // hrana výstupku, který se jen dočasně nekreslí (neplatný roh, nevolný konec), kótu nesmaže – zanikne se smazáním výstupku
+  const gone = (e: DimEnd) => ('prot' in e ? !protById(floor, e.prot) : !refGeom(floor, e));
+  for (const d of freeDimsOf(floor)) if (gone(d.a) || gone(d.b)) delete floor.dims[d.id];
   if (Object.keys(floor.dims).length === 0) delete floor.dims;
 }
 

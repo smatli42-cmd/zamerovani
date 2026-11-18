@@ -10,7 +10,7 @@
 
 import type { DimTarget } from '../core/dimLock';
 
-export const SCHEMA_VERSION = 21;
+export const SCHEMA_VERSION = 22;
 
 export type Id = string;
 
@@ -306,7 +306,9 @@ export type DimEnd =
   | { x: number; y: number }
   | { wall: Id; side: 1 | -1 | 0; at: number }
   | { seg: Id; i: number; at: number }
-  | { opening: Id; edge: 'start' | 'end'; at: number };
+  | { opening: Id; edge: 'start' | 'end'; at: number }
+  /** Rovný úsek `i` obrysu výstupku / vybrání (na stěně, v rohu, na konci stěny – id se hledá ve všech třech); `at` = mm od bodu `i`. */
+  | { prot: Id; i: number; at: number };
 
 /**
  * Volná kóta mezi dvěma body (POZADAVKY.md 3, rozhodnutí uživatele 2026-11-18: řídicí – zadaná délka posune zvolený
