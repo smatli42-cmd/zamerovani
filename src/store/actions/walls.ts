@@ -1,6 +1,7 @@
 /**
  * Akce: stěny (kreslení, tvary, oblouky, tloušťka, popisky) a posun rohů / skupin.
  */
+import { remapDimNode } from '../../core/freeDim';
 import { placeDrawing } from '../../core/drawing';
 import { trimExtendToCorner, trimExtendToEdge, type TrimResult } from '../../core/trimExtend';
 import { createCircleWall, createWall, newId } from '../../model/factory';
@@ -359,6 +360,8 @@ export function mergeNodeIfCoincident(nodeId: Id): void {
     }
     // výstupek přes roh v přetaženém rohu patří spojenému rohu
     for (const cp of Object.values(floor.cornerProtrusions ?? {})) if (cp.node === nodeId) cp.node = other.id;
+    // volné kóty k přetaženému rohu patří spojenému rohu
+    remapDimNode(floor, nodeId, other.id);
     for (const w of Object.values(floor.walls)) {
       if (w.a === nodeId) w.a = other.id;
       if (w.b === nodeId) w.b = other.id;

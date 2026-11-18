@@ -11,6 +11,7 @@
  *   napojené příčky se odpojí (F4, core/carried.ts).
  * - Zamčená délka stěny (zámek kót) úpravu zastaví – hlídá store.edit.
  */
+import { remapDimNode } from './freeDim';
 import { newId } from '../model/factory';
 import type { Floor, Id, Pt, Wall } from '../model/types';
 import { add, dist, dot, normal, scale, sub, unit } from './geometry';
@@ -99,6 +100,7 @@ export function trimExtendToCorner(floor: Floor, w1: Id, keep1: Pt, w2: Id, keep
       const node = end === 'a' ? n[0] : n[1];
       if (dist(node, x) >= 1) continue;
       if (w[end] !== cornerId) {
+        remapDimNode(floor, w[end], cornerId); // volná kóta jde s koncem
         w[end] = cornerId;
         changed = true;
       }
@@ -121,6 +123,7 @@ export function trimExtendToCorner(floor: Floor, w1: Id, keep1: Pt, w2: Id, keep
     const oldA = { x: a0.x, y: a0.y };
     const oldLen = dist(a0, b0);
     const dir = scale(sub(b0, a0), 1 / oldLen);
+    remapDimNode(floor, w[pl.end], cornerId); // volná kóta jde s koncem
     w[pl.end] = cornerId;
     if (pl.end === 'a') delete w.noJoinA;
     else delete w.noJoinB;
@@ -222,6 +225,7 @@ export function trimExtendToEdge(floor: Floor, w1: Id, keep1: Pt, w2: Id): TrimR
   const dir = scale(sub(b0, a0), 1 / oldLen);
   const id = newId('n');
   floor.nodes[id] = { id, x: pl.x.x, y: pl.x.y, host: w2, ...(pl.face ? { hostFace: pl.face } : {}) };
+  remapDimNode(floor, w[pl.end], id); // volná kóta jde s koncem
   w[pl.end] = id;
   if (pl.end === 'a') delete w.noJoinA;
   else delete w.noJoinB;

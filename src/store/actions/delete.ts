@@ -30,6 +30,9 @@ export function deleteSelection(): void {
         case 'drawing':
           if (floor.drawings) delete floor.drawings[sel.id];
           break;
+        case 'dim':
+          if (floor.dims) delete floor.dims[sel.id];
+          break;
         case 'protrusion':
           if (floor.protrusions) delete floor.protrusions[sel.id];
           if (floor.cornerProtrusions) delete floor.cornerProtrusions[sel.id];

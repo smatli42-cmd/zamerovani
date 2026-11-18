@@ -13,8 +13,9 @@ import type { DrawColor, LineStyle } from '../model/types';
 import { syncHosted } from '../core/hosting';
 import { syncProtrusions } from '../core/protrusion';
 import { describeDim, dimKey, lockViolation, pruneLocks, reboundLocks, type DimTarget } from '../core/dimLock';
+import { pruneFreeDims, rescueFreeDims } from '../core/freeDim';
 
-export type ToolId = 'select' | 'wall' | 'line' | 'trim' | 'split' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'drawLine' | 'drawDouble' | 'text' | 'leader' | 'paste' | 'pan';
+export type ToolId = 'select' | 'wall' | 'line' | 'trim' | 'split' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'drawLine' | 'drawDouble' | 'text' | 'leader' | 'dim' | 'paste' | 'pan';
 
 export type SingleSelection =
   | { kind: 'wall'; id: Id }
@@ -25,7 +26,9 @@ export type SingleSelection =
   /** Výstupek / vybrání stěny (KATALOG-STEN.md, sekce I). */
   | { kind: 'protrusion'; id: Id }
   /** Kresba – grafický prvek (čára, tvar, dvojitá čára; core/drawing.ts). */
-  | { kind: 'drawing'; id: Id };
+  | { kind: 'drawing'; id: Id }
+  /** Volná kóta mezi dvěma body (core/freeDim.ts). */
+  | { kind: 'dim'; id: Id };
 
 /** Výběr: jeden prvek, skupina prvků (výběr obdélníkem) nebo nic. */
 export type Selection = SingleSelection | { kind: 'multi'; items: SingleSelection[] } | null;
@@ -277,7 +280,9 @@ class Store {
         syncHosted(before, f);
         // výstupky drží místo na stěně i při změně jejího vzepětí
         syncProtrusions(before, f);
-        // zámky smazaných prvků zmizí s nimi
+        // volné kóty, jejichž bod zanikl, a zámky smazaných prvků zmizí s nimi
+        rescueFreeDims(before, f);
+        pruneFreeDims(f);
         pruneLocks(f);
         const v = lockViolation(before, f, opts.allowKey);
         if (v) {

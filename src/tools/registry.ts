@@ -7,6 +7,7 @@ import { arcTool, circleTool, rectTool } from './shapeTools';
 import { drawDoubleTool, drawLineTool } from './drawTools';
 import { pasteTool } from './pasteTool';
 import { leaderTool } from './leaderTool';
+import { dimTool } from './dimTool';
 import { textTool } from './textTool';
 import { trimTool } from './trimTool';
 import { splitTool } from './splitTool';
@@ -32,6 +33,7 @@ export const tools: Record<ToolId, Tool> = {
   drawDouble: drawDoubleTool,
   text: textTool,
   leader: leaderTool,
+  dim: dimTool,
   paste: pasteTool,
   pan: {}
 };

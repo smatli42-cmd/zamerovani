@@ -16,6 +16,7 @@ import { hasBody } from '../../core/wallFace';
 import { setHostedGap } from '../../core/hosting';
 import { defaultArcSign, setProtrusionSagitta } from '../../core/protrusionEdit';
 import { applyCornerDim, applyEndDim, applyProtrusionDim } from './protrusions';
+import { freeDimValue, setFreeDimLength } from '../../core/freeDim';
 
 /**
  * Míra líce u stěny s osou uprostřed (2b): délka osy se upraví tak, aby měl líc zadanou délku
@@ -65,11 +66,22 @@ export function applyNumpadValue(t: NumPadTarget, value: number, overrideLock = 
   if (t.kind === 'wall-length') return applyWallLength(t.wallId, value, t.move, opts);
   let ok = false;
   let chainFail = false; // řetěz otvorů: otvor by vyjel ze stěny / narazil na souseda
+  let dimFail = false; // volná kóta: posun nedal zadanou délku
   const applied = store.edit(floor => {
     run(floor);
     // neúspěch = nic se nezmění (ani to, co recept stihl nastavit)
     return ok;
   }, {}, opts);
+  // volná kóta: hodnota se ověří až po dorovnání napojených rohů (store.edit) – nesedí = vrátit
+  if (applied && ok && t.kind === 'free-dim') {
+    const v = freeDimValue(store.floor()!, t.dimId);
+    if (v === null || Math.abs(v - value) > 0.5) {
+      store.undo();
+      ok = false;
+      dimFail = true;
+    }
+  }
+  if (dimFail) store.set({ lockBlock: { key: '', text: 'Nelze – kótu nejde nastavit na tuto délku (posunem se změní i druhý bod kóty nebo bod nejde posunout).' } });
   if (chainFail) store.set({ lockBlock: { key: '', text: 'Nelze – otvor, výstupek nebo napojená příčka by přesáhl souseda nebo konec stěny (nebo je konec stěny napojený na jinou stěnu).' } });
   return applied && ok;
 
@@ -167,6 +179,15 @@ export function applyNumpadValue(t: NumPadTarget, value: number, overrideLock = 
       ok = applyCornerDim(floor, t.protrusionId, t.dim, value);
     } else if (t.kind === 'end-dim') {
       ok = applyEndDim(floor, t.protrusionId, t.dim, value);
+    } else if (t.kind === 'free-dim') {
+      ok = setFreeDimLength(floor, t.dimId, value, t.move);
+      if (!ok) dimFail = true;
+      // prvky nesené stěnou zůstanou ve výkresu na místě (pravidlo jako u délky stěny, core/openingChain.ts)
+      const before = store.floor();
+      if (ok && before && keepOpeningsOnResizedWalls(before, floor) !== true) {
+        ok = false;
+        chainFail = true;
+      }
     } else if (t.kind === 'comp-gap') {
       ok = setComponentGap(floor, t.wallId, t.side, value);
     }

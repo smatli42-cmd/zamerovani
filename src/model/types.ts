@@ -10,7 +10,7 @@
 
 import type { DimTarget } from '../core/dimLock';
 
-export const SCHEMA_VERSION = 19;
+export const SCHEMA_VERSION = 20;
 
 export type Id = string;
 
@@ -292,6 +292,23 @@ export interface Drawing {
   hatchColor?: DrawColor;
 }
 
+/**
+ * Konec volné kóty: roh stěny (jede s ním), bod kresby (vrchol `i` kresby, u kruhu střed) nebo pevný bod výkresu.
+ */
+export type DimEnd = { node: Id } | { drawing: Id; i: number } | { x: number; y: number };
+
+/**
+ * Volná kóta mezi dvěma body (POZADAVKY.md 3, rozhodnutí uživatele 2026-11-18: řídicí – zadaná délka posune zvolený
+ * konec, odsazení tažením; i úhlopříčka místnosti a kóta kresby). Hodnota se nepamatuje, počítá se z bodů.
+ */
+export interface FreeDim {
+  id: Id;
+  a: DimEnd;
+  b: DimEnd;
+  /** Odsazení kótovací čáry od spojnice bodů (mm, kladně na stranu normal(a→b)). */
+  offset: number;
+}
+
 /** Podlaží = jeden půdorys. */
 export interface Floor {
   id: Id;
@@ -309,6 +326,8 @@ export interface Floor {
   endProtrusions?: Record<Id, EndProtrusion>;
   /** Kresba – grafické prvky (čáry, tvary, dvojité čáry; od verze 17; chybí = žádné). */
   drawings?: Record<Id, Drawing>;
+  /** Volné kóty mezi dvěma body (od verze 20; chybí = žádné). */
+  dims?: Record<Id, FreeDim>;
   /**
    * Zamčené kóty (KOTY-ZAMEK-EXPORT.md, A): klíč = `dimKey(kóta)`, hodnota = popis kóty. Chybí = vše odemčeno.
    * Zamčená kóta drží hodnotu – úprava, která by ji změnila, se neprovede (core/dimLock.ts).

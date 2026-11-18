@@ -49,6 +49,7 @@ Doplňuj klidně přímo sem – škrtej, přepisuj, přidávej do sekce „Moje
 - 💡 *(odloženo – současný dálkoměr FIELDMANN FDLM 1040 Bluetooth nejspíš nemá)* Přímé napojení laserového dálkoměru přes Bluetooth (Leica DISTO, Bosch GLM…) – jen pokud by v budoucnu přibyl dálkoměr s Bluetooth.
 - 💡 Chytrý řešič geometrie – vyrovná všechny změřené délky + úhlopříčky najednou a ukáže, kde a o kolik měření „nesedí“ (chyba uzávěru místnosti).
 - 💡 Volná kóta mezi libovolnými dvěma body (např. roh – sloup).
+  - **Hotovo 2026-11-18:** nástroj Kóta – kóta mezi dvěma body (roh stěny, bod kresby, místo ve výkresu), řídicí (zadaná délka posune zvolený bod), odsazení tažením, zámek; i úhlopříčka místnosti a kóta kresby (dvěma body – rozhodnutí uživatele).
   - **Požadavek 2026-11-17:** prvek Kóta musí jít **přiřadit k jednotlivým čarám kresby** (samostatná čára, obdélník, kruh, oblouk, dvojitá čára) – tím se vyřeší kóty kresby (samostatné kóty kresby se zvlášť nedělají; do té doby rozměry v panelu kresby).
 - 💡 Výškové kóty (±0,000, rozdíl podlah, schod mezi místnostmi).
 - 💡 Tloušťka stěny změřená v otvoru (špaleta) → automaticky se propíše do popisku stěny.

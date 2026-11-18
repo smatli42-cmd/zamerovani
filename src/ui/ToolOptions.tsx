@@ -11,6 +11,7 @@ import { DRAW_COLOR_LABELS } from '../core/drawing';
 import { trimMsg, trimTool } from '../tools/trimTool';
 import { tools } from '../tools/registry';
 import { splitMsg, splitTool } from '../tools/splitTool';
+import { dimToolMsg } from '../tools/dimTool';
 
 export function ToolOptions() {
   const tool = useStore(s => s.tool);
@@ -101,6 +102,13 @@ export function ToolOptions() {
           ))}
         </div>
         <NumField label="Vlastní" value={wallPresets(project).includes(active) ? null : active} min={10} onCommit={v => v !== null && addWallPreset(v)} />
+      </div>
+    );
+  }
+  if (tool === 'dim') {
+    return (
+      <div class="tool-options">
+        <span class="small">📏 {toolMsg ?? dimToolMsg(false)}</span>
       </div>
     );
   }

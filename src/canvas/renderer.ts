@@ -6,6 +6,7 @@ import { tools } from '../tools/registry';
 import { drawBodyDims, drawDims, drawProtrusionDims, setDimLockContext } from './drawDims';
 import { drawGrid, drawScaleBar } from './drawGrid';
 import { drawCornerEndDims } from './drawCornerEndDims';
+import { drawFreeDims } from './drawFreeDims';
 import { drawArcHandle, drawFlipArrow, drawNodes, drawWalls } from './drawPlan';
 import { drawOpenings } from './drawOpenings';
 import { drawDrawingHandles, drawDrawings } from './drawDrawings';
@@ -95,6 +96,8 @@ function render(): void {
       drawProtrusionDims(ctx, floor, cam, state.settings.dimScale, state.selection);
       drawCornerEndDims(ctx, floor, cam, state.settings.dimScale, state.selection);
     }
+    // volné kóty jsou samostatné prvky – kreslí se i při skrytých automatických kótách
+    drawFreeDims(ctx, floor, cam, state.settings.dimScale, state.selection, state.hover);
     drawArcHandle(ctx, floor, cam, state.selection);
     drawDrawingHandles(ctx, floor, cam, state.selection);
     drawFlipArrow(ctx, floor, cam, state.selection);

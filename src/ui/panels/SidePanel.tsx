@@ -8,6 +8,7 @@ import { useStore } from '../../store/useStore';
 import { close } from './common';
 import { NumField, Panel } from './fields';
 import { DrawingPanel } from './DrawingPanel';
+import { DimPanel } from './DimPanel';
 import { OpeningPanel } from './OpeningPanel';
 import { CornerProtrusionPanel, EndProtrusionPanel, ProtrusionPanel } from './ProtrusionPanel';
 import { RoomPanel } from './RoomPanel';
@@ -45,6 +46,10 @@ export function SidePanel() {
     case 'drawing': {
       const d = floor.drawings?.[selection.id];
       return d ? <DrawingPanel key={d.id} d={d} /> : null;
+    }
+    case 'dim': {
+      const d = floor.dims?.[selection.id];
+      return d ? <DimPanel key={d.id} floor={floor} d={d} /> : null;
     }
     case 'protrusion': {
       const p = floor.protrusions?.[selection.id];

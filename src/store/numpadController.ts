@@ -34,7 +34,9 @@ export function openTarget(target: NumPadTarget): void {
   }
   const v = numpadInitialValue(floor, target);
   const selection =
-    target.kind === 'protrusion-dim' || target.kind === 'protrusion-sagitta' || target.kind === 'corner-dim' || target.kind === 'end-dim'
+    target.kind === 'free-dim'
+      ? ({ kind: 'dim', id: target.dimId } as const)
+      : target.kind === 'protrusion-dim' || target.kind === 'protrusion-sagitta' || target.kind === 'corner-dim' || target.kind === 'end-dim'
       ? ({ kind: 'protrusion', id: target.protrusionId } as const)
       : target.kind === 'junction-gap' ||
           target.kind === 'wall-length' || target.kind === 'wall-sagitta' || target.kind === 'circle-diameter' || target.kind === 'wall-thickness' || target.kind === 'wall-face-length' || target.kind === 'comp-gap'
@@ -153,6 +155,13 @@ export function setMoveTarget(move: { nodeId: Id } | 'both'): void {
   store.set({ numpad: { ...np, target: { ...np.target, move } } });
 }
 
+/** Přepne konec volné kóty, který se posune. */
+export function setFreeDimMove(move: 'a' | 'b'): void {
+  const np = store.get().numpad;
+  if (!np || np.target.kind !== 'free-dim') return;
+  store.set({ numpad: { ...np, target: { ...np.target, move } } });
+}
+
 /** Zamkne / odemkne kótu otevřenou v NumPadu. */
 export function toggleCurrentLock(): void {
   const np = store.get().numpad;
@@ -220,7 +229,7 @@ function commitAndNext(): void {
     return store.set({ numpad: null });
   }
 
-  if (t.kind === 'field' || t.kind === 'wall-sagitta' || t.kind === 'circle-diameter' || t.kind === 'wall-thickness' || t.kind === 'wall-face-length' || t.kind === 'opening-reveal') return store.set({ numpad: null });
+  if (t.kind === 'field' || t.kind === 'free-dim' || t.kind === 'wall-sagitta' || t.kind === 'circle-diameter' || t.kind === 'wall-thickness' || t.kind === 'wall-face-length' || t.kind === 'opening-reveal') return store.set({ numpad: null });
 
   // Odstupy skupiny stěn od okolí: vlevo → vpravo → nahoře → dole, pak konec
   if (t.kind === 'comp-gap') {

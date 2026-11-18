@@ -1,6 +1,7 @@
 /**
  * Hledání prvku pod perem/prstem (společné pro více nástrojů).
  */
+import { pickFreeDim } from '../core/freeDim';
 import { chooseNodeAt, findWallNear, isCurved, openingsOnWall, wallLength, wallNodes, type NodePrefer, type WallHit } from '../core/floorQueries';
 import { textBoxPx } from '../canvas/textBox';
 import { dot, projectToSegment, sub } from '../core/geometry';
@@ -112,7 +113,7 @@ export function nodePrefer(current: Selection): NodePrefer {
 }
 
 /**
- * Prvek pod bodem v pořadí priority: roh, čára kresby, otvor, text, místnost, výstupek, stěna, vnitřek šrafy, tělo stěny.
+ * Prvek pod bodem v pořadí priority: roh, čára kresby, otvor, text, místnost, výstupek, stěna, volná kóta, vnitřek šrafy, tělo stěny.
  * `current` = aktuální výběr: u překrývajících se rohů má přednost konec vybrané stěny / vybraný roh (D14).
  */
 export function pickAny(floor: Floor, p: Pt, cam: Camera, current: Selection = null): Selection {
@@ -132,6 +133,9 @@ export function pickAny(floor: Floor, p: Pt, cam: Camera, current: Selection = n
   if (prot) return { kind: 'protrusion', id: prot };
   const wall = findWallNear(floor, p, tol);
   if (wall) return { kind: 'wall', id: wall.wall.id };
+  // volná kóta (kótovací čára) – až za stěnou (kóta s odsazením 0 leží na stěně; vybere se i ťuknutím na číslo)
+  const dim = pickFreeDim(floor, p, tol * 0.6);
+  if (dim) return { kind: 'dim', id: dim };
   // ťuknutí dovnitř šrafovaného tvaru
   const drawIn = pickDrawing(floor, p, 0, false);
   if (drawIn) return { kind: 'drawing', id: drawIn };

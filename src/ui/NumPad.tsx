@@ -4,7 +4,8 @@
 import { wallNodes } from '../core/floorQueries';
 import { OPENING_DEFAULTS } from '../model/factory';
 import type { Floor } from '../model/types';
-import { numpadValue, pressKey, setMoveTarget, toggleCurrentLock, type NumKey } from '../store/numpadController';
+import { numpadValue, pressKey, setFreeDimMove, setMoveTarget, toggleCurrentLock, type NumKey } from '../store/numpadController';
+import { endLabel } from '../core/freeDim';
 import { END_DIM_LABEL, isDimLocked } from '../core/dimLock';
 import { store, type NumPadTarget } from '../store/store';
 import { useStore } from '../store/useStore';
@@ -19,6 +20,7 @@ function title(floor: Floor | null, t: NumPadTarget): string {
   if (t.kind === 'junction-gap') return t.to === 'prev' ? 'Poloha napojení – od předchozího' : 'Poloha napojení – k rohu B';
   if (t.kind === 'protrusion-sagitta') return 'Výstupek – vzepětí oblouku';
   if (t.kind === 'corner-dim') return `Výstupek v rohu – podél ${t.dim === 'a' ? '1.' : '2.'} stěny`;
+  if (t.kind === 'free-dim') return 'Kóta';
   if (t.kind === 'end-dim') return `Výstupek na konci stěny – ${END_DIM_LABEL[t.dim]}`;
   if (t.kind === 'protrusion-dim') {
     const p = floor?.protrusions?.[t.protrusionId];
@@ -75,6 +77,7 @@ export function NumPad() {
   const wall = t.kind === 'wall-length' ? floor?.walls[t.wallId] : null;
   const nodes = floor && wall ? wallNodes(floor, wall) : null;
   const locked = !!floor && t.kind !== 'field' && isDimLocked(floor, t);
+  const fd = t.kind === 'free-dim' ? floor?.dims?.[t.dimId] : null;
 
   return (
     <section class="numpad" aria-label="Zadání rozměru">
@@ -106,6 +109,20 @@ export function NumPad() {
             </button>
             <button class={t.move !== 'both' && t.move.nodeId === wall.b ? 'active' : ''} onClick={() => setMoveTarget({ nodeId: wall.b })}>
               B ▶
+            </button>
+          </div>
+        </div>
+      )}
+
+      {t.kind === 'free-dim' && fd && (
+        <div class="numpad-move">
+          <span class="muted small">Posunout bod:</span>
+          <div class="seg">
+            <button class={t.move === 'a' ? 'active' : ''} onClick={() => setFreeDimMove('a')}>
+              ◀ 1. – {endLabel(fd.a)}
+            </button>
+            <button class={t.move === 'b' ? 'active' : ''} onClick={() => setFreeDimMove('b')}>
+              2. – {endLabel(fd.b)} ▶
             </button>
           </div>
         </div>

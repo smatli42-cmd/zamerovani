@@ -23,6 +23,7 @@ import { hostedChain } from './hosting';
 import { protrusionDims, protrusionNeighbors } from './protrusionEdit';
 import { cornerDims } from './cornerProtrusion';
 import { endDims, type EndDim } from './endProtrusion';
+import { freeDimValue } from './freeDim';
 
 /** Názvy kót výstupku na konci stěny (NumPad, hlášení zámku). */
 export const END_DIM_LABEL: Record<EndDim, string> = {
@@ -61,7 +62,9 @@ export type DimTarget =
   /** Kóta výstupku v rohu: podél líce 1. stěny ('a') / 2. stěny ('b') od rohu. */
   | { kind: 'corner-dim'; protrusionId: Id; dim: 'a' | 'b' }
   /** Kóta výstupku na konci stěny: podél líců, přesah za čelo, hloubka od líců. */
-  | { kind: 'end-dim'; protrusionId: Id; dim: EndDim };
+  | { kind: 'end-dim'; protrusionId: Id; dim: EndDim }
+  /** Volná kóta (core/freeDim.ts); `move` = konec, který se zadáním posune (pro zámek nezáleží). */
+  | { kind: 'free-dim'; dimId: Id; move: 'a' | 'b' };
 
 /** Jednoznačný klíč kóty (u délky stěny nezáleží na tom, který roh se posouvá). */
 export function dimKey(t: DimTarget): string {
@@ -91,6 +94,8 @@ export function dimKey(t: DimTarget): string {
       return `${t.kind}:${t.protrusionId}:${t.seg}`;
     case 'junction-gap':
       return `${t.kind}:${t.wallId}:${t.nodeId}:${t.to}`;
+    case 'free-dim':
+      return `${t.kind}:${t.dimId}`;
   }
 }
 
@@ -112,6 +117,8 @@ function ownersExist(floor: Floor, t: DimTarget): boolean {
       return !!floor.endProtrusions?.[t.protrusionId];
     case 'junction-gap':
       return !!floor.walls[t.wallId] && !!floor.nodes[t.nodeId];
+    case 'free-dim':
+      return !!floor.dims?.[t.dimId];
     default:
       return !!floor.walls[t.wallId];
   }
@@ -177,6 +184,8 @@ export function dimValue(floor: Floor, t: DimTarget): number | null {
       const ep = floor.endProtrusions?.[t.protrusionId];
       return ep ? endDims(ep)[t.dim] : null;
     }
+    case 'free-dim':
+      return freeDimValue(floor, t.dimId);
     case 'junction-gap': {
       const w = floor.walls[t.wallId];
       const a = w && floor.nodes[w.a];
@@ -306,6 +315,8 @@ export function describeDim(floor: Floor, t: DimTarget): string {
         return `výstupek na konci – ${END_DIM_LABEL[t.dim]}`;
       case 'junction-gap':
         return 'poloha napojení';
+      case 'free-dim':
+        return 'kóta';
     }
   })();
   return name + num;

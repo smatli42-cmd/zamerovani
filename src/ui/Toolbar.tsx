@@ -6,6 +6,7 @@ import { useStore } from '../store/useStore';
 import { tools } from '../tools/registry';
 import { trimMsg } from '../tools/trimTool';
 import { splitMsg } from '../tools/splitTool';
+import { dimToolMsg } from '../tools/dimTool';
 
 const TOOLS: { id: ToolId; icon: string; label: string; title: string }[] = [
   { id: 'select', icon: '👆', label: 'Vybrat', title: 'Vybrat prvek, posunout roh / otvor, ťuknutím na stěnu zadat délku' },
@@ -22,6 +23,7 @@ const TOOLS: { id: ToolId; icon: string; label: string; title: string }[] = [
   { id: 'rect', icon: '▭', label: 'Obdélník', title: 'Tažením nakreslit obdélník (kresba – sloup, komín…)' },
   { id: 'circle', icon: '◯', label: 'Kruh', title: 'Tažením od středu nakreslit kruh' },
   { id: 'arc', icon: '◠', label: 'Oblouk', title: 'Tažením mezi krajními body nakreslit oblouk, vzepětí se upřesní kótou' },
+  { id: 'dim', icon: '📏', label: 'Kóta', title: 'Volná kóta: ťukni na dva body (roh, bod kresby, místo ve výkresu); délku zadáš ťuknutím na číslo, odsazení tažením za čáru' },
   { id: 'leader', icon: '↗️', label: 'Šipka', title: 'Odkazová šipka s textem: táhni od místa, na které se ukazuje, tam kam má přijít text' },
   { id: 'text', icon: '🅰️', label: 'Text', title: 'Ťuknutím vložit text; ťuknutím na text ho upravit, tažením přesunout' },
   { id: 'pan', icon: '✋', label: 'Posun', title: 'Posouvat výkres' }
@@ -38,7 +40,7 @@ export function Toolbar() {
           title={t.title}
           onClick={() => {
             tools[store.get().tool].cancel?.();
-            store.set({ tool: t.id, hover: null, chainNode: null, toolMsg: t.id === 'trim' ? trimMsg(store.get().settings.trimEdge) : t.id === 'split' ? splitMsg(store.get().settings.splitGap) : null });
+            store.set({ tool: t.id, hover: null, chainNode: null, toolMsg: t.id === 'trim' ? trimMsg(store.get().settings.trimEdge) : t.id === 'split' ? splitMsg(store.get().settings.splitGap) : t.id === 'dim' ? dimToolMsg(false) : null });
           }}
         >
           <span class="tool-icon">{t.icon}</span>
