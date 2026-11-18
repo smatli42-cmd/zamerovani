@@ -73,14 +73,25 @@ export function drawWalls(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
     const sel = isSel(selection, 'wall', body.wallId);
     const hov = isSel(hover, 'wall', body.wallId);
     ctx.fillStyle = sel ? '#bfdbfe' : hov ? '#dbeafe' : COLORS.body;
-    // vybrání (sekce I) se z těla vyřízne (sudý-lichý), výstupky se vyplní stejně jako tělo
+    // vybrání (sekce I) se z těla vyřízne: kreslí se jen mimo výřezy (ořez sudý-lichý – výřez smí přesahovat tělo,
+    // vybrání v rohu leží ve dvou stěnách); výstupky se vyplní stejně jako tělo
+    if (body.holes.length) {
+      ctx.save();
+      // každý výřez zvlášť – překrývající se výřezy se tak sečtou (ne sudý-lichý mezi sebou)
+      for (const h of body.holes) {
+        ctx.beginPath();
+        ctx.rect(-1e6, -1e6, 2e6, 2e6);
+        path(h, true);
+        ctx.clip('evenodd');
+      }
+    }
     path(body.poly);
-    for (const h of body.holes) path(h, true);
-    ctx.fill('evenodd');
-    // přesah výplně přes spoje (bez švů mezi sousedními těly); u vybrání jen obrys těla, ne přes výřez
+    ctx.fill();
+    // přesah výplně přes spoje (bez švů mezi sousedními těly), ne přes výřez
     ctx.strokeStyle = ctx.fillStyle;
     ctx.lineWidth = 1;
-    if (!body.holes.length) ctx.stroke();
+    ctx.stroke();
+    if (body.holes.length) ctx.restore();
     for (const a of body.adds) {
       path(a);
       ctx.fill();

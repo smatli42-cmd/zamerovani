@@ -27,7 +27,8 @@ export function applyProtrusions(floor: Floor, bodies: Map<Id, WallBody>): void 
     (p.mode === 'add' ? body.adds : body.holes).push(area);
     for (const q of outline) body.snaps.push(q);
   }
-  // výstupky přes roh (I1.11): líce obou stěn se od rohu po obrys nekreslí, obrys a plocha patří první stěně
+  // výstupky přes roh (I1.11): líce obou stěn se od rohu po obrys nekreslí, obrys a plocha patří první stěně;
+  // vybrání v rohu se vyřízne z těl obou stěn (při kreslení se výřez ořízne tělem každé z nich)
   for (const cp of cornerProtrusionsOf(floor)) {
     // těla se právě počítají – kontrola rohu dostane rozpracovaná (jinak by se volal výpočet znovu)
     const outline = cornerOutline(floor, cp, bodies);
@@ -44,7 +45,8 @@ export function applyProtrusions(floor: Floor, bodies: Map<Id, WallBody>): void 
       body.edges = cutAlongFace(body.edges, f, faceOffset(w, cp.sides[i]), Math.min(ua, ub), Math.max(ua, ub));
     }
     for (let i = 0; i + 1 < outline.length; i++) owner.edges.push([outline[i]!, outline[i + 1]!]);
-    owner.adds.push(area);
+    if (cp.mode === 'subtract') for (const id of cp.walls) bodies.get(id)?.holes.push(area);
+    else owner.adds.push(area);
     for (const q of outline) owner.snaps.push(q);
   }
   // výstupky přes volný konec stěny (I1.11): oba líce od čela po obrys se nekreslí, čelo zmizí v ořezu níže

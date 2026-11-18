@@ -147,14 +147,16 @@ export interface FaceHit {
   distance: number;
 }
 
-export function findFaceNear(floor: Floor, p: Pt, tol: number, onlyWall?: Id): FaceHit | null {
+export function findFaceNear(floor: Floor, p: Pt, tol: number, onlyWall?: Id, beyondEnds = false): FaceHit | null {
   let best: FaceHit | null = null;
   for (const w of Object.values(floor.walls)) {
     if ((onlyWall && w.id !== onlyWall) || !takesProtrusion(w)) continue;
     const f = wallFrame(floor, w);
     if (!f) continue;
     const { u, across } = f.project(p);
-    if (u < -tol || u > f.len + tol) continue;
+    // beyondEnds: líc v rohu přesahuje osu stěny až o tloušťku (vnější líc u vnějšího rohu)
+    const ext = tol + (beyondEnds ? w.thickness : 0);
+    if (u < -ext || u > f.len + ext) continue;
     for (const side of [1, -1] as const) {
       const off = faceOffset(w, side);
       const distance = Math.abs(across - off);

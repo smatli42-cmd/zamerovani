@@ -1,7 +1,8 @@
 /**
  * Výstupek přes roh dvou rovných stěn (KATALOG-STEN.md I1.11; rozhodnutí uživatele 2026-11-15: vnitřní i vnější
- * roh, i roh u napojení T, drží se rohu, zatím jen výstupek – ne vybrání; když stěny přestanou tvořit roh, výstupek
- * se jen nekreslí a vrátí se, až roh znovu vznikne).
+ * roh, i roh u napojení T, drží se rohu; když stěny přestanou tvořit roh, výstupek se jen nekreslí a vrátí se, až roh
+ * znovu vznikne). Vybrání v rohu (`mode: 'subtract'`, rozhodnutí uživatele 2026-11-18): stejný prvek, obrys vede
+ * tělem obou stěn (vnitřní roh – zářez do obou stěn, vnější roh – ukousnutý / zkosený roh) a plocha se z těl vyřízne.
  *
  * Souřadnice rohu: X = průsečík líců obou stěn, které se v rohu potkávají (vnitřní nebo vnější roh),
  * e1 / e2 = jednotkové směry stěn od rohu; bod p = X + s·e1 + t·e2. Obrys začíná na líci první stěny (t = 0)
@@ -25,7 +26,7 @@ export interface CornerFrame {
   e2: Pt;
 }
 
-type CornerKey = Pick<CornerProtrusion, 'node' | 'walls' | 'sides' | 'dirs'>;
+type CornerKey = Pick<CornerProtrusion, 'node' | 'walls' | 'sides' | 'dirs' | 'mode'>;
 
 /**
  * Rovná stěna s tělem v rohu `node`: buď v něm končí (směr od rohu ke vzdálenému konci), nebo je roh napojený
@@ -69,19 +70,36 @@ export function worldToCorner(f: CornerFrame, p: Pt): CornerPt {
 
 /**
  * Je roh pořád roh? V místě X musí být volno (žádné tělo stěny – např. třetí stěna dodatečně napojená do rohu)
- * a pod oběma úseky líců od X k obrysu musí být tělo své stěny. `bodies` = těla stěn (při jejich výpočtu se
- * předávají rozpracovaná, jinak se spočítají).
+ * a pod oběma úseky líců od X k obrysu musí být tělo své stěny. U vybrání naopak: plocha u X i podél líců leží
+ * v tělech obou stěn rohu. `bodies` = těla stěn (při jejich výpočtu se předávají rozpracovaná, jinak se spočítají).
  */
 function cornerValid(cp: CornerKey & { pts: CornerPt[] }, f: CornerFrame, bodies: Map<Id, WallBody>): boolean {
   const pts = cp.pts.map(q => cornerToWorld(f, q));
   const area = [f.X, ...pts];
   const first = pts[0]!;
   const last = pts[pts.length - 1]!;
+  const recess = cp.mode === 'subtract';
   const polys = [...bodies.values()].map(b => b.poly);
-  // bod plochy výstupku těsně u X (u vnitřního rohu mezi stěnami, u vnějšího vně)
+  const own = [bodies.get(cp.walls[0])?.poly, bodies.get(cp.walls[1])?.poly].filter((p): p is Pt[] => !!p);
+  // bod plochy výstupku těsně u X (u vnitřního rohu mezi stěnami, u vnějšího vně; u vybrání v těle stěn rohu)
   const diag = add(f.e1, f.e2);
   const near = [add(f.X, scale(diag, 3)), add(f.X, scale(diag, -3))].find(q => pointInPolygon(q, area));
-  if (!near || polys.some(p => pointInPolygon(near, p))) return false;
+  if (!near) return false;
+  if (recess ? !own.some(p => pointInPolygon(near, p)) : polys.some(p => pointInPolygon(near, p))) return false;
+  if (recess) {
+    // naproti vybrání (u vnitřního rohu v místnosti) je volno – třetí stěna napojená do rohu roh ruší
+    const sg = dot(sub(near, f.X), diag) > 0 ? -1 : 1;
+    for (const [a, b] of [[5, 20], [20, 5], [15, 15]] as const) {
+      const opp = add(f.X, scale(add(scale(f.e1, a), scale(f.e2, b)), sg));
+      if (polys.some(p => pointInPolygon(opp, p))) return false;
+    }
+    // obrys vede tělem stěn rohu (po zúžení stěny pod hloubku vybrání by ji prořízl – pak se nekreslí)
+    const inOwn = (q: Pt) => own.some(p => pointInPolygon(q, p) || onBoundary(q, p));
+    for (let i = 0; i + 1 < pts.length; i++) {
+      if (!inOwn(scale(add(pts[i]!, pts[i + 1]!), 0.5))) return false;
+      if (i > 0 && !inOwn(pts[i]!)) return false;
+    }
+  }
   // do plochy výstupku nesmí zasahovat tělo jiné stěny (třetí stěna napojená do rohu): rohy a body na hranách těla
   for (const b of bodies.values()) {
     if (b.wallId === cp.walls[0] || b.wallId === cp.walls[1]) continue;
@@ -103,7 +121,8 @@ function cornerValid(cp: CornerKey & { pts: CornerPt[] }, f: CornerFrame, bodies
     if (!body || dist(f.X, end) < 1) return false;
     const mid = scale(add(f.X, end), 0.5);
     const n = normal(e);
-    const out = [add(mid, n), add(mid, scale(n, -1))].find(q => !pointInPolygon(q, area));
+    // výstupek: tělo je na straně mimo plochu; vybrání: plocha leží v těle
+    const out = [add(mid, n), add(mid, scale(n, -1))].find(q => pointInPolygon(q, area) === recess);
     if (!out || !pointInPolygon(out, body.poly)) return false;
   }
   return true;
@@ -165,12 +184,13 @@ function commonNode(floor: Floor, w1: Wall, w2: Wall): Id | null {
 
 /**
  * Lomená čára nakreslená čarami: začíná na líci jedné stěny a končí na líci druhé stěny téhož rohu (i u napojení T),
- * oba líce se v rohu potkávají (vnitřní nebo vnější roh) a čára vede mimo těla stěn → výstupek přes roh. Jinak null.
+ * oba líce se v rohu potkávají (vnitřní nebo vnější roh) a čára vede celá mimo těla stěn → výstupek přes roh, celá
+ * v tělech stěn → vybrání v rohu (stačí i jedna čára – zkosení vnějšího rohu). Jinak null.
  */
 export function cornerFromPolyline(floor: Floor, pts: readonly Pt[], tol = 1.5): Omit<CornerProtrusion, 'id' | 'name' | 'material' | 'note'> | null {
-  if (pts.length < 3) return null;
-  const s = findFaceNear(floor, pts[0]!, tol);
-  const e = findFaceNear(floor, pts[pts.length - 1]!, tol);
+  if (pts.length < 2) return null;
+  const s = findFaceNear(floor, pts[0]!, tol, undefined, true);
+  const e = findFaceNear(floor, pts[pts.length - 1]!, tol, undefined, true);
   if (!s || !e || s.wall.id === e.wall.id) return null;
   const node = commonNode(floor, s.wall, e.wall);
   const c = node && floor.nodes[node];
@@ -194,14 +214,18 @@ export function cornerFromPolyline(floor: Floor, pts: readonly Pt[], tol = 1.5):
   if (Math.abs(q[0]!.t) > tol || Math.abs(q[q.length - 1]!.s) > tol || q[0]!.s < 10 || q[q.length - 1]!.t < 10) return null;
   q[0] = { s: q[0]!.s, t: 0 };
   q[q.length - 1] = { s: 0, t: q[q.length - 1]!.t };
-  // čára vede mimo těla stěn (výstupek, ne vybrání): vnitřní body i středy úseků
+  // čára vede celá mimo těla stěn (výstupek), nebo celá v tělech (vybrání): vnitřní body i středy úseků
+  const inBody: boolean[] = [];
   for (let i = 0; i + 1 < pts.length; i++) {
-    const mid = scale(add(pts[i]!, pts[i + 1]!), 0.5);
-    if (findBodyAt(floor, mid)) return null;
-    if (i > 0 && findBodyAt(floor, pts[i]!)) return null;
+    inBody.push(!!findBodyAt(floor, scale(add(pts[i]!, pts[i + 1]!), 0.5)));
+    if (i > 0) inBody.push(!!findBodyAt(floor, pts[i]!));
   }
+  const recess = inBody.every(Boolean);
+  if (!recess && inBody.some(Boolean)) return null;
+  // výstupek aspoň dvěma čarami (jedna čára přes vnitřní roh zůstane čarou)
+  if (!recess && pts.length < 3) return null;
   const r1 = (x: number) => Math.round(x * 10) / 10;
-  const out = { ...base, pts: q.map(p => ({ s: r1(p.s), t: r1(p.t) })) };
+  const out = { ...base, ...(recess ? { mode: 'subtract' as const } : {}), pts: q.map(p => ({ s: r1(p.s), t: r1(p.t) })) };
   // líce se v X opravdu potkávají a roh je volný (jinak by obrys vedl přes tělo)
   return cornerValid(out, f, wallBodies(floor)) ? out : null;
 }
@@ -227,8 +251,10 @@ export function cornerOverhang(floor: Floor, wallId: Id): number {
     const i = cp.walls.indexOf(wallId);
     const cover = i >= 0 ? cornerFaceCover(floor, cp, i as 0 | 1) : null;
     if (!cover) continue;
+    // přečnívání jen ve směru od rohu (u vnějšího rohu leží roh X i krátký obrys před začátkem osy – to nevadí)
+    const uX = fr.project(cover[0]).u;
     const u = fr.project(cover[1]).u;
-    out = Math.max(out, -u, u - fr.len);
+    out = Math.max(out, u < uX ? -u : u - fr.len);
   }
   return out;
 }

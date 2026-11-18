@@ -10,7 +10,7 @@
 
 import type { DimTarget } from '../core/dimLock';
 
-export const SCHEMA_VERSION = 18;
+export const SCHEMA_VERSION = 19;
 
 export type Id = string;
 
@@ -213,6 +213,8 @@ export interface CornerProtrusion {
    * napojený doprostřed (T bez dělení); u stěny, která v rohu končí, se směr bere od jejího konce.
    */
   dirs: [1 | -1, 1 | -1];
+  /** `subtract` = vybrání v rohu (obrys vede tělem stěn, plocha se z nich vyřízne; od verze 19); chybí = výstupek. */
+  mode?: 'subtract';
   /** Otevřený obrys od líce první stěny (t = 0) k líci druhé (s = 0); roh X uzavírá plochu. */
   pts: CornerPt[];
   /** Výška (mm); chybí = neurčeno. */

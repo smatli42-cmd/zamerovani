@@ -1,13 +1,13 @@
 /**
  * Kóty vybraného výstupku v rohu a výstupku na konci stěny (I1.11, rozhodnutí uživatele 2026-11-18 „jako u výstupku“):
  * klikací kóty na výkrese – ťuknutím se otevře NumPad, mění se jen výstupek, kóty jdou zamknout.
- * - v rohu: rozměr podél líce 1. a 2. stěny od rohu, vně výstupku,
+ * - v rohu: rozměr podél líce 1. a 2. stěny od rohu, vně výstupku (u vybrání v rohu vně těla, u líce),
  * - na konci stěny: řetěz po každém líci (podél líce od čela, přesah za čelo) vně výstupku a hloubka od každého líce.
  */
 import { cornerDims, cornerFrame, cornerOutline } from '../core/cornerProtrusion';
 import { endDims, endFrame, endOutline, type EndDim } from '../core/endProtrusion';
 import { add, dot, normal, scale, sub, unit } from '../core/geometry';
-import type { Floor, Pt } from '../model/types';
+import type { CornerPt, Floor, Pt } from '../model/types';
 import type { Camera, Selection } from '../store/store';
 import { drawDimLine, type DimStyle } from './drawDims';
 import { toScreen } from './view';
@@ -31,11 +31,17 @@ export function drawCornerEndDims(ctx: CanvasRenderingContext2D, floor: Floor, c
     if (f && outline) {
       const d = cornerDims(cp);
       const n = cp.pts.length;
+      // vybrání: kóta leží na straně líce mimo tělo, hned u líce (obrys vede tělem)
+      const recess = cp.mode === 'subtract';
+      const side = (x: number | undefined) => (recess ? -1 : 1) * (Math.sign(x ?? 1) || 1);
+      const reach = (sg: number, v: (q: CornerPt) => number) => (recess ? 0 : Math.max(0, ...cp.pts.map(q => v(q) * sg)));
+      const sa = side(cp.pts[1]?.t);
+      const sb = side(cp.pts[n - 2]?.s);
       for (const [dim, dir, other, len, sgn, far] of [
         // strana obrysu od líce: první úsek obrysu opouští líc 1. stěny (znaménko t), poslední přichází na líc 2. stěny
         // (znaménko s); u vnějšího rohu záporné. Kóta leží za nejvzdálenějším bodem obrysu na té straně.
-        ['a', f.e1, f.e2, d.a, Math.sign(cp.pts[1]?.t ?? 1) || 1, Math.max(0, ...cp.pts.map(q => q.t * (Math.sign(cp.pts[1]?.t ?? 1) || 1)))],
-        ['b', f.e2, f.e1, d.b, Math.sign(cp.pts[n - 2]?.s ?? 1) || 1, Math.max(0, ...cp.pts.map(q => q.s * (Math.sign(cp.pts[n - 2]?.s ?? 1) || 1)))]
+        ['a', f.e1, f.e2, d.a, sa, reach(sa, q => q.t)],
+        ['b', f.e2, f.e1, d.b, sb, reach(sb, q => q.s)]
       ] as const) {
         if (len < 0.5) continue;
         const p1 = f.X;

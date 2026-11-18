@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-18 (3) – vybrání v rohu (fronta bod 1)
+- **Co se změnilo:** Výstupek v rohu umí i vybrání (`CornerProtrusion.mode = 'subtract'`, SCHEMA_VERSION 19 bez převodu). Lomená čára nástrojem Čára ve stěnách z líce jedné stěny na líc druhé stěny téhož rohu vedená celá tělem stěn = vybrání; plocha se vyřízne z těl obou stěn (`core/wallBodyEdges.ts`), líce se pod ním nekreslí. Vnitřní roh = zářez do obou stěn, vnější roh = ukousnutý roh, zkosení vnějšího rohu stačí jednou čárou. Jinak platí vše jako u výstupku v rohu (drží se rohu, F4, změna délky kótou, kopie, sloučení, kóty a NumPad, zámky, smazání). Kreslení těl s výřezy (`canvas/drawPlan.ts`): výřez smí přesahovat tělo, každý výřez se ořízne zvlášť, bez švu ve spoji. Testy `store/cornerRecess.test.ts` (18). Po kontrole revieweru opraveno: vnější zářez jde kótou zmenšit i pod tloušťku stěny (`cornerOverhang` měří přečnívání jen směrem od rohu); po zúžení stěny pod hloubku vybrání se vybrání nekreslí (dřív by stěnu prořízlo) a vrátí se po rozšíření; třetí stěna v rohu vybrání skryje; překrývající se výřezy se při kreslení sečtou.
+- **Viditelně v aplikaci:** Čárou ve stěnách nakreslený zářez v rohu (dovnitř stěn) = bílé vybrání bez čar líců, ťuknutím se vybere, panel „Vybrání v rohu“, kóty podél obou stěn leží na straně líce mimo tělo. Ověřeno v prohlížeči.
+- **Rozhodnuto uživatelem:** vnější i vnitřní roh; kreslí se čárou jako výstupek v rohu.
+- **Rozhodnuto samostatně:** zkosení jednou čárou jen u vybrání (výstupek v rohu dál aspoň dvěma čarami – nemění se dosavadní chování); čára zčásti v těle a zčásti mimo zůstane čarami; vybrání přes celou tloušťku stěny v rohu nevznikne (zůstanou čáry); hloubka vybrání v rohu se kótou nemění (jen rozměry podél stěn, jako u výstupku v rohu); obrys a plocha patří první stěně (výběr), výřez oběma.
+- **Otevřené:** vyzkoušet na PC a tabletu.
+
 ### 2026-11-18 (konec sezení)
 - **Co se změnilo:** Sezení ukončeno; za 2026-11-17/18: D3 K hraně (17 (7)), napojení na líc oblouku (18 (1)), kóty výstupku v rohu a na konci stěny + sjednocený překryv výstupků `core/wallSpans.ts` (18 (2)). Testy 546, typecheck a build OK.
 - **Viditelně v aplikaci:** viz záznamy níže.
@@ -442,18 +449,17 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Otevřené:** vyzkoušet na tabletu; další krok tažení a posun jako blok (D2, D11–D14).
 - **Chyby od uživatele:** zatím žádné.
 
-## Poslední stav (2026-11-18, konec sezení)
+## Poslední stav (2026-11-18, vybrání v rohu)
 
-**Hotové (na webu):** kresba – samostatná Čára, Dvojitá, Obdélník / Kruh / Oblouk jako kresba, šrafy a barvy (Deník 2026-11-17 (1)–(6)); D3 K hraně (2026-11-17 (7)); napojení stěny na líc obloukové stěny (2026-11-18 (1)) – vše uživatel vyzkoušel na PC. Kóty výstupku v rohu a na konci stěny (2026-11-18 (2)) – **čeká na vyzkoušení**. Testy 546, typecheck a build OK. SCHEMA_VERSION 18.
+**Hotové (na webu):** kresba – samostatná Čára, Dvojitá, Obdélník / Kruh / Oblouk jako kresba, šrafy a barvy (Deník 2026-11-17 (1)–(6)); D3 K hraně (2026-11-17 (7)); napojení stěny na líc obloukové stěny (2026-11-18 (1)) – vše uživatel vyzkoušel na PC. Kóty výstupku v rohu a na konci stěny (2026-11-18 (2)) a vybrání v rohu (2026-11-18 (3)) – **čeká na vyzkoušení**. Testy 564, typecheck OK. SCHEMA_VERSION 19.
 
 **Rozpracované:** nic.
 
-**Čeká na vyzkoušení:** kóty výstupku v rohu / na konci (PC); na tabletu vše od 2026-11-14.
+**Čeká na vyzkoušení:** kóty výstupku v rohu / na konci, vybrání v rohu (PC); na tabletu vše od 2026-11-14.
 
 **Fronta kroků:**
-1. Vybrání v rohu (výstupek v rohu jen jako vybrání – zeptat se na podobu).
-2. Kóty: volná kóta / úhlopříčka (POZADAVKY.md, i kóta přiřazená k čarám kresby) – zámek je připravený; později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) spolu s exportem DXF / PDF.
-3. Drobnosti: řetězová kóta polohy napojení i u oblouku; Do rohu / K hraně pro oblouky; řetězová kóta užšího otvoru při vypnutém vnitřním ostění.
+1. Kóty: volná kóta / úhlopříčka (POZADAVKY.md, i kóta přiřazená k čarám kresby) – zámek je připravený; později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) spolu s exportem DXF / PDF. Průřezová funkce – před začátkem se zeptat na podobu.
+2. Drobnosti: řetězová kóta polohy napojení i u oblouku; Do rohu / K hraně pro oblouky; řetězová kóta užšího otvoru při vypnutém vnitřním ostění.
 
 ## Předchozí stav (2026-11-15, konec sezení)
 
