@@ -149,9 +149,11 @@ describe('volná kóta: zadání délky posune zvolený bod', () => {
 });
 
 describe('volná kóta: zámek, odsazení, mazání', () => {
-  it('zamčená kóta drží: posun rohu, který by ji změnil, se neprovede', () => {
+  // rozhodnutí uživatele 2026-11-18: zamčená kóta = pevné spojení; pevný bod výkresu se s ní neposune → zámek zastaví
+  // (posun druhého konce – roh, kresba, otvor – testuje store/dimFollow.test.ts)
+  it('zamčená kóta k pevnému bodu drží: posun rohu, který by ji změnil, se neprovede', () => {
     room();
-    const id = addFreeDim(N({ x: 0, y: 0 }), N({ x: 4000, y: 3000 }))!;
+    const id = addFreeDim({ x: 0, y: 0 }, N({ x: 4000, y: 3000 }))!;
     setDimLock({ kind: 'free-dim', dimId: id, move: 'b' }, true);
     const c = nodeAt({ x: 4000, y: 3000 }).id;
     expect(

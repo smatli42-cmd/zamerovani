@@ -7,13 +7,15 @@
  * Data projektu jsou neměnná (immer): každá změna vytvoří novou verzi a nezměněné části se sdílí.
  * Díky tomu je historie levná a překreslení/uložení se pozná podle změny odkazu.
  */
-import { produce, freeze } from 'immer';
+import { produce, freeze, current } from 'immer';
 import type { Floor, Id, Opening, Project } from '../model/types';
 import type { DrawColor, LineStyle } from '../model/types';
 import { syncHosted } from '../core/hosting';
 import { syncProtrusions } from '../core/protrusion';
 import { describeDim, dimKey, lockViolation, pruneLocks, reboundLocks, type DimTarget } from '../core/dimLock';
 import { pruneFreeDims, rescueFreeDims } from '../core/freeDim';
+import { followDisturbsEdit, followLockedDims } from '../core/dimFollow';
+import { keepOpeningsOnResizedWalls } from '../core/openingChain';
 
 export type ToolId = 'select' | 'wall' | 'line' | 'trim' | 'split' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'drawLine' | 'drawDouble' | 'text' | 'leader' | 'dim' | 'paste' | 'pan';
 
@@ -284,6 +286,22 @@ class Store {
         rescueFreeDims(before, f);
         pruneFreeDims(f);
         pruneLocks(f);
+        // zamčená volná kóta = pevné spojení: prvek na druhém konci se posune s tím, co se pohnulo (core/dimFollow.ts)
+        const hasFreeLock = !!before?.dimLocks && Object.keys(before.dimLocks).some(k => k.startsWith('free-dim:'));
+        const preFollow = hasFreeLock ? (current(f) as Floor) : null;
+        if (preFollow && followLockedDims(before, f, opts.allowKey)) {
+          syncHosted(preFollow, f);
+          // dorovnání nesmí pohnout tím, co úprava sama změnila (jinak by se zadaná úprava přepsala)
+          if (followDisturbsEdit(before!, preFollow, f, opts.allowKey)) {
+            blocked = { key: '', text: 'Nelze – zamčené kóty by úpravu vrátily zpět (prvek je zamčenými kótami přivázaný z obou stran).' };
+            throw LOCK_ABORT;
+          }
+          // stěny posunuté kótou: prvky nesené stěnou zůstanou ve výkresu na místě (core/openingChain.ts)
+          if (keepOpeningsOnResizedWalls(preFollow, f) !== true) {
+            blocked = { key: '', text: 'Nelze – zamčená kóta by posunula stěnu a otvor, výstupek nebo napojená příčka by přesáhl souseda nebo konec stěny.' };
+            throw LOCK_ABORT;
+          }
+        }
         const v = lockViolation(before, f, opts.allowKey);
         if (v) {
           blocked = { key: dimKey(v), text: `Nelze – brání zamčená kóta: ${describeDim(before!, v)}`, target: v };
