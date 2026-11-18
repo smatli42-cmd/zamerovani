@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { createProject } from '../model/factory';
 import { openingSpan, openingStartFromA, wallLength } from '../core/floorQueries';
-import { addOpening, addWall, applyNumpadValue, setDimLock } from './actions';
+import { addOpening, addWall, applyNumpadValue, setDimLock, setRevealEnabled } from './actions';
 import { store } from './store';
 
 const f = () => store.floor()!;
@@ -144,5 +144,91 @@ describe('šířka otvoru se zámky – řada otvorů a dveře (po kontrole revi
     expect(parts(W, d)).toMatchObject({ after: before.after, before: before.before - 100, len: 3000 });
     store.undo();
     expect(parts(W, d)).toEqual(before);
+  });
+});
+
+describe('ostění a zárubeň se zámkem na jedné straně (rozhodnutí uživatele 2026-11-18: i tam na volnou stranu)', () => {
+  it('ostění vpravo u okna od A se zamčeným úsekem k B: otvor roste doleva, zamčený úsek stojí', () => {
+    const { W, op } = setup('a');
+    setRevealEnabled(op, true);
+    setDimLock({ kind: 'opening-offset', openingId: op, ref: 'b' }, true);
+    const before = parts(W, op);
+    const r0 = f().openings[op]!.reveal!.right;
+    expect(applyNumpadValue({ kind: 'opening-reveal', openingId: op, part: 'right' }, r0 + 50)).toBe(true);
+    expect(parts(W, op)).toMatchObject({ after: before.after, before: before.before - 50, len: 3000 });
+  });
+
+  it('ostění vlevo u okna od B se zamčeným úsekem k A: otvor roste doprava', () => {
+    const { W, op } = setup('b');
+    setRevealEnabled(op, true);
+    setDimLock({ kind: 'opening-offset', openingId: op, ref: 'a' }, true);
+    const before = parts(W, op);
+    const l0 = f().openings[op]!.reveal!.left;
+    expect(applyNumpadValue({ kind: 'opening-reveal', openingId: op, part: 'left' }, l0 + 50)).toBe(true);
+    expect(parts(W, op)).toMatchObject({ before: before.before, after: before.after - 50, len: 3000 });
+  });
+
+  it('šířka zárubně dveří od A se zamčeným úsekem k B: roste doleva', () => {
+    store.openProject(createProject({ name: 't' }));
+    const W = addWall({ x: 0, y: 0 }, null, { x: 0, y: 3000 }, null, false, { thickness: 300, side: 1 })!;
+    const d = addOpening(W, 'door', 0.5)!;
+    store.edit(fl => {
+      const o = fl.openings[d]!;
+      const st = openingStartFromA(o, 3000);
+      o.ref = 'a';
+      o.offset = Math.round(st);
+    });
+    setDimLock({ kind: 'opening-offset', openingId: d, ref: 'b' }, true);
+    const before = parts(W, d);
+    const span0 = openingSpan(f().openings[d]!);
+    const fw = f().openings[d]!.frame!.width;
+    expect(applyNumpadValue({ kind: 'opening-reveal', openingId: d, part: 'frameWidth' }, fw + 20)).toBe(true);
+    const grow = openingSpan(f().openings[d]!) - span0;
+    expect(grow).toBeGreaterThan(0);
+    expect(parts(W, d)).toMatchObject({ after: before.after, before: Math.round(before.before - grow), len: 3000 });
+  });
+
+  it('ostění větší než volný úsek se neprovede', () => {
+    const { W, op } = setup('a');
+    setRevealEnabled(op, true);
+    setDimLock({ kind: 'opening-offset', openingId: op, ref: 'b' }, true);
+    const before = parts(W, op);
+    expect(applyNumpadValue({ kind: 'opening-reveal', openingId: op, part: 'left' }, 2000)).toBe(false);
+    expect(parts(W, op)).toEqual(before);
+    expect(store.get().lockBlock?.text).toContain('přesáhl souseda');
+  });
+
+  it('zmenšení ostění se zamčeným úsekem k B: otvor se zúží z volné strany', () => {
+    const { W, op } = setup('a');
+    setRevealEnabled(op, true);
+    setDimLock({ kind: 'opening-offset', openingId: op, ref: 'b' }, true);
+    const before = parts(W, op);
+    const r0 = f().openings[op]!.reveal!.right;
+    expect(applyNumpadValue({ kind: 'opening-reveal', openingId: op, part: 'right' }, r0 - 20)).toBe(true);
+    expect(parts(W, op)).toMatchObject({ after: before.after, before: before.before + 20, len: 3000 });
+  });
+
+  it('ostění u okna od A se zamčeným meziostěním k dalšímu oknu (dál volno): jako u šířky – soused se posune', () => {
+    store.openProject(createProject({ name: 't' }));
+    const W = addWall({ x: 0, y: 0 }, null, { x: 0, y: 6000 }, null, false, { thickness: 300, side: 1 })!;
+    const o1 = addOpening(W, 'window', 0.3)!;
+    const o2 = addOpening(W, 'window', 0.6)!;
+    store.edit(fl => {
+      for (const id of [o1, o2]) {
+        const o = fl.openings[id]!;
+        const st = openingStartFromA(o, 6000);
+        o.ref = 'a';
+        o.offset = Math.round(st);
+      }
+    });
+    setRevealEnabled(o1, true);
+    setDimLock({ kind: 'opening-gap', firstId: o1, secondId: o2 }, true);
+    const s1 = openingStartFromA(f().openings[o1]!, 6000);
+    const s2 = openingStartFromA(f().openings[o2]!, 6000);
+    const r0 = f().openings[o1]!.reveal!.right;
+    expect(applyNumpadValue({ kind: 'opening-reveal', openingId: o1, part: 'right' }, r0 + 50)).toBe(true);
+    expect(openingStartFromA(f().openings[o1]!, 6000)).toBeCloseTo(s1, 0);
+    expect(openingStartFromA(f().openings[o2]!, 6000)).toBeCloseTo(s2 + 50, 0);
+    expect(wallLength(f(), f().walls[W]!)).toBeCloseTo(6000, 0);
   });
 });

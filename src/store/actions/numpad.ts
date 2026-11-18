@@ -160,8 +160,35 @@ export function applyNumpadValue(t: NumPadTarget, value: number, overrideLock = 
       }
     } else if (t.kind === 'opening-reveal') {
       const op = floor.openings[t.openingId];
-      if (!op) return;
+      const wall = op && floor.walls[op.wallId];
+      if (!op || !wall) return;
+      // ostění vlevo / vpravo a šířka zárubně mění celkovou šířku otvoru: zamčený úsek na straně, kam otvor roste,
+      // a volný na druhé straně → otvor roste na volnou stranu (rozhodnutí uživatele 2026-11-18, jako u šířky)
+      const len = wallLength(floor, wall);
+      const start = openingStartFromA(op, len);
+      const end = start + openingSpan(op);
+      const sl = openingSideLocks(floor, op.id);
       ok = setReveal(floor, op, t.part, value);
+      const span = openingSpan(op);
+      const grow = span - (end - start);
+      // stejně jako u šířky otvoru: ref a – zamčeno vpravo až k rohu B a vlevo volno → na volnou stranu; zamčené
+      // meziostění vpravo (řetěz) → posune spojené otvory doprava (pushChainRight); ref b – zamčeno vlevo, vpravo volno
+      const toFreeSide = !!sl && ((op.ref === 'a' && sl.rightToEnd && !sl.left) || (op.ref === 'b' && sl.left && !sl.right));
+      if (ok && sl && op.ref === 'a' && !toFreeSide && sl.right && Math.abs(grow) > 0.01) {
+        const placed = openingsOnWall(floor, wall);
+        const j = placed.findIndex(p => p.op.id === op.id);
+        ok = pushChainRight(floor, wall.id, j + 1, grow, !placed[j + 1]);
+        chainFail = !ok;
+      } else if (ok && sl && toFreeSide && Math.abs(grow) > 0.01) {
+        // ref a: drží pravý okraj (zamčený), roste doleva; ref b: drží levý okraj, roste doprava
+        const ns = op.ref === 'a' ? end - span : start;
+        if (ns < sl.leftEdge - 0.5 || ns + span > sl.rightEdge + 0.5) {
+          ok = false;
+          chainFail = true; // otvor by přesáhl souseda / konec stěny
+          return;
+        }
+        op.offset = op.ref === 'a' ? Math.round(ns) : Math.round(len - ns - span);
+      }
     } else if (t.kind === 'opening-gap') {
       // meziostění: posune druhý otvor a vše, co je s ním spojené zamčenými kótami (řetěz otvorů)
       const a = floor.openings[t.firstId];
