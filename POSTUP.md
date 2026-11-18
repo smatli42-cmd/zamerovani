@@ -7,6 +7,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-18 (konec sezení 2)
+- **Co se změnilo:** Sezení ukončeno; za tuto část dne: vybrání v rohu (3), volná kóta / úhlopříčka (4), kóta přichycená k hranám – líce stěn, čáry, okraje otvorů, kolmá jako v CAD (5), šířka okna / ostění / zárubeň se zámkem na jedné straně rostou na volnou stranu (6, 7). Testy 618, typecheck a build OK.
+- **Viditelně v aplikaci:** viz záznamy (3)–(7).
+- **Rozhodnuto samostatně:** viz (3)–(5).
+- **Otevřené:** uživatel bude hlásit další chyby kótování (nástroj Kóta); vyzkoušet vybrání v rohu a kóty výstupků v rohu / na konci; vše na tabletu.
+- **Chyby od uživatele:** kóta se nepřichytávala k lícům, čarám a oknům a nebylo vidět přichycení – opraveno (5); změna šířky okna zablokovaná nesouvisející zamčenou kótou – opraveno (6, 7).
+- **Soubory nad 500 řádků:** žádné (největší `canvas/drawDims.ts` 464, `tools/selectTool.ts` 454, `tools/wallTool.ts` 446).
+
 ### 2026-11-18 (7) – ostění a zárubeň se zámkem na jedné straně
 - **Co se změnilo:** Pravidlo z (6) platí i pro ostění vlevo / vpravo a šířku zárubně (mění celkovou šířku otvoru): zamčený úsek na straně růstu a volný na druhé → otvor roste / se zužuje na volnou stranu; zamčené meziostění k dalšímu otvoru (řetěz nekončí u rohu) → spojené otvory se posunou jako u šířky (`pushChainRight`). Díly, které šířku nemění (hloubka, nahoře, hloubka / odsazení zárubně), beze změny. Větev `opening-reveal` v `store/actions/numpad.ts`. Testy v `store/openingWidthLocks.test.ts` (14). Po kontrole revieweru sjednoceno chování s šířkou otvoru (řetěz zámků).
 - **Viditelně v aplikaci:** ostění / zárubeň u okna se zamčeným úsekem k rohu rostou na volnou stranu.
@@ -477,7 +485,20 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Otevřené:** vyzkoušet na tabletu; další krok tažení a posun jako blok (D2, D11–D14).
 - **Chyby od uživatele:** zatím žádné.
 
-## Poslední stav (2026-11-18, volná kóta)
+## Poslední stav (2026-11-18, konec sezení 2)
+
+**Hotové (na webu):** kresba, D3 K hraně, napojení na líc oblouku – uživatel vyzkoušel na PC. Kóty výstupku v rohu a na konci stěny (Deník 2026-11-18 (2)), vybrání v rohu (3), volná kóta / úhlopříčka (4), kóta přichycená k hranám jako v CAD (5), šířka okna / ostění / zárubeň se zámkem na jedné straně (6, 7). Testy 618, typecheck a build OK. SCHEMA_VERSION 21.
+
+**Rozpracované:** nic.
+
+**Čeká na vyzkoušení:** nástroj Kóta (uživatel ho zkouší a bude hlásit chyby kótování), vybrání v rohu, kóty výstupku v rohu / na konci (PC); na tabletu vše od 2026-11-14.
+
+**Fronta kroků:**
+1. **Chyby kótování od uživatele** (začne je hlásit v příštím sezení) – mají přednost.
+2. Volná kóta – doplnit: hrany výstupků, oblouky (líc obloukové stěny, oblouk kresby), druhá čára dvojité čáry, kopie a výběr obdélníkem, odsazení tažením i ve Vybrat, úhlopříčka se zachováním délek stěn (řešič). Později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) s exportem DXF / PDF.
+3. Drobnosti: řetězová kóta polohy napojení i u oblouku; Do rohu / K hraně pro oblouky; řetězová kóta užšího otvoru při vypnutém vnitřním ostění.
+
+## Předchozí stav (2026-11-18, volná kóta)
 
 **Hotové (na webu):** kresba, D3 K hraně, napojení na líc oblouku – uživatel vyzkoušel na PC. Kóty výstupku v rohu a na konci stěny (2026-11-18 (2)), vybrání v rohu (3), volná kóta / úhlopříčka (4), kóta na hranách (5), šířka okna / ostění se zámkem (6, 7) – **čeká na vyzkoušení**. Testy 618, typecheck OK. SCHEMA_VERSION 21.
 
