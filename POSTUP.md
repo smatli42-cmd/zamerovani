@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-18 (14) – posun celé stěny kótou u otevřeného půdorysu (chyba od uživatele)
+- **Chyba od uživatele:** výkres s horní, pravou a spodní stěnou (levá chybí); kóta od čelní hrany výstupku na horní stěně ke spodní stěně – zadání délky hlásilo „zamčené kóty by úpravu vrátily zpět“, i když zamčená kóta nebránila. Příčina (rozbor na záloze výkresu uživatele): posun celé stěny bral s sebou „volné větve“ – u tvaru U celou zbývající místnost i se spodní stěnou, kóta se nezměnila a dorovnání zamčené kóty 1340 vyvolalo hlášení.
+- **Co se změnilo:** `moveWallStretch` v `core/solver.ts` – posun celé stěny kótou (konec kóty na líci stěny i čelní hrana výstupku) posune jen oba rohy stěny, sousední stěny se protáhnou. Jedno místo pro obě použití. Test s výkresem uživatele (`store/__fixtures__/protDimUser.json`) a tvar U s kótou mezi líci (`store/freeDimOpenPlan.test.ts`).
+- **Viditelně v aplikaci:** kóta mezi výstupkem a protější stěnou (i mezi líci dvou stěn) posune jen tu jednu stěnu, i když půdorys není uzavřený.
+- **Rozhodnuto samostatně:** volné větve (pahýly stěn) na posouvané stěně se při posunu kótou protáhnou, neposouvají se s ní (posun rohu tažením / délkou stěny se nemění).
+- **Otevřené:** nic.
+
 ### 2026-11-18 (13) – volná kóta k hraně výstupku / vybrání (fronta bod 2, průřezové)
 - **Co se změnilo:** nový konec kóty `{ prot, i, at }` = rovný úsek obrysu výstupku / vybrání na stěně, v rohu i na konci stěny (SCHEMA_VERSION 22 bez převodu). Geometrie a přichycení v `core/dimRefs.ts` (hrana má přednost před lícem, na kterém leží; těla stěn se pro rohové výstupky počítají jednou), posun v novém `core/protrusionDimMove.ts`, volá `freeDim.ts`; pevné spojení (`dimFollow`) funguje stejně. Koncové body posouvané hrany jedou po sousedních hranách (krajní po líci) – funguje i šikmá hrana a zkosení. Kontrola výsledku: obrys se nepřetočí, výstupek se vejde na stěnu a nepřekryje souseda, rozměry ≥ 10 mm; jinak se nic nezmění. Hrana výstupku, který se dočasně nekreslí (neplatný roh, nevolný konec), kótu nesmaže. Testy `store/freeDimProt.test.ts` (21). Po kontrole revieweru opraveno: chyběla kontrola výsledku (výstupek za koncem stěny, překřížení hran), šikmé hrany nešly nastavit, kóta zanikala s dočasně neplatným rohem, výkon, geometrie přesunuta do dimRefs.
 - **Viditelně v aplikaci:** nástroj Kóta zvýrazní a přichytí hrany výstupků a vybrání (ověřeno v prohlížeči); zadání délky podle pravidel níže.
@@ -534,7 +541,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Poslední stav (2026-11-18, sezení 3)
 
-**Hotové (na webu):** opravy kótování od uživatele – výchozí posouvaný bod volné kóty (8), poslední kóta řetězu okna posune okno (10), **zamčená volná kóta = pevné spojení** (11, uživatel potvrdil), kóta ke druhé čáře dvojité čáry (12), kóta k hraně výstupku / vybrání (13). Testy 676, typecheck a build OK. SCHEMA_VERSION 22.
+**Hotové (na webu):** opravy kótování od uživatele – výchozí posouvaný bod volné kóty (8), poslední kóta řetězu okna posune okno (10), **zamčená volná kóta = pevné spojení** (11, uživatel potvrdil), kóta ke druhé čáře dvojité čáry (12), kóta k hraně výstupku / vybrání (13), posun stěny kótou u otevřeného půdorysu (14). Testy 680, typecheck a build OK. SCHEMA_VERSION 22.
 
 **Rozpracované:** nic.
 

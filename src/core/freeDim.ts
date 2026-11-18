@@ -7,7 +7,7 @@
  * Posun konce jede s prvkem:
  * - roh stěny: jako při změně délky stěny (řešič „gumička“, core/solver.ts); když druhý konec není roh, posune se
  *   celá skupina stěn, která na rohu visí,
- * - líc / čára stěny: posune se celá stěna (oba rohy, sousední stěny se protáhnou),
+ * - líc / čára stěny: posune se celá stěna (jen oba rohy, sousední stěny se protáhnou – `moveWallStretch`),
  * - bod kresby / čára kresby: celá kresba; oba konce na téže kresbě → jen ten bod / úsek (obdélník zůstane obdélníkem;
  *   dvojitá čára: 1. / 2. čára = změna šířky, uzavřený konec = posun bodu na tom konci),
  * - okraj otvoru: otvor se posune po stěně,
@@ -17,7 +17,7 @@
 import type { DimEnd, Drawing, Floor, FreeDim, Id, Node, Pt } from '../model/types';
 import { add, dist, dot, normal, projectToSegment, scale, sub, unit } from './geometry';
 import { DEFAULT_DOUBLE_WIDTH, moveDrawingVertex, placeDrawing } from './drawing';
-import { moveNodeWithRubberBand } from './solver';
+import { moveNodeWithRubberBand, moveWallStretch } from './solver';
 import { drawSeg, drawSegCount, measurePoints, protById, refGeom } from './dimRefs';
 import { moveProtEdge, ownProtEnd } from './protrusionDimMove';
 import { openingSpan, openingStartFromA } from './floorQueries';
@@ -131,14 +131,8 @@ function moveEnd(floor: Floor, e: DimEnd, other: DimEnd, otherPt: Pt, dx: number
     return true;
   }
   if ('wall' in e) {
-    const w = floor.walls[e.wall];
-    const na = w && floor.nodes[w.a];
-    const nb = w && floor.nodes[w.b];
-    if (!w || !na || !nb) return false;
-    // celá stěna: oba rohy (volné větve jedou s nimi, sousední stěny se protáhnou)
-    moveNodeWithRubberBand(floor, na, nb, dx, dy);
-    moveNodeWithRubberBand(floor, nb, na, dx, dy);
-    return true;
+    // celá stěna: oba rohy, sousední stěny se protáhnou (core/solver.ts)
+    return moveWallStretch(floor, e.wall, dx, dy);
   }
   const drId = drawingOf(e);
   if (drId) {

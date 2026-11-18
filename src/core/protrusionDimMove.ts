@@ -17,7 +17,7 @@ import { cornerDims, cornerFrame, cornerOutline, worldToCorner } from './cornerP
 import { endDims, endFrame, endOutline } from './endProtrusion';
 import { cornersOf, protrusionExtent } from './protrusion';
 import { protrusionDims, protrusionFits, rescaleArcs } from './protrusionEdit';
-import { moveNodeWithRubberBand } from './solver';
+import { moveNodeWithRubberBand, moveWallStretch } from './solver';
 import { dimKey, type DimTarget } from './dimLock';
 import { parallel, protById, protSeg, type ProtKind } from './dimRefs';
 
@@ -62,17 +62,6 @@ function edgePointMoves(pts: Pt[], i: number, disp: Pt, faceFirst: Pt, faceLast:
   const m0 = along(i, i - 1, faceFirst);
   const m1 = along(i + 1, i + 2, faceLast);
   return m0 && m1 ? [m0, m1] : null;
-}
-
-/** Posun celé stěny o (dx, dy) – oba rohy, sousední stěny se protáhnou (jako konec kóty na líci). */
-function moveWall(floor: Floor, wallId: Id, dx: number, dy: number): boolean {
-  const w = floor.walls[wallId];
-  const na = w && floor.nodes[w.a];
-  const nb = w && floor.nodes[w.b];
-  if (!w || !na || !nb) return false;
-  moveNodeWithRubberBand(floor, na, nb, dx, dy);
-  moveNodeWithRubberBand(floor, nb, na, dx, dy);
-  return true;
 }
 
 /** Zamčené rozměry výstupku (hodnoty) – pro rozhodnutí „posune se celek“. */
@@ -146,7 +135,7 @@ export function moveProtEdge(floor: Floor, id: Id, i: number, dx: number, dy: nu
     const c = cornersOf(floor, k.p);
     if (!c) return false;
     const d = unit(floor.nodes[c.w.a]!, floor.nodes[c.w.b]!);
-    if (!sameElement && parallel(ed, d)) return moveWall(floor, c.w.id, dx, dy); // čelní hrana
+    if (!sameElement && parallel(ed, d)) return moveWallStretch(floor, c.w.id, dx, dy); // čelní hrana
     const du = dot(disp, d);
     const before = k.p.pts;
     const nd = normal(d);
@@ -187,12 +176,12 @@ export function moveProtEdge(floor: Floor, id: Id, i: number, dx: number, dy: nu
     };
     // celek: stěna, se kterou je hrana rovnoběžná (výstupek se drží rohu a jede s ní)
     const wid = parallel(ed, f.e1) ? k.p.walls[0] : parallel(ed, f.e2) ? k.p.walls[1] : null;
-    return tryEdgeThenWhole(floor, k, area0, sameElement, edge, () => !!wid && moveWall(floor, wid, dx, dy), () => (k.p.pts = before));
+    return tryEdgeThenWhole(floor, k, area0, sameElement, edge, () => !!wid && moveWallStretch(floor, wid, dx, dy), () => (k.p.pts = before));
   }
 
   const f = endFrame(floor, k.p);
   if (!f) return false;
-  if (!sameElement && parallel(ed, f.e1)) return moveWall(floor, k.p.wallId, dx, dy); // čelní hrana (podél stěny)
+  if (!sameElement && parallel(ed, f.e1)) return moveWallStretch(floor, k.p.wallId, dx, dy); // čelní hrana (podél stěny)
   const before = k.p.pts;
   const last = before.length - 1;
   const edge = (): boolean => {

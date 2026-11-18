@@ -87,6 +87,23 @@ function hasLockedWallAlong(floor: Floor, node: Node, excludeWallId: Id, dir: { 
   return false;
 }
 
+/**
+ * Posun celé stěny o (dx, dy) zadaný kótou (konec kóty na líci stěny, čelní hrana výstupku): posunou se jen oba její
+ * rohy, sousední stěny se protáhnou / zkrátí. Volné větve se s ní nehýbou – u otevřeného půdorysu (chybí stěna) by
+ * jinak ujela celá místnost i s druhým koncem kóty (chyba od uživatele 2026-11-18). Jediné místo pro obě použití.
+ */
+export function moveWallStretch(floor: Floor, wallId: Id, dx: number, dy: number): boolean {
+  const w = floor.walls[wallId];
+  const na = w && floor.nodes[w.a];
+  const nb = w && floor.nodes[w.b];
+  if (!w || !na || !nb) return false;
+  for (const n of na === nb ? [na] : [na, nb]) {
+    n.x = round1(n.x + dx);
+    n.y = round1(n.y + dy);
+  }
+  return true;
+}
+
 export function moveNodeWithRubberBand(floor: Floor, moving: Node, fixed: Node, dx: number, dy: number): void {
   const toMove = new Set<Id>([moving.id]);
 
