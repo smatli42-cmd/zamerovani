@@ -12,14 +12,14 @@ import { add, centroid, dist, dot, lerp, normal, scale, sub, unit } from '../cor
 import { OPENING_DEFAULTS } from '../model/factory';
 import type { Floor, Id, Pt } from '../model/types';
 import type { Camera, NumPadTarget, Selection } from '../store/store';
-import { addHitBox, type HitAction } from './hitTargets';
+import { drawDimLine, type DimStyle } from './dimLine';
+import type { HitAction } from './hitTargets';
 import { toScreen } from './view';
 import { bodyNormal, bodyStart, facePointAt, faceSpan, hasBody } from '../core/wallFace';
 import { wallBodies } from '../core/wallBody';
 import { doorLayout } from '../core/doorLayout';
 import { openingStartFromA } from '../core/floorQueries';
 import { hostedChain } from '../core/hosting';
-import { dimKey } from '../core/dimLock';
 
 /** Těžiště každé souvislé skupiny stěn (pro určení strany „ven“). */
 function componentCentroids(floor: Floor): Map<Id, Pt> {
@@ -52,11 +52,6 @@ function componentCentroids(floor: Floor): Map<Id, Pt> {
   return result;
 }
 
-export interface DimStyle {
-  color: string;
-  bg: string;
-  bold: boolean;
-}
 
 export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camera, dimScale: number, selection: Selection): void {
   const centroids = componentCentroids(floor);
@@ -227,148 +222,6 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
     }
 
   }
-  ctx.restore();
-}
-
-function readableAngle(u: Pt): number {
-  let ang = Math.atan2(u.y, u.x);
-  if (ang > Math.PI / 2 + 0.01) ang -= Math.PI;
-  if (ang < -Math.PI / 2 - 0.01) ang += Math.PI;
-  return ang;
-}
-
-export function drawDimLine(
-  ctx: CanvasRenderingContext2D,
-  p1: Pt,
-  p2: Pt,
-  out: Pt,
-  offsetPx: number,
-  text: string,
-  subText: string | undefined,
-  style: DimStyle,
-  s: number,
-  action: HitAction | null
-): void {
-  const o = scale(out, offsetPx);
-  const q1 = { x: p1.x + o.x, y: p1.y + o.y };
-  const q2 = { x: p2.x + o.x, y: p2.y + o.y };
-  const u = unit(p1, p2);
-
-  ctx.save();
-  // Vynášecí čáry
-  ctx.strokeStyle = '#94a3b8';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  for (const [p, q] of [
-    [p1, q1],
-    [p2, q2]
-  ] as const) {
-    ctx.moveTo(p.x + out.x * 4, p.y + out.y * 4);
-    ctx.lineTo(q.x + out.x * 4, q.y + out.y * 4);
-  }
-  ctx.stroke();
-
-  // Kótovací čára a šikmé značky
-  ctx.strokeStyle = style.color;
-  ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  ctx.moveTo(q1.x, q1.y);
-  ctx.lineTo(q2.x, q2.y);
-  const tick = { x: (u.x + out.x) * 4, y: (u.y + out.y) * 4 };
-  for (const q of [q1, q2]) {
-    ctx.moveTo(q.x - tick.x, q.y - tick.y);
-    ctx.lineTo(q.x + tick.x, q.y + tick.y);
-  }
-  ctx.stroke();
-
-  // úsek bez čísla (např. rám okna – pevných 50 mm se nekótuje)
-  if (!text) {
-    ctx.restore();
-    return;
-  }
-
-  // Číslo
-  const fontPx = Math.round(13 * s);
-  const subPx = Math.round(10 * s);
-  ctx.font = `${style.bold ? 700 : 500} ${fontPx}px system-ui, sans-serif`;
-  const tw = ctx.measureText(text).width;
-  let sw = 0;
-  if (subText) {
-    ctx.font = `500 ${subPx}px system-ui, sans-serif`;
-    sw = ctx.measureText(subText).width;
-  }
-  const boxW = Math.max(tw, sw) + 10;
-  const boxH = fontPx + 6 + (subText ? subPx + 2 : 0);
-  const mid = lerp(q1, q2, 0.5);
-  const angle = readableAngle(u);
-
-  ctx.translate(mid.x, mid.y);
-  ctx.rotate(angle);
-  ctx.fillStyle = style.bg;
-  ctx.strokeStyle = style.color;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.roundRect(-boxW / 2, -boxH / 2, boxW, boxH, 4);
-  ctx.fill();
-  if (action) ctx.stroke();
-  ctx.fillStyle = style.color;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.font = `${style.bold ? 700 : 500} ${fontPx}px system-ui, sans-serif`;
-  ctx.fillText(text, 0, subText ? -boxH / 2 + 3 + fontPx / 2 : 0);
-  if (subText) {
-    ctx.font = `500 ${subPx}px system-ui, sans-serif`;
-    ctx.fillStyle = '#64748b';
-    ctx.fillText(subText, 0, boxH / 2 - 2 - subPx / 2);
-  }
-  ctx.restore();
-
-  if (action) addHitBox({ x: mid.x, y: mid.y, halfW: boxW / 2, halfH: boxH / 2, angle, action });
-
-  // Zámek kóty: modrá ikona hned za číslem (pomocná – jen v editoru)
-  if (action?.type === 'numpad' && action.target.kind !== 'field' && lockCtx.helpers) {
-    const key = dimKey(action.target);
-    if (lockCtx.locks?.[key]) {
-      const r = 9 * s;
-      const c = add(mid, scale({ x: Math.cos(angle), y: Math.sin(angle) }, boxW / 2 + r + 2));
-      drawLockIcon(ctx, c, r, key === lockCtx.blocked);
-      addHitBox({ x: c.x, y: c.y, halfW: r, halfH: r, angle, action: { type: 'lock', target: action.target } });
-    }
-  }
-}
-
-/** Zámky kót pro aktuální vykreslení (nastaví renderer před kreslením kót). */
-let lockCtx: { locks: Floor['dimLocks']; blocked: string | null; helpers: boolean } = { locks: undefined, blocked: null, helpers: true };
-
-/**
- * `locks` = zamčené kóty podlaží, `blocked` = kóta, která právě zastavila úpravu (zvýrazní se),
- * `helpers` = kreslit pomocné ikony (editor ano, export výkresu ne).
- */
-export function setDimLockContext(locks: Floor['dimLocks'], blocked: string | null, helpers: boolean): void {
-  lockCtx = { locks, blocked, helpers };
-}
-
-/** Ikona zámku: bílý kroužek s modrým okrajem a modrým zámkem (čitelné i na slunci); zvýrazněná žlutě. */
-function drawLockIcon(ctx: CanvasRenderingContext2D, c: Pt, r: number, highlight: boolean): void {
-  const blue = '#1d4ed8';
-  ctx.save();
-  ctx.translate(c.x, c.y);
-  ctx.beginPath();
-  ctx.arc(0, 0, r, 0, Math.PI * 2);
-  ctx.fillStyle = highlight ? '#fde047' : '#ffffff';
-  ctx.fill();
-  ctx.lineWidth = Math.max(1.5, r * 0.18);
-  ctx.strokeStyle = blue;
-  ctx.stroke();
-  // oblouk (třmen) a tělo zámku
-  const w = r * 0.95;
-  const h = r * 0.7;
-  ctx.beginPath();
-  ctx.arc(0, -h * 0.15, w * 0.32, Math.PI, 0);
-  ctx.lineWidth = Math.max(1.5, r * 0.2);
-  ctx.stroke();
-  ctx.fillStyle = blue;
-  ctx.fillRect(-w / 2, -h * 0.15, w, h * 0.75);
   ctx.restore();
 }
 

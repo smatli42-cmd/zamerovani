@@ -9,7 +9,7 @@ import { endDims, endFrame, endOutline, type EndDim } from '../core/endProtrusio
 import { add, dot, normal, scale, sub, unit } from '../core/geometry';
 import type { CornerPt, Floor, Pt } from '../model/types';
 import type { Camera, Selection } from '../store/store';
-import { drawDimLine, type DimStyle } from './drawDims';
+import { drawDimLine, type DimStyle } from './dimLine';
 import { toScreen } from './view';
 
 const STYLE: DimStyle = { color: '#334155', bg: '#ffffff', bold: false };

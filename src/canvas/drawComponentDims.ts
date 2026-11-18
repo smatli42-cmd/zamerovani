@@ -5,7 +5,7 @@
 import { type Side, visibleComponentGap } from '../core/components';
 import type { Floor, Pt } from '../model/types';
 import type { Camera, Selection } from '../store/store';
-import { drawDimLine, type DimStyle } from './drawDims';
+import { drawDimLine, type DimStyle } from './dimLine';
 import { toScreen } from './view';
 
 const GAP_STYLE: DimStyle = { color: '#0e7490', bg: '#ecfeff', bold: false };

@@ -6,7 +6,7 @@ import { dimLine, dimPoints, freeDimsOf } from '../core/freeDim';
 import { dist, normal, scale, sub } from '../core/geometry';
 import type { Floor } from '../model/types';
 import { isSelected, type Camera, type Selection } from '../store/store';
-import { drawDimLine, type DimStyle } from './drawDims';
+import { drawDimLine, type DimStyle } from './dimLine';
 import { toScreen } from './view';
 
 const STYLE: DimStyle = { color: '#334155', bg: '#ffffff', bold: false };

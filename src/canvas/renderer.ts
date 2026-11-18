@@ -3,7 +3,8 @@
  */
 import { store } from '../store/store';
 import { tools } from '../tools/registry';
-import { drawBodyDims, drawDims, drawProtrusionDims, setDimLockContext } from './drawDims';
+import { drawBodyDims, drawDims, drawProtrusionDims } from './drawDims';
+import { setDimLockContext } from './dimLine';
 import { drawGrid, drawScaleBar } from './drawGrid';
 import { drawCornerEndDims } from './drawCornerEndDims';
 import { drawFreeDims } from './drawFreeDims';
