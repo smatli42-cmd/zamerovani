@@ -7,6 +7,12 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-18 (17) – čísla kót vždy nad čarami (chyba od uživatele)
+- **Chyba od uživatele:** posun kóty funguje; když se ale číslo přesune na čáru sousední kóty, ta čára vede přes číslo.
+- **Co se změnilo:** `drawDimLine` (`canvas/dimLine.ts`) kreslí hned jen čáry; čísla a ikony zámků se kreslí až po všech kótách (`flushDimLabels` v rendereru). Test v `canvas/dimPlace.test.ts`.
+- **Viditelně v aplikaci:** číslo kóty je vždy nahoře a čitelné, i na čáře jiné kóty. Ověřeno v prohlížeči (řetěz výstupku přetažený na kótu délky stěny).
+- **Rozhodnuto samostatně:** nic. **Otevřené:** nic nového.
+
 ### 2026-11-18 (16) – posun kóty tažením za číslo (požadavek uživatele, průřezové)
 - **Co se změnilo:** každou kótu jde chytit za číslo a přetáhnout: kolmo (dál / blíž k prvku, i na druhou stranu) a číslo podél kótovací čáry (i za její konec – čára se k číslu prodlouží). Vynášecí (odkazové) čáry vedou vždy od měřených bodů ke kótě. Ťuknutí bez tažení dál otevře NumPad. Data `Floor.dimPlace` (SCHEMA_VERSION 23 bez převodu), pravidlo jen v `core/dimPlace.ts`, kreslení `canvas/dimLine.ts` (přesunuto z `drawDims.ts` samostatným commitem), tažení `input/pointer.ts`. Tažení = jeden krok Zpět; přerušené tažení (druhý prst) se vrátí. Testy `canvas/dimPlace.test.ts` (19).
 - **Viditelně v aplikaci:** číslo kóty jde táhnout perem / prstem / myší v každém nástroji; blízko výchozí polohy (8 px) kóta skočí zpět na výchozí. Ověřeno v prohlížeči (délka stěny dolů, nad stěnu, číslo za koncem čáry, ťuknutí → NumPad, Zpět).

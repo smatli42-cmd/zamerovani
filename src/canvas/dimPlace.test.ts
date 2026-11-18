@@ -15,7 +15,7 @@ import { addFreeDim, addLine, addOpening, addWall, beginDimDrag, deleteSelection
 import { frameOutside } from '../core/floorQueries';
 import { store, type Selection } from '../store/store';
 import { allHitBoxes, resetHitBoxes, type HitBox } from './hitTargets';
-import { setDimLockContext, setDimPlaceContext } from './dimLine';
+import { drawDimLine, flushDimLabels, setDimLockContext, setDimPlaceContext } from './dimLine';
 import { drawBodyDims, drawDims, drawProtrusionDims } from './drawDims';
 import { drawComponentDims } from './drawComponentDims';
 import { drawCornerEndDims } from './drawCornerEndDims';
@@ -46,6 +46,7 @@ function render(selection: Selection = null): HitBox[] {
   drawProtrusionDims(ctx, floor, cam, 1, selection);
   drawCornerEndDims(ctx, floor, cam, 1, selection);
   drawFreeDims(ctx, floor, cam, 1, selection, null);
+  flushDimLabels();
   return allHitBoxes().filter(b => b.action.type === 'numpad');
 }
 
@@ -315,5 +316,26 @@ describe('posun kóty – společná pravidla', () => {
     store.set({ selection: { kind: 'opening', id: op } });
     deleteSelection();
     expect(f().dimPlace?.[`row:openings:${right.id}`]).toBeUndefined();
+  });
+
+  it('čísla kót se kreslí až po čarách všech kót (posunuté číslo na čáře sousední kóty je čitelné)', () => {
+    const calls: string[] = [];
+    const rec = new Proxy({} as Record<string | symbol, unknown>, {
+      get: (t, k) => (k === 'measureText' ? () => ({ width: 30 }) : k in t ? t[k] : () => calls.push(String(k))),
+      set: (t, k, v) => {
+        t[k] = v;
+        return true;
+      }
+    }) as unknown as CanvasRenderingContext2D;
+    const st = { color: '#000', bg: '#fff', bold: false };
+    const act = { type: 'numpad' as const, target: { kind: 'wall-thickness' as const, wallId: 'w' } };
+    drawDimLine(rec, { x: 0, y: 0 }, { x: 100, y: 0 }, { x: 0, y: 1 }, 20, '100', undefined, st, 1, act);
+    drawDimLine(rec, { x: 0, y: 50 }, { x: 100, y: 50 }, { x: 0, y: 1 }, 20, '200', undefined, st, 1, act);
+    expect(calls).not.toContain('fillText');
+    const lines = calls.length;
+    flushDimLabels();
+    const after = calls.slice(lines);
+    expect(after.filter(c => c === 'fillText')).toHaveLength(2);
+    expect(after).not.toContain('lineTo');
   });
 });

@@ -4,7 +4,7 @@
 import { store } from '../store/store';
 import { tools } from '../tools/registry';
 import { drawBodyDims, drawDims, drawProtrusionDims } from './drawDims';
-import { setDimLockContext, setDimPlaceContext } from './dimLine';
+import { flushDimLabels, setDimLockContext, setDimPlaceContext } from './dimLine';
 import { drawGrid, drawScaleBar } from './drawGrid';
 import { drawCornerEndDims } from './drawCornerEndDims';
 import { drawFreeDims } from './drawFreeDims';
@@ -100,6 +100,8 @@ function render(): void {
     }
     // volné kóty jsou samostatné prvky – kreslí se i při skrytých automatických kótách
     drawFreeDims(ctx, floor, cam, state.settings.dimScale, state.selection, state.hover);
+    // čísla kót až nad všemi čarami kót (posunuté číslo na čáře sousední kóty zůstane čitelné)
+    flushDimLabels();
     drawArcHandle(ctx, floor, cam, state.selection);
     drawDrawingHandles(ctx, floor, cam, state.selection);
     drawFlipArrow(ctx, floor, cam, state.selection);

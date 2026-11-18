@@ -113,26 +113,32 @@ export function drawDimLine(
     ctx.restore();
   }
 
-  ctx.translate(mid.x, mid.y);
-  ctx.rotate(angle);
-  ctx.fillStyle = style.bg;
-  ctx.strokeStyle = style.color;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.roundRect(-boxW / 2, -boxH / 2, boxW, boxH, 4);
-  ctx.fill();
-  if (action) ctx.stroke();
-  ctx.fillStyle = style.color;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.font = `${style.bold ? 700 : 500} ${fontPx}px system-ui, sans-serif`;
-  ctx.fillText(text, 0, subText ? -boxH / 2 + 3 + fontPx / 2 : 0);
-  if (subText) {
-    ctx.font = `500 ${subPx}px system-ui, sans-serif`;
-    ctx.fillStyle = '#64748b';
-    ctx.fillText(subText, 0, boxH / 2 - 2 - subPx / 2);
-  }
   ctx.restore();
+
+  // číslo se kreslí až po čarách všech kót (flushDimLabels) – žádná kótovací čára ho nepřeškrtne
+  labels.push(() => {
+    ctx.save();
+    ctx.translate(mid.x, mid.y);
+    ctx.rotate(angle);
+    ctx.fillStyle = style.bg;
+    ctx.strokeStyle = style.color;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(-boxW / 2, -boxH / 2, boxW, boxH, 4);
+    ctx.fill();
+    if (action) ctx.stroke();
+    ctx.fillStyle = style.color;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `${style.bold ? 700 : 500} ${fontPx}px system-ui, sans-serif`;
+    ctx.fillText(text, 0, subText ? -boxH / 2 + 3 + fontPx / 2 : 0);
+    if (subText) {
+      ctx.font = `500 ${subPx}px system-ui, sans-serif`;
+      ctx.fillStyle = '#64748b';
+      ctx.fillText(subText, 0, boxH / 2 - 2 - subPx / 2);
+    }
+    ctx.restore();
+  });
 
   const drag: DimDrag | undefined = target && dimRow ? { row: dimRow, target, out, u, alongKey: place.alongKey } : undefined;
   if (action) addHitBox({ x: mid.x, y: mid.y, halfW: boxW / 2, halfH: boxH / 2, angle, action, drag });
@@ -143,21 +149,39 @@ export function drawDimLine(
     if (lockCtx.locks?.[key]) {
       const r = 9 * s;
       const c = add(mid, scale({ x: Math.cos(angle), y: Math.sin(angle) }, boxW / 2 + r + 2));
-      drawLockIcon(ctx, c, r, key === lockCtx.blocked);
+      const highlight = key === lockCtx.blocked;
+      labels.push(() => drawLockIcon(ctx, c, r, highlight));
       addHitBox({ x: c.x, y: c.y, halfW: r, halfH: r, angle, action: { type: 'lock', target: action.target } });
     }
   }
 }
 
+/** Čísla kót a ikony zámků čekající na vykreslení nad všemi čarami kót. */
+let labels: (() => void)[] = [];
+
+/** Vykreslí čísla všech kót nakreslených od posledního volání (nad všemi kótovacími a vynášecími čarami). */
+export function flushDimLabels(): void {
+  const list = labels;
+  labels = [];
+  for (const draw of list) draw();
+}
+
 /** Posunuté kóty a měřítko pro aktuální vykreslení (nastaví renderer před kreslením kót). */
-let placeCtx: { place: Floor['dimPlace']; zoom: number } = { place: undefined, zoom: 1 };
+let placeCtx: { place: Floor['dimPlace']; zoom: number } = {
+  place: undefined,
+  zoom: 1
+};
 
 export function setDimPlaceContext(place: Floor['dimPlace'], zoom: number): void {
   placeCtx = { place, zoom };
 }
 
 /** Zámky kót pro aktuální vykreslení (nastaví renderer před kreslením kót). */
-let lockCtx: { locks: Floor['dimLocks']; blocked: string | null; helpers: boolean } = { locks: undefined, blocked: null, helpers: true };
+let lockCtx: {
+  locks: Floor['dimLocks'];
+  blocked: string | null;
+  helpers: boolean;
+} = { locks: undefined, blocked: null, helpers: true };
 
 /**
  * `locks` = zamčené kóty podlaží, `blocked` = kóta, která právě zastavila úpravu (zvýrazní se),
