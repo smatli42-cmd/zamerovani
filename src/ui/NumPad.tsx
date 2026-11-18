@@ -5,7 +5,7 @@ import { wallNodes } from '../core/floorQueries';
 import { OPENING_DEFAULTS } from '../model/factory';
 import type { Floor } from '../model/types';
 import { numpadValue, pressKey, setFreeDimMove, setMoveTarget, toggleCurrentLock, type NumKey } from '../store/numpadController';
-import { endLabel } from '../core/freeDim';
+import { refLabel as endLabel } from '../core/dimRefs';
 import { END_DIM_LABEL, isDimLocked } from '../core/dimLock';
 import { store, type NumPadTarget } from '../store/store';
 import { useStore } from '../store/useStore';

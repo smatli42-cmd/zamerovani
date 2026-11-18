@@ -3,16 +3,16 @@
  */
 import { newId } from '../../model/factory';
 import type { DimEnd, Id } from '../../model/types';
-import { endPoint, sameEnd } from '../../core/freeDim';
+import { dimPoints, sameEnd } from '../../core/freeDim';
 import { dist } from '../../core/geometry';
 import { store } from '../store';
 
 /** Přidá kótu mezi body `a` a `b` (vybere se). null = stejný bod / nulová délka. */
 export function addFreeDim(a: DimEnd, b: DimEnd, offset = 0): Id | null {
   const floor = store.floor();
-  const pa = floor && endPoint(floor, a);
-  const pb = floor && endPoint(floor, b);
-  if (!pa || !pb || sameEnd(a, b) || dist(pa, pb) < 1) return null;
+  // kóta, která nejde změřit (nerovnoběžné hrany, nulová délka), nevznikne
+  const pts = floor && dimPoints(floor, { id: '', a, b, offset: 0 });
+  if (!pts || sameEnd(a, b) || dist(pts[0], pts[1]) < 1) return null;
   const id = newId('dim');
   store.edit(
     f => {

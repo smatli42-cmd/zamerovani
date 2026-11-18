@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-18 (5) – kóta se přichytí k hranám (líce stěn, čáry, okraje otvorů), kolmá jako v CAD
+- **Chyby / požadavek od uživatele:** kóta se nepřichytávala ke všem prvkům (obě strany stěny, čáry, okna, dveře); při najetí myší nebylo vidět, k čemu se přichytí; kóta má být „rovnoběžná jako v CAD“ (první ťuknutí třeba na stěnu, druhé na čáru).
+- **Co se změnilo:** Podle zarovnané kóty v Revitu (Aligned Dimension: kóta mezi rovnoběžnými hranami nebo body, měří kolmo) může být konec kóty i **hrana**: líc rovné stěny (oba líce; u stěny bez tloušťky čára), rovný úsek čáry kresby (i obdélník, první čára dvojité), okraj otvoru napříč stěnou (dveře, okno, průchod, nika). Hledání a geometrie konců jen v `core/dimRefs.ts`. Hrana – rovnoběžná hrana a hrana – bod: kolmá vzdálenost; bod – bod: přímo; nerovnoběžné hrany: kóta nevznikne (hlášení). Zadaná délka: líc = posune se celá stěna (sousední se protáhnou), čára kresby = celá kresba (na téže kresbě jen úsek – obdélník zůstane obdélníkem), okraj otvoru = otvor po stěně (nesmí najet na jiný otvor ani vyjet ze stěny), oba okraje téhož otvoru = šířka otvoru (levý okraj stojí). Délka se ověřuje až po vrácení otvorů na místo. Po dělení / sloučení stěny kóta přejde na líc na stejné přímce. SCHEMA_VERSION 21. Testy v `store/freeDim.test.ts` (40). Po kontrole revieweru opraveno: posun okraje otvoru na sousední otvor, pořadí kontroly délky, dělení stěny mazalo kótu, akce přijala nerovnoběžné hrany, úseky otevřené čáry.
+- **Viditelně v aplikaci:** nástroj Kóta při najetí myší / perem zvýrazní modře hranu nebo bod, ke kterému se přichytí; 1. konec zůstane zeleně; nerovnoběžná hrana červeně; mezi nimi náhled kolmé kóty s délkou. Ověřeno v prohlížeči (líc – čára 1000, líc – okraj okna 2600).
+- **Rozhodnuto samostatně:** bod (roh, bod kresby) má při přichycení přednost před hranou, mezi hranami nejbližší; nerovnoběžné hrany odmítnout (jako Revit); kóta mezi okraji téhož otvoru mění šířku; přehození strany stěny – kóta zůstane na geometricky stejné straně (na líci, který je teď na té straně).
+- **Otevřené:** druhá čára dvojité čáry, líc obloukové stěny a oblouk kresby se nepřichytí; hrany výstupků a místnosti zatím ne; kopie kót; ťuknutí podruhé na tentýž líc jinde nic nehlásí.
+
 ### 2026-11-18 (4) – volná kóta mezi dvěma body, úhlopříčka (fronta bod 1)
 - **Co se změnilo:** Nový prvek **volná kóta** (`Floor.dims`, SCHEMA_VERSION 20 bez převodu). Pravidla na jednom místě `core/freeDim.ts`. Konec kóty je roh stěny (jede s ním), bod kresby (vrchol, střed kruhu) nebo pevný bod výkresu. Kóta je řídicí: zadaná délka (NumPad, panel) posune zvolený bod ve směru kóty – roh jako při změně délky stěny (řešič „gumička“; když druhý konec není roh, posune se celá skupina stěn), kresbu celou, oba body na jedné kresbě jen ten bod (obdélník zůstane obdélníkem), pevný bod jen sám. Prvky nesené stěnou zůstanou na místě (`keepOpeningsOnResizedWalls`), zámky se dodržují, výsledek se ověří po dorovnání napojených rohů. Kóta jde zamknout (`free-dim` v `core/dimLock.ts`). Po každé úpravě (`store.edit`) se konce kót znovu napojí: zaniklý roh → roh na stejném místě / pevný bod, když tam dál vede stěna (sloučení stěn); přečíslovaný bod kresby (prodloužení čáry od začátku, spojení čar) → vrchol na stejném místě; jinak kóta zanikne se svým prvkem. Do rohu / K hraně přepojí kótu s koncem stěny (`remapDimNode`), stejně přetažení rohu na roh. Nástroj 📏 **Kóta** (`tools/dimTool.ts`), kreslení `canvas/drawFreeDims.ts`, panel `ui/panels/DimPanel.tsx`, akce `store/actions/dims.ts`. Testy `store/freeDim.test.ts` (25). Po kontrole revieweru opraveno: okna při změně délky stěny přes kótu ujížděla; kóta ke kresbě po prodloužení čáry od začátku skočila na jiný bod; spojení čar a Do rohu kótu smazaly; ťuknutí na roh, kde končí jiná kóta, místo nové kóty chytlo tu starou; kóta ležící na stěně zakrývala stěnu při výběru (kóta je teď ve výběru až za stěnou).
 - **Viditelně v aplikaci:** v liště 📏 Kóta – ťuknout na dva body (roh, bod kresby, místo ve výkresu), kóta se nakreslí a vybere; ťuknutím na číslo NumPad s volbou „Posunout bod: 1. / 2.“; tažením za čáru kóty (nástrojem Kóta) se mění odsazení; panel Kóta (délka, odsazení, zámek, smazat). Ověřeno v prohlížeči (úhlopříčka místnosti 5000 → posun rohu po úhlopříčce).
@@ -459,14 +466,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Poslední stav (2026-11-18, volná kóta)
 
-**Hotové (na webu):** kresba, D3 K hraně, napojení na líc oblouku – uživatel vyzkoušel na PC. Kóty výstupku v rohu a na konci stěny (2026-11-18 (2)), vybrání v rohu (3), volná kóta / úhlopříčka (4) – **čeká na vyzkoušení**. Testy 589, typecheck OK. SCHEMA_VERSION 20.
+**Hotové (na webu):** kresba, D3 K hraně, napojení na líc oblouku – uživatel vyzkoušel na PC. Kóty výstupku v rohu a na konci stěny (2026-11-18 (2)), vybrání v rohu (3), volná kóta / úhlopříčka (4), kóta na hranách (5) – **čeká na vyzkoušení**. Testy 604, typecheck OK. SCHEMA_VERSION 21.
 
 **Rozpracované:** nic.
 
 **Čeká na vyzkoušení:** kóty výstupku v rohu / na konci, vybrání v rohu, nástroj Kóta (PC); na tabletu vše od 2026-11-14.
 
 **Fronta kroků:**
-1. Volná kóta – doplnit podle zkoušky uživatele: konce na okrajích otvorů / rozích výstupků / lících, kopie, výběr obdélníkem, odsazení tažením i ve Vybrat; úhlopříčka se zachováním délek stěn (řešič). Později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) s exportem DXF / PDF.
+1. Volná kóta – doplnit podle zkoušky uživatele: hrany výstupků, oblouky, druhá čára dvojité čáry, kopie, výběr obdélníkem, odsazení tažením i ve Vybrat; úhlopříčka se zachováním délek stěn (řešič). Později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) s exportem DXF / PDF.
 2. Drobnosti: řetězová kóta polohy napojení i u oblouku; Do rohu / K hraně pro oblouky; řetězová kóta užšího otvoru při vypnutém vnitřním ostění.
 
 ## Předchozí stav (2026-11-15, konec sezení)

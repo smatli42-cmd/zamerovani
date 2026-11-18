@@ -7,8 +7,10 @@ import { createProject } from '../model/factory';
 import type { DimEnd, Pt } from '../model/types';
 import { freeDimValue, freeDimsOf } from '../core/freeDim';
 import { dist } from '../core/geometry';
-import { addDrawCircle, addDrawLine, addFreeDim, addOpening, addWall, applyNumpadValue, deleteSelection, mergeNodeIfCoincident, setDimLock, setFreeDimOffset, trimToCorner } from './actions';
+import { addDrawCircle, addDrawLine, addFreeDim, addOpening, addWall, splitWall, applyNumpadValue, deleteSelection, mergeNodeIfCoincident, setDimLock, setFreeDimOffset, trimToCorner } from './actions';
 import { endPoint } from '../core/freeDim';
+import { refAt } from '../core/dimRefs';
+import { openingStartFromA, wallLength } from '../core/floorQueries';
 import { store } from './store';
 import { dimTool } from '../tools/dimTool';
 import { pickAny } from '../tools/pick';
@@ -275,5 +277,181 @@ describe('volná kóta – po kontrole revieweru', () => {
     room();
     addFreeDim(N({ x: 0, y: 0 }), N({ x: 4000, y: 0 }));
     expect(pickAny(f(), { x: 2000, y: 0 }, store.get().camera)?.kind).toBe('wall');
+  });
+});
+
+describe('volná kóta na hranách (rozhodnutí uživatele 2026-11-18: přichytit ke všem prvkům, kóta rovnoběžná jako v CAD)', () => {
+  /** Stěna místnosti podle rohů (osa na vnitřním líci, tělo ven). */
+  const wallBy = (p: Pt, q: Pt) => Object.values(f().walls).find(w => [w.a, w.b].includes(nodeAt(p).id) && [w.a, w.b].includes(nodeAt(q).id))!;
+
+  it('najetí na líc stěny: přichytí se k líci (vnitřní i vnější), ne k bodu', () => {
+    room();
+    const top = wallBy({ x: 0, y: 0 }, { x: 4000, y: 0 });
+    const tol = 50;
+    const inner = refAt(f(), { x: 2000, y: 10 }, tol, tol);
+    const outer = refAt(f(), { x: 2000, y: -290 }, tol, tol);
+    expect(inner).toMatchObject({ wall: top.id });
+    expect(outer).toMatchObject({ wall: top.id });
+    expect((inner as { side: number }).side).not.toBe((outer as { side: number }).side);
+  });
+
+  it('líc – rovnoběžný líc: kolmá vzdálenost; nástrojem Kóta dvěma ťuknutími', () => {
+    room();
+    dimTool.up!(tap({ x: 1500, y: 5 })); // vnitřní líc horní stěny
+    dimTool.up!(tap({ x: 2500, y: 2995 })); // vnitřní líc dolní stěny
+    expect(dims()).toHaveLength(1);
+    expect(freeDimValue(f(), dims()[0]!.id)).toBeCloseTo(3000, 6);
+    expect(dims()[0]!.a).toMatchObject({ wall: wallBy({ x: 0, y: 0 }, { x: 4000, y: 0 }).id });
+  });
+
+  it('vnější líc – vnitřní líc téže stěny = tloušťka stěny', () => {
+    room();
+    dimTool.up!(tap({ x: 1500, y: -300 }));
+    dimTool.up!(tap({ x: 1500, y: 0 }));
+    expect(freeDimValue(f(), dims()[0]!.id)).toBeCloseTo(300, 6);
+  });
+
+  it('nerovnoběžné hrany: kóta nevznikne', () => {
+    room();
+    dimTool.up!(tap({ x: 1500, y: 5 })); // horní líc
+    dimTool.up!(tap({ x: 5, y: 1500 })); // levý líc – kolmo
+    expect(dims()).toHaveLength(0);
+    dimTool.cancel!();
+  });
+
+  it('zadání délky mezi líci posune celou stěnu (sousední stěny se protáhnou)', () => {
+    room();
+    dimTool.up!(tap({ x: 1500, y: 5 }));
+    dimTool.up!(tap({ x: 2500, y: 2995 }));
+    const id = dims()[0]!.id;
+    expect(applyNumpadValue({ kind: 'free-dim', dimId: id, move: 'b' }, 3200)).toBe(true);
+    expect(nodeAt({ x: 0, y: 3200 })).toBeDefined();
+    expect(nodeAt({ x: 4000, y: 3200 })).toBeDefined();
+    expect(freeDimValue(f(), id)).toBeCloseTo(3200, 6);
+  });
+
+  it('líc stěny – čára kresby rovnoběžná: kolmá vzdálenost, zadáním se posune čára', () => {
+    room();
+    const l = addDrawLine({ x: 500, y: 800 }, { x: 2500, y: 800 })!;
+    dimTool.up!(tap({ x: 1500, y: 5 }));
+    dimTool.up!(tap({ x: 1000, y: 805 }));
+    const d = dims()[0]!;
+    expect(d.b).toMatchObject({ seg: l, i: 0 });
+    expect(freeDimValue(f(), d.id)).toBeCloseTo(800, 6);
+    expect(applyNumpadValue({ kind: 'free-dim', dimId: d.id, move: 'b' }, 1000)).toBe(true);
+    expect(f().drawings![l]!.pts[0]).toMatchObject({ x: 500, y: 1000 });
+  });
+
+  it('líc – bod: kolmá vzdálenost bodu od líce', () => {
+    room();
+    const c = addDrawCircle({ x: 1000, y: 700 }, 100);
+    const top = wallBy({ x: 0, y: 0 }, { x: 4000, y: 0 });
+    const id = addFreeDim({ wall: top.id, side: 1, at: 3000 }, { drawing: c, i: 0 })!; // side 1 = vnitřní líc y = 0
+    expect(freeDimValue(f(), id)).toBeCloseTo(700, 6);
+  });
+
+  it('okraj otvoru: ťuknutí na ostění okna se přichytí k okraji; zadáním se okno posune po stěně', () => {
+    room();
+    const top = wallBy({ x: 0, y: 0 }, { x: 4000, y: 0 });
+    const op = addOpening(top.id, 'window', 0.5)!;
+    const len = wallLength(f(), f().walls[top.id]!);
+    const start = openingStartFromA(f().openings[op]!, len);
+    const a = f().nodes[top.a]!;
+    const dir = Math.sign(f().nodes[top.b]!.x - a.x);
+    const edgeX = a.x + dir * start;
+    const e = refAt(f(), { x: edgeX + 3, y: -150 }, 20, 20);
+    expect(e).toMatchObject({ opening: op, edge: 'start' });
+    // kóta od protější (levé) stěny k okraji okna
+    const left = wallBy({ x: 0, y: 0 }, { x: 0, y: 3000 });
+    const id = addFreeDim({ wall: left.id, side: 1, at: 1500 }, e!)!;
+    const v0 = freeDimValue(f(), id)!;
+    expect(applyNumpadValue({ kind: 'free-dim', dimId: id, move: 'b' }, Math.round(v0) + 100)).toBe(true);
+    expect(freeDimValue(f(), id)).toBeCloseTo(Math.round(v0) + 100, 0);
+    expect(Math.abs(openingStartFromA(f().openings[op]!, len) - start)).toBeCloseTo(100, 0);
+  });
+
+  it('kóta k čáře kresby přežije prodloužení čáry od začátku', () => {
+    store.openProject(createProject({ name: 't' }));
+    const l = addDrawLine({ x: 0, y: 0 }, { x: 1000, y: 0 })!;
+    const id = addFreeDim({ seg: l, i: 0, at: 500 }, { x: 500, y: 600 })!;
+    addDrawLine({ x: 0, y: 0 }, { x: -500, y: -500 });
+    expect(freeDimValue(f(), id)).toBeCloseTo(600, 6);
+  });
+
+  it('smazání stěny smaže kótu k jejímu líci', () => {
+    room();
+    const top = wallBy({ x: 0, y: 0 }, { x: 4000, y: 0 });
+    addFreeDim({ wall: top.id, side: -1, at: 1000 }, { x: 1000, y: 1000 });
+    store.set({ selection: { kind: 'wall', id: top.id } });
+    deleteSelection();
+    expect(dims()).toHaveLength(0);
+  });
+});
+
+describe('volná kóta na hranách – po kontrole revieweru', () => {
+  const wallBy = (p: Pt, q: Pt) => Object.values(f().walls).find(w => [w.a, w.b].includes(nodeAt(p).id) && [w.a, w.b].includes(nodeAt(q).id))!;
+  const startOf = (op: string) => {
+    const o = f().openings[op]!;
+    return openingStartFromA(o, wallLength(f(), f().walls[o.wallId]!));
+  };
+
+  it('posun okraje otvoru na jiný otvor se neprovede', () => {
+    room();
+    const top = wallBy({ x: 0, y: 0 }, { x: 4000, y: 0 });
+    const o1 = addOpening(top.id, 'window', 0.25)!;
+    const o2 = addOpening(top.id, 'window', 0.75)!;
+    const left = wallBy({ x: 0, y: 0 }, { x: 0, y: 3000 });
+    const id = addFreeDim({ wall: left.id, side: 1, at: 1500 }, { opening: o1, edge: 'start', at: -150 })!;
+    const s1 = startOf(o1);
+    const gap = startOf(o2) - s1;
+    expect(applyNumpadValue({ kind: 'free-dim', dimId: id, move: 'b' }, Math.round(freeDimValue(f(), id)!) + gap)).toBe(false);
+    expect(startOf(o1)).toBeCloseTo(s1, 0);
+  });
+
+  it('kóta mezi okraji téhož otvoru = šířka otvoru (levý okraj stojí)', () => {
+    room();
+    const top = wallBy({ x: 0, y: 0 }, { x: 4000, y: 0 });
+    const op = addOpening(top.id, 'window', 0.5)!;
+    const s0 = startOf(op);
+    const w0 = f().openings[op]!.width;
+    const id = addFreeDim({ opening: op, edge: 'start', at: -150 }, { opening: op, edge: 'end', at: -150 })!;
+    const v0 = freeDimValue(f(), id)!;
+    expect(applyNumpadValue({ kind: 'free-dim', dimId: id, move: 'b' }, Math.round(v0) + 200)).toBe(true);
+    expect(f().openings[op]!.width).toBe(w0 + 200);
+    expect(startOf(op)).toBeCloseTo(s0, 0);
+  });
+
+  it('kóta k okraji otvoru na protahované stěně: otvor zůstane na místě a délka sedí', () => {
+    room();
+    const right = wallBy({ x: 4000, y: 0 }, { x: 4000, y: 3000 });
+    const op = addOpening(right.id, 'window', 0.6)!;
+    const top = wallBy({ x: 0, y: 0 }, { x: 4000, y: 0 });
+    // líc horní stěny – vzdálenější okraj okna (rovnoběžné hrany)
+    const id = addFreeDim({ wall: top.id, side: 1, at: 3900 }, { opening: op, edge: 'end', at: 0 });
+    const did = id ?? addFreeDim({ wall: top.id, side: 1, at: 3900 }, { opening: op, edge: 'start', at: 0 })!;
+    const v0 = freeDimValue(f(), did)!;
+    // posun horní stěny (1. konec) o 200 nahoru: okno na pravé stěně má zůstat na místě
+    expect(applyNumpadValue({ kind: 'free-dim', dimId: did, move: 'a' }, Math.round(v0) + 200)).toBe(true);
+    expect(freeDimValue(f(), did)).toBeCloseTo(Math.round(v0) + 200, 0);
+  });
+
+  it('rozdělení stěny nezruší kótu k jejímu líci', () => {
+    room();
+    const top = wallBy({ x: 0, y: 0 }, { x: 4000, y: 0 });
+    const bottom = wallBy({ x: 0, y: 3000 }, { x: 4000, y: 3000 });
+    const id = addFreeDim({ wall: top.id, side: 1, at: 2000 }, { wall: bottom.id, side: 1, at: 2000 })!;
+    const v = freeDimValue(f(), id);
+    expect(v).not.toBeNull();
+    splitWall(top.id, { x: 1000, y: -150 });
+    expect(dims()).toHaveLength(1);
+    expect(freeDimValue(f(), id)).toBeCloseTo(v!, 6);
+  });
+
+  it('akce nevytvoří kótu mezi nerovnoběžnými hranami', () => {
+    room();
+    const top = wallBy({ x: 0, y: 0 }, { x: 4000, y: 0 });
+    const left = wallBy({ x: 0, y: 0 }, { x: 0, y: 3000 });
+    expect(addFreeDim({ wall: top.id, side: 1, at: 1000 }, { wall: left.id, side: 1, at: 1000 })).toBeNull();
+    expect(dims()).toHaveLength(0);
   });
 });

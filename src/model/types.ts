@@ -10,7 +10,7 @@
 
 import type { DimTarget } from '../core/dimLock';
 
-export const SCHEMA_VERSION = 20;
+export const SCHEMA_VERSION = 21;
 
 export type Id = string;
 
@@ -293,9 +293,20 @@ export interface Drawing {
 }
 
 /**
- * Konec volné kóty: roh stěny (jede s ním), bod kresby (vrchol `i` kresby, u kruhu střed) nebo pevný bod výkresu.
+ * Konec volné kóty (core/dimRefs.ts) – bod nebo hrana, ke které se kóta přichytila a se kterou jede:
+ * - body: roh stěny, bod kresby (vrchol `i`, u kruhu střed), pevný bod výkresu,
+ * - hrany: líc rovné stěny (`side` 1 / −1 jako `Protrusion.side`, 0 = čára stěny bez tloušťky; `at` = mm od rohu A
+ *   po ose – místo, kde kóta na hranu dosedá), úsek `i` čáry kresby (`at` = mm od bodu `i`), okraj otvoru ve stěně
+ *   (`at` = mm kolmo od osy stěny).
+ * Kóta mezi rovnoběžnými hranami / hranou a bodem měří kolmou vzdálenost (jako zarovnaná kóta v CAD).
  */
-export type DimEnd = { node: Id } | { drawing: Id; i: number } | { x: number; y: number };
+export type DimEnd =
+  | { node: Id }
+  | { drawing: Id; i: number }
+  | { x: number; y: number }
+  | { wall: Id; side: 1 | -1 | 0; at: number }
+  | { seg: Id; i: number; at: number }
+  | { opening: Id; edge: 'start' | 'end'; at: number };
 
 /**
  * Volná kóta mezi dvěma body (POZADAVKY.md 3, rozhodnutí uživatele 2026-11-18: řídicí – zadaná délka posune zvolený

@@ -180,7 +180,8 @@ export function applyNumpadValue(t: NumPadTarget, value: number, overrideLock = 
     } else if (t.kind === 'end-dim') {
       ok = applyEndDim(floor, t.protrusionId, t.dim, value);
     } else if (t.kind === 'free-dim') {
-      ok = setFreeDimLength(floor, t.dimId, value, t.move);
+      // délka se ověří až po vrácení otvorů na místo (níže, po store.edit)
+      ok = setFreeDimLength(floor, t.dimId, value, t.move, false);
       if (!ok) dimFail = true;
       // prvky nesené stěnou zůstanou ve výkresu na místě (pravidlo jako u délky stěny, core/openingChain.ts)
       const before = store.floor();

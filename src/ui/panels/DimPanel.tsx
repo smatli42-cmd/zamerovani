@@ -2,7 +2,8 @@
  * Panel volné kóty (core/freeDim.ts): délka (posune zvolený bod), odsazení, zámek, smazání.
  */
 import { useState } from 'preact/hooks';
-import { endLabel, freeDimValue } from '../../core/freeDim';
+import { freeDimValue } from '../../core/freeDim';
+import { refLabel as endLabel } from '../../core/dimRefs';
 import { isDimLocked } from '../../core/dimLock';
 import type { Floor, FreeDim } from '../../model/types';
 import { applyNumpadValue, deleteSelection, setFreeDimOffset, toggleDimLock } from '../../store/actions';
@@ -17,8 +18,8 @@ export function DimPanel({ floor, d }: { floor: Floor; d: FreeDim }) {
   return (
     <Panel title="Kóta" onClose={close}>
       <p class="muted small">
-        Kóta mezi dvěma body: 1. {endLabel(d.a)}, 2. {endLabel(d.b)}. Zadaná délka posune zvolený bod ve směru kóty (roh stěny jako při změně délky
-        stěny, kresbu celou, oba body na jedné kresbě jen bod).
+        Kóta: 1. {endLabel(d.a)}, 2. {endLabel(d.b)}. Mezi rovnoběžnými hranami měří kolmo. Zadaná délka posune zvolený konec ve směru kóty (roh jako při
+        změně délky stěny, líc = celou stěnu, kresbu celou, okraj otvoru = otvor po stěně).
       </p>
       <Seg
         options={[
