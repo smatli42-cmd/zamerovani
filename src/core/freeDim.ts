@@ -43,6 +43,17 @@ export function dimLine(floor: Floor, d: FreeDim): [Pt, Pt] | null {
   return [add(pts[0], o), add(pts[1], o)];
 }
 
+/** Konec, jehož posun hýbe stěnami (roh, líc stěny). Okraj otvoru, kresba a pevný bod posunou jen sebe. */
+const movesWalls = (e: DimEnd): boolean => 'node' in e || 'wall' in e;
+
+/**
+ * Výchozí posouvaný konec kóty (NumPad, panel): 2. bod; když ale 2. konec hýbe stěnami a 1. ne (okraj otvoru,
+ * kresba, pevný bod), posune se 1. – zadáním kóty k oknu se má posunout okno, ne stěna (chyba od uživatele 2026-11-18).
+ */
+export function defaultFreeDimMove(d: FreeDim): 'a' | 'b' {
+  return movesWalls(d.b) && !movesWalls(d.a) ? 'a' : 'b';
+}
+
 /** Kóta, jejíž kótovací čára leží do `tol` od bodu (nejbližší). */
 export function pickFreeDim(floor: Floor, p: Pt, tol: number): Id | null {
   let best: Id | null = null;

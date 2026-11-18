@@ -2,7 +2,7 @@
  * Panel volné kóty (core/freeDim.ts): délka (posune zvolený bod), odsazení, zámek, smazání.
  */
 import { useState } from 'preact/hooks';
-import { freeDimValue } from '../../core/freeDim';
+import { defaultFreeDimMove, freeDimValue } from '../../core/freeDim';
 import { refLabel as endLabel } from '../../core/dimRefs';
 import { isDimLocked } from '../../core/dimLock';
 import type { Floor, FreeDim } from '../../model/types';
@@ -11,7 +11,7 @@ import { close } from './common';
 import { NumField, Panel, Seg } from './fields';
 
 export function DimPanel({ floor, d }: { floor: Floor; d: FreeDim }) {
-  const [move, setMove] = useState<'a' | 'b'>('b');
+  const [move, setMove] = useState<'a' | 'b'>(() => defaultFreeDimMove(d));
   const value = freeDimValue(floor, d.id);
   const target = { kind: 'free-dim' as const, dimId: d.id, move };
   const locked = isDimLocked(floor, target);

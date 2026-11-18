@@ -1,6 +1,6 @@
 /**
- * Volné kóty (core/freeDim.ts): kótovací čára s odsazením, klikací číslo otevře NumPad (posune se 2. bod,
- * v NumPadu jde přepnout), zamčená kóta má ikonu zámku. Vybraná / pod perem modře.
+ * Volné kóty (core/freeDim.ts): kótovací čára s odsazením, klikací číslo otevře NumPad (výchozí posouvaný bod
+ * vybere `defaultFreeDimMove` při otevření, v NumPadu jde přepnout), zamčená kóta má ikonu zámku. Vybraná / pod perem modře.
  */
 import { dimLine, dimPoints, freeDimsOf } from '../core/freeDim';
 import { dist, normal, scale, sub } from '../core/geometry';

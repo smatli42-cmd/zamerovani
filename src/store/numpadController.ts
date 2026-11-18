@@ -9,6 +9,7 @@ import { endDims } from '../core/endProtrusion';
 import type { Id } from '../model/types';
 import { applyNumpadValue, numpadInitialValue, toggleDimLock } from './actions';
 import { isDimLocked } from '../core/dimLock';
+import { defaultFreeDimMove } from '../core/freeDim';
 import { store, type NumPadTarget } from './store';
 
 export type NumKey = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '00' | '000' | '+' | '-' | 'BACK' | 'CLEAR' | 'ENTER' | 'NEXT' | 'ESC';
@@ -31,6 +32,12 @@ export function openTarget(target: NumPadTarget): void {
       const other = target.move.nodeId === w.a ? w.b : w.a;
       if (!free(target.move.nodeId) && free(other)) target = { ...target, move: { nodeId: other } };
     }
+  }
+  // volná kóta: přednostně se posune okraj otvoru / kresba / pevný bod, ne stěna (core/freeDim.ts);
+  // `move` od volajícího se tu vždy přepíše (ruční přepnutí jde přes setFreeDimMove)
+  if (target.kind === 'free-dim') {
+    const d = floor.dims?.[target.dimId];
+    if (d) target = { ...target, move: defaultFreeDimMove(d) };
   }
   const v = numpadInitialValue(floor, target);
   const selection =

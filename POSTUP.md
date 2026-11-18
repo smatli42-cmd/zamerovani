@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-18 (8) – kóta k oknu posune okno, ne stěnu (chyba od uživatele)
+- **Chyba od uživatele:** okno s ostěním, volná kóta 2200 mezi okrajem okna a lícem spodní stěny; zadání délky hlásilo „brání zamčená kóta: kóta 1340“ (obdélník kresby – spodní stěna) a okno se neposunulo. Příčina: NumPad i panel kóty vždy předvybraly 2. bod – tady líc spodní stěny → posouvala se celá stěna. Se zapnutím ostění to nesouviselo (ve zkoušce se okno s ostěním posouvá správně).
+- **Co se změnilo:** výchozí posouvaný bod volné kóty určuje `defaultFreeDimMove` (`core/freeDim.ts`): když 2. konec hýbe stěnami (roh, líc stěny) a 1. ne (okraj otvoru, kresba, pevný bod), předvybere se 1. Použito v NumPadu (`openTarget`) i panelu Kóta. Testy `store/freeDimMove.test.ts` (4).
+- **Viditelně v aplikaci:** ťuknutí na číslo kóty mezi oknem a stěnou předvybere v NumPadu „okraj otvoru“ – zadáním se posune okno.
+- **Rozhodnuto samostatně:** přednost má konec, který neposouvá stěny; když hýbou stěnami oba nebo žádný, dál 2. bod.
+- **Otevřené:** nic.
+
 ### 2026-11-18 (konec sezení 2)
 - **Co se změnilo:** Sezení ukončeno; za tuto část dne: vybrání v rohu (3), volná kóta / úhlopříčka (4), kóta přichycená k hranám – líce stěn, čáry, okraje otvorů, kolmá jako v CAD (5), šířka okna / ostění / zárubeň se zámkem na jedné straně rostou na volnou stranu (6, 7). Testy 618, typecheck a build OK.
 - **Viditelně v aplikaci:** viz záznamy (3)–(7).
