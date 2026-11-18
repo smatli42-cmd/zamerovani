@@ -12,6 +12,7 @@ import { add, dist, dot, normal, projectToSegment, scale, sub, unit } from './ge
 import { faceOffset } from './protrusion';
 import { bodyRange, hasBody } from './wallFace';
 import { openingSpan, openingStartFromA } from './floorQueries';
+import { doubleOffset } from './drawing';
 
 export type RefGeom = { kind: 'point'; p: Pt } | { kind: 'line'; p: Pt; d: Pt };
 
@@ -28,9 +29,31 @@ function straight(floor: Floor, w: Wall | undefined): { a: Pt; d: Pt; n: Pt; len
 /** Posun líce `side` od osy (0 = osa / čára stěny bez tloušťky). */
 const offOf = (w: Wall, side: 1 | -1 | 0) => (side === 0 || !hasBody(w) ? 0 : faceOffset(w, side));
 
-/** Rovný úsek `i` kresby (body úseku); null = oblouk, kruh, neexistuje. */
-function drawSeg(dr: Drawing | undefined, i: number): [Pt, Pt] | null {
+/** Počet úseků kresby pro kótu (`drawSeg` může u některých vrátit null – oblouk, chybějící uzavřený konec). */
+export function drawSegCount(dr: Drawing): number {
+  if (dr.shape === 'double') return 4;
+  return dr.shape === 'rect' || dr.closed ? dr.pts.length : dr.pts.length - 1;
+}
+
+/**
+ * Rovný úsek `i` kresby (body úseku); null = oblouk, kruh, neexistuje. Dvojitá čára má pevné číslování:
+ * 0 = první čára (pts), 1 = druhá čára, 2 = uzavřený konec u bodu 1, 3 = uzavřený konec u bodu 0.
+ */
+export function drawSeg(dr: Drawing | undefined, i: number): [Pt, Pt] | null {
   if (!dr || dr.shape === 'circle' || dr.shape === 'arc') return null;
+  if (dr.shape === 'double') {
+    const a = dr.pts[0];
+    const b = dr.pts[1];
+    const o = doubleOffset(dr);
+    if (!a || !b || !o) return null;
+    const P = (p: Pt): Pt => ({ x: p.x, y: p.y });
+    if (i === 0) return [P(a), P(b)];
+    if (i === 1) return o;
+    if (!dr.closedEnds) return null;
+    if (i === 2) return [P(b), o[1]];
+    if (i === 3) return [o[0], P(a)];
+    return null;
+  }
   const n = dr.pts.length;
   const closed = dr.shape === 'rect' || !!dr.closed;
   const p = dr.pts[i];
@@ -159,7 +182,7 @@ export function refAt(floor: Floor, p: Pt, tolPt: number, tolLine: number): DimE
   }
   // rovné úseky kresby
   for (const dr of Object.values(floor.drawings ?? {})) {
-    for (let i = 0; i < dr.pts.length; i++) {
+    for (let i = 0; i < drawSegCount(dr); i++) {
       const sg = drawSeg(dr, i);
       if (!sg) continue;
       const h = projectToSegment(p, sg[0], sg[1]);

@@ -5,7 +5,7 @@
  * po každé úpravě, před kontrolou zámků (`lockViolation`); co se dorovnat nedá, kontrola zámků dál zastaví.
  *
  * Který konec se posune s druhým (rozhodnutí uživatele):
- * - kresba (bod, úsek) ✔ – celá kresba (oba konce na téže kresbě: jen bod / úsek),
+ * - kresba (bod, úsek) ✔ – celá kresba (oba konce na téže kresbě: jen bod / úsek, u dvojité čáry šířka / konec),
  * - okraj otvoru ✔ – otvor po své stěně (jen když kóta vede podél stěny, jinak se délka nedorovná → zámek zastaví),
  * - roh stěny, líc stěny ✔ – roh / celá stěna (sousední stěny se protáhnou),
  * - pevný bod výkresu ✗ – zůstává (zámek zastaví).

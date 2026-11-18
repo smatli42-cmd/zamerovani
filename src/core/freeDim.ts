@@ -8,15 +8,16 @@
  * - roh stěny: jako při změně délky stěny (řešič „gumička“, core/solver.ts); když druhý konec není roh, posune se
  *   celá skupina stěn, která na rohu visí,
  * - líc / čára stěny: posune se celá stěna (oba rohy, sousední stěny se protáhnou),
- * - bod kresby / čára kresby: celá kresba; oba konce na téže kresbě → jen ten bod / úsek (obdélník zůstane obdélníkem),
+ * - bod kresby / čára kresby: celá kresba; oba konce na téže kresbě → jen ten bod / úsek (obdélník zůstane obdélníkem;
+ *   dvojitá čára: 1. / 2. čára = změna šířky, uzavřený konec = posun bodu na tom konci),
  * - okraj otvoru: otvor se posune po stěně,
  * - pevný bod: jen bod.
  */
-import type { DimEnd, Floor, FreeDim, Id, Node, Pt } from '../model/types';
+import type { DimEnd, Drawing, Floor, FreeDim, Id, Node, Pt } from '../model/types';
 import { add, dist, dot, normal, projectToSegment, scale, sub, unit } from './geometry';
-import { moveDrawingVertex, placeDrawing } from './drawing';
+import { DEFAULT_DOUBLE_WIDTH, moveDrawingVertex, placeDrawing } from './drawing';
 import { moveNodeWithRubberBand } from './solver';
-import { measurePoints, refGeom } from './dimRefs';
+import { drawSeg, drawSegCount, measurePoints, refGeom } from './dimRefs';
 import { openingSpan, openingStartFromA } from './floorQueries';
 
 export const freeDimsOf = (floor: Floor): FreeDim[] => Object.values(floor.dims ?? {});
@@ -86,6 +87,36 @@ export function sameEnd(a: DimEnd, b: DimEnd): boolean {
 /** Kresba, ke které konec patří (bod nebo úsek); null = jiný prvek. */
 const drawingOf = (e: DimEnd): Id | null => ('drawing' in e ? e.drawing : 'seg' in e ? e.seg : null);
 
+/**
+ * Dvojitá čára, posun jejího úseku (druhý konec kóty na téže kresbě): 1. / 2. čára = změna šířky (druhá čára
+ * stojí / první stojí), uzavřený konec = posun bodu na tom konci.
+ */
+function moveDoubleSeg(dr: Drawing, i: number, dx: number, dy: number): boolean {
+  const a = dr.pts[0];
+  const b = dr.pts[1];
+  if (!a || !b || dist(a, b) < 1e-6) return false;
+  const n = normal(unit(a, b));
+  const shift = dx * n.x + dy * n.y;
+  let k = (dr.side ?? 1) * (dr.width ?? DEFAULT_DOUBLE_WIDTH);
+  if (i === 0) {
+    for (const p of [a, b]) {
+      p.x += dx;
+      p.y += dy;
+    }
+    k -= shift;
+  } else if (i === 1) k += shift;
+  else if (i === 2 || i === 3) {
+    const p = i === 2 ? b : a;
+    p.x += dx;
+    p.y += dy;
+    return true;
+  } else return false;
+  if (Math.abs(k) < 1) return false; // čáry by splynuly
+  dr.side = k < 0 ? -1 : 1;
+  dr.width = Math.round(Math.abs(k) * 10) / 10;
+  return true;
+}
+
 /** Posune prvek konce `e` o (dx, dy); `other` = druhý konec kóty (rozhoduje, co se posune). false = nejde. */
 function moveEnd(floor: Floor, e: DimEnd, other: DimEnd, otherPt: Pt, dx: number, dy: number): boolean {
   if ('node' in e) {
@@ -116,6 +147,8 @@ function moveEnd(floor: Floor, e: DimEnd, other: DimEnd, otherPt: Pt, dx: number
       const q = dr.pts[e.i];
       if (!q) return false;
       moveDrawingVertex(dr, e.i, { x: q.x + dx, y: q.y + dy });
+    } else if (same && 'seg' in e && dr.shape === 'double') {
+      if (!moveDoubleSeg(dr, e.i, dx, dy)) return false;
     } else if (same && 'seg' in e) {
       // úsek posunutý kolmo – oba jeho body (obdélník zůstane obdélníkem)
       for (const k of [e.i, (e.i + 1) % dr.pts.length]) {
@@ -232,24 +265,24 @@ export function rescueFreeDims(before: Floor | undefined, after: Floor): void {
         const hit = faceOnLine(after, g.p, g.d);
         if (hit) d[k] = hit;
       } else if ('seg' in e) {
-        const od = before.drawings?.[e.seg];
-        if (!od) continue;
-        const p0 = od.pts[e.i];
-        const p1 = od.pts[(e.i + 1) % od.pts.length];
-        if (!p0 || !p1) continue;
-        const segAt = (dr: { pts: Pt[] }, i: number): [Pt, Pt] => [dr.pts[i]!, dr.pts[(i + 1) % dr.pts.length]!];
-        // úseky kresby: u otevřené čáry bez uzavíracího (n-1 → 0)
-        const segCount = (dr: { pts: Pt[]; shape: string; closed?: true }) => (dr.shape === 'rect' || dr.closed ? dr.pts.length : dr.pts.length - 1);
+        const old = drawSeg(before.drawings?.[e.seg], e.i);
+        if (!old) continue;
+        const [p0, p1] = old;
+        // úseky kresby (i druhá čára a konce dvojité čáry) – jediné číslování v core/dimRefs.ts
+        const segAt = (dr: Drawing, i: number): [Pt, Pt] | null => drawSeg(dr, i);
+        const segCount = drawSegCount;
         const nd = after.drawings?.[e.seg];
-        if (nd && nd.pts.length > e.i) {
-          const [q0, q1] = segAt(nd, e.i);
-          if (near(q0, p0) && near(q1, p1)) continue; // beze změny
-        }
+        const now = nd ? segAt(nd, e.i) : null;
+        if (now && near(now[0], p0) && near(now[1], p1)) continue; // beze změny
+        // dvojitá čára má pevné číslování úseků – úsek, který dál existuje, se jen posunul (nepřeskakovat na jinou čáru)
+        if (now && nd?.shape === 'double') continue;
         const cands = [...(nd ? [nd] : []), ...Object.values(after.drawings ?? {}).filter(x => x.id !== e.seg)];
         let found = false;
         for (const dr of cands) {
           for (let i = 0; i < segCount(dr) && !found; i++) {
-            const [q0, q1] = segAt(dr, i);
+            const sq = segAt(dr, i);
+            if (!sq) continue;
+            const [q0, q1] = sq;
             if (near(q0, p0) && near(q1, p1)) {
               d[k] = { seg: dr.id, i, at: e.at };
               found = true;
