@@ -7,6 +7,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-19 (9) – konec sezení
+- **Co se změnilo:** nic v kódu; aktualizován Poslední stav a fronta (na začátku dalšího sezení nejdřív chyby schodiště od uživatele).
+- **Viditelně v aplikaci:** beze změny (schodiště (8) je na webu).
+- **Rozhodnuto samostatně:** nic.
+- **Chyby od uživatele:** uživatel při zkoušení schodiště (8) našel několik chyb – popíše je na druhém počítači; zatím neopravené.
+- **Otevřené:** chyby schodiště od uživatele; vyzkoušet na tabletu.
+- **Soubory nad 500 řádků:** žádné.
+
 ### 2026-11-19 (8) – schodiště: další druhy a způsoby zadání (doplnění zadání)
 - **Rozhodnuto uživatelem:** doplnit chybějící body zadání (rameno dvěma ťuknutími, zadání šířka × délka z klávesnice, vlastní tvar podesty, odstupy od stěn a přichytávání k rohům schodiště) a přidat druhy: zabíhavé stupně, točité schodiště, rameno po oblouku.
 - **Co se změnilo:** nástroj `tools/stairTool.ts` (režimy Z rohu do rohu / Zadané rozměry / Točité); rameno po oblouku (`StairFlight.center`, `sweep`; geometrie ramene jen v `core/stairFlight.ts`, `core/stairs.ts` ji používá i pro L / U za obloukem); zabíhavé stupně `StairLanding.winders` (`core/stairWinders.ts`); ručně nakreslené další rameno (`turn: 'free'`) s podestou mezi rameny a podesta z kresby (`core/stairCreate.ts`); volná kóta k rohu / hraně schodiště (`DimEnd` `stair`, `stairSeg`, `core/stairRefs.ts`, napojeno v `core/dimRefs.ts`, posun celého schodiště v `core/freeDim.ts`, pevné spojení v `core/dimFollow.ts`); přichytávání kresby a nového ramene k rohům schodiště (`tools/drawSnap.ts`). SCHEMA_VERSION 26 bez převodu. Testy `store/stairKinds.test.ts` (22), `store/dimFollow.test.ts` (+2).
@@ -642,7 +650,23 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Otevřené:** vyzkoušet na tabletu; další krok tažení a posun jako blok (D2, D11–D14).
 - **Chyby od uživatele:** zatím žádné.
 
-## Poslední stav (2026-11-19, sezení 1)
+## Poslední stav (2026-11-19, konec sezení)
+
+**Hotové (na webu):** **schodiště – další druhy a zadání** (2026-11-19 (8)): rameno dvěma ťuknutími a zadanými rozměry, točité, rameno po oblouku, zabíhavé stupně, ručně nakreslené rameno, podesta z kresby, kóta a přichycení k rohům / hranám schodiště; schodiště jako 2D značka (6). Testy 796 + 1 zapsaný nález, typecheck a build OK. SCHEMA_VERSION 26.
+
+**Rozpracované:** nic.
+
+**Chyby od uživatele (čekají):** uživatel našel při zkoušení schodiště (8) několik chyb – na začátku sezení se zeptat, které, a opravit je jako první.
+
+**Čeká na vyzkoušení:** nové druhy a zadání schodiště (8); vše na tabletu.
+
+**Fronta kroků:**
+1. **Chyby schodiště od uživatele** (viz výše), pak ostatní chyby z používání a testování – mají přednost.
+2. Zařizovací předměty a symboly (návrh plánu je hotový: nástroj Předměty – koupelna, kuchyň, technika, šipka k severu; čeká na schválení) → poznámkový špendlík → fotky se značkou směru pohledu. Schodiště doladit podle zkoušky (úchyty ramen).
+3. Nakonec výstupy: PDF podle velikosti výkresu s razítkem, DXF s hladinami (s tím část B KOTY-ZAMEK-EXPORT.md – hlavní kóta pro export).
+4. Kóty, jen když se ukáže potřeba (viz předchozí stav, bod 4).
+
+## Předchozí stav (2026-11-19, sezení 1)
 
 **Hotové (na webu):** **schodiště – další druhy a zadání** (2026-11-19 (8): dvě ťuknutí, rozměry, točité, oblouk, zabíhavé, ručně kreslené rameno, podesta z kresby, kóta ke schodišti); **schodiště jako 2D značka** (2026-11-19 (6)); volná kóta ve výběru – výběr obdélníkem, kopie s prvky, posun a otočení skupiny (2026-11-19 (1)); **kóta k oblouku** (2026-11-19 (2)); **úhlopříčka místnosti se zachováním délek stěn** (2026-11-19 (4)). Testy 796 + 1 zapsaný nález, typecheck a build OK. SCHEMA_VERSION 26.
 
