@@ -3,7 +3,7 @@
  * v core/stairCreate.ts).
  */
 import { canHatch, drawingPolylines } from '../../core/drawing';
-import { addStairTurn, defaultSteps, flightFromCorners, flightLength, flipStair, isUTurn, relayoutStair, removeLastFlight, STAIR_MIN, stairFromOutline, turnOutlineAxis, type StairJoin, type StairTurn } from '../../core/stairs';
+import { addStairTee, addStairTurn, canAppendFlight, canWind, defaultSteps, flightFromCorners, flightLength, flipStair, isLTurn, isTee, isUTurn, relayoutStair, removeLastFlight, STAIR_MIN, stairFromOutline, turnOutlineAxis, type StairJoin, type StairTurn } from '../../core/stairs';
 import { bendFlight, mirrorFlightArc, straightenFlight } from '../../core/stairFlight';
 import { bridgeLanding, landingForPolygon, orientFreeFlight, sizedFlight, spiralFlight } from '../../core/stairCreate';
 import { defaultWinders, WINDERS } from '../../core/stairWinders';
@@ -54,7 +54,7 @@ export function appendDrawnFlight(id: Id, p: Pt, q: Pt, size?: { width: number; 
     floor => {
       const s = floor.stairs?.[id];
       const prev = s?.flights[s.flights.length - 1];
-      if (!s || !prev || s.outline) return false;
+      if (!s || !prev || !canAppendFlight(s)) return false;
       orientFreeFlight(prev, f);
       s.flights.push(f);
       s.landings.push({ id: newId('sl'), pts: bridgeLanding(prev, f) });
@@ -78,17 +78,33 @@ export function updateStair(id: Id, patch: Partial<Pick<Stair, 'height' | 'noLab
   });
 }
 
-/** Počet stoupání ramene (nejméně 2). */
+/**
+ * Počet stoupání ramene (nejméně 2). Atypické T: rameno L a větev T vedou do stejné výšky – počet se mění u obou
+ * zároveň (výška stupně a popisek platí pro obě větve).
+ */
 export function setFlightSteps(id: Id, flightId: Id, steps: number): void {
   if (!Number.isFinite(steps)) return;
   const n = Math.max(STAIR_MIN.steps, Math.min(STAIR_MIN.maxSteps, Math.round(steps)));
   store.edit(floor => {
-    const f = floor.stairs?.[id]?.flights.find((x: StairFlight) => x.id === flightId);
-    if (f) f.steps = n;
+    const fl = floor.stairs?.[id]?.flights ?? [];
+    const i = fl.findIndex((x: StairFlight) => x.id === flightId);
+    if (i < 0) return false;
+    fl[i]!.steps = n;
+    const pair = isTee(fl[i]) ? fl[i - 1] : isTee(fl[i + 1]) ? fl[i + 1] : undefined;
+    if (pair) pair.steps = n;
+    return true;
   });
 }
 
-/** Přidá podestu a další rameno (L / U). */
+/** Atypické T: podesta a dvě ramena z jejích boků (L vlevo + větev T vpravo). */
+export function addStairTeeFlights(id: Id): void {
+  store.edit(floor => {
+    const s = floor.stairs?.[id];
+    return s ? addStairTee(s, { flight: newId('sf'), landing: newId('sl'), tee: newId('sf'), teeLanding: newId('sl') }) : false;
+  });
+}
+
+/** Přidá podestu a další rameno (L / U / rovně). */
 export function addStairFlight(id: Id, turn: StairTurn): void {
   store.edit(floor => {
     const s = floor.stairs?.[id];
@@ -97,21 +113,26 @@ export function addStairFlight(id: Id, turn: StairTurn): void {
 }
 
 /**
- * Změní napojení ramene (L / U, vlevo / vpravo, nebo „volně“ = rameno i podesta zůstanou, kde jsou).
- * Zabíhavé stupně zůstanou jen u L / U (počet se u změny L ↔ U nastaví na výchozí).
+ * Změní napojení ramene (L / U, vlevo / vpravo, rovně, nebo „volně“ = rameno i podesta zůstanou, kde jsou).
+ * Zabíhavé stupně zůstanou jen u L / U (počet se u změny L ↔ U nastaví na výchozí). Atypické T: větev T napojení
+ * nemění, rameno L, ze kterého vychází, jde jen přepnout L vlevo ↔ L vpravo (větev T se přehodí na druhou stranu).
  */
 export function setStairTurn(id: Id, flightId: Id, turn: StairJoin): void {
   store.edit(floor => {
     const s = floor.stairs?.[id];
     const f = s?.flights.find(x => x.id === flightId);
     const i = s && f ? s.flights.indexOf(f) : -1;
-    if (!s || !f || i < 1) return false;
+    if (!s || !f || i < 1 || isTee(f) || turn === 'tee') return false;
+    if (isTee(s.flights[i + 1]) && !isLTurn(turn)) return false;
     const land = s.landings[i - 1];
-    if (land?.winders) {
-      if (turn === 'free') delete land.winders;
-      else if (isUTurn(turn) !== isUTurn(f.turn)) land.winders = defaultWinders(isUTurn(turn));
-    }
+    const wasU = isUTurn(f.turn);
     f.turn = turn;
+    // L: podesta nesmí být mělčí než šířka ramene (z Rovně / U mohla zůstat menší hloubka) → výchozí = šířka ramene
+    if (isLTurn(turn) && f.depth !== undefined && f.depth < f.width - 0.5) delete f.depth;
+    if (land?.winders) {
+      if (!canWind(s, i)) delete land.winders;
+      else if (isUTurn(turn) !== wasU) land.winders = defaultWinders(isUTurn(turn));
+    }
     relayoutStair(s);
     return true;
   });
@@ -124,7 +145,7 @@ export function setLandingWinders(id: Id, flightId: Id, count: number | null): v
     const f = s?.flights.find(x => x.id === flightId);
     const i = s && f ? s.flights.indexOf(f) : -1;
     const land = s && i > 0 ? s.landings[i - 1] : undefined;
-    if (!s || !f || !land || f.turn === 'free') return false;
+    if (!s || !f || !land || (count !== null && !canWind(s, i))) return false;
     if (count === null) delete land.winders;
     else land.winders = Math.max(WINDERS.min, Math.min(WINDERS.max, Math.round(count === 0 ? defaultWinders(isUTurn(f.turn)) : count)));
     return true;

@@ -15,10 +15,13 @@ export const stairsOf = (floor: Floor): Stair[] => Object.values(floor.stairs ??
 /** Nejmenší rozměry (mm) a počet stoupání ramene. */
 export const STAIR_MIN = { width: 100, length: 100, steps: 2, maxSteps: 60 } as const;
 
-/** Jak navazuje rameno na předchozí: L vlevo / vpravo, U vlevo / vpravo (podesta mezi nimi). */
-export type StairTurn = 'left' | 'right' | 'u-left' | 'u-right';
-/** Napojení včetně ručně nakresleného ramene (`free` – stojí, kde je; podesta má vlastní tvar). */
-export type StairJoin = StairTurn | 'free';
+/** Jak navazuje rameno na předchozí: L vlevo / vpravo, U vlevo / vpravo, rovně (podesta mezi nimi). */
+export type StairTurn = 'left' | 'right' | 'u-left' | 'u-right' | 'straight';
+/**
+ * Napojení včetně ručně nakresleného ramene (`free` – stojí, kde je; podesta má vlastní tvar) a druhé větve
+ * atypického T (`tee` – z téže podesty jako předchozí rameno L, na opačnou stranu; vzniká jen `addStairTee`).
+ */
+export type StairJoin = StairTurn | 'free' | 'tee';
 
 /** Směr chůze na začátku ramene. */
 const dir = (f: StairFlight): Pt => flightFrame(f, 0).u;
@@ -26,16 +29,31 @@ const dir = (f: StairFlight): Pt => flightFrame(f, 0).u;
 /** Je napojení U (otočka o 180°)? */
 export const isUTurn = (t: StairJoin | undefined): boolean => t === 'u-left' || t === 'u-right';
 
-/** Má podesta `i` (před ramenem i + 1) místo podesty zabíhavé stupně? (jen u napojení L / U) */
-export const hasWinders = (s: Stair, i: number): boolean => !!s.landings[i]?.winders && !s.outline && (s.flights[i + 1]?.turn ?? 'left') !== 'free';
+/** Je napojení L (otočka o 90°)? */
+export const isLTurn = (t: StairJoin | undefined): boolean => t === 'left' || t === 'right';
+
+/** Je rameno druhou větví atypického T (vychází z podesty předchozího ramene)? */
+export const isTee = (f: StairFlight | undefined): boolean => f?.turn === 'tee';
 
 /**
- * Počet stoupání celého schodiště (ruční obrys = 1. rameno). k zabíhavých stupňů v otočce = k nášlapů oddělených
+ * Jde u podesty před ramenem i (i ≥ 1) zvolit zabíhavé stupně? Jen L / U – ne rovně, volně, u větve T ani u L,
+ * ze kterého vychází T (podesta je společná pro obě větve).
+ */
+export const canWind = (s: Stair, i: number): boolean => {
+  const t = s.flights[i]?.turn ?? 'left';
+  return !s.outline && (isLTurn(t) || isUTurn(t)) && !isTee(s.flights[i + 1]);
+};
+
+/** Má podesta `i` (před ramenem i + 1) místo podesty zabíhavé stupně? (jen kde `canWind`) */
+export const hasWinders = (s: Stair, i: number): boolean => !!s.landings[i]?.winders && canWind(s, i + 1);
+
+/**
+ * Počet stoupání celého schodiště (ruční obrys = 1. rameno; větev T se nepočítá – vede do stejné výšky jako rameno L). k zabíhavých stupňů v otočce = k nášlapů oddělených
  * k − 1 čarami: přidají k − 1 stoupání (na první vede poslední stoupání předchozího ramene, z posledního první
  * stoupání dalšího ramene – jako u podesty).
  */
 export const totalSteps = (s: Stair): number =>
-  s.outline ? (s.flights[0]?.steps ?? 0) : s.flights.reduce((n, f) => n + f.steps, 0) + s.landings.reduce((n, l, i) => n + (hasWinders(s, i) ? l.winders! - 1 : 0), 0);
+  s.outline ? (s.flights[0]?.steps ?? 0) : s.flights.reduce((n, f) => n + (isTee(f) ? 0 : f.steps), 0) + s.landings.reduce((n, l, i) => n + (hasWinders(s, i) ? l.winders! - 1 : 0), 0);
 
 /** Výška stupně v = výška / počet stoupání (mm); null = výška nezadaná. */
 export function stepHeight(s: Stair): number | null {
@@ -110,14 +128,17 @@ export function treadLines(s: Stair): [Pt, Pt][] {
  * konce předchozího ramene, `e` = vnější kraj začátku ramene i; null = ručně nakreslené rameno.
  */
 function turnPoints(s: Stair, i: number): { c: Pt; s: Pt; e: Pt; side: Pt; pe: { p: Pt; u: Pt }; depth: number } | null {
-  const prev = s.flights[i - 1];
   const f = s.flights[i];
-  const turn = f?.turn ?? 'left';
-  if (!prev || !f || turn === 'free') return null;
+  const tee = isTee(f);
+  // větev T: napojí se na konec ramene před ramenem L (společná podesta), na opačnou stranu než L
+  const prev = s.flights[tee ? i - 2 : i - 1];
+  const owner = tee ? s.flights[i - 1] : f; // rameno, kterému podesta patří (hloubka)
+  const turn = tee ? (owner?.turn === 'left' ? 'right' : owner?.turn === 'right' ? 'left' : null) : (f?.turn ?? 'left');
+  if (!prev || !f || !owner || !turn || turn === 'free' || turn === 'straight' || turn === 'tee') return null;
   const pe = flightEnd(prev);
   const side = turn === 'left' || turn === 'u-left' ? leftOf(pe.u) : scale(leftOf(pe.u), -1);
   const pw = prev.width / 2;
-  const depth = f.depth ?? f.width;
+  const depth = owner.depth ?? owner.width;
   const c = add(pe.p, scale(side, pw));
   const e = isUTurn(turn) ? add(pe.p, scale(side, pw + f.width)) : add(c, scale(pe.u, depth));
   return { c, s: sub(pe.p, scale(side, pw)), e, side, pe, depth };
@@ -127,6 +148,23 @@ function turnPoints(s: Stair, i: number): { c: Pt; s: Pt; e: Pt; side: Pt; pe: {
 export function arrowPath(s: Stair): Pt[] {
   const pts = arrowForward(s);
   return s.reverse ? pts.reverse() : pts;
+}
+
+/**
+ * Všechny šipky schodiště: hlavní (`arrowPath`, ťuknutím na její hrot se přepíná směr) a u atypického T druhá
+ * šipka od středu společné podesty po ose větve T.
+ */
+export function arrowPaths(s: Stair): Pt[][] {
+  const out = [arrowPath(s)];
+  if (s.outline) return out;
+  s.flights.forEach((f, i) => {
+    if (!isTee(f)) return;
+    const l = s.landings[i - 2]?.pts ?? [];
+    if (l.length < 3) return;
+    const pts = [scale(l.reduce((v, p) => add(v, p), { x: 0, y: 0 }), 1 / l.length), ...flightAxis(f)];
+    out.push(s.reverse ? pts.reverse() : pts);
+  });
+  return out;
 }
 
 function arrowForward(s: Stair): Pt[] {
@@ -141,6 +179,7 @@ function arrowForward(s: Stair): Pt[] {
   // přes podestu: v polovině její hloubky (u L roh, u U příčná čára mezi rameny); u ručně nakresleného ramene přes těžiště podesty
   const pts: Pt[] = [];
   s.flights.forEach((f, i) => {
+    if (isTee(f)) return; // větev T má vlastní šipku (arrowPaths)
     const prev = i > 0 ? s.flights[i - 1] : undefined;
     if (prev && f.turn === 'free') {
       const l = s.landings[i - 1]?.pts ?? [];
@@ -174,7 +213,7 @@ function midAcross(poly: readonly Pt[], p: Pt, u: Pt): Pt | null {
 export function stairLabel(s: Stair): string {
   const n = totalSteps(s);
   const v = stepHeight(s);
-  const ds = (s.outline ? s.flights.slice(0, 1) : s.flights).map(f => treadDepth(s, f)).filter((d): d is number => d !== null).map(d => Math.round(d));
+  const ds = (s.outline ? s.flights.slice(0, 1) : s.flights.filter(f => !isTee(f))).map(f => treadDepth(s, f)).filter((d): d is number => d !== null).map(d => Math.round(d));
   const sameD = ds.length > 0 && ds.every(d => d === ds[0]) ? ds[0]! : null;
   if (v !== null) return `${n} × ${Math.round(v)}${sameD !== null ? `/${sameD}` : ''}`;
   return `${n} st.${sameD !== null ? ` / ${sameD}` : ''}`;
@@ -224,10 +263,28 @@ export function relayoutStair(s: Stair): void {
   for (let i = 1; i < s.flights.length; i++) {
     const prev = s.flights[i - 1]!;
     const f = s.flights[i]!;
+    if (f.turn === 'straight') {
+      // rovně: obdélníková podesta za koncem ramene, nové rameno pokračuje stejným směrem za ní
+      const { p: e0, u } = flightEnd(prev);
+      const n = leftOf(u);
+      const depth = f.depth ?? f.width;
+      const hw = Math.max(prev.width, f.width) / 2;
+      placeFlight(f, add(e0, scale(u, depth)), u);
+      const land = s.landings[i - 1];
+      if (land) land.pts = [add(e0, scale(n, -hw)), add(e0, scale(n, hw)), add(add(e0, scale(n, hw)), scale(u, depth)), add(add(e0, scale(n, -hw)), scale(u, depth))];
+      continue;
+    }
     const t = turnPoints(s, i);
     if (!t) continue; // ručně nakreslené rameno stojí, podesta má vlastní tvar
     const { side, depth } = t;
     const { p: e0, u } = t.pe;
+    if (isTee(f)) {
+      // větev T: z druhého boku společné podesty ramene L (podesta patří ramenu L, vlastní podesta je prázdná)
+      placeFlight(f, add(add(e0, scale(u, depth / 2)), scale(side, s.flights[i - 2]!.width / 2)), side);
+      const land = s.landings[i - 1];
+      if (land) land.pts = [];
+      continue;
+    }
     const pw = prev.width / 2;
     let pts: Pt[];
     if (!isUTurn(f.turn)) {
@@ -246,14 +303,30 @@ export function relayoutStair(s: Stair): void {
   }
 }
 
-/** Přidá podestu a další rameno (L / U); nové rameno má šířku a počet stoupání posledního. */
+/** Lze ke schodišti přidat další rameno? (ne ruční obrys, ne za větví T – ta je vždy poslední) */
+export const canAppendFlight = (s: Stair): boolean => !s.outline && s.flights.length > 0 && !isTee(s.flights[s.flights.length - 1]);
+
+/** Přidá podestu a další rameno (L / U / rovně); nové rameno má šířku a počet stoupání posledního. */
 export function addStairTurn(s: Stair, turn: StairTurn, ids: { flight: Id; landing: Id }): boolean {
   const last = s.flights[s.flights.length - 1];
-  if (!last || s.outline) return false;
+  if (!last || !canAppendFlight(s)) return false;
   const len = flightLength(last);
   const pe = flightEnd(last);
   s.flights.push({ id: ids.flight, a: pe.p, b: add(pe.p, scale(pe.u, len)), width: last.width, steps: last.steps, turn });
   s.landings.push({ id: ids.landing, pts: [] } as StairLanding);
+  relayoutStair(s);
+  return true;
+}
+
+/**
+ * Atypické T: přidá podestu a dvě ramena z jejích boků – rameno L vlevo a větev T vpravo (obě se šířkou a počtem
+ * stoupání posledního ramene). Strany jdou přehodit napojením ramene L (L vlevo / L vpravo).
+ */
+export function addStairTee(s: Stair, ids: { flight: Id; landing: Id; tee: Id; teeLanding: Id }): boolean {
+  if (!addStairTurn(s, 'left', ids)) return false;
+  const l = s.flights[s.flights.length - 1]!;
+  s.flights.push({ id: ids.tee, a: l.a, b: l.b, width: l.width, steps: l.steps, turn: 'tee' });
+  s.landings.push({ id: ids.teeLanding, pts: [] });
   relayoutStair(s);
   return true;
 }
@@ -282,7 +355,7 @@ export function stairDimValue(s: Stair, flightId: Id, d: StairDim): number | nul
   if (d === 'width') return f.width;
   if (d === 'radius') return isArcFlight(f) ? flightOuterRadius(f) : null;
   if (d === 'sweep') return isArcFlight(f) ? Math.abs(f.sweep!) : null;
-  return s.flights.indexOf(f) > 0 && !s.outline && f.turn !== 'free' ? (f.depth ?? f.width) : null;
+  return s.flights.indexOf(f) > 0 && !s.outline && f.turn !== 'free' && !isTee(f) ? (f.depth ?? f.width) : null;
 }
 
 /**
@@ -293,6 +366,7 @@ export function stairDimValue(s: Stair, flightId: Id, d: StairDim): number | nul
 export function setStairDim(s: Stair, flightId: Id, d: StairDim, value: number): boolean {
   const f = s.flights.find(x => x.id === flightId);
   if (!f || s.outline || !Number.isFinite(value)) return false;
+  if (teeOverhangs(s, f, d, value)) return false;
   const arc = isArcFlight(f);
   if (d === 'length') {
     if (value < STAIR_MIN.length) return false;
@@ -309,11 +383,25 @@ export function setStairDim(s: Stair, flightId: Id, d: StairDim, value: number):
   } else if (d === 'sweep') {
     if (!arc || !setFlightSweep(f, Math.sign(f.sweep!) * value)) return false;
   } else {
-    if (s.flights.indexOf(f) < 1 || f.turn === 'free' || value < STAIR_MIN.width || overhangsLanding(f, value, f.width)) return false;
+    if (s.flights.indexOf(f) < 1 || f.turn === 'free' || isTee(f) || value < STAIR_MIN.width || overhangsLanding(f, value, f.width)) return false;
     f.depth = value;
   }
   relayoutStair(s);
   return true;
+}
+
+/** Atypické T: větev T by byla širší než hloubka společné podesty (patří ramenu L před ní)? */
+function teeOverhangs(s: Stair, f: StairFlight, d: StairDim, value: number): boolean {
+  const i = s.flights.indexOf(f);
+  if (isTee(f)) {
+    const l = s.flights[i - 1]!;
+    return d === 'width' && value > (l.depth ?? l.width) + 0.5;
+  }
+  const tee = s.flights[i + 1];
+  if (!tee || !isTee(tee)) return false;
+  if (d === 'depth') return value < tee.width - 0.5;
+  if (d === 'width' && f.depth === undefined) return value < tee.width - 0.5; // hloubka = šířka ramene L
+  return false;
 }
 
 /** Podesta L by byla mělčí než šířka navazujícího ramene? */

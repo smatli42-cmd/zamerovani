@@ -7,6 +7,15 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-19 (10) – schodiště: rovné s podestou a atypické T (požadavek uživatele)
+- **Požadavek uživatele:** obrázek se 13 druhy schodišť – všechny vytvořit; vyhodnotit obrys × typ s parametry. Vyhodnocení: aplikace už má obojí (ramena L / U se zabíhavými stupni, oblouk, točité = typ s parametry; ruční obrys z kresby). Chyběly „rovné s podestou“ a „atypické T“ – uživatel: „doplň obě“.
+- **Co se změnilo:** nové napojení ramene `turn: 'straight'` (podesta za koncem ramene, rameno pokračuje rovně) a `turn: 'tee'` (tlačítko „T (na obě strany)“ přidá rameno L a druhou větev z téže podesty na opačnou stranu). Vše v `core/stairs.ts` (`relayoutStair`, `canWind`, `canAppendFlight`, `addStairTee`, `arrowPaths`, `teeOverhangs`); typ beze změny verze (nové hodnoty pole `turn`, staré projekty platí). Testy `store/stairTee.test.ts` (11).
+- **Viditelně v aplikaci:** v panelu schodiště u „Přidat podestu a rameno“ tlačítka **Rovně** a **T (na obě strany)**; u napojení ramene volba Rovně; u T druhá šipka po větvi T. Ověřeno v prohlížeči.
+- **Rozhodnuto samostatně:** T = rameno L vlevo + větev T vpravo (strany přehodí přepnutí ramene L na L vpravo; U / Rovně / Volně u něj nejdou); za větev T nejde přidat další rameno (je vždy poslední); větev T se nepočítá do počtu stupňů (vede do stejné výšky); zabíhavé stupně u Rovně a u T nejdou; podesta T nejde nahradit kresbou; šířka větve T nesmí přesáhnout hloubku podesty; podesta Rovně je široká jako širší z obou ramen.
+- **Po kontrole revieweru opraveno:** SCHEMA_VERSION 27 (bez převodu – starší aplikace nový projekt nepozná jako svůj); počet stupňů ramene L a větve T se mění zároveň (rozhodnuto samostatně – vedou do stejné výšky); po přepnutí Rovně / U → L se příliš mělká podesta vrátí na výchozí hloubku (= šířka ramene); popisek bez větve T. Testy 11.
+- **Připomínka uživatele k obrysu schodiště čárami** (uzavření, nad stěnou, přitahování ke stěně): v prohlížeči nezopakováno – nástroj Čára (kresba) obrys uzavře, přitahuje k lícům a schodiště se kreslí nad stěnou. Možná příčina: kreslení přes Stěna → Čára (vznikne výstupek). Čeká na upřesnění od uživatele.
+- **Otevřené:** vyzkoušet; upřesnění chyby obrysu.
+
 ### 2026-11-19 (9) – konec sezení
 - **Co se změnilo:** nic v kódu; aktualizován Poslední stav a fronta (na začátku dalšího sezení nejdřív chyby schodiště od uživatele).
 - **Viditelně v aplikaci:** beze změny (schodiště (8) je na webu).
@@ -652,11 +661,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Poslední stav (2026-11-19, konec sezení)
 
-**Hotové (na webu):** **schodiště – další druhy a zadání** (2026-11-19 (8)): rameno dvěma ťuknutími a zadanými rozměry, točité, rameno po oblouku, zabíhavé stupně, ručně nakreslené rameno, podesta z kresby, kóta a přichycení k rohům / hranám schodiště; schodiště jako 2D značka (6). Testy 796 + 1 zapsaný nález, typecheck a build OK. SCHEMA_VERSION 26.
+**Hotové (na webu):** **schodiště – další druhy a zadání** (2026-11-19 (8)): rameno dvěma ťuknutími a zadanými rozměry, točité, rameno po oblouku, zabíhavé stupně, ručně nakreslené rameno, podesta z kresby, kóta a přichycení k rohům / hranám schodiště; schodiště jako 2D značka (6). Testy 796 + 1 zapsaný nález, typecheck a build OK. SCHEMA_VERSION 26. **Doplněno (10):** rovné s podestou a atypické T, testy 807 + 1 zapsaný nález, SCHEMA_VERSION 27.
 
 **Rozpracované:** nic.
 
-**Chyby od uživatele (čekají):** uživatel našel při zkoušení schodiště (8) několik chyb – na začátku sezení se zeptat, které, a opravit je jako první.
+**Chyby od uživatele (čekají):** obrys schodiště čárami se neuzavřel / nebyl vidět nad stěnou (2026-11-19 (10)) – nezopakováno, čeká na upřesnění (kterým nástrojem, PC / tablet).
+
+**Hotové navíc:** rovné s podestou a atypické T (10).
 
 **Čeká na vyzkoušení:** nové druhy a zadání schodiště (8); vše na tabletu.
 

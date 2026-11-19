@@ -4,7 +4,7 @@
  * schodiště; ťuknutí na šipku vybraného schodiště přepne směr výstupu.
  */
 import { add, dist, dot, normal, scale, sub } from '../core/geometry';
-import { arrowPath, flightRect, stairLabel, stairOutlines, stairsOf, treadLines } from '../core/stairs';
+import { arrowPaths, flightRect, stairLabel, stairOutlines, stairsOf, treadLines } from '../core/stairs';
 import { flightFrame, isArcFlight } from '../core/stairFlight';
 import type { Floor, Pt, Stair } from '../model/types';
 import { isSelected, type Camera, type Selection } from '../store/store';
@@ -48,22 +48,26 @@ export function drawStairs(ctx: CanvasRenderingContext2D, floor: Floor, cam: Cam
       ctx.lineTo(b.x, b.y);
     }
     ctx.stroke();
-    drawArrow(ctx, arrowPath(s).map(p => toScreen(p, cam)), s, isSelected(selection, 'stair', s.id));
+    // hlavní šipka (ťuknutím na hrot se přepne směr) a u atypického T šipka větve T
+    arrowPaths(s).forEach((path, k) => drawArrow(ctx, path.map(p => toScreen(p, cam)), s, k === 0 && isSelected(selection, 'stair', s.id), k === 0 || !!s.reverse));
     if (!s.noLabel) drawLabel(ctx, s, cam, color);
     ctx.restore();
   }
 }
 
-function drawArrow(ctx: CanvasRenderingContext2D, pts: Pt[], s: Stair, clickable: boolean): void {
+/** `startDot` = tečka u prvního stupně (větev T začíná na podestě – bez tečky, u obráceného výstupu na konci větve). */
+function drawArrow(ctx: CanvasRenderingContext2D, pts: Pt[], s: Stair, clickable: boolean, startDot = true): void {
   if (pts.length < 2) return;
   ctx.lineWidth = 1.3;
   ctx.beginPath();
   pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
   ctx.stroke();
   // tečka u prvního stupně
-  ctx.beginPath();
-  ctx.arc(pts[0]!.x, pts[0]!.y, 3.5, 0, Math.PI * 2);
-  ctx.fill();
+  if (startDot) {
+    ctx.beginPath();
+    ctx.arc(pts[0]!.x, pts[0]!.y, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
   // hrot u výstupu
   const end = pts[pts.length - 1]!;
   const prev = pts[pts.length - 2]!;

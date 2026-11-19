@@ -4,11 +4,12 @@
  * (rovné / po oblouku), napojení dalšího ramene (L, U, volně), zabíhavé stupně místo podesty.
  */
 import { isArcFlight } from '../../core/stairFlight';
-import { flightLength, isUTurn, stairDimValue, stairLabel, stepHeight, totalSteps, treadDepth, type StairDim, type StairJoin, type StairTurn } from '../../core/stairs';
+import { canAppendFlight, canWind, flightLength, isTee, isUTurn, stairDimValue, stairLabel, stepHeight, totalSteps, treadDepth, type StairDim, type StairJoin, type StairTurn } from '../../core/stairs';
 import { WINDERS } from '../../core/stairWinders';
 import type { Stair, StairFlight } from '../../model/types';
 import {
   addStairFlight,
+  addStairTeeFlights,
   applyNumpadValue,
   deleteSelection,
   duplicateSelection,
@@ -33,9 +34,12 @@ const TURNS: { v: StairTurn; label: string }[] = [
   { v: 'left', label: 'L vlevo' },
   { v: 'right', label: 'L vpravo' },
   { v: 'u-left', label: 'U vlevo' },
-  { v: 'u-right', label: 'U vpravo' }
+  { v: 'u-right', label: 'U vpravo' },
+  { v: 'straight', label: 'Rovně' }
 ];
 const JOINS: { v: StairJoin; label: string }[] = [...TURNS, { v: 'free', label: 'Volně' }];
+/** Rameno L, ze kterého vychází větev atypického T: jen strana (větev T se přehodí na druhou). */
+const TEE_JOINS: { v: StairJoin; label: string }[] = TURNS.filter(t => t.v === 'left' || t.v === 'right');
 
 const mm = (v: number | null) => (v === null ? '–' : `${Math.round(v)} mm`);
 
@@ -55,18 +59,20 @@ function FlightFields({ s, f, i }: { s: Stair; f: StairFlight; i: number }) {
   const arc = isArcFlight(f);
   const land = i > 0 ? s.landings[i - 1] : undefined;
   const join = f.turn ?? 'left';
+  const teeNext = isTee(s.flights[i + 1]);
   return (
     <div>
-      {many && <h4>{i + 1}. rameno</h4>}
-      {i > 0 && (
+      {many && <h4>{i + 1}. rameno{isTee(f) ? ' (druhá větev T)' : ''}</h4>}
+      {i > 0 && isTee(f) && <p class="muted small">Vychází z téže podesty jako předchozí rameno, na opačnou stranu (atypické schodiště T). Strany se přehodí napojením předchozího ramene.</p>}
+      {i > 0 && !isTee(f) && (
         <>
           <div class="field">
-            <span>Napojení na předchozí rameno</span>
-            <Seg options={JOINS} value={join} onChange={t => setStairTurn(s.id, f.id, t)} />
+            <span>Napojení na předchozí rameno{teeNext ? ' (podesta T)' : ''}</span>
+            <Seg options={teeNext ? TEE_JOINS : JOINS} value={join} onChange={t => setStairTurn(s.id, f.id, t)} />
           </div>
           {join === 'free' ? (
             <p class="muted small">Rameno stojí, kde je nakreslené. Tvar podesty: nakreslete uzavřený tvar (Čára, Obdélník) a v jeho panelu zvolte „Použít jako podestu“.</p>
-          ) : (
+          ) : !canWind(s, i) ? null : (
             <div class="field field-inline">
               <span>Otočka</span>
               <Seg
@@ -79,7 +85,7 @@ function FlightFields({ s, f, i }: { s: Stair; f: StairFlight; i: number }) {
               />
             </div>
           )}
-          {join !== 'free' && land?.winders && (
+          {canWind(s, i) && land?.winders && (
             <NumField label={`Zabíhavých stupňů${isUTurn(join) ? ' (U)' : ' (L)'}`} value={land.winders} min={WINDERS.min} unit="" onCommit={k => k !== null && setLandingWinders(s.id, f.id, k)} />
           )}
         </>
@@ -180,17 +186,24 @@ export function StairPanel({ s }: { s: Stair }) {
         </>
       ) : (
         <div class="field">
-          <span>Přidat podestu a rameno</span>
-          <div class="btn-row" style={{ flexWrap: 'wrap' }}>
-            {TURNS.map(t => (
-              <button key={t.v} class="btn btn-sm" onClick={() => addStairFlight(s.id, t.v)}>
-                {t.label}
-              </button>
-            ))}
-            <button class="btn btn-sm" onClick={() => drawNextFlight(s.id)}>
-              ✏️ Nakreslit další rameno
-            </button>
-          </div>
+          {canAppendFlight(s) && (
+            <>
+              <span>Přidat podestu a rameno</span>
+              <div class="btn-row" style={{ flexWrap: 'wrap' }}>
+                {TURNS.map(t => (
+                  <button key={t.v} class="btn btn-sm" onClick={() => addStairFlight(s.id, t.v)}>
+                    {t.label}
+                  </button>
+                ))}
+                <button class="btn btn-sm" title="Atypické schodiště: podesta a dvě ramena na obě strany" onClick={() => addStairTeeFlights(s.id)}>
+                  T (na obě strany)
+                </button>
+                <button class="btn btn-sm" onClick={() => drawNextFlight(s.id)}>
+                  ✏️ Nakreslit další rameno
+                </button>
+              </div>
+            </>
+          )}
           {many && (
             <button class="btn btn-sm" onClick={() => removeStairFlight(s.id)}>
               Odebrat poslední rameno

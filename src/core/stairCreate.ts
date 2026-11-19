@@ -78,6 +78,8 @@ export function landingForPolygon(floor: Floor, poly: Pt[]): { stair: Stair; ind
   for (const s of stairsOf(floor)) {
     if (s.outline) continue;
     for (let i = 1; i < s.flights.length; i++) {
+      // atypické T: společná podesta patří ramenu L, vlastní tvar by T rozpojil (rameno L by bylo „volně“)
+      if (s.flights[i]!.turn === 'tee' || s.flights[i + 1]?.turn === 'tee') continue;
       const l = s.landings[i - 1]?.pts ?? [];
       const at = l.length >= 3 ? centroid(l) : scale(add(flightEnd(s.flights[i - 1]!).p, s.flights[i]!.a), 0.5);
       // podesta uvnitř kresby má přednost (mezi nimi ta blíž těžišti)

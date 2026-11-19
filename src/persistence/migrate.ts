@@ -39,6 +39,7 @@ export function migrateProject(raw: unknown): Project {
   // 23 → 24: konec volné kóty na oblouku (`arcWall`, `arcSeg`) a ve středu oblouku (`center`) – bez převodu
   // 24 → 25: schodiště (floor.stairs) – nepovinné pole, bez převodu
   // 25 → 26: schodiště – rameno po oblouku (center, sweep), ručně nakreslené rameno (turn 'free'), zabíhavé stupně (winders) – bez převodu
+  // 26 → 27: schodiště – napojení ramene rovně (turn 'straight') a atypické T (turn 'tee') – bez převodu
   const old = p.schema ?? 1;
   const floors = p.floors.map(f => {
     const j = joinSemicircles(convertShapesToWalls(f));

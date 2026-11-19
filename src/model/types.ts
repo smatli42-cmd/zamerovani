@@ -10,7 +10,7 @@
 
 import type { DimTarget } from '../core/dimLock';
 
-export const SCHEMA_VERSION = 26;
+export const SCHEMA_VERSION = 27;
 
 export type Id = string;
 
@@ -350,10 +350,11 @@ export interface StairFlight {
   width: number;
   steps: number;
   /**
-   * Napojení na předchozí rameno přes podestu (L / U vlevo / vpravo); u 1. ramene chybí.
+   * Napojení na předchozí rameno přes podestu (L / U vlevo / vpravo, `straight` = rovně za podestou); u 1. ramene chybí.
    * `free` = rameno nakreslené ručně – stojí, kde je, podesta před ním má vlastní tvar.
+   * `tee` = atypické T: rameno vychází z téže podesty jako předchozí rameno (L), na opačnou stranu; je vždy poslední.
    */
-  turn?: 'left' | 'right' | 'u-left' | 'u-right' | 'free';
+  turn?: 'left' | 'right' | 'u-left' | 'u-right' | 'straight' | 'free' | 'tee';
   /** Hloubka podesty před ramenem (mm, podél předchozího ramene); chybí = šířka ramene. */
   depth?: number;
   /**
