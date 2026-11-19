@@ -14,6 +14,7 @@ import { textTool } from './textTool';
 import { trimTool } from './trimTool';
 import { splitTool } from './splitTool';
 import { selectTool } from './selectTool';
+import { eraserTool, penTool } from './penTool';
 import type { Tool } from './types';
 import { lineTool, wallTool } from './wallTool';
 
@@ -39,5 +40,7 @@ export const tools: Record<ToolId, Tool> = {
   dim: dimTool,
   stair: stairTool,
   paste: pasteTool,
+  pen: penTool,
+  eraser: eraserTool,
   pan: {}
 };

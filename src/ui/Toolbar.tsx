@@ -23,6 +23,8 @@ const TOOLS: { id: ToolId; icon: string; label: string; title: string }[] = [
   { id: 'drawLine', icon: '╱', label: 'Čára', title: 'Kreslit čáru (jen kresba – nikdy stěna ani výstupek); další úsek navazuje na konec, čára zpět do počátku se uzavře' },
   { id: 'drawDouble', icon: '═', label: 'Dvojitá', title: 'Dvojitá čára (překlad): dvě rovnoběžné čáry; od líce podél stěny přes celou její tloušťku' },
   { id: 'drawTrim', icon: '⌿', label: 'Ořezat', title: 'Kresba: ťuknutím oříznout čáru k nejbližším průsečíkům, nebo prodloužit její konec k nejbližší čáře' },
+  { id: 'pen', icon: '🖊️', label: 'Pero', title: 'Ruční kresba perem do aktivní vrstvy (barva vrstvy); prst posouvá a zoomuje' },
+  { id: 'eraser', icon: '🧽', label: 'Guma', title: 'Guma: maže celé ruční tahy v aktivní vrstvě' },
   { id: 'rect', icon: '▭', label: 'Obdélník', title: 'Tažením nakreslit obdélník (kresba – sloup, komín…)' },
   { id: 'circle', icon: '◯', label: 'Kruh', title: 'Tažením od středu nakreslit kruh' },
   { id: 'arc', icon: '◠', label: 'Oblouk', title: 'Tažením mezi krajními body nakreslit oblouk, vzepětí se upřesní kótou' },

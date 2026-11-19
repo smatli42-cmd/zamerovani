@@ -147,7 +147,8 @@ export function attachPointer(canvas: HTMLCanvasElement): () => void {
       spaceDown ||
       (e.pointerType === 'mouse' && (e.button === 1 || e.button === 2)) ||
       (e.pointerType === 'pen' && (e.button === 2 || e.button === 5)) ||
-      (e.pointerType === 'touch' && state.settings.fingerPan);
+      // Pero a Guma: prst vždy posouvá a zoomuje, kreslí jen pero (zadání ruční kresby)
+      (e.pointerType === 'touch' && (state.settings.fingerPan || state.tool === 'pen' || state.tool === 'eraser'));
 
     if (wantsPan) {
       mode = 'pan';

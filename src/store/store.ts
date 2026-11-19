@@ -19,7 +19,7 @@ import { followDisturbsEdit, followLockedDims } from '../core/dimFollow';
 import { keepOpeningsOnResizedWalls } from '../core/openingChain';
 import { assignLayers, layerLockViolation, selectableItems, viewFloor } from '../core/layers';
 
-export type ToolId = 'select' | 'wall' | 'line' | 'trim' | 'split' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'drawLine' | 'drawDouble' | 'drawTrim' | 'text' | 'leader' | 'dim' | 'stair' | 'paste' | 'pan';
+export type ToolId = 'select' | 'wall' | 'line' | 'trim' | 'split' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'drawLine' | 'drawDouble' | 'drawTrim' | 'text' | 'leader' | 'dim' | 'stair' | 'paste' | 'pen' | 'eraser' | 'pan';
 
 export type SingleSelection =
   | { kind: 'wall'; id: Id }
@@ -34,7 +34,9 @@ export type SingleSelection =
   /** Volná kóta mezi dvěma body (core/freeDim.ts). */
   | { kind: 'dim'; id: Id }
   /** Schodiště – 2D značka (core/stairs.ts). */
-  | { kind: 'stair'; id: Id };
+  | { kind: 'stair'; id: Id }
+  /** Ruční tah perem (core/strokes.ts). */
+  | { kind: 'stroke'; id: Id };
 
 /** Výběr: jeden prvek, skupina prvků (výběr obdélníkem) nebo nic. */
 export type Selection = SingleSelection | { kind: 'multi'; items: SingleSelection[] } | null;
@@ -106,6 +108,8 @@ export interface Settings {
   /** Nástroj Schodiště, zadané rozměry: šířka a délka ramene (mm). */
   stairWidth: number;
   stairLength: number;
+  /** Pero: tloušťka nového ručního tahu (mm výkresu, core/strokes.ts). */
+  penWidth: number;
 }
 
 export type SaveStatus = 'saved' | 'saving' | 'dirty' | 'error';
@@ -155,7 +159,7 @@ export interface EditOptions {
 const SETTINGS_KEY = 'zamerovani.settings';
 
 function loadSettings(): Settings {
-  const defaults: Settings = { snap: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', drawColor: 'black', doubleWidth: 250, doubleEnds: 'open', doubleStyle: 'dashdot2', windowKind: 'window', wallShape: 'straight', wallAxis: 'face', wallChain: false, splitGap: false, trimEdge: false, drawTrimMode: 'trim', keepAwake: true, stairMode: 'rect', stairWidth: 1000, stairLength: 3000 };
+  const defaults: Settings = { snap: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', drawColor: 'black', doubleWidth: 250, doubleEnds: 'open', doubleStyle: 'dashdot2', windowKind: 'window', wallShape: 'straight', wallAxis: 'face', wallChain: false, splitGap: false, trimEdge: false, drawTrimMode: 'trim', keepAwake: true, stairMode: 'rect', stairWidth: 1000, stairLength: 3000, penWidth: 25 };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     return raw ? { ...defaults, ...JSON.parse(raw) } : defaults;

@@ -10,7 +10,7 @@
 
 import type { DimTarget } from '../core/dimLock';
 
-export const SCHEMA_VERSION = 28;
+export const SCHEMA_VERSION = 29;
 
 export type Id = string;
 
@@ -352,6 +352,18 @@ export interface FreeDim {
 import type { Stair } from './stairTypes';
 export type { Stair, StairFlight, StairLanding } from './stairTypes';
 
+/**
+ * Ruční tah perem (zadání Vrstvy, krok 2): vyhlazená lomená čára (vektor, ne bitmapa) v mm, tloušťka v mm výkresu,
+ * barva = barva vrstvy. Jen vizuální poznámka – nechytá se, do BIM / IFC nejde (core/strokes.ts).
+ */
+export interface Stroke {
+  id: Id;
+  pts: Pt[];
+  width: number;
+  /** Vrstva (core/layers.ts) – nový tah jde do aktivní vrstvy. */
+  layerId?: Id;
+}
+
 /** Podlaží = jeden půdorys. */
 export interface Floor {
   id: Id;
@@ -371,6 +383,8 @@ export interface Floor {
   drawings?: Record<Id, Drawing>;
   /** Schodiště – 2D značka v půdorysu (od verze 25; chybí = žádné; core/stairs.ts). */
   stairs?: Record<Id, Stair>;
+  /** Ruční tahy perem (od verze 29; chybí = žádné; core/strokes.ts). */
+  strokes?: Record<Id, Stroke>;
   /** Volné kóty mezi dvěma body (od verze 20; chybí = žádné). */
   dims?: Record<Id, FreeDim>;
   /**

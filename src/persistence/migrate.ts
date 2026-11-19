@@ -41,6 +41,7 @@ export function migrateProject(raw: unknown): Project {
   // 24 → 25: schodiště (floor.stairs) – nepovinné pole, bez převodu
   // 25 → 26: schodiště – rameno po oblouku (center, sweep), ručně nakreslené rameno (turn 'free'), zabíhavé stupně (winders) – bez převodu
   // 26 → 27: schodiště – napojení ramene rovně (turn 'straight') a atypické T (turn 'tee') – bez převodu
+  // 28 → 29: ruční tahy perem (floor.strokes) – nepovinné pole, bez převodu
   // 27 → 28: vrstvy projektu (Project.layers, activeLayer) a vrstva u každého prvku (layerId) – core/layers.ts
   const old = p.schema ?? 1;
   const floors = p.floors.map(f => {

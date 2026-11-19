@@ -12,6 +12,7 @@ import { cornerOutline, cornerPolygon, cornerProtrusionsOf } from '../core/corne
 import { endOutline, endProtrusionsOf } from '../core/endProtrusion';
 import { pickDrawing } from '../core/drawing';
 import { stairHit, stairsOf } from '../core/stairs';
+import { pickStroke } from '../core/strokes';
 import type { Floor, Pt } from '../model/types';
 import type { Camera, Selection } from '../store/store';
 import { HIT_PX } from './types';
@@ -124,6 +125,9 @@ export function pickAny(floor: Floor, p: Pt, cam: Camera, current: Selection = n
   const tol = HIT_PX.wall / cam.zoom;
   const drawEdge = pickDrawing(floor, p, tol * 0.8, true);
   if (drawEdge) return { kind: 'drawing', id: drawEdge };
+  // ruční tah (poznámka perem) leží nad stavbou
+  const stroke = pickStroke(floor, p, tol * 0.6);
+  if (stroke) return { kind: 'stroke', id: stroke };
   const op = pickOpening(floor, p, cam);
   if (op) return { kind: 'opening', id: op };
   const text = pickText(floor, p, cam);

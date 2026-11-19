@@ -49,7 +49,7 @@ export function layerById(p: Pick<Project, 'layers'> | null | undefined, id: Id 
 }
 
 /** Druhy prvků s vlastní vrstvou (pole `layerId`) a jejich kolekce v podlaží. */
-export const OWN_KINDS = ['wall', 'drawing', 'stair', 'room', 'text', 'dim'] as const;
+export const OWN_KINDS = ['wall', 'drawing', 'stair', 'room', 'text', 'dim', 'stroke'] as const;
 export type OwnKind = (typeof OWN_KINDS)[number];
 /** Druhy prvků, které vrstvu dědí od stěny. */
 export const CARRIED_KINDS = ['opening', 'protrusion'] as const;
@@ -64,6 +64,7 @@ export function ownCollection(floor: Floor, kind: OwnKind): Rec {
     case 'room': return floor.rooms;
     case 'text': return floor.texts;
     case 'dim': return floor.dims ?? {};
+    case 'stroke': return floor.strokes ?? {};
   }
 }
 
@@ -77,6 +78,7 @@ export function setCollection(floor: Floor, kind: OwnKind, rec: Rec): void {
     case 'drawing': if (floor.drawings) floor.drawings = r; break;
     case 'stair': if (floor.stairs) floor.stairs = r; break;
     case 'dim': if (floor.dims) floor.dims = r; break;
+    case 'stroke': if (floor.strokes) floor.strokes = r; break;
   }
 }
 
@@ -97,6 +99,8 @@ export function newElementLayer(p: Pick<Project, 'layers' | 'activeLayer'> | nul
   const fixed = FIXED[kind];
   if (fixed) return fixed;
   const active = layerById(p, p?.activeLayer);
+  // ruční tah (Pero) kreslí vždy do aktivní vrstvy (zadání kroku 2), i do systémové
+  if (kind === 'stroke') return active?.id ?? SYS.kresba;
   return active && !active.system ? active.id : SYS.kresba;
 }
 
@@ -234,7 +238,8 @@ function filterFloor(floor: Floor, drop: (kind: ElemKind, id: Id) => boolean): F
     stairs: keep(floor.stairs, x => !drop('stair', x.id)),
     rooms: keep(floor.rooms, x => !drop('room', x.id)),
     texts: keep(floor.texts, x => !drop('text', x.id)),
-    dims: keep(floor.dims, x => !drop('dim', x.id))
+    dims: keep(floor.dims, x => !drop('dim', x.id)),
+    strokes: keep(floor.strokes, x => !drop('stroke', x.id))
   };
   return out;
 }
@@ -365,7 +370,8 @@ export function layerSlice(floor: Floor, layerId: Id): Floor {
     stairs: mine(floor.stairs, 'stair'),
     rooms: mine(floor.rooms, 'room'),
     texts: mine(floor.texts, 'text'),
-    dims: mine(floor.dims, 'dim')
+    dims: mine(floor.dims, 'dim'),
+    strokes: mine(floor.strokes, 'stroke')
   };
 }
 

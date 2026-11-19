@@ -14,6 +14,7 @@ import { drawOpenings } from './drawOpenings';
 import { drawDrawingHandles, drawDrawings } from './drawDrawings';
 import { drawRooms } from './drawRooms';
 import { drawTexts } from './drawTexts';
+import { drawStrokes } from './drawStrokes';
 import { drawComponentDims } from './drawComponentDims';
 import { resetHitBoxes, setHitEnabled } from './hitTargets';
 import { setWallFilter } from './layerDraw';
@@ -105,6 +106,8 @@ function render(): void {
       if (kinds.has('stair')) drawStairs(ctx, slice, cam, state.selection, state.hover);
       if (kinds.has('room')) drawRooms(ctx, slice, cam, state.selection);
       if (kinds.has('text')) drawTexts(ctx, slice, cam, state.selection);
+      // ruční tahy barvou vrstvy (core/strokes.ts)
+      if (kinds.has('stroke')) drawStrokes(ctx, slice, cam, layer.color, state.selection, state.hover);
       // automatické kóty patří vrstvě Kóty a kreslí se jen u viditelné stěny (rozhodnutí uživatele 2026-11-19)
       if (layer.id === SYS.koty) {
         setWallFilter(id => wallVisible(project, floor, id));

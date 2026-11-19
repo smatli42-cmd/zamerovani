@@ -15,6 +15,7 @@ import { RoomPanel } from './RoomPanel';
 import { StairPanel } from './StairPanel';
 import { TextPanel } from './TextPanel';
 import { WallPanel } from './WallPanel';
+import { StrokePanel } from './StrokePanel';
 
 export { LINE_STYLES } from './common';
 
@@ -56,6 +57,10 @@ export function SidePanel() {
       const st = floor.stairs?.[selection.id];
       return st ? <StairPanel key={st.id} s={st} /> : null;
     }
+    case 'stroke': {
+      const s = floor.strokes?.[selection.id];
+      return s ? <StrokePanel key={s.id} s={s} /> : null;
+    }
     case 'protrusion': {
       const p = floor.protrusions?.[selection.id];
       const cp = floor.cornerProtrusions?.[selection.id];
@@ -71,7 +76,8 @@ export function SidePanel() {
         [count('text'), 'textů'],
         [count('drawing'), 'prvků kresby'],
         [count('stair'), 'schodišť'],
-        [count('dim'), 'kót']
+        [count('dim'), 'kót'],
+        [count('stroke'), 'ručních tahů']
       ].filter(([n]) => n);
       return (
         <Panel title={`Vybráno ${selection.items.length} prvků`} onClose={close}>

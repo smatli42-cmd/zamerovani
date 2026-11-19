@@ -22,6 +22,7 @@ import {
   addLine,
   addOpening,
   addRoom,
+  addStroke,
   addStair,
   addText,
   addWall,
@@ -86,7 +87,8 @@ const MAKERS: Record<string, () => Made> = {
   kóta: () => ({ kind: 'dim', id: addFreeDim({ x: 0, y: -1000 }, { x: 2000, y: -1000 })!, at: { x: 1000, y: -1000 } }),
   text: () => ({ kind: 'text', id: addText({ x: 8000, y: 3000 }), at: { x: 8000, y: 3000 } }),
   'štítek místnosti': () => ({ kind: 'room', id: addRoom({ x: 8000, y: 6000 }), at: { x: 8000, y: 6000 } }),
-  schodiště: () => ({ kind: 'stair', id: addStair({ x: 0, y: 6000 }, { x: 1000, y: 9000 })!, at: { x: 500, y: 7500 } })
+  schodiště: () => ({ kind: 'stair', id: addStair({ x: 0, y: 6000 }, { x: 1000, y: 9000 })!, at: { x: 500, y: 7500 } }),
+  'ruční tah': () => ({ kind: 'stroke', id: addStroke([{ x: 10000, y: 0 }, { x: 11000, y: 500 }, { x: 12000, y: 0 }], 25)!, at: { x: 11000, y: 500 } })
 };
 
 /** Výchozí vrstva nového prvku (pravidlo 4, schválená tabulka). */
@@ -102,7 +104,8 @@ const DEFAULT: Record<string, Id> = {
   kóta: SYS.koty,
   text: SYS.popisky,
   'štítek místnosti': SYS.popisky,
-  schodiště: SYS.stavba
+  schodiště: SYS.stavba,
+  'ruční tah': SYS.kresba // aktivní vrstva (nový projekt: Kresba)
 };
 
 const layerOf = (m: Made) => elementLayer(f(), m.kind as ElemKind, m.id);
@@ -116,6 +119,7 @@ const exists = (fl: Floor, m: Made): boolean => {
     case 'text': return !!fl.texts[m.id];
     case 'room': return !!fl.rooms[m.id];
     case 'stair': return !!fl.stairs?.[m.id];
+    case 'stroke': return !!fl.strokes?.[m.id];
     default: return false;
   }
 };
@@ -136,6 +140,7 @@ function touch(fl: Floor, m: Made): void {
     case 'text': fl.texts[m.id]!.x += 100; break;
     case 'room': fl.rooms[m.id]!.x += 100; break;
     case 'stair': fl.stairs![m.id]!.flights[0]!.a.x += 100; break;
+    case 'stroke': fl.strokes![m.id]!.pts[0]!.x += 100; break;
   }
 }
 
@@ -233,6 +238,7 @@ describe.each(Object.keys(MAKERS))('%s', name => {
       else if (m.kind === 'text') delete fl.texts[m.id];
       else if (m.kind === 'room') delete fl.rooms[m.id];
       else if (m.kind === 'stair') delete fl.stairs![m.id];
+      else if (m.kind === 'stroke') delete fl.strokes![m.id];
     })).toBe(false);
     expect(exists(f(), m)).toBe(true);
     // po odemčení jde upravit
@@ -286,6 +292,7 @@ function allIds(fl: Floor, kind: SingleSelection['kind']): Id[] {
     case 'text': return Object.keys(fl.texts);
     case 'room': return Object.keys(fl.rooms);
     case 'stair': return Object.keys(fl.stairs ?? {});
+    case 'stroke': return Object.keys(fl.strokes ?? {});
     default: return [];
   }
 }
@@ -479,7 +486,7 @@ describe('pravidlo 10: prvky pro export podle zvolených vrstev', () => {
     expect(stavba.filter(i => i.kind === 'protrusion')).toHaveLength(1);
     const only = layerContents(P(), f(), [SYS.kresba, SYS.popisky]);
     expect(only.map(g => g.layer.id)).toEqual([SYS.kresba, SYS.popisky]);
-    expect(only[0]!.items).toHaveLength(Object.keys(f().drawings!).length);
+    expect(only[0]!.items.filter(i => i.kind === 'drawing')).toHaveLength(Object.keys(f().drawings!).length);
     setLayerVisible(SYS.popisky, false);
     expect(layerContents(P(), f(), [SYS.kresba, SYS.popisky]).map(g => g.layer.id)).toEqual([SYS.kresba]);
   });

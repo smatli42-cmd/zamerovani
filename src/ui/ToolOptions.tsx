@@ -14,6 +14,9 @@ import { tools } from '../tools/registry';
 import { splitMsg, splitTool } from '../tools/splitTool';
 import { dimToolMsg } from '../tools/dimTool';
 import { resetStairPoints, stairToolMsg } from '../tools/stairTool';
+import { eraserMsg } from '../tools/penTool';
+import { STROKE_WIDTHS } from '../core/strokes';
+import { layerById } from '../core/layers';
 
 export function ToolOptions() {
   const tool = useStore(s => s.tool);
@@ -208,6 +211,26 @@ export function ToolOptions() {
           value={settings.windowKind}
           onChange={v => store.updateSettings({ windowKind: v })}
         />
+      </div>
+    );
+  }
+  if (tool === 'pen' || tool === 'eraser') {
+    const p = project;
+    const active = layerById(p, p?.activeLayer);
+    return (
+      <div class="tool-options">
+        <span class="small">
+          <span class="layer-dot" style={{ background: active?.color ?? '#0f172a' }} />
+          Vrstva: <b>{active?.name ?? '—'}</b>
+        </span>
+        {tool === 'pen' ? (
+          <Seg options={STROKE_WIDTHS.map(w => ({ v: w, label: `${w} mm` }))} value={settings.penWidth as (typeof STROKE_WIDTHS)[number]} onChange={v => store.updateSettings({ penWidth: v })} />
+        ) : (
+          <span class="small">{eraserMsg()}</span>
+        )}
+        <button class="btn btn-sm" onClick={() => store.set({ layersOpen: true })}>
+          Vrstvy…
+        </button>
       </div>
     );
   }

@@ -219,7 +219,7 @@ export const selectTool: Tool = {
       drag = { kind: 'wall', id: hit.id, origin: groupOrigin(floor, [hit]), grab: p.world, lines: wallMoveLines(store.view('snap')!, hit.id, p.world) };
     }
     // tažení už vybrané kresby / schodiště ji posune celou
-    if ((hit.kind === 'drawing' || hit.kind === 'stair') && before?.kind === hit.kind && before.id === hit.id) drag = { kind: 'group', origin: groupOrigin(floor, [hit]), start: p.world };
+    if ((hit.kind === 'drawing' || hit.kind === 'stair' || hit.kind === 'stroke') && before?.kind === hit.kind && before.id === hit.id) drag = { kind: 'group', origin: groupOrigin(floor, [hit]), start: p.world };
     if (hit.kind === 'room') {
       const r = floor.rooms[hit.id]!;
       drag = { kind: 'room', id: hit.id, dx: p.world.x - r.x, dy: p.world.y - r.y };

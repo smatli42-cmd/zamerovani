@@ -16,7 +16,7 @@ import { stairOutlines, stairPoints } from './stairs';
 import { dimKey } from './dimLock';
 import { fullFloorOf } from './layers';
 
-export type LooseKindId = 'room' | 'text' | 'drawing' | 'stair' | 'dim';
+export type LooseKindId = 'room' | 'text' | 'drawing' | 'stair' | 'dim' | 'stroke';
 
 /**
  * Přemístění skupiny: `pt` = bod zaokrouhlený na mm (rohy, štítky), `exact` = přesně (kresba – obdélník
@@ -216,7 +216,29 @@ const dim: LooseKind = {
   },
 };
 
+/** Ruční tah perem (core/strokes.ts): posouvají / otáčejí se jeho body, kopie ve vrstvě originálu. */
+const stroke: LooseKind = {
+  kind: 'stroke',
+  remove: (f, id) => void (f.strokes && delete f.strokes[id]),
+  capture: (f, id) => f.strokes?.[id]?.pts.map(xy) ?? null,
+  place: (f, id, snap, t) => {
+    const s = f.strokes?.[id];
+    if (!s) return;
+    s.pts = (snap as Pt[]).map(p => t.exact(p));
+  },
+  extent: (f, id) => f.strokes?.[id]?.pts.map(xy) ?? [],
+  inRect: (f, r, crossing) => Object.values(f.strokes ?? {}).filter(s => polylinesInRect(r, [s.pts], crossing)).map(s => s.id),
+  copy: (f, id, ctx) => {
+    const src = f.strokes?.[id];
+    if (!src) return null;
+    const s = { ...clone(src), id: newId('sk') };
+    for (const p of s.pts) Object.assign(p, ctx.shift(p));
+    f.strokes![s.id] = s;
+    return s.id;
+  },
+};
+
 /** Všechny volné prvky; pořadí = pořadí kopírování (kóta až po prvcích, ke kterým může vést). */
-export const LOOSE_KINDS: readonly LooseKind[] = [room, text, drawing, stair, dim];
+export const LOOSE_KINDS: readonly LooseKind[] = [room, text, drawing, stair, stroke, dim];
 
 export const looseKind = (kind: string): LooseKind | undefined => LOOSE_KINDS.find(k => k.kind === kind);
