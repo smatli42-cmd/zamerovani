@@ -71,7 +71,6 @@ export interface Camera {
 
 export interface Settings {
   snap: boolean;
-  showDims: boolean;
   showGrid: boolean;
   /** Prst jen posouvá plátno, kreslí se stylusem (ochrana proti dlani). */
   fingerPan: boolean;
@@ -143,6 +142,8 @@ export interface AppState {
    * nebo jiný důvod (bez `target`, např. otvor by vyjel ze stěny). Hlášení dole na plátně.
    */
   lockBlock: { key: string; text: string; target?: DimTarget } | null;
+  /** Otevřený panel Vrstvy. */
+  layersOpen: boolean;
 }
 
 /** Volby úpravy výkresu. */
@@ -154,7 +155,7 @@ export interface EditOptions {
 const SETTINGS_KEY = 'zamerovani.settings';
 
 function loadSettings(): Settings {
-  const defaults: Settings = { snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', drawColor: 'black', doubleWidth: 250, doubleEnds: 'open', doubleStyle: 'dashdot2', windowKind: 'window', wallShape: 'straight', wallAxis: 'face', wallChain: false, splitGap: false, trimEdge: false, drawTrimMode: 'trim', keepAwake: true, stairMode: 'rect', stairWidth: 1000, stairLength: 3000 };
+  const defaults: Settings = { snap: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', drawColor: 'black', doubleWidth: 250, doubleEnds: 'open', doubleStyle: 'dashdot2', windowKind: 'window', wallShape: 'straight', wallAxis: 'face', wallChain: false, splitGap: false, trimEdge: false, drawTrimMode: 'trim', keepAwake: true, stairMode: 'rect', stairWidth: 1000, stairLength: 3000 };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     return raw ? { ...defaults, ...JSON.parse(raw) } : defaults;
@@ -190,7 +191,8 @@ class Store {
     toolMsg: null,
     chainNode: null,
     stairAppend: null,
-    lockBlock: null
+    lockBlock: null,
+    layersOpen: false
   };
 
   private listeners = new Set<Listener>();

@@ -7,6 +7,8 @@ import { attachKeyboard } from '../input/keyboard';
 import { attachPointer } from '../input/pointer';
 import { NumPad } from './NumPad';
 import { LockNotice } from './LockNotice';
+import { LayersPanel } from './LayersPanel';
+import { useStore } from '../store/useStore';
 import { ToolOptions } from './ToolOptions';
 import { SidePanel } from './panels/SidePanel';
 import { Toolbar } from './Toolbar';
@@ -15,6 +17,7 @@ import { fitToDrawing } from './viewActions';
 
 export function Editor() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const layersOpen = useStore(s => s.layersOpen);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -38,6 +41,7 @@ export function Editor() {
         <div class="canvas-wrap">
           <canvas ref={canvasRef} class="plan-canvas" />
           <ToolOptions />
+          {layersOpen && <LayersPanel />}
           <SidePanel />
           <NumPad />
           <LockNotice />

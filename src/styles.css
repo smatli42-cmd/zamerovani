@@ -872,3 +872,135 @@ textarea {
   margin-bottom: 0;
   gap: 10px;
 }
+
+/* Panel Vrstvy (ui/LayersPanel.tsx) – vlevo nahoře pod volbami nástroje */
+.layers-panel {
+  position: absolute;
+  top: 64px;
+  left: 10px;
+  width: 340px;
+  max-height: calc(100% - 80px);
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+  z-index: 12;
+}
+.layer-list {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.layer-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+  transition: transform 0.12s;
+}
+.layer-row.active {
+  background: var(--primary-soft);
+}
+.layer-row.dragging {
+  transition: none;
+  z-index: 2;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.2);
+}
+.layer-handle {
+  width: 32px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: var(--muted);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.layer-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  border-radius: 8px;
+  flex: none;
+}
+.layer-btn:disabled {
+  opacity: 0.35;
+}
+.layer-color {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--line);
+  flex: none;
+  position: relative;
+  overflow: hidden;
+}
+.layer-color input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+}
+.layer-name {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  text-align: left;
+  border: none;
+  background: transparent;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dark);
+}
+.layer-name.off {
+  color: var(--muted);
+}
+.layer-name small {
+  color: var(--muted);
+  font-weight: normal;
+}
+.layer-field {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.layer-field-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.layer-field-row .btn {
+  margin-left: auto;
+}
+.layer-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.layer-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}

@@ -3,6 +3,7 @@
  */
 import type { ComponentChildren } from 'preact';
 import { openField } from '../../store/numpadController';
+import { LayerField } from './LayerField';
 
 interface NumProps {
   label: string;
@@ -82,7 +83,11 @@ export function Panel({ title, children, onClose }: { title: string; children: C
           ✕
         </button>
       </div>
-      <div class="panel-body">{children}</div>
+      <div class="panel-body">
+        {children}
+        {/* vrstva vybraného prvku a přesun do jiné vrstvy – stejně ve všech panelech (core/layers.ts) */}
+        <LayerField />
+      </div>
     </section>
   );
 }

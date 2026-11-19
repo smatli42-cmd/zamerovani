@@ -5,7 +5,8 @@ import { wakeLockSupported } from '../input/wakeLock';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { downloadBackup } from '../persistence/backup';
 import { saveNow } from '../persistence/autosave';
-import { addFloor, deleteFloor, renameFloor } from '../store/actions';
+import { addFloor, deleteFloor, renameFloor, setLayerVisible } from '../store/actions';
+import { layerById, SYS } from '../core/layers';
 import { store, type SaveStatus, type Settings } from '../store/store';
 import { useStore } from '../store/useStore';
 import { ConfirmDialog, TextPrompt } from './Dialog';
@@ -27,6 +28,7 @@ export function TopBar() {
   const canUndo = useStore(s => s.canUndo);
   const canRedo = useStore(s => s.canRedo);
   const saveStatus = useStore(s => s.saveStatus);
+  const layersOpen = useStore(s => s.layersOpen);
   const [floorDialog, setFloorDialog] = useState<FloorDialog>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [editInfo, setEditInfo] = useState(false);
@@ -87,6 +89,9 @@ export function TopBar() {
       <button class="btn btn-dark" disabled={!canRedo} onClick={() => store.redo()} title="Vpřed (Ctrl+Y)">
         ↪️
       </button>
+      <button class={`btn btn-dark ${layersOpen ? 'active' : ''}`} onClick={() => store.set({ layersOpen: !layersOpen })} title="Vrstvy">
+        🗂️ Vrstvy
+      </button>
       <button class="btn btn-dark" onClick={fitToDrawing} title="Zobrazit celý výkres">
         🎯
       </button>
@@ -145,7 +150,10 @@ function suggestFloorName(existing: string[]): string {
 
 function SettingsPopover({ onClose }: { onClose: () => void }) {
   const settings = useStore(s => s.settings);
+  const project = useStore(s => s.project);
   const box = useRef<HTMLDivElement>(null);
+  // kóty = vrstva Kóty (rozhodnutí uživatele 2026-11-19: přepínač nahrazuje oko vrstvy Kóty, je v historii)
+  const dimsVisible = layerById(project, SYS.koty)?.visible ?? true;
   // Zavře se ťuknutím mimo okno (ne při zvednutí prstu – na dotykovém displeji by zmizelo dřív, než se stihne zapnout volba)
   useEffect(() => {
     const away = (e: PointerEvent) => {
@@ -164,7 +172,10 @@ function SettingsPopover({ onClose }: { onClose: () => void }) {
   return (
     <div class="popover settings-popover" ref={box}>
       {toggle('snap', 'Přichytávat na rohy', 'Přichytávání na rohy, stěny a zarovnání')}
-      {toggle('showDims', 'Zobrazit kóty', '')}
+      <label class="toggle-row" title="Vrstva Kóty (automatické i volné kóty)">
+        <input type="checkbox" checked={dimsVisible} onChange={() => setLayerVisible(SYS.koty, !dimsVisible)} />
+        <span>Zobrazit kóty</span>
+      </label>
       {toggle('showGrid', 'Zobrazit mřížku', '')}
       {toggle('fingerPan', 'Prst jen posouvá', 'Kreslí se jen perem, prst posouvá výkres (ochrana proti dlani)')}
       {toggle('keepAwake', 'Nevypínat displej', 'Tablet neusne, dokud je aplikace otevřená na obrazovce')}
