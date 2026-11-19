@@ -520,3 +520,81 @@ describe('nové kusy z prvku zůstanou v jeho vrstvě', () => {
     for (const d of Object.values(f().drawings!)) expect(d.layerId).toBe('voda');
   });
 });
+
+describe('nálezy kontroly kroku 1', () => {
+  it('navázání čáry kresby jen na čáru ve vrstvě nové kresby (ne v jiné, skryté ani zamčené)', () => {
+    setActiveLayer('elektro');
+    const e = addDrawLine({ x: 0, y: 0 }, { x: 1000, y: 0 })!;
+    setActiveLayer('voda');
+    const v = addDrawLine({ x: 1000, y: 0 }, { x: 1000, y: 1000 })!;
+    expect(v).not.toBe(e);
+    expect(f().drawings![v]!.layerId).toBe('voda');
+    expect(f().drawings![e]!.pts).toHaveLength(2);
+    // ve stejné vrstvě naváže
+    const v2 = addDrawLine({ x: 1000, y: 1000 }, { x: 0, y: 1000 })!;
+    expect(v2).toBe(v);
+    // zamčená vrstva: nová čára vznikne samostatně, zamčená se nezmění
+    setLayerLocked('voda', true);
+    const v3 = addDrawLine({ x: 0, y: 1000 }, { x: 0, y: 2000 })!;
+    expect(v3).not.toBe(v);
+    expect(f().drawings![v3]).toBeTruthy();
+  });
+
+  it('stěny v různých vrstvách se neslučují; pokračování zamčené stěny vznikne samostatně', () => {
+    const w = WALL();
+    store.set({ selection: { kind: 'wall', id: w } });
+    moveSelectionToLayer('elektro');
+    const n = addWall({ x: 4000, y: 0 }, f().walls[w]!.b, { x: 6000, y: 0 }, null, false, { thickness: 300, side: 1 })!;
+    expect(n).not.toBe(w);
+    expect(f().walls[n]!.layerId).toBe(SYS.stavba);
+    expect(f().walls[w]!.layerId).toBe('elektro');
+    // zamčená Stavba: další rovné pokračování stavby se nesloučí, ale vznikne
+    setLayerLocked(SYS.stavba, true);
+    const m = addWall({ x: 6000, y: 0 }, f().walls[n]!.b, { x: 8000, y: 0 }, null, false, { thickness: 300, side: 1 });
+    expect(m).toBeTruthy();
+    expect(m).not.toBe(n);
+  });
+
+  it('ořez kresby nebere skrytou čáru jako hranici', async () => {
+    const { trimDrawingAt } = await import('./actions');
+    const h = addDrawLine({ x: 0, y: 0 }, { x: 3000, y: 0 })!;
+    setActiveLayer('elektro');
+    addDrawLine({ x: 1000, y: -500 }, { x: 1000, y: 500 });
+    setActiveLayer(SYS.kresba);
+    setLayerVisible('elektro', false);
+    // bez hranice zmizí celý úsek
+    expect(trimDrawingAt(h, { x: 2000, y: 0 })).toBe('ok');
+    expect(Object.values(f().drawings!).filter(d => d.layerId === SYS.kresba)).toHaveLength(0);
+  });
+
+  it('nový prvek do skryté vrstvy ji zobrazí (prvek nezmizí); Zpět vrátí obojí', () => {
+    setLayerVisible(SYS.koty, false);
+    addFreeDim({ x: 0, y: 0 }, { x: 1000, y: 0 });
+    expect(layersOf(P()).find(l => l.id === SYS.koty)!.visible).toBe(true);
+    store.undo();
+    expect(layersOf(P()).find(l => l.id === SYS.koty)!.visible).toBe(false);
+    expect(Object.keys(f().dims ?? {})).toHaveLength(0);
+  });
+
+  it('zamčená vrstva Kóty nebrání rozdělení stěny, na jejíž líc vede kóta (kóta se jen přepojí)', async () => {
+    const { splitWall } = await import('./actions');
+    const w = WALL();
+    const nodes = f().walls[w]!;
+    addFreeDim({ node: nodes.a }, { x: 3000, y: -1000 }, 0);
+    addFreeDim({ wall: w, side: 1, at: 1000 } as never, { x: 1000, y: 2000 }, 0);
+    setLayerLocked(SYS.koty, true);
+    splitWall(w, { x: 2000, y: 0 });
+    expect(Object.keys(f().walls)).toHaveLength(2);
+  });
+
+  it('nástroj Do rohu k hraně: zamčená stěna smí být hranou (nemění se)', async () => {
+    const { trimToEdge } = await import('./actions');
+    const a = WALL();
+    const b = addWall({ x: 5000, y: -2000 }, null, { x: 5000, y: 2000 }, null, false, { thickness: 300, side: 1 })!;
+    store.set({ selection: { kind: 'wall', id: b } });
+    moveSelectionToLayer('elektro');
+    setLayerLocked('elektro', true);
+    expect(trimToEdge(a, { x: 1000, y: 0 }, b)).toBe('ok');
+    expect(f().nodes[f().walls[a]!.b]!.x).toBeGreaterThan(4000);
+  });
+});

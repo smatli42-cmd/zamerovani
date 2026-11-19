@@ -2,6 +2,7 @@
  * Změny propojení stěn: rozdělení stěny v rohu (dnes jen nástroj / testy – napojení stěnu nedělí, viz
  * core/hosting.ts), sloučení rovného pokračování a migrace starých rozdělených stěn a oblouků.
  */
+import { SYS } from './layers';
 import { newId } from '../model/factory';
 import type { Floor, Id, Wall } from '../model/types';
 import { arcGeometry, nearestOnArc, splitArcSagittas } from './arc';
@@ -111,7 +112,7 @@ export function splitWallsAtNode(floor: Floor, nodeId: Id): void {
  * `throughT` (migrace starých rozdělených stěn): slučuje i přes roh, kde se napojují další stěny – pak tam
  * zůstane roh napojený na sloučenou stěnu (T bez dělení, core/hosting.ts); musí sedět i strana těla a styl.
  */
-export function mergeStraightAt(floor: Floor, wallId: Id, nodeId: Id, throughT = false): Id {
+export function mergeStraightAt(floor: Floor, wallId: Id, nodeId: Id, throughT = false, keepApart?: (wallId: Id) => boolean): Id {
   const w = floor.walls[wallId];
   const node = floor.nodes[nodeId];
   if (!w || !node || w.sagitta || (w.a !== nodeId && w.b !== nodeId)) return wallId;
@@ -120,6 +121,8 @@ export function mergeStraightAt(floor: Floor, wallId: Id, nodeId: Id, throughT =
   if (!wFar) return wallId;
   const o = straightContinuation(floor, nodeId, node, wFar, w.thickness, w.id, throughT);
   if (!o || o.axis !== w.axis) return wallId; // různá osa = dvě stěny
+  // stěny v různých vrstvách se neslučují (vrstvy: core/layers.ts) – nová stěna by jinak přešla do cizí vrstvy
+  if ((o.layerId ?? SYS.stavba) !== (w.layerId ?? SYS.stavba) || keepApart?.(o.id)) return wallId;
   // zamčená délka stěny (zámek kót) – pokračování se nepřipojí, zůstanou dvě stěny a zamčená kóta platí dál
   if (floor.dimLocks?.[`wall-length:${o.id}`] || floor.dimLocks?.[`wall-length:${w.id}`]) return wallId;
   if (throughT) {
@@ -229,6 +232,7 @@ export function mergeArcAt(floor: Floor, nodeId: Id): boolean {
       if (dist(g1.center, g2.center) > 0.5 || Math.abs(g1.r - g2.r) > 0.5) continue;
       if (w1.thickness !== w2.thickness || w1.axis !== w2.axis || (w1.style ?? 'solid') !== (w2.style ?? 'solid')) continue;
       if (JSON.stringify(w1.label) !== JSON.stringify(w2.label)) continue;
+      if ((w1.layerId ?? SYS.stavba) !== (w2.layerId ?? SYS.stavba)) continue; // různé vrstvy se neslučují
       const noJoinAt = (x: Wall) => (x.a === nodeId && x.noJoinA) || (x.b === nodeId && x.noJoinB);
       if (noJoinAt(w1) || noJoinAt(w2)) continue;
       // strana těla vůči směru řetězu p → roh → q

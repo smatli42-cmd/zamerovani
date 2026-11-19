@@ -17,7 +17,7 @@ import { drawTexts } from './drawTexts';
 import { drawComponentDims } from './drawComponentDims';
 import { resetHitBoxes, setHitEnabled } from './hitTargets';
 import { setWallFilter } from './layerDraw';
-import { elementLayer, kindsInLayer, layerSlice, layersOf, SYS, wallVisible } from '../core/layers';
+import { elementLayer, kindsInLayer, layerSlice, layersOf, SYS, viewFloor, wallVisible } from '../core/layers';
 import { setRenderHandler } from './invalidate';
 
 let canvas: HTMLCanvasElement | null = null;
@@ -109,10 +109,13 @@ function render(): void {
       if (layer.id === SYS.koty) {
         setWallFilter(id => wallVisible(project, floor, id));
         drawDims(ctx, floor, cam, s, state.selection);
-        drawComponentDims(ctx, floor, cam, s, state.selection);
+        // odstupy skupiny jen k viditelným stěnám (skryté se do kót mezi prvky nepočítají)
+        drawComponentDims(ctx, viewFloor(project, floor, 'snap'), cam, s, state.selection);
         drawBodyDims(ctx, floor, cam, s, state.selection);
         drawProtrusionDims(ctx, floor, cam, s, state.selection);
         drawCornerEndDims(ctx, floor, cam, s, state.selection);
+        // kóty schodiště jen u vybraného schodiště
+        drawStairDims(ctx, floor, cam, s, state.selection);
       }
       // volné kóty jsou samostatné prvky své vrstvy – viditelné i u skrytého měřeného prvku (pravidlo 8)
       if (kinds.has('dim')) drawFreeDims(ctx, slice, cam, s, state.selection, state.hover);
@@ -122,8 +125,6 @@ function render(): void {
     setWallFilter(id => wallVisible(project, floor, id));
     drawNodes(ctx, floor, cam, state.selection, state.hover);
     setWallFilter(null);
-    // kóty schodiště jen u vybraného schodiště
-    drawStairDims(ctx, floor, cam, state.settings.dimScale, state.selection);
     // čísla kót až nad všemi čarami kót (posunuté číslo na čáře sousední kóty zůstane čitelné)
     flushDimLabels();
     drawArcHandle(ctx, floor, cam, state.selection);

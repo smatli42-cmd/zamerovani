@@ -13,7 +13,8 @@
  * Kreslení (`canvas/renderer.ts`), výběr a přichytávání (nástroje přes `viewFloor`) i export (`layerContents`)
  * se ptají jen tady. Nový druh prvku s vrstvou přidat do `OWN_KINDS` / `elementLayers`.
  */
-import type { Floor, Id, Layer, Project } from '../model/types';
+import type { Floor, FreeDim, Id, Layer, Project } from '../model/types';
+import { dimPoints } from './freeDim';
 
 /** Systémové vrstvy (pevná id – nemění se ani po přejmenování vrstvy). */
 export const SYS = { stavba: 'stavba', koty: 'koty', popisky: 'popisky', kresba: 'kresba' } as const;
@@ -163,6 +164,12 @@ export function isSelectable(p: Pick<Project, 'layers'> | null | undefined, floo
   return !isHidden(p, floor, kind, id) && !isLocked(p, floor, kind, id);
 }
 
+/** Jde na čáru kresby navázat novým úsekem? Jen ve vrstvě, kam jde nová kresba, viditelné a odemčené. */
+export function canJoinDrawing(p: Pick<Project, 'layers' | 'activeLayer'> | null | undefined, floor: Floor, id: Id): boolean {
+  const l = elementLayer(floor, 'drawing', id);
+  return l === newElementLayer(p ?? null, 'drawing') && isSelectable(p, floor, 'drawing', id);
+}
+
 /** Výběr bez prvků ve skrytých a zamčených vrstvách (např. po skrytí vrstvy s vybraným prvkem). */
 export function selectableItems<T extends { kind: string; id: Id }>(p: Pick<Project, 'layers'> | null | undefined, floor: Floor, items: T[]): T[] {
   const { hidden, locked } = layerState(p);
@@ -249,7 +256,8 @@ export function layerLockViolation(pBefore: Pick<Project, 'layers'> | null | und
     for (const el of Object.values(b)) {
       const l = isLockedIn([el.layerId ?? kindDefaultLayer(kind)]);
       if (!l) continue;
-      if (!same(el, a[el.id])) return name(l);
+      // kóta přepojená na jiný prvek (dělení stěny, přečíslování) se nezměnila, měří-li stejné body se stejným odsazením
+      if (!same(el, a[el.id]) && !(kind === 'dim' && sameDim(before, after, el as FreeDim, a[el.id] as FreeDim | undefined))) return name(l);
       if (kind === 'wall') {
         const w = el as Floor['walls'][string];
         for (const n of [w.a, w.b]) if (!same(before.nodes[n], after.nodes[n])) return name(l);
@@ -277,6 +285,13 @@ export function layerLockViolation(pBefore: Pick<Project, 'layers'> | null | und
   return null;
 }
 
+function sameDim(before: Floor, after: Floor, d: FreeDim, e: FreeDim | undefined): boolean {
+  if (!e || d.offset !== e.offset) return false;
+  const p = dimPoints(before, d);
+  const q = dimPoints(after, e);
+  return !!p && !!q && p.every((pt, i) => Math.hypot(pt.x - q[i]!.x, pt.y - q[i]!.y) < 0.01);
+}
+
 function same(x: unknown, y: unknown): boolean {
   if (x === y) return true;
   if (!x || !y) return false;
@@ -292,7 +307,12 @@ export function assignLayers(p: Pick<Project, 'layers' | 'activeLayer'> | null, 
     const rec = ownCollection(floor, kind);
     for (const id in rec) {
       const el = rec[id]!;
-      if (el.layerId === undefined || !layerById(p, el.layerId)) el.layerId = newElementLayer(p, kind);
+      if (el.layerId === undefined || !layerById(p, el.layerId)) {
+        el.layerId = newElementLayer(p, kind);
+        // nový prvek do skryté vrstvy: vrstva se zobrazí (prvek nesmí po vytvoření zmizet), ve stejném kroku Zpět
+        const layer = p?.layers?.find(l => l.id === el.layerId);
+        if (layer && !layer.visible) layer.visible = true;
+      }
     }
   }
 }

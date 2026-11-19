@@ -12,6 +12,7 @@
 | `KRESLENI-VYSTUPKU.md` | Návrh výstupku / vybrání stěny (přizdívka, pilastr), kreslí se nástrojem Čára |
 | `KOTY-ZAMEK-EXPORT.md` | Návrh zámku kót (A, schváleno) a výběru kót do exportu (B, později) |
 | `ZADANI-OKNA-DVERE.md` | Zadání oken, dveří, ostění a dalších fází |
+| `bim-export.md` | Zásady budoucího exportu pro BIM (vrstvy jsou součástí modelu, symboly ve stejných vrstvách, ruční tahy ne) |
 | `POZADAVKY.md` | Celkové požadavky a plán po fázích |
 | `PREPNUTI-POCITACE.md` | Postup přepnutí mezi počítači pro uživatele |
 | `src/` | Zdrojový kód (struktura v `CLAUDE.md`) |
@@ -33,6 +34,8 @@
 | `src/persistence/migrateDrawings.ts` | Migrace 17 → 18: staré obdélníky, kruhy a volné oblouky tloušťky 0 → kresba |
 | `KRESLENI-PREKLADU.md`, `KRESLENI-SAMOSTATNE-CARY-A-SRAFY.md` | Podklady: dvojitá čára / překlady; samostatná čára a šrafy |
 | `src/store/protrusionRow.test.ts` | Kopírování výstupku v řadě (I1.11) |
+| `src/core/layers.ts`, `src/store/layers.test.ts` | **Vrstvy** (katalog V) – jediné místo pravidel: výchozí sada, vrstva prvku, skrytá / zamčená vrstva, pohled pro nástroje, zámek vrstvy, export (`layerContents`) |
+| `src/store/actions/layers.ts`, `src/ui/LayersPanel.tsx`, `src/ui/panels/LayerField.tsx`, `src/canvas/layerDraw.ts` | Akce vrstev / panel Vrstvy / řádek Vrstva v panelu prvku / filtr stěn při kreslení po vrstvách |
 | `src/sizeGuard.test.ts` | Hlídání velikosti zdrojových souborů (nad 700 řádků selže, nad 500 upozorní) |
 | `prototyp/` | Starý první prototyp (jen inspirace) |
 | `.claude/agents/reviewer.md` | Agent pro nezávislou kontrolu kroku |

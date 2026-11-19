@@ -46,10 +46,10 @@ export const drawTrimTool: Tool = {
     preview = null;
     if (floor && d) {
       if (extendMode()) {
-        const e = extendPlan(floor, d, p.world);
+        const e = extendPlan(store.view('snap') ?? floor, d, p.world);
         if (typeof e !== 'string') preview = { extend: e };
       } else {
-        const t = trimPiece(floor, d, p.world);
+        const t = trimPiece(store.view('snap') ?? floor, d, p.world);
         if (typeof t !== 'string') preview = { trim: t };
       }
     }

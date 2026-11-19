@@ -215,6 +215,43 @@ Souřadnice v mm jako v C2 (osa Y nahoru; v aplikaci dolů). Výchozí stěna **
 14. **Uzavřený tvar přes líc.** (Od 2026-11-17 platí jen pro uzavřený obrys čarami ve stěnách – nástroj Obdélník kreslí kresbu, rozhodnutí uživatele.) Plný obdélník (2000, −200) – (2500, −700) zvenku přes vnější líc y = −300 (zasahuje 100 mm do těla): výstupek 500 × 400 na líci y = −300, část v těle zmizí. Obdélník (2000, 10) – (2500, −290) (10 mm venku, 290 v těle) zůstane čarami. Obdélník ve vnitřním rohu dvou stěn přes obě těla zůstane čarami.
 11. **Uložení a načtení.** Výkres s výstupky se uloží a po načtení (i po migraci ze starší verze bez výstupků) je stejný.
 
+## V. Vrstvy (závazná rozhodnutí uživatele 2026-11-19)
+
+Průřezová funkce. Pravidla jen v `src/core/layers.ts`; prvky je jen využívají. Testy `src/store/layers.test.ts`.
+
+**Model.** Vrstvy patří projektu (`Project.layers`), stejná sada pro všechna podlaží. Vrstva: `id` (stálé), `name` (měnitelný – hladina v DXF), `color` (jen pro ruční tahy a symboly, stavba si drží vzhled), `order` (pořadí kreslení), `visible`, `locked`, `system`. Vlastní vrstvu (`layerId`) má stěna, kresba (čára, obdélník, kruh, oblouk, dvojitá čára), schodiště, štítek místnosti, text a volná kóta. **Otvor (i s ostěním) a výstupek / vybrání (na stěně, na konci, v rohu) vlastní vrstvu nemají – dědí vrstvu stěny** a samostatně se nepřesouvají. Výchozí sada: systémové **Stavba, Kóty, Popisky, Kresba** (nejdou smazat ani přejmenovat, jdou skrýt a zamknout), uživatelské Elektro, Voda, Topení, Nábytek, Poznámky.
+
+| ID | Pravidlo |
+|---|---|
+| V1 | **Skrytá vrstva:** prvek se nekreslí, nechytá (přichytávání), nevybírá (ťuknutím ani obdélníkem), tedy ani nemaže a neposouvá; nepočítá se do automatických kót mezi prvky (řada napojení). Do geometrie (místnosti, napojení těl, sdílené rohy) se počítá dál a úprava viditelného prvku jím smí pohnout (vy). |
+| V2 | **Zamčená vrstva:** prvek je vidět a chytá, ale nevybere se a nedá se posunout, smazat ani tažením změnit. Úprava jiného prvku, která by ho změnila (sdílený roh, napojení, zamčená kóta, změna délky, nový otvor na zamčené stěně), se **neprovede s hlášením** (vy). Klikací čísla kót zamčené vrstvy (u automatických kót vrstva Kóty) nereagují. |
+| V3 | **Přesun do jiné vrstvy:** vybraný prvek (i skupina) jedním ťuknutím (panel prvku → Přesunout do vrstvy), jeden krok Zpět. Stěna bere otvory a výstupky s sebou. |
+| V4 | **Nový prvek:** stěna a schodiště → Stavba; volná kóta → Kóty; text a štítek místnosti → Popisky; kresba (a později ruční tah, symbol) → aktivní vrstva, a když je aktivní systémová vrstva, tak Kresba (vy). Jinam přesunem (V3). Kusy vzniklé dělením / ořezem zůstanou ve vrstvě původního prvku. Nový prvek do skryté vrstvy tu vrstvu zobrazí (jinak by po vytvoření zmizel). Čára kresby navazuje jen na čáru ve vrstvě nové kresby; stěny různých vrstev se neslučují a stěna zamčené vrstvy se se svým pokračováním nesloučí. |
+| V5 | **Kopie** zůstane ve vrstvě originálu. |
+| V6 | **Zpět / Vpřed:** vytvoření, přejmenování, barva, pořadí, viditelnost, zámek, přesun prvku i smazání vrstvy jsou v historii. Volba aktivní vrstvy ne. |
+| V7 | **Smazání neprázdné vrstvy:** dialog – přesunout obsah do vybrané vrstvy / smazat i s obsahem / zrušit; nikdy potichu. Platí pro všechna podlaží. Systémovou ani zamčenou vrstvu smazat nejde. |
+| V8 | **Kóty:** volná kóta je prvek své vrstvy (výchozí Kóty), vidět je i u skrytého měřeného prvku. Automatické kóty (délka stěny, řetězy otvorů, kóty výstupků a schodišť) patří vrstvě Kóty a kreslí se jen u viditelné stěny; přepínač „Zobrazit kóty“ v nastavení = oko vrstvy Kóty (vy). |
+| V9 | **Export JSON** (záloha) nese vrstvy i `layerId` u každého prvku. Starší projekty dostanou při otevření výchozí sadu a vrstvy podle druhu (migrace 27 → 28, beze ztráty). |
+| V10 | **Příprava exportu PDF / DXF:** `layerContents(project, floor, vrstvy)` vrátí prvky zvolených viditelných vrstev v pořadí kreslení (otvory a výstupky s vrstvou stěny, automatické kóty stěny ve vrstvě Kóty). UI exportu bude později. |
+| V11 | **Pořadí** vrstev se mění přetažením v panelu Vrstvy; kreslí se podle `order` (nahoře v seznamu = nahoře na výkresu). Rohy (pomůcka úprav) se kreslí nad vším. |
+
+### V-tabulka: pravidlo × typ prvku (✔ test, ✔k průchod kódem, n.a. nedává smysl)
+
+| pravidlo | stěna | otvor | ostění | výstupek | čára | dvojitá čára | kruh / oblouk | volná kóta | autom. kóty | text | štítek místn. | schodiště | značka detailu |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| V1 skrytá | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | n.a. |
+| V2 zamčená | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔k | ✔ | ✔ | ✔ | n.a. |
+| V3 přesun | ✔ | ✔ se stěnou | ✔ se stěnou | ✔ se stěnou | ✔ | ✔ | ✔ | ✔ | n.a. | ✔ | ✔ | ✔ | n.a. |
+| V4 výchozí | ✔ Stavba | ✔ stěna | ✔ stěna | ✔ stěna | ✔ aktivní | ✔ aktivní | ✔ aktivní | ✔ Kóty | ✔ Kóty | ✔ Popisky | ✔ Popisky | ✔ Stavba | n.a. |
+| V5 kopie | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | n.a. | ✔ | ✔ | ✔ | n.a. |
+| V6 historie | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | n.a. |
+| V7 smazání vrstvy | ✔ | ✔ | ✔k | ✔k | ✔ | ✔k | ✔k | ✔ | n.a. | ✔k | ✔k | ✔k | n.a. |
+| V8 kóty | ✔ | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | ✔ | ✔ | n.a. | n.a. | n.a. | n.a. |
+| V9 JSON | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | n.a. | ✔ | ✔ | ✔ | n.a. |
+| V10 export | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | n.a. |
+
+Značka detailu v aplikaci zatím není (n.a.). Ruční tah, symbol, špendlík, fotka přibudou později – každý nový druh prvku s vrstvou se přidá do `OWN_KINDS` v `core/layers.ts` a do této tabulky.
+
 ## Zdroje
 - Revit, napojení stěn: [Change the Configuration of a Wall Join](https://help.autodesk.com/cloudhelp/2022/ENU/RevitLT-ArchDes/files/GUID-19EAF7A9-331F-4271-94CC-43B76B13011E.htm), [Modify Wall Joins](https://help.autodesk.com/cloudhelp/2023/ENU/Revit-ArchDesign/files/GUID-7AFCACAC-9ED2-44A4-A30E-7D7ED16E01E5.htm), [Revit Pure: wall joins tips](https://bimpure.com/blog/8-tips-to-understand-revit-wall-joins)
 - Revit, Location Line a kreslení: [About the Wall Location Line](https://help.autodesk.com/cloudhelp/2020/ENU/Revit-Model/files/GUID-F26DB6DA-A0EC-424D-B656-3BDF47607F4F.htm), [Placing Walls](https://help.autodesk.com/cloudhelp/2014/ENU/Revit/files/GUID-05BAFEAA-5186-484E-80F4-8D900C454748.htm)

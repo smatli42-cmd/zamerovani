@@ -1,6 +1,7 @@
 /**
  * Akce: stěny (kreslení, tvary, oblouky, tloušťka, popisky) a posun rohů / skupin.
  */
+import { isLocked, newElementLayer } from '../../core/layers';
 import { remapDimNode } from '../../core/freeDim';
 import { looseKind, type Transform } from '../../core/looseElements';
 import { trimExtendToCorner, trimExtendToEdge, type TrimResult } from '../../core/trimExtend';
@@ -66,6 +67,8 @@ export function insertWall(floor: Floor, start: Pt, startNodeId: Id | null, end:
     const wall = linkWall(floor, a, b, opts.sagitta ?? 0, opts.style, opts.thickness ?? 0);
     if (!wall) return null;
     createdId = wall.id;
+    // vrstva nové stěny hned (sloučení s pokračováním jen ve stejné vrstvě; core/layers.ts)
+    if (isNew) wall.layerId ??= newElementLayer(store.get().project, 'wall');
     if (isNew && hasBody(wall)) {
       if (opts.axis) wall.axis = opts.axis;
       // strana zvolená při kreslení (překlopení stylusem) platí natrvalo, jinak automaticky
@@ -79,8 +82,10 @@ export function insertWall(floor: Floor, start: Pt, startNodeId: Id | null, end:
     attachAtNode(floor, b);
     if (isNew && hasBody(wall)) {
       // rovné pokračování stěny se stejnou tloušťkou = jedna stěna (nelze pak překlopit každou část zvlášť)
-      let id = mergeStraightAt(floor, wall.id, a);
-      id = mergeStraightAt(floor, id, b);
+      // stěna zamčené vrstvy se neslučuje (změnila by se) – nová stěna zůstane samostatná
+      const keepApart = (id: Id) => isLocked(store.get().project, floor, 'wall', id);
+      let id = mergeStraightAt(floor, wall.id, a, false, keepApart);
+      id = mergeStraightAt(floor, id, b, false, keepApart);
       createdId = id;
       cleanup(floor);
       orientLoopOutward(floor, id);

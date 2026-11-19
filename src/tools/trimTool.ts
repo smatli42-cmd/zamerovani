@@ -34,10 +34,11 @@ let first: { wallId: Id; keep: Pt } | null = null;
 let hoverPt: Pt | null = null;
 
 function wallAt(p: PointerInput): Id | null {
-  const floor = store.floor();
-  if (!floor) return null;
-  const hit = findWallNear(store.view('pick')!, p.world, HIT_PX.wall / store.get().camera.zoom);
-  return hit?.wall.id ?? findBodyAt(store.view('pick')!, p.world)?.id ?? null;
+  // první stěna se mění → jen vybratelné; hrana v režimu „k hraně“ se nemění → i zamčená (chytá, vrstvy V2)
+  const view = store.view(first && edgeMode() ? 'snap' : 'pick');
+  if (!view) return null;
+  const hit = findWallNear(view, p.world, HIT_PX.wall / store.get().camera.zoom);
+  return hit?.wall.id ?? findBodyAt(view, p.world)?.id ?? null;
 }
 
 export const trimTool: Tool = {

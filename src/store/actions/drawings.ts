@@ -8,6 +8,7 @@ import { dist } from '../../core/geometry';
 import { canHatch, doubleWidthTowards, moveDrawingVertex, openLineEnds, sagittaTowards, setRectSize } from '../../core/drawing';
 import { applyTrim, extendPlan, remapTrimDims, trimPiece, type TrimFail } from '../../core/drawTrim';
 import { store } from '../store';
+import { canJoinDrawing } from '../../core/layers';
 
 /** Body blíž než toto (mm) jsou jeden bod (navázání a uzavření lomené čáry). */
 const JOIN_TOL = 1;
@@ -37,7 +38,9 @@ export function addDrawLine(a: Pt, b: Pt): Id | null {
   const floor = store.floor();
   if (!floor) return null;
   const near = (p: Pt, q: Pt) => dist(p, q) <= JOIN_TOL;
-  const all = Object.values(floor.drawings ?? {}).reverse(); // naposledy kreslená má přednost
+  // naposledy kreslená má přednost; navazuje se jen na čáru ve vrstvě nové kresby, viditelnou a odemčenou (core/layers.ts)
+  const project = store.get().project;
+  const all = Object.values(floor.drawings ?? {}).reverse().filter(d => canJoinDrawing(project, floor, d.id));
   const host = all.find(d => {
     const e = openLineEnds(d);
     return !!e && (near(e[0], a) || near(e[1], a) || near(e[0], b) || near(e[1], b));
@@ -57,7 +60,7 @@ export function addDrawLine(a: Pt, b: Pt): Id | null {
       return d.pts.length >= 3 ? undefined : false;
     }
     // úsek končí na volném konci jiné lomené čáry → obě čáry se spojí do jedné
-    const other2 = Object.values(f.drawings!).find(o => o.id !== d.id && (() => {
+    const other2 = Object.values(f.drawings!).find(o => o.id !== d.id && canJoinDrawing(project, floor, o.id) && (() => {
       const e = openLineEnds(o);
       return !!e && (near(e[0], to) || near(e[1], to));
     })());
@@ -233,7 +236,8 @@ export function trimDrawingAt(id: Id, p: Pt): TrimFail | 'ok' {
   const floor = store.floor();
   const d = floor?.drawings?.[id];
   if (!floor || !d) return 'notLine';
-  const piece = trimPiece(floor, d, p);
+  // hranice ořezu jen z viditelných prvků (vrstvy, pravidlo 1); data úpravy z celého podlaží
+  const piece = trimPiece(store.view('snap') ?? floor, d, p);
   if (typeof piece === 'string') return piece;
   const parts = applyTrim(d, piece);
   let lockedDim = false;
@@ -266,7 +270,7 @@ export function extendDrawingAt(id: Id, p: Pt): TrimFail | 'ok' {
   const floor = store.floor();
   const d = floor?.drawings?.[id];
   if (!floor || !d) return 'notLine';
-  const plan = extendPlan(floor, d, p);
+  const plan = extendPlan(store.view('snap') ?? floor, d, p);
   if (typeof plan === 'string') return plan;
   const done = change(id, cur => {
     const q = plan.end ? cur.pts[cur.pts.length - 1] : cur.pts[0];

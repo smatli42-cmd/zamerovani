@@ -7,6 +7,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-19 (13) – vrstvy, krok 1 (průřezová funkce, zadání „Vrstvy + ruční kresba“)
+- **Rozhodnuto uživatelem:** výchozí vrstvy nových prvků podle návrhu (stěna a schodiště Stavba, volná kóta Kóty, text a štítek Popisky, kresba aktivní vrstva / u systémové Kresba); automatické kóty patří vrstvě Kóty a kreslí se jen u viditelné stěny (přepínač Kóty = oko vrstvy Kóty); úprava, která by pohnula prvkem v zamčené vrstvě, se neprovede; skrytá vrstva se dál počítá do geometrie a viditelná úprava jí smí pohnout. Krok 2 (ruční kresba) až po potvrzení kroku 1.
+- **Co se změnilo:** vrstvy projektu (`Project.layers`, `activeLayer`) a `layerId` u stěny, kresby, schodiště, štítku, textu a volné kóty; SCHEMA_VERSION 28 s převodem (starší projekt dostane výchozí sadu a vrstvy podle druhu). Všechna pravidla v novém `core/layers.ts`; `store.edit` doplní vrstvu novým prvkům a zastaví změnu zamčené vrstvy; nástroje vybírají a přichytávají přes `store.view('pick' | 'snap')`; renderer kreslí po vrstvách v pořadí; akce `store/actions/layers.ts`; export `layerContents`. Kusy z dělení stěny a ořezu čáry a kopie kóty si vrstvu nesou. Dokumentace: KATALOG-STEN.md sekce V (pravidla V1–V11 a tabulka), CLAUDE.md, INDEX.md, nový `bim-export.md`. Testy `store/layers.test.ts` (93), celkem 917 + 1 zapsaný nález.
+- **Viditelně v aplikaci:** v horní liště tlačítko **🗂️ Vrstvy** – panel se seznamem vrstev (oko, zámek, barva, název, ťuknutí = aktivní vrstva, ≡ přetažení mění pořadí, ✏️ přejmenovat, 🗑️ smazat s volbou přesunout / smazat obsah, ＋ Přidat vrstvu). V panelu vybraného prvku řádek **Vrstva** s tlačítkem **Přesunout do vrstvy** (u otvoru a výstupku „podle stěny“). „Zobrazit kóty“ v nastavení skrývá vrstvu Kóty (i volné kóty). Ověřeno v prohlížeči (skrytí Stavby, zámek – stěna se nevybere, přesun čáry do Elektro, přetažení pořadí, Zpět).
+- **Rozhodnuto samostatně:** barvy a pořadí výchozích vrstev (zdola Stavba, Kresba, Elektro, Voda, Topení, Nábytek, Poznámky, Popisky, Kóty); nová vrstva vznikne nad aktivní a stane se aktivní; aktivní vrstvu nejde skrýt (volba aktivní vrstvy ji zobrazí); volba aktivní vrstvy není v historii; zamčenou vrstvu nejde smazat (nejdřív odemknout); prázdná vrstva se smaže bez dialogu (Zpět ji vrátí); u zamčené vrstvy Kóty nereagují čísla automatických kót; řada napojení se skrytou napojenou stěnou ukáže vzdálenosti bez ní, ale není klikací; rohy se kreslí nad všemi vrstvami.
+- **Po kontrole revieweru opraveno:** čára kresby navazovala na čáru jiné / skryté / zamčené vrstvy; nová stěna se slévala se stěnou jiné vrstvy a pokračování zamčené stěny nevzniklo; kóty schodiště nepatřily vrstvě Kóty; odstupy skupiny se měřily i ke skrytým stěnám; ořez kresby bral skryté čáry jako hranici; nový prvek do skryté vrstvy zmizel (teď se vrstva zobrazí – rozhodnuto samostatně; řeší i Zpět, které nechá aktivní vrstvu skrytou); zamčená vrstva Kóty zastavila rozdělení měřené stěny (kóta se jen přepojí – teď se porovnávají měřené body); skrytý roh blokoval ťuknutí na číslo kóty; nástroj Do rohu (k hraně) nebral zamčenou stěnu jako hranu.
+- **Otevřené (otázky pro uživatele):** viz závěrečná zpráva kroku 1 (výstupek v rohu dvou stěn v různých vrstvách; smazání podlaží se zamčenou vrstvou; schodiště vzniklé z kresby jde do Stavby; smazání stěny, ke které vede kóta v zamčené vrstvě Kóty, se neprovede).
+
 ### 2026-11-19 (12) – uživatel vyzkoušel: vše funguje
 - **Co se změnilo:** nic v kódu. Uživatel potvrdil „vše funguje jak má“ – pomocné čáry kresby a nástroj Ořezat (11); (rovné s podestou a T (10) zatím bez zvláštního potvrzení).
 - **Otevřené:** vyzkoušet na tabletu; ořez dvojité čáry a oblouků (jen když bude potřeba).
@@ -675,7 +683,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Hotové (na webu):** **schodiště – další druhy a zadání** (2026-11-19 (8)): rameno dvěma ťuknutími a zadanými rozměry, točité, rameno po oblouku, zabíhavé stupně, ručně nakreslené rameno, podesta z kresby, kóta a přichycení k rohům / hranám schodiště; schodiště jako 2D značka (6). Testy 796 + 1 zapsaný nález, typecheck a build OK. SCHEMA_VERSION 26. **Doplněno (10):** rovné s podestou a atypické T, testy 807 + 1 zapsaný nález, SCHEMA_VERSION 27.
 
-**Rozpracované:** nic.
+**Rozpracované:** **Vrstvy + ruční kresba** – krok 1 (vrstvy) hotový, čeká na potvrzení uživatele; krok 2 (nástroj Pero, guma, ruční tahy) začít až po potvrzení.
 
 **Chyby od uživatele:** žádné čekající – obrys čárami bez pomocného zarovnání opraven v (11), uživatel potvrdil (12).
 

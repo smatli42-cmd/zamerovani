@@ -96,7 +96,7 @@ function handleOverlayTap(p: PointerInput): boolean | 'dim' {
   if (anyHandleUnderPen(p)) return false;
 
   // Úchyt rohu / koncového bodu má při ťuknutí přednost před klikacími kótami (ty ho mohou překrývat)
-  if (findNodeNear(floor, p.world, HIT_PX.node / state.camera.zoom)) return false;
+  if (findNodeNear(store.view('snap') ?? floor, p.world, HIT_PX.node / state.camera.zoom)) return false;
 
   const box = hitTest(p.screen, p.device === 'touch' ? 8 : 4);
   if (box?.action.type === 'numpad') {
