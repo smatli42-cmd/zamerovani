@@ -5,6 +5,7 @@
  * Všechna pravidla volné kóty jsou tady (hodnota, posun konce, znovunapojení a úklid po úpravách).
  *
  * Posun konce jede s prvkem:
+ * - úhlopříčka uzavřené místnosti (oba konce rohy téže místnosti): délky stěn zůstanou, místnost se zkosí (core/diagonal.ts),
  * - roh stěny: jako při změně délky stěny (řešič „gumička“, core/solver.ts); když druhý konec není roh, posune se
  *   celá skupina stěn, která na rohu visí,
  * - líc / čára stěny: posune se celá stěna (jen oba rohy, sousední stěny se protáhnou – `moveWallStretch`),
@@ -21,6 +22,7 @@ import { DEFAULT_DOUBLE_WIDTH, moveDrawingVertex, placeDrawing } from './drawing
 import { moveNodeWithRubberBand, moveWallStretch } from './solver';
 import { drawSeg, drawSegCount, measurePoints, protById, refGeom, rescueArcEnd } from './dimRefs';
 import { moveProtEdge, ownProtEnd } from './protrusionDimMove';
+import { setRoomDiagonal } from './diagonal';
 import { openingSpan, openingStartFromA } from './floorQueries';
 
 export const freeDimsOf = (floor: Floor): FreeDim[] => Object.values(floor.dims ?? {});
@@ -224,7 +226,11 @@ export function setFreeDimLength(floor: Floor, id: Id, value: number, move: 'a' 
   const from = move === 'a' ? pts[0] : pts[1];
   const to = move === 'a' ? pts[1] : pts[0];
   const u = unit(to, from); // od pevného konce k posouvanému
-  const ok = moveEnd(floor, move === 'a' ? d.a : d.b, move === 'a' ? d.b : d.a, to, u.x * delta, u.y * delta);
+  const mv = move === 'a' ? d.a : d.b;
+  const fx = move === 'a' ? d.b : d.a;
+  // úhlopříčka uzavřené místnosti: délky stěn zůstanou, místnost se zkosí (core/diagonal.ts)
+  const diag = 'node' in mv && 'node' in fx ? setRoomDiagonal(floor, fx.node, mv.node, value) : null;
+  const ok = diag !== null ? diag : moveEnd(floor, move === 'a' ? d.a : d.b, move === 'a' ? d.b : d.a, to, u.x * delta, u.y * delta);
   if (!verify) return ok; // ověří volající (až po vrácení otvorů na místo)
   const after = freeDimValue(floor, id);
   return ok && after !== null && Math.abs(after - value) < 0.5;

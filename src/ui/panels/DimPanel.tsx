@@ -19,7 +19,8 @@ export function DimPanel({ floor, d }: { floor: Floor; d: FreeDim }) {
     <Panel title="Kóta" onClose={close}>
       <p class="muted small">
         Kóta: 1. {endLabel(d.a)}, 2. {endLabel(d.b)}. Mezi rovnoběžnými hranami měří kolmo. Zadaná délka posune zvolený konec ve směru kóty (roh jako při
-        změně délky stěny, líc = celou stěnu, kresbu celou, okraj otvoru = otvor po stěně).
+        změně délky stěny, líc = celou stěnu, kresbu celou, okraj otvoru = otvor po stěně). Úhlopříčka místnosti zachová
+        délky stěn – stojí pevný roh a jeho delší stěna, místnost se zkosí.
       </p>
       <Seg
         options={[

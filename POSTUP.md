@@ -7,6 +7,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-19 (4) – úhlopříčka místnosti se zachováním délek stěn (fronta bod 2)
+- **Rozhodnuto uživatelem:** zadaná úhlopříčka v uzavřené místnosti zachová délky všech stěn místnosti, místnost se zkosí; stojí pevný roh (konec, který se neposouvá) a **delší z jeho dvou stěn**. Uživatel schválil přepsání dvou starších testů (`store/freeDim.test.ts`: dřív roh jel po úhlopříčce a zámek délky stěny úpravu zastavil).
+- **Co se změnilo:** nový `core/diagonal.ts`, volá ho `setFreeDimLength`. Místnost = nejmenší obrys grafu úseků stěn obsahující oba rohy (příčky s volným koncem se vynechají; hledá se podle rohů, takže funguje i u místnosti tvaru L). Rohy na přímce (rozdělená stěna, napojení příčky) zůstanou na rovné stěně ve stejné vzdálenosti. Ostatní rohy se dopočítají postupným dorovnáním od výchozího tvaru; výsledek se ověří (žádný roh se nepřevrátí, obrys se nepřekříží), jinak se úprava neprovede. Mimo uzavřenou místnost, u kóty podél stěny a v místnosti s obloukem platí dřívější posun rohu. Text v panelu kóty. Testy `store/diagonal.test.ts` (14).
+- **Viditelně v aplikaci:** úhlopříčka obdélníkové místnosti 5000 → 5300: horní stěna stojí, místnost se zkosí, stěny 4000 / 3000 zůstanou; příčka napojená do T zůstane napojená. Ověřeno v prohlížeči.
+- **Rozhodnuto samostatně:** u místnosti s víc než 4 rohy není tvar úhlopříčkou jednoznačný – použije se nejbližší nalezený tvar; když je roh místnosti napojený doprostřed jiné stěny (místnost rozdělená příčkou do T), úprava se zatím **neprovede** (řešič by napojení utrhl); volný konec napojené příčky stojí (příčka se protáhne, jako u posunu stěny kótou (14)); zámek délky stěny úhlopříčce v místnosti nebrání (délka se nemění).
+- **Po kontrole revieweru opraveno:** kóta podél rozdělené stěny zalomila stěnu; místnost s napojenou příčkou / příčkou s volným koncem pravidlo vypnula; konkávní místnost (střed úhlopříčky mimo ni) pravidlo vypnula; chyběla kontrola převrácení / překřížení; kruhový import (místnost se už nehledá přes dimLock); doplněn test zámku délky stěny mimo místnost.
+- **Otevřené:** vyzkoušet; úhlopříčka v místnosti rozdělené příčkou do T (roh napojený na jinou stěnu).
+
 ### 2026-11-19 (3) – rozhodnutí uživatele: kótování oblouků dál ne
 - **Rozhodnuto uživatelem:** kótování oblouků se dál rozvíjet nebude (při zaměřování zbytečné). Z fronty vypuštěno: hrany výstupků na obloukové stěně, zvýraznění celého oblouku pod perem, řetězová kóta polohy napojení u oblouku. Hotové kóty k oblouku (2) zůstávají.
 
@@ -593,15 +601,15 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Poslední stav (2026-11-19, sezení 1)
 
-**Hotové (na webu):** volná kóta ve výběru – výběr obdélníkem, kopie s prvky, posun a otočení skupiny (2026-11-19 (1)); **kóta k oblouku** – bod na oblouku, vrchol, střed (2026-11-19 (2)). Testy 737 + 1 zapsaný nález, typecheck a build OK. SCHEMA_VERSION 24.
+**Hotové (na webu):** volná kóta ve výběru – výběr obdélníkem, kopie s prvky, posun a otočení skupiny (2026-11-19 (1)); **kóta k oblouku** (2026-11-19 (2)); **úhlopříčka místnosti se zachováním délek stěn** (2026-11-19 (4)). Testy 751 + 1 zapsaný nález, typecheck a build OK. SCHEMA_VERSION 24.
 
 **Rozpracované:** nic.
 
-**Čeká na vyzkoušení:** kóta k oblouku; výběr obdélníkem a kopie s kótami; čísla nad čarami (17); kóta ke druhé čáře dvojité čáry (12), kóta k hranám výstupků (13); vybrání v rohu, kóty výstupku v rohu / na konci; na tabletu vše od 2026-11-14 (i tažení kót perem a prstem).
+**Čeká na vyzkoušení:** úhlopříčka místnosti; kóta k oblouku; výběr obdélníkem a kopie s kótami; čísla nad čarami (17); kóta ke druhé čáře dvojité čáry (12), kóta k hranám výstupků (13); vybrání v rohu, kóty výstupku v rohu / na konci; na tabletu vše od 2026-11-14 (i tažení kót perem a prstem).
 
 **Fronta kroků:**
 1. **Chyby kótování od uživatele** – mají přednost.
-2. Volná kóta – doplnit: úhlopříčka se zachováním délek stěn (řešič). Posun ostatních kót (dimPlace) se nekopíruje s prvkem. Později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) s exportem DXF / PDF.
+2. Volná kóta – doplnit: úhlopříčka v místnosti rozdělené příčkou do T (roh na jiné stěně). Posun ostatních kót (dimPlace) se nekopíruje s prvkem. Později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) s exportem DXF / PDF.
 3. Pevné spojení i pro ostatní zamčené kóty (stěny, výstupky, napojení)? – otázka pro uživatele.
 4. Drobnosti: kopie odsazená o 300 mm zakryje roh originálu (výstupek v rohu se do odtažení nekreslí, it.fails ve `store/freeDimCopy.test.ts`); Do rohu / K hraně pro oblouky; řetězová kóta užšího otvoru při vypnutém vnitřním ostění; posun otvorů řetězem nehlídá výstupky / napojené příčky.
 

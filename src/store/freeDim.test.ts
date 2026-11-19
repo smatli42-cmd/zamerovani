@@ -77,14 +77,20 @@ describe('volná kóta: vznik a hodnota', () => {
 });
 
 describe('volná kóta: zadání délky posune zvolený bod', () => {
-  it('úhlopříčka: posun 2. rohu ve směru kóty, Zpět vrátí', () => {
+  // rozhodnutí uživatele 2026-11-19 (nahrazuje dřívější posun rohu po úhlopříčce): délky stěn místnosti zůstanou,
+  // stojí pevný roh a delší z jeho stěn, místnost se zkosí (core/diagonal.ts)
+  it('úhlopříčka místnosti: délky stěn zůstanou, místnost se zkosí; Zpět vrátí', () => {
     room();
     const id = addFreeDim(N({ x: 0, y: 0 }), N({ x: 4000, y: 3000 }))!;
     expect(applyNumpadValue({ kind: 'free-dim', dimId: id, move: 'b' }, 5100)).toBe(true);
     expect(freeDimValue(f(), id)).toBeCloseTo(5100, 0);
-    // roh se posunul po úhlopříčce o 100 (4000 + 80, 3000 + 60)
-    expect(f().nodes[(dims()[0]!.b as { node: string }).node]).toMatchObject({ x: 4080, y: 3060 });
+    // stojí pevný roh (0,0) a delší stěna u něj (0,0)–(4000,0); posunutý roh na kružnici r 3000 kolem (4000,0)
+    const c = f().nodes[(dims()[0]!.b as { node: string }).node]!;
+    expect(c.x).toBeCloseTo(4126.25, 1);
+    expect(c.y).toBeCloseTo(2997.34, 1);
     expect(f().nodes[(dims()[0]!.a as { node: string }).node]).toMatchObject({ x: 0, y: 0 });
+    expect(nodeAt({ x: 4000, y: 0 })).toBeDefined();
+    for (const w of Object.values(f().walls)) expect([3000, 4000].some(l => Math.abs(dist(f().nodes[w.a]!, f().nodes[w.b]!) - l) < 0.1)).toBe(true);
     store.undo();
     expect(freeDimValue(f(), id)).toBeCloseTo(5000, 6);
   });
@@ -138,13 +144,14 @@ describe('volná kóta: zadání délky posune zvolený bod', () => {
     expect(f().drawings![l]!.pts[1]).toMatchObject({ x: 1700, y: 500 });
   });
 
-  it('zamčená délka stěny brání: úprava se neprovede', () => {
+  // rozhodnutí uživatele 2026-11-19: úhlopříčka místnosti délky stěn nemění → zámek délky stěny úpravě nebrání
+  it('zamčená délka stěny: úhlopříčka místnosti se provede, délka zůstane', () => {
     room();
     const S = Object.values(f().walls).find(w => f().nodes[w.a]!.x === 4000 && f().nodes[w.b]!.x === 4000)!; // stěna do posouvaného rohu
     setDimLock({ kind: 'wall-length', wallId: S.id, move: 'both' }, true);
     const id = addFreeDim(N({ x: 0, y: 0 }), N({ x: 4000, y: 3000 }))!;
-    expect(applyNumpadValue({ kind: 'free-dim', dimId: id, move: 'b' }, 5100)).toBe(false);
-    expect(nodeAt({ x: 4000, y: 3000 })).toBeDefined();
+    expect(applyNumpadValue({ kind: 'free-dim', dimId: id, move: 'b' }, 5100)).toBe(true);
+    expect(dist(f().nodes[S.a]!, f().nodes[S.b]!)).toBeCloseTo(3000, 1);
   });
 });
 
