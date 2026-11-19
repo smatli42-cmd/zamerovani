@@ -7,6 +7,15 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-19 (2) – volná kóta k oblouku (fronta bod 2)
+- **Rozhodnuto uživatelem:** kóta se chytí bodu na oblouku tam, kde se ťukne; vrchol oblouku a střed mají přednost. Měří se k bodu (od rovné hrany kolmo), bod jede s obloukem, zadaná délka posune celou stěnu / kresbu.
+- **Co se změnilo:** nové konce kóty `arcWall` (líc obloukové stěny, `at` = mm po oblouku osy od rohu A), `arcSeg` (oblouk kresby – oblouk, oblouk v lomené čáře, kruh), `center` (střed oblouku; u kruhu je středem bod kresby). SCHEMA_VERSION 24 bez převodu. Geometrie a znovunapojení v novém `core/dimArcRefs.ts` (oddělen z `dimRefs.ts`, který by přesáhl 500 řádků). Posun: oblouková stěna celá (`moveWallStretch`, tvar zůstane), kresba celá; bod na oblouku vůči jinému bodu téže kresby / rohu téže stěny = nic se nezmění. Po úpravě (`rescueArcEnd`): zkrácení / dělení oblouku → bod zůstane na místě (i na druhé části); změna vzepětí / posun rohu → bod úměrně po oblouku; narovnání stěny → líc rovné stěny; přečíslovaný úsek kresby → úsek se stejnými body. Automatické překlopení strany oblouku otočí i stranu líce kóty (`core/wallSide.ts`). Kopie, výběr, zámky, výstupek na oblouku (`ownProtEnd`) znají nové konce. Testy `store/freeDimArc.test.ts` (19).
+- **Viditelně v aplikaci:** nástroj Kóta zvýrazní a chytí bod na oblouku (vrchol a střed přesně); zadaná délka posune obloukovou stěnu. Ověřeno v prohlížeči (vnější líc oblouku → rovná stěna, 2081 → 2000).
+- **Rozhodnuto samostatně:** bod si pamatuje vzdálenost po oblouku od rohu A (jako líc rovné stěny); narovnaná kresba (oblouk → úsečka) kótu k oblouku smaže; kruhová stěna ze starých dat se nekótuje.
+- **Tabulka konec × operace (✔ test):** přichycení – líc stěny ✔ (obě strany ✔), vrchol ✔, střed ✔, oblouk kresby ✔, kruh ✔; měření od rovné hrany ✔; zadání délky – stěna ✔, kresba ✔, téže kresby / téže stěny nic ✔✔; dělení ✔✔ (obě části); zkrácení posunem rohu ✔; změna vzepětí ✔; narovnání ✔; přečíslování úseku kresby ✔; smazání ✔; kopie stěny ✔, kresby ✔; zámek ✔; výstupek na oblouku ✔. Překlopení strany – jen kód (bez testu, nastává při uzavření smyčky).
+- **Po kontrole revieweru opraveno:** kóta zmizela při zkrácení / změně vzepětí / narovnání oblouku; kóta ke kresbě mohla přeskočit na jiný oblouk po přidání / smazání vrcholu; překlopení oblouku přehodilo líc; kóta mezi hranou výstupku na oblouku a lícem téže stěny posouvala výstupek místo rozměru.
+- **Otevřené:** vyzkoušet; zvýraznění oblouku pod perem je jen tečka (ne celý oblouk); hrany výstupků na obloukové stěně se zatím nekótují; číslo kóty délky stěny leží přes vrchol oblouku (ťuknutí na vrchol tam otevře NumPad délky stěny – vrchol jde chytit vedle čísla nebo po posunu čísla).
+
 ### 2026-11-19 (1) – volná kóta ve výběru: výběr obdélníkem, kopie, posun a otočení skupiny (fronta bod 2)
 - **Co se změnilo:** výběr obdélníkem zahrne volné kóty (okno = měřené body i kótovací čára uvnitř, křížení = dotyk kótovací nebo vynášecí čáry; `core/rectSelect.ts`). Kopírovat zkopíruje vybrané kóty: konec na kopírovaném prvku jede s kopií, konec na prvku, který se nekopíruje, se v kopii stane pevným bodem (přemapování všech druhů konců jen v `copyDimEnd`, `core/dimRefs.ts`). Posun a otočení skupiny posune / otočí pevné body vybraných kót (`GroupOrigin.dims`). Panel skupiny ukazuje počet kót. Testy `store/freeDimCopy.test.ts` (16).
 - **Viditelně v aplikaci:** obdélníkem jde vybrat stěny i s kótami; Kopírovat zkopíruje i kóty; tažení skupiny bere kóty s sebou (i kótu k pevnému bodu). Ověřeno v prohlížeči.
@@ -581,15 +590,15 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Poslední stav (2026-11-19, sezení 1)
 
-**Hotové (na webu):** volná kóta ve výběru – výběr obdélníkem, kopie s prvky, posun a otočení skupiny (2026-11-19 (1)). Testy 718 + 1 zapsaný nález, typecheck OK. SCHEMA_VERSION 23.
+**Hotové (na webu):** volná kóta ve výběru – výběr obdélníkem, kopie s prvky, posun a otočení skupiny (2026-11-19 (1)); **kóta k oblouku** – bod na oblouku, vrchol, střed (2026-11-19 (2)). Testy 737 + 1 zapsaný nález, typecheck a build OK. SCHEMA_VERSION 24.
 
 **Rozpracované:** nic.
 
-**Čeká na vyzkoušení:** výběr obdélníkem a kopie s kótami; čísla nad čarami (17); kóta ke druhé čáře dvojité čáry (12), kóta k hranám výstupků (13); vybrání v rohu, kóty výstupku v rohu / na konci; na tabletu vše od 2026-11-14 (i tažení kót perem a prstem).
+**Čeká na vyzkoušení:** kóta k oblouku; výběr obdélníkem a kopie s kótami; čísla nad čarami (17); kóta ke druhé čáře dvojité čáry (12), kóta k hranám výstupků (13); vybrání v rohu, kóty výstupku v rohu / na konci; na tabletu vše od 2026-11-14 (i tažení kót perem a prstem).
 
 **Fronta kroků:**
 1. **Chyby kótování od uživatele** – mají přednost.
-2. Volná kóta – doplnit: oblouky (i výstupky na oblouku) (líc obloukové stěny, oblouk kresby) – potřebuje rozhodnutí, co kóta k oblouku měří; úhlopříčka se zachováním délek stěn (řešič). Posun ostatních kót (dimPlace) se nekopíruje s prvkem. Později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) s exportem DXF / PDF.
+2. Volná kóta – doplnit: hrany výstupků na obloukové stěně; úhlopříčka se zachováním délek stěn (řešič). Posun ostatních kót (dimPlace) se nekopíruje s prvkem. Později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) s exportem DXF / PDF.
 3. Pevné spojení i pro ostatní zamčené kóty (stěny, výstupky, napojení)? – otázka pro uživatele.
 4. Drobnosti: kopie odsazená o 300 mm zakryje roh originálu (výstupek v rohu se do odtažení nekreslí, it.fails ve `store/freeDimCopy.test.ts`); řetězová kóta polohy napojení i u oblouku; Do rohu / K hraně pro oblouky; řetězová kóta užšího otvoru při vypnutém vnitřním ostění; posun otvorů řetězem nehlídá výstupky / napojené příčky.
 
