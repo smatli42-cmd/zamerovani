@@ -10,7 +10,7 @@ import { arrowPath, flightLength, stairLabel, stepHeight, totalSteps, treadDepth
 import { selectInRect } from '../core/rectSelect';
 import { migrateProject } from '../persistence/migrate';
 import { pickAny } from '../tools/pick';
-import { stairTool } from '../tools/shapeTools';
+import { stairTool } from '../tools/stairTool';
 import { selectTool } from '../tools/selectTool';
 import type { PointerInput, Tool } from '../tools/types';
 import {

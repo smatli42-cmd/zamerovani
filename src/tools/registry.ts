@@ -3,7 +3,8 @@
  */
 import type { ToolId } from '../store/store';
 import { doorTool, nicheTool, openingTool, roomTool, windowTool } from './placeTools';
-import { arcTool, circleTool, rectTool, stairTool } from './shapeTools';
+import { arcTool, circleTool, rectTool } from './shapeTools';
+import { stairTool } from './stairTool';
 import { drawDoubleTool, drawLineTool } from './drawTools';
 import { pasteTool } from './pasteTool';
 import { leaderTool } from './leaderTool';

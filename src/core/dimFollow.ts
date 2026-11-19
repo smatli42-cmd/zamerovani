@@ -9,6 +9,7 @@
  * - okraj otvoru ✔ – otvor po své stěně (jen když kóta vede podél stěny, jinak se délka nedorovná → zámek zastaví),
  * - roh stěny, líc stěny ✔ – roh / celá stěna (sousední stěny se protáhnou),
  * - hrana výstupku / vybrání ✔ – podle core/protrusionDimMove.ts (hrana, čelní = stěna, zamčený rozměr = celek),
+ * - roh / hrana schodiště ✔ – celé schodiště,
  * - pevný bod výkresu ✗ – zůstává (zámek zastaví).
  * Posouvá se jen konec, který se úpravou nepohnul; když se pohnuly oba (posun celé skupiny), kóta se nedorovnává.
  */
@@ -18,6 +19,7 @@ import { dimKey } from './dimLock';
 import { refGeom } from './dimRefs';
 import { freeDimValue, freeDimsOf, setFreeDimLength } from './freeDim';
 import { dist } from './geometry';
+import { stairPoints } from './stairs';
 
 /**
  * Pohnulo dorovnání něčím, co změnila sama úprava (`before` → `edited`)? Pak by se zadaná úprava přepsala
@@ -34,6 +36,14 @@ export function followDisturbsEdit(before: Floor, edited: Floor, after: Floor, a
     const d1 = after.drawings?.[dr.id];
     if (!d0 || !d1) continue;
     if (dr.pts.some((p, i) => !same(d0.pts[i], p)) && dr.pts.some((p, i) => !same(p, d1.pts[i]))) return true;
+  }
+  // schodiště, které úprava posunula / změnila
+  for (const st of Object.values(edited.stairs ?? {})) {
+    const s0 = before.stairs?.[st.id];
+    const s1 = after.stairs?.[st.id];
+    if (!s0 || !s1) continue;
+    const [p0, p, p1] = [stairPoints(s0), stairPoints(st), stairPoints(s1)];
+    if (p.some((q, i) => !same(p0[i], q)) && p.some((q, i) => !same(q, p1[i]))) return true;
   }
   // délky stěn a volné kóty, které úprava změnila
   for (const w of Object.values(edited.walls)) {

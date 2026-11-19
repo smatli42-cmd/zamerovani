@@ -6,6 +6,9 @@
 import type { Floor, Id, Pt, Stair, StairFlight, StairLanding } from '../model/types';
 import { add, dist, dot, scale, sub } from './geometry';
 import { pointInPolygon } from './wallBody';
+import { flightAxis, flightEnd, flightFrame, flightLength, flightOuterRadius, flightPoints, flightPolygon, flightRadius, flightTreads, isArcFlight, leftOf, placeFlight, setFlightOuterRadius, setFlightSweep } from './stairFlight';
+import { winderLines } from './stairWinders';
+export { flightLength, flightRect } from './stairFlight';
 
 export const stairsOf = (floor: Floor): Stair[] => Object.values(floor.stairs ?? {});
 
@@ -14,24 +17,25 @@ export const STAIR_MIN = { width: 100, length: 100, steps: 2, maxSteps: 60 } as 
 
 /** Jak navazuje rameno na předchozí: L vlevo / vpravo, U vlevo / vpravo (podesta mezi nimi). */
 export type StairTurn = 'left' | 'right' | 'u-left' | 'u-right';
+/** Napojení včetně ručně nakresleného ramene (`free` – stojí, kde je; podesta má vlastní tvar). */
+export type StairJoin = StairTurn | 'free';
 
-const dir = (f: StairFlight): Pt => {
-  const d = dist(f.a, f.b) || 1;
-  return { x: (f.b.x - f.a.x) / d, y: (f.b.y - f.a.y) / d };
-};
-/** Levá strana při chůzi po ose (osa y míří dolů). */
-const leftOf = (u: Pt): Pt => ({ x: u.y, y: -u.x });
+/** Směr chůze na začátku ramene. */
+const dir = (f: StairFlight): Pt => flightFrame(f, 0).u;
 
-export const flightLength = (f: StairFlight): number => dist(f.a, f.b);
+/** Je napojení U (otočka o 180°)? */
+export const isUTurn = (t: StairJoin | undefined): boolean => t === 'u-left' || t === 'u-right';
 
-/** Obdélník ramene: [a vlevo, b vlevo, b vpravo, a vpravo]. */
-export function flightRect(f: StairFlight): Pt[] {
-  const l = scale(leftOf(dir(f)), f.width / 2);
-  return [add(f.a, l), add(f.b, l), sub(f.b, l), sub(f.a, l)];
-}
+/** Má podesta `i` (před ramenem i + 1) místo podesty zabíhavé stupně? (jen u napojení L / U) */
+export const hasWinders = (s: Stair, i: number): boolean => !!s.landings[i]?.winders && !s.outline && (s.flights[i + 1]?.turn ?? 'left') !== 'free';
 
-/** Počet stoupání celého schodiště (ruční obrys = 1. rameno). */
-export const totalSteps = (s: Stair): number => (s.outline ? (s.flights[0]?.steps ?? 0) : s.flights.reduce((n, f) => n + f.steps, 0));
+/**
+ * Počet stoupání celého schodiště (ruční obrys = 1. rameno). k zabíhavých stupňů v otočce = k nášlapů oddělených
+ * k − 1 čarami: přidají k − 1 stoupání (na první vede poslední stoupání předchozího ramene, z posledního první
+ * stoupání dalšího ramene – jako u podesty).
+ */
+export const totalSteps = (s: Stair): number =>
+  s.outline ? (s.flights[0]?.steps ?? 0) : s.flights.reduce((n, f) => n + f.steps, 0) + s.landings.reduce((n, l, i) => n + (hasWinders(s, i) ? l.winders! - 1 : 0), 0);
 
 /** Výška stupně v = výška / počet stoupání (mm); null = výška nezadaná. */
 export function stepHeight(s: Stair): number | null {
@@ -59,7 +63,7 @@ function axisSpan(s: Stair): { u: Pt; o: Pt; t0: number; len: number } | null {
 /** Uzavřené obrysy schodiště (ramena, podesty, ruční obrys) – kreslení, výběr. */
 export function stairOutlines(s: Stair): Pt[][] {
   if (s.outline) return [s.outline];
-  return [...s.flights.map(flightRect), ...s.landings.map(l => l.pts)];
+  return [...s.flights.map(flightPolygon), ...s.landings.map(l => l.pts).filter(p => p.length >= 3)];
 }
 
 /** Úsečky přes polygon kolmo k ose v poloze t (ruční obrys) – části uvnitř obrysu. */
@@ -93,17 +97,30 @@ export function treadLines(s: Stair): [Pt, Pt][] {
     for (let i = 1; i < f.steps - 1; i++) out.push(...clipAcross(s.outline, span.o, span.u, span.t0 + i * k));
     return out;
   }
-  for (const f of s.flights) {
-    if (f.steps < 3) continue;
-    const u = dir(f);
-    const l = scale(leftOf(u), f.width / 2);
-    const k = flightLength(f) / (f.steps - 1);
-    for (let i = 1; i < f.steps - 1; i++) {
-      const c = add(f.a, scale(u, i * k));
-      out.push([add(c, l), sub(c, l)]);
-    }
-  }
+  for (const f of s.flights) out.push(...flightTreads(f));
+  s.landings.forEach((l, i) => {
+    const t = hasWinders(s, i) ? turnPoints(s, i + 1) : null;
+    if (t) out.push(...winderLines(l.pts, t.c, t.s, t.e, l.winders!));
+  });
   return out;
+}
+
+/**
+ * Otočka před ramenem i (napojení L / U): vnitřní bod `c` (vnitřní roh L, bod mezi rameny u U), `s` = vnější kraj
+ * konce předchozího ramene, `e` = vnější kraj začátku ramene i; null = ručně nakreslené rameno.
+ */
+function turnPoints(s: Stair, i: number): { c: Pt; s: Pt; e: Pt; side: Pt; pe: { p: Pt; u: Pt }; depth: number } | null {
+  const prev = s.flights[i - 1];
+  const f = s.flights[i];
+  const turn = f?.turn ?? 'left';
+  if (!prev || !f || turn === 'free') return null;
+  const pe = flightEnd(prev);
+  const side = turn === 'left' || turn === 'u-left' ? leftOf(pe.u) : scale(leftOf(pe.u), -1);
+  const pw = prev.width / 2;
+  const depth = f.depth ?? f.width;
+  const c = add(pe.p, scale(side, pw));
+  const e = isUTurn(turn) ? add(pe.p, scale(side, pw + f.width)) : add(c, scale(pe.u, depth));
+  return { c, s: sub(pe.p, scale(side, pw)), e, side, pe, depth };
 }
 
 /** Šipka výstupu: lomená čára po osách ramen od prvního stupně k výstupu (hrot na konci). */
@@ -121,18 +138,22 @@ function arrowForward(s: Stair): Pt[] {
     const e = Math.min(span.len * 0.05, 100);
     return [span.t0 + e, span.t0 + span.len - e].map(t => add(span.o, scale(span.u, t))).map(p => midAcross(s.outline!, p, span.u) ?? p);
   }
-  // přes podestu: v polovině její hloubky (u L roh, u U příčná čára mezi rameny)
+  // přes podestu: v polovině její hloubky (u L roh, u U příčná čára mezi rameny); u ručně nakresleného ramene přes těžiště podesty
   const pts: Pt[] = [];
   s.flights.forEach((f, i) => {
     const prev = i > 0 ? s.flights[i - 1] : undefined;
-    if (prev) {
+    if (prev && f.turn === 'free') {
+      const l = s.landings[i - 1]?.pts ?? [];
+      if (l.length >= 3) pts.push(scale(l.reduce((v, p) => add(v, p), { x: 0, y: 0 }), 1 / l.length));
+    } else if (prev) {
       const half = (f.depth ?? f.width) / 2;
-      const q1 = add(prev.b, scale(dir(prev), half));
+      const pe = flightEnd(prev);
+      const q1 = add(pe.p, scale(pe.u, half));
       const q2 = sub(f.a, scale(dir(f), half));
       pts.push(q1);
       if (dist(q1, q2) > 1) pts.push(q2);
     }
-    pts.push(f.a, f.b);
+    pts.push(...flightAxis(f));
   });
   return pts;
 }
@@ -203,25 +224,22 @@ export function relayoutStair(s: Stair): void {
   for (let i = 1; i < s.flights.length; i++) {
     const prev = s.flights[i - 1]!;
     const f = s.flights[i]!;
-    const turn = f.turn ?? 'left';
-    const u = dir(prev);
-    const side = turn === 'left' || turn === 'u-left' ? leftOf(u) : scale(leftOf(u), -1);
-    const depth = f.depth ?? f.width;
-    const len = flightLength(f);
+    const t = turnPoints(s, i);
+    if (!t) continue; // ručně nakreslené rameno stojí, podesta má vlastní tvar
+    const { side, depth } = t;
+    const { p: e0, u } = t.pe;
     const pw = prev.width / 2;
     let pts: Pt[];
-    if (turn === 'left' || turn === 'right') {
+    if (!isUTurn(f.turn)) {
       // L: čtvercová (obdélníková) podesta za koncem ramene, nové rameno vychází z jejího boku
-      const c = add(prev.b, scale(u, depth / 2));
-      const a = add(c, scale(side, pw));
-      Object.assign(f, { a, b: add(a, scale(side, len)) });
-      pts = [add(prev.b, scale(side, -pw)), add(prev.b, scale(side, pw)), add(add(prev.b, scale(side, pw)), scale(u, depth)), add(add(prev.b, scale(side, -pw)), scale(u, depth))];
+      const c = add(e0, scale(u, depth / 2));
+      placeFlight(f, add(c, scale(side, pw)), side);
+      pts = [add(e0, scale(side, -pw)), add(e0, scale(side, pw)), add(add(e0, scale(side, pw)), scale(u, depth)), add(add(e0, scale(side, -pw)), scale(u, depth))];
     } else {
       // U: podesta přes obě ramena, nové rameno vedle předchozího opačným směrem
-      const a = add(prev.b, scale(side, pw + f.width / 2));
-      Object.assign(f, { a, b: sub(a, scale(u, len)) });
+      placeFlight(f, add(e0, scale(side, pw + f.width / 2)), scale(u, -1));
       const far = pw + f.width;
-      pts = [add(prev.b, scale(side, -pw)), add(prev.b, scale(side, far)), add(add(prev.b, scale(side, far)), scale(u, depth)), add(add(prev.b, scale(side, -pw)), scale(u, depth))];
+      pts = [add(e0, scale(side, -pw)), add(e0, scale(side, far)), add(add(e0, scale(side, far)), scale(u, depth)), add(add(e0, scale(side, -pw)), scale(u, depth))];
     }
     const land = s.landings[i - 1];
     if (land) land.pts = pts;
@@ -233,7 +251,8 @@ export function addStairTurn(s: Stair, turn: StairTurn, ids: { flight: Id; landi
   const last = s.flights[s.flights.length - 1];
   if (!last || s.outline) return false;
   const len = flightLength(last);
-  s.flights.push({ id: ids.flight, a: last.b, b: add(last.b, scale(dir(last), len)), width: last.width, steps: last.steps, turn });
+  const pe = flightEnd(last);
+  s.flights.push({ id: ids.flight, a: pe.p, b: add(pe.p, scale(pe.u, len)), width: last.width, steps: last.steps, turn });
   s.landings.push({ id: ids.landing, pts: [] } as StairLanding);
   relayoutStair(s);
   return true;
@@ -247,15 +266,23 @@ export function removeLastFlight(s: Stair): boolean {
   return true;
 }
 
-/** Kóty schodiště, které jde zadat (NumPad): délka a šířka ramene, hloubka podesty. */
-export type StairDim = 'length' | 'width' | 'depth';
+/**
+ * Kóty schodiště, které jde zadat (NumPad): délka a šířka ramene, hloubka podesty; u ramene po oblouku i vnější
+ * poloměr a úhel (stupně).
+ */
+export type StairDim = 'length' | 'width' | 'depth' | 'radius' | 'sweep';
+
+/** Názvy kót schodiště (NumPad, hlášení zámku). */
+export const STAIR_DIM_LABEL: Record<StairDim, string> = { length: 'délka ramene', width: 'šířka ramene', depth: 'hloubka podesty', radius: 'vnější poloměr', sweep: 'úhel oblouku' };
 
 export function stairDimValue(s: Stair, flightId: Id, d: StairDim): number | null {
   const f = s.flights.find(x => x.id === flightId);
   if (!f) return null;
   if (d === 'length') return flightLength(f);
   if (d === 'width') return f.width;
-  return s.flights.indexOf(f) > 0 && !s.outline ? (f.depth ?? f.width) : null;
+  if (d === 'radius') return isArcFlight(f) ? flightOuterRadius(f) : null;
+  if (d === 'sweep') return isArcFlight(f) ? Math.abs(f.sweep!) : null;
+  return s.flights.indexOf(f) > 0 && !s.outline && f.turn !== 'free' ? (f.depth ?? f.width) : null;
 }
 
 /**
@@ -266,14 +293,23 @@ export function stairDimValue(s: Stair, flightId: Id, d: StairDim): number | nul
 export function setStairDim(s: Stair, flightId: Id, d: StairDim, value: number): boolean {
   const f = s.flights.find(x => x.id === flightId);
   if (!f || s.outline || !Number.isFinite(value)) return false;
+  const arc = isArcFlight(f);
   if (d === 'length') {
     if (value < STAIR_MIN.length) return false;
-    f.b = add(f.a, scale(dir(f), value));
+    if (arc) {
+      if (!setFlightSweep(f, (Math.sign(f.sweep!) * value) / flightRadius(f) / (Math.PI / 180))) return false;
+    } else f.b = add(f.a, scale(dir(f), value));
   } else if (d === 'width') {
     if (value < STAIR_MIN.width || overhangsLanding(f, f.depth, value)) return false;
+    if (arc && value / 2 > flightRadius(f) + 0.5) return false; // vnitřní okraj by přešel přes střed
     f.width = value;
+  } else if (d === 'radius') {
+    // 1. rameno (točité schodiště): střed stojí; navazující rameno: začátek stojí
+    if (!arc || !setFlightOuterRadius(f, value, s.flights.indexOf(f) === 0)) return false;
+  } else if (d === 'sweep') {
+    if (!arc || !setFlightSweep(f, Math.sign(f.sweep!) * value)) return false;
   } else {
-    if (s.flights.indexOf(f) < 1 || value < STAIR_MIN.width || overhangsLanding(f, value, f.width)) return false;
+    if (s.flights.indexOf(f) < 1 || f.turn === 'free' || value < STAIR_MIN.width || overhangsLanding(f, value, f.width)) return false;
     f.depth = value;
   }
   relayoutStair(s);
@@ -328,5 +364,5 @@ export function turnOutlineAxis(s: Stair): boolean {
 
 /** Všechny body schodiště (posun, otočení, kopie – mění se jen tyto body, rozměry zůstanou). */
 export function stairPoints(s: Stair): Pt[] {
-  return [...s.flights.flatMap(f => [f.a, f.b]), ...s.landings.flatMap(l => l.pts), ...(s.outline ?? [])];
+  return [...s.flights.flatMap(flightPoints), ...s.landings.flatMap(l => l.pts), ...(s.outline ?? [])];
 }

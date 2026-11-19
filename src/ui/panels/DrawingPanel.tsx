@@ -3,8 +3,10 @@
  * tvaru (pravidlo canHatch v core/drawing.ts), rozměry podle tvaru.
  */
 import { canHatch, DRAW_COLOR_LABELS, HATCH_LABELS, rectSize } from '../../core/drawing';
-import type { Drawing, HatchKind } from '../../model/types';
-import { deleteSelection, drawingToStair, duplicateSelection, flipDrawingSide, setDrawingBulge, setDrawingRadius, setDrawingRect, setDrawingWidth, updateDrawing } from '../../store/actions';
+import type { Drawing, Floor, HatchKind } from '../../model/types';
+import { stairsOf } from '../../core/stairs';
+import { store } from '../../store/store';
+import { deleteSelection, drawingToLanding, drawingToStair, duplicateSelection, flipDrawingSide, setDrawingBulge, setDrawingRadius, setDrawingRect, setDrawingWidth, updateDrawing } from '../../store/actions';
 import { close, DRAW_LINE_STYLES } from './common';
 import { NumField, Panel, Seg } from './fields';
 
@@ -21,6 +23,8 @@ const NO_HATCH = 'none' as const;
 export function DrawingPanel({ d }: { d: Drawing }) {
   const size = rectSize(d);
   const hatchOk = canHatch(d);
+  // podestu jde nahradit jen u schodiště se dvěma a více rameny
+  const hasLandingSpot = stairsOf(store.floor() ?? ({} as Floor)).some(st => !st.outline && st.flights.length > 1);
   return (
     <Panel title={TITLES[d.shape]} onClose={close}>
       <p class="muted small">Kresba – jen čáry, nikdy stěna ani výstupek.</p>
@@ -101,6 +105,11 @@ export function DrawingPanel({ d }: { d: Drawing }) {
       {hatchOk && d.shape !== 'double' && (
         <button class="btn" onClick={() => drawingToStair(d.id)} title="Uzavřený tvar se stane schodištěm s ručním obrysem (zabíhavé, točité…); doplní se počet stupňů a směr">
           🪜 Označit jako schodiště
+        </button>
+      )}
+      {hatchOk && d.shape !== 'double' && hasLandingSpot && (
+        <button class="btn" onClick={() => drawingToLanding(d.id)} title="Uzavřený tvar se stane podestou schodiště, které má podestu v tvaru nebo poblíž (do 1 m)">
+          🪜 Použít jako podestu
         </button>
       )}
       <div class="panel-actions">

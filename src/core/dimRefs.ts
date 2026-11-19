@@ -4,9 +4,9 @@
  * **nový druh prvku pro kótování přidat jen sem** (`refGeom`, `refAt`, `refSegment`).
  *
  * Bod: roh stěny, bod kresby (vrchol, střed kruhu), pevný bod, bod na oblouku (líc obloukové stěny, oblouk kresby;
- * vrchol přednostně) a střed oblouku. Hrana (nekonečná přímka pro výpočet, úsečka pro
+ * vrchol přednostně), střed oblouku a roh schodiště. Hrana (nekonečná přímka pro výpočet, úsečka pro
  * zvýraznění): líc rovné stěny (u stěny bez tloušťky její čára), rovný úsek čáry kresby (i obdélníku a dvojité čáry
- * – první čára), okraj otvoru (dveře, okno, průchod, nika) napříč stěnou.
+ * – první čára), okraj otvoru (dveře, okno, průchod, nika) napříč stěnou, rovná hrana schodiště (core/stairRefs.ts).
  */
 import type { DimEnd, Drawing, Floor, Opening, Pt, Wall } from '../model/types';
 import { add, dist, dot, normal, projectToSegment, scale, sub, unit } from './geometry';
@@ -22,6 +22,7 @@ import { endOutline, endProtrusionsOf } from './endProtrusion';
 import { cornersOf, protrusionsOf } from './protrusion';
 import { wallBodies, type WallBody } from './wallBody';
 import type { CornerProtrusion, EndProtrusion, Id, Protrusion } from '../model/types';
+import { stairPartPts, stairPartSeg, stairPointNear, stairSegs } from './stairRefs';
 
 export type RefGeom = { kind: 'point'; p: Pt } | { kind: 'line'; p: Pt; d: Pt };
 
@@ -159,6 +160,16 @@ export function refGeom(floor: Floor, e: DimEnd): RefGeom | null {
     const u = openingEdgeU(op, e.edge, s.len);
     return { kind: 'line', p: add(add(s.a, scale(s.d, u)), scale(s.n, e.at)), d: s.n };
   }
+  if ('stair' in e) {
+    const q = stairPartPts(floor.stairs?.[e.stair], e.part)?.[e.i];
+    return q ? { kind: 'point', p: { x: q.x, y: q.y } } : null;
+  }
+  if ('stairSeg' in e) {
+    const sg = stairPartSeg(floor.stairs?.[e.stairSeg], e.part, e.i);
+    if (!sg) return null;
+    const d = unit(sg[0], sg[1]);
+    return { kind: 'line', p: add(sg[0], scale(d, e.at)), d };
+  }
   return { kind: 'point', p: { x: e.x, y: e.y } };
 }
 
@@ -173,6 +184,7 @@ export function refSegment(floor: Floor, e: DimEnd): [Pt, Pt] | null {
   }
   if ('seg' in e) return drawSeg(floor.drawings?.[e.seg], e.i);
   if ('prot' in e) return protSeg(floor, e.prot, e.i);
+  if ('stairSeg' in e) return stairPartSeg(floor.stairs?.[e.stairSeg], e.part, e.i);
   if ('opening' in e) {
     const op = floor.openings[e.opening];
     const w = op && floor.walls[op.wallId];
@@ -209,6 +221,12 @@ export function refAt(floor: Floor, p: Pt, tolPt: number, tolLine: number): DimE
         best = dd;
       }
     });
+  }
+  // rohy schodišť (ramena, podesty, ruční obrys; střed ramene po oblouku)
+  const sp = stairPointNear(floor, p, best);
+  if (sp && sp.d <= best) {
+    pt = { stair: sp.stair, part: sp.part, i: sp.i };
+    best = sp.d;
   }
   // vrchol oblouku a střed oblouku (přesné body)
   for (const { arc, end, center } of arcsOf(floor)) {
@@ -254,6 +272,11 @@ export function refAt(floor: Floor, p: Pt, tolPt: number, tolLine: number): DimE
       // o kousek bližší než líc stejné vzdálenosti (hrana na líci stěny)
       take({ prot: id, i, at: r1(dist(sg[0], h.point)) }, Math.max(0, h.distance - 0.01));
     });
+  }
+  // hrany schodišť – před lícem stěny (schodiště u stěny: při stejné vzdálenosti vyhraje líc)
+  for (const { stair, part, i, seg } of stairSegs(floor)) {
+    const h = projectToSegment(p, seg[0], seg[1]);
+    take({ stairSeg: stair, part, i, at: r1(dist(seg[0], h.point)) }, h.distance);
   }
   // líce rovných stěn (stěna bez tloušťky = její čára)
   for (const w of Object.values(floor.walls)) {
@@ -310,6 +333,8 @@ export function refLabel(e: DimEnd): string {
   if ('prot' in e) return 'hrana výstupku / vybrání';
   if ('arcWall' in e || 'arcSeg' in e) return 'bod na oblouku';
   if ('center' in e) return 'střed oblouku';
+  if ('stair' in e) return 'roh schodiště';
+  if ('stairSeg' in e) return 'hrana schodiště';
   return 'bod výkresu';
 }
 
@@ -320,6 +345,8 @@ export interface CopyMaps {
   openings: ReadonlyMap<Id, Id>;
   drawings: ReadonlyMap<Id, Id>;
   prots: ReadonlyMap<Id, Id>;
+  /** Schodiště (části mají v kopii stejné pořadí – konec se přepojí jen na id schodiště). */
+  stairs?: ReadonlyMap<Id, Id>;
 }
 
 /**
@@ -363,6 +390,14 @@ export function copyDimEnd(e: DimEnd, maps: CopyMaps, fallback: Pt): DimEnd {
   if ('center' in e) {
     const n = (e.i === undefined ? maps.walls : maps.drawings).get(e.center);
     return n ? { ...e, center: n } : fixed;
+  }
+  if ('stair' in e) {
+    const n = maps.stairs?.get(e.stair);
+    return n ? { ...e, stair: n } : fixed;
+  }
+  if ('stairSeg' in e) {
+    const n = maps.stairs?.get(e.stairSeg);
+    return n ? { ...e, stairSeg: n } : fixed;
   }
   return fixed;
 }

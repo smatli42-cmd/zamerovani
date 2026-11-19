@@ -137,7 +137,7 @@ export function duplicateSelection(): void {
       protMap.set(ep.id, ne.id);
     }
     // volné prvky (core/looseElements.ts) v pořadí LOOSE_KINDS – kóty až po kresbě, ke které mohou vést
-    const ctx: CopyContext = { before, shift: p => ({ x: p.x + COPY_OFFSET, y: p.y + COPY_OFFSET }), maps: { nodes: nodeMap, walls: wallMap, openings: openingMap, drawings: drawingMap, prots: protMap } };
+    const ctx: CopyContext = { before, shift: p => ({ x: p.x + COPY_OFFSET, y: p.y + COPY_OFFSET }), maps: { nodes: nodeMap, walls: wallMap, openings: openingMap, drawings: drawingMap, prots: protMap, stairs: new Map<Id, Id>() } };
     for (const k of LOOSE_KINDS)
       for (const it of items) {
         if (it.kind !== k.kind) continue;

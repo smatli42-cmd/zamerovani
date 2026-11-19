@@ -99,6 +99,11 @@ export interface Settings {
   trimEdge: boolean;
   /** Nevypínat displej, dokud je aplikace otevřená (Screen Wake Lock, input/wakeLock.ts). */
   keepAwake: boolean;
+  /** Nástroj Schodiště: rameno z rohu do rohu (tažení / dvě ťuknutí), zadanými rozměry, nebo točité schodiště. */
+  stairMode: 'rect' | 'size' | 'spiral';
+  /** Nástroj Schodiště, zadané rozměry: šířka a délka ramene (mm). */
+  stairWidth: number;
+  stairLength: number;
 }
 
 export type SaveStatus = 'saved' | 'saving' | 'dirty' | 'error';
@@ -128,6 +133,8 @@ export interface AppState {
   toolMsg: string | null;
   /** Kreslení řetězem: roh, ve kterém začne další stěna (null = řetěz neběží). */
   chainNode: string | null;
+  /** Nástroj Schodiště kreslí další rameno ke schodišti s tímto id (tlačítko v panelu); null = nové schodiště. */
+  stairAppend: string | null;
   /**
    * Úprava se neprovedla: zamčená kóta, která brání (klíč pro zvýraznění, `target` pro tlačítko Odemknout),
    * nebo jiný důvod (bez `target`, např. otvor by vyjel ze stěny). Hlášení dole na plátně.
@@ -144,7 +151,7 @@ export interface EditOptions {
 const SETTINGS_KEY = 'zamerovani.settings';
 
 function loadSettings(): Settings {
-  const defaults: Settings = { snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', drawColor: 'black', doubleWidth: 250, doubleEnds: 'open', doubleStyle: 'dashdot2', windowKind: 'window', wallShape: 'straight', wallAxis: 'face', wallChain: false, splitGap: false, trimEdge: false, keepAwake: true };
+  const defaults: Settings = { snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', drawColor: 'black', doubleWidth: 250, doubleEnds: 'open', doubleStyle: 'dashdot2', windowKind: 'window', wallShape: 'straight', wallAxis: 'face', wallChain: false, splitGap: false, trimEdge: false, keepAwake: true, stairMode: 'rect', stairWidth: 1000, stairLength: 3000 };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     return raw ? { ...defaults, ...JSON.parse(raw) } : defaults;
@@ -179,6 +186,7 @@ class Store {
     canRedo: false,
     toolMsg: null,
     chainNode: null,
+    stairAppend: null,
     lockBlock: null
   };
 

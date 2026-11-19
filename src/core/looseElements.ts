@@ -32,7 +32,7 @@ export interface CopyContext {
   /** Výkres před kopií (měřené body kót: kopie může dočasně zneplatnit roh originálu). */
   before: Floor;
   shift(p: Pt): Pt;
-  maps: CopyMaps & { drawings: Map<Id, Id> };
+  maps: CopyMaps & { drawings: Map<Id, Id>; stairs: Map<Id, Id> };
 }
 
 export interface LooseKind {
@@ -143,6 +143,7 @@ const stair: LooseKind = {
     const src = f.stairs?.[id];
     if (!src) return null;
     const s = { ...clone(src), id: newId('st') };
+    ctx.maps.stairs.set(id, s.id); // kóty k rohům / hranám schodiště se přepojí na kopii
     for (const p of stairPoints(s)) Object.assign(p, ctx.shift(p));
     const fmap = new Map<Id, Id>();
     for (const fl of s.flights) {

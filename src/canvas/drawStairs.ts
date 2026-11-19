@@ -5,6 +5,7 @@
  */
 import { add, dist, dot, normal, scale, sub } from '../core/geometry';
 import { arrowPath, flightRect, stairLabel, stairOutlines, stairsOf, treadLines } from '../core/stairs';
+import { flightFrame, isArcFlight } from '../core/stairFlight';
 import type { Floor, Pt, Stair } from '../model/types';
 import { isSelected, type Camera, type Selection } from '../store/store';
 import { drawDimLine, type DimStyle } from './dimLine';
@@ -87,10 +88,8 @@ function drawLabel(ctx: CanvasRenderingContext2D, s: Stair, cam: Camera, color: 
   const f = s.flights[0];
   if (!f) return;
   // popisek u středu 1. ramene, kousek vedle osy (šipky)
-  const len = dist(f.a, f.b) || 1;
-  const u = scale(sub(f.b, f.a), 1 / len);
-  const side = f.width / 4;
-  const at = toScreen(add(scale(add(f.a, f.b), 0.5), scale(normal(u), side)), cam);
+  const mid = flightFrame(f, 0.5);
+  const at = toScreen(add(mid.p, scale(normal(mid.u), f.width / 4)), cam);
   const text = stairLabel(s);
   ctx.font = '600 12px system-ui, sans-serif';
   const w = ctx.measureText(text).width + 8;
@@ -122,14 +121,18 @@ export function drawStairDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: 
     const mid = scale(all.reduce((v, p) => add(v, p), { x: 0, y: 0 }), 1 / (all.length || 1));
     s.flights.forEach((f, i) => {
       const [al, bl, br, ar] = flightRect(f);
-      const c = scale(add(f.a, f.b), 0.5);
-      const leftOut = dist(scale(add(al!, bl!), 0.5), mid) >= dist(scale(add(ar!, br!), 0.5), mid) - 1;
-      const [l1, l2] = leftOut ? [al!, bl!] : [ar!, br!];
-      dimAway(ctx, l1, l2, c, cam, dimScale, dist(f.a, f.b), { stairId: s.id, flightId: f.id, dim: 'length' });
+      const arc = isArcFlight(f);
+      const c = arc ? flightFrame(f, 0.5).p : scale(add(f.a, f.b), 0.5);
+      // délka jen u rovného ramene (u oblouku poloměr a úhel v panelu)
+      if (!arc) {
+        const leftOut = dist(scale(add(al!, bl!), 0.5), mid) >= dist(scale(add(ar!, br!), 0.5), mid) - 1;
+        const [l1, l2] = leftOut ? [al!, bl!] : [ar!, br!];
+        dimAway(ctx, l1, l2, c, cam, dimScale, dist(f.a, f.b), { stairId: s.id, flightId: f.id, dim: 'length' });
+      }
       // šířka u prvního stupně; u dalších ramen u výstupu (začátek leží na podestě)
       const [w1, w2] = i > 0 ? [bl!, br!] : [al!, ar!];
-      dimAway(ctx, w1, w2, c, cam, dimScale, f.width, { stairId: s.id, flightId: f.id, dim: 'width' });
-      const land = i > 0 ? s.landings[i - 1] : undefined;
+      dimAway(ctx, w1, w2, arc ? flightFrame(f, i > 0 ? 0.9 : 0.1).p : c, cam, dimScale, f.width, { stairId: s.id, flightId: f.id, dim: 'width' });
+      const land = i > 0 && f.turn !== 'free' ? s.landings[i - 1] : undefined;
       if (land && land.pts.length === 4) {
         const lc = scale(land.pts.reduce((v, p) => add(v, p), { x: 0, y: 0 }), 1 / 4);
         dimAway(ctx, land.pts[0]!, land.pts[3]!, lc, cam, dimScale, f.depth ?? f.width, { stairId: s.id, flightId: f.id, dim: 'depth' });

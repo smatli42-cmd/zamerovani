@@ -8,7 +8,7 @@
  * Zámek je jediný mechanismus držení: řešič délek drží jen zamčené délky stěn a každá úprava výkresu
  * (store.edit) se zkontroluje funkcí `lockViolation` – když by změnila hodnotu zamčené kóty, neprovede se.
  */
-import { stairDimValue, type StairDim } from './stairs';
+import { STAIR_DIM_LABEL, stairDimValue, type StairDim } from './stairs';
 import type { Floor, Id, Pt } from '../model/types';
 import type { MoveTarget } from './solver';
 import type { RevealPart } from './doorLayout';
@@ -329,7 +329,7 @@ export function describeDim(floor: Floor, t: DimTarget): string {
       case 'free-dim':
         return 'kóta';
       case 'stair-dim':
-        return t.dim === 'length' ? 'délka ramene' : t.dim === 'width' ? 'šířka ramene' : 'hloubka podesty';
+        return STAIR_DIM_LABEL[t.dim];
     }
   })();
   return name + num;

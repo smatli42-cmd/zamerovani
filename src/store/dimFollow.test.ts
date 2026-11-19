@@ -9,7 +9,7 @@ import type { Pt } from '../model/types';
 import { freeDimValue } from '../core/freeDim';
 import { dist } from '../core/geometry';
 import { openingSpan, openingStartFromA, wallLength } from '../core/floorQueries';
-import { addDrawLine, addDrawRect, addFreeDim, addOpening, addWall, applyNumpadValue, setDimLock } from './actions';
+import { addDrawLine, addDrawRect, addFreeDim, addOpening, addStair, addWall, applyNumpadValue, setDimLock } from './actions';
 import { store } from './store';
 
 const f = () => store.floor()!;
@@ -213,6 +213,33 @@ describe('zamčená volná kóta = pevné spojení', () => {
     expect(store.edit(fl => fl.drawings![r]!.pts.forEach(p => void (p.y += 100)))).toBe(true);
     expect(freeDimValue(f(), lk)).toBeCloseTo(1000, 3);
     expect(f().drawings![l]!.pts[0]!.y).toBeCloseTo(1100, 3);
+  });
+  it('roh / hrana schodiště: schodiště zamčené ke spodní stěně jede s ní', () => {
+    const { right, bottom } = room();
+    const sid = addStair({ x: 1000, y: 2000 }, { x: 4000, y: 3000 })!;
+    // hrana 2 ramene = pravý okraj (b vpravo → a vpravo) – dole, rovnoběžná se spodní stěnou
+    const lk = addFreeDim({ stairSeg: sid, part: 'f0', i: 2, at: 500 }, { wall: bottom.id, side: 1, at: 2000 })!;
+    lock(lk);
+    expect(freeDimValue(f(), lk)).toBeCloseTo(2000, 3);
+    expect(applyNumpadValue({ kind: 'wall-length', wallId: right.id, move: { nodeId: right.b } }, 5300)).toBe(true);
+    expect(store.get().lockBlock).toBeNull();
+    expect(freeDimValue(f(), lk)).toBeCloseTo(2000, 3);
+    expect(f().stairs![sid]!.flights[0]!.a.y).toBeCloseTo(2800, 3);
+  });
+
+  it('roh schodiště: zamčená kóta k rohu stěny – schodiště jede s rohem', () => {
+    const { right } = room();
+    const sid = addStair({ x: 1000, y: 2000 }, { x: 4000, y: 3000 })!;
+    const lk = addFreeDim({ stair: sid, part: 'f0', i: 2 }, { node: right.b })!;
+    lock(lk);
+    const v0 = freeDimValue(f(), lk)!;
+    expect(applyNumpadValue({ kind: 'wall-length', wallId: right.id, move: { nodeId: right.b } }, 5300)).toBe(true);
+    expect(freeDimValue(f(), lk)).toBeCloseTo(v0, 3);
+    // roh schodiště (4000, 3000) se posunul ve směru kóty k rohu (5000, 5300): na spojnici, ve vzdálenosti v0
+    const b = f().stairs![sid]!.flights[0]!.b;
+    const moved = { x: b.x, y: b.y + 500 }; // b = střed čela ramene, roh vpravo je o půl šířky níž
+    expect(Math.hypot(5000 - moved.x, 5300 - moved.y)).toBeCloseTo(v0, 3);
+    expect(moved.y).toBeGreaterThan(3000);
   });
 });
 

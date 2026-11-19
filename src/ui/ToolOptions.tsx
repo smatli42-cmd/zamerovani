@@ -12,6 +12,7 @@ import { trimMsg, trimTool } from '../tools/trimTool';
 import { tools } from '../tools/registry';
 import { splitMsg, splitTool } from '../tools/splitTool';
 import { dimToolMsg } from '../tools/dimTool';
+import { resetStairPoints, stairToolMsg } from '../tools/stairTool';
 
 export function ToolOptions() {
   const tool = useStore(s => s.tool);
@@ -102,6 +103,32 @@ export function ToolOptions() {
           ))}
         </div>
         <NumField label="Vlastní" value={wallPresets(project).includes(active) ? null : active} min={10} onCommit={v => v !== null && addWallPreset(v)} />
+      </div>
+    );
+  }
+  if (tool === 'stair') {
+    return (
+      <div class="tool-options">
+        <Seg
+          options={[
+            { v: 'rect', label: 'Z rohu do rohu' },
+            { v: 'size', label: 'Zadané rozměry' },
+            { v: 'spiral', label: 'Točité' }
+          ]}
+          value={settings.stairMode}
+          onChange={v => {
+            resetStairPoints();
+            store.updateSettings({ stairMode: v });
+            store.set({ toolMsg: stairToolMsg(false) });
+          }}
+        />
+        {settings.stairMode === 'size' && (
+          <>
+            <NumField label="Šířka ramene" value={settings.stairWidth} min={100} onCommit={v => v !== null && store.updateSettings({ stairWidth: v })} />
+            <NumField label="Délka ramene" value={settings.stairLength} min={100} onCommit={v => v !== null && store.updateSettings({ stairLength: v })} />
+          </>
+        )}
+        <span class="small">🪜 {toolMsg ?? stairToolMsg(false)}</span>
       </div>
     );
   }

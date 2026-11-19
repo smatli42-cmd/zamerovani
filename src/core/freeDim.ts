@@ -24,6 +24,7 @@ import { drawSeg, drawSegCount, measurePoints, protById, refGeom, rescueArcEnd }
 import { moveProtEdge, ownProtEnd } from './protrusionDimMove';
 import { setRoomDiagonal } from './diagonal';
 import { openingSpan, openingStartFromA } from './floorQueries';
+import { stairPoints } from './stairs';
 
 export const freeDimsOf = (floor: Floor): FreeDim[] => Object.values(floor.dims ?? {});
 
@@ -92,6 +93,9 @@ export function sameEnd(a: DimEnd, b: DimEnd): boolean {
 /** Kresba, ke které konec patří (bod nebo úsek); null = jiný prvek. */
 const drawingOf = (e: DimEnd): Id | null =>
   'drawing' in e ? e.drawing : 'seg' in e ? e.seg : 'arcSeg' in e ? e.arcSeg : 'center' in e && e.i !== undefined ? e.center : null;
+
+/** Schodiště, ke kterému konec patří (roh, hrana); null = jiný prvek. */
+const stairOf = (e: DimEnd): Id | null => ('stair' in e ? e.stair : 'stairSeg' in e ? e.stairSeg : null);
 
 /** Stěna, kterou konec posouvá celou (líc rovné stěny, bod na oblouku stěny, střed obloukové stěny). */
 const wallOf = (e: DimEnd): Id | null => ('wall' in e ? e.wall : 'arcWall' in e ? e.arcWall : 'center' in e && e.i === undefined ? e.center : null);
@@ -174,6 +178,17 @@ function moveEnd(floor: Floor, e: DimEnd, other: DimEnd, otherPt: Pt, dx: number
   if ('prot' in e) {
     // hrana výstupku / vybrání: pravidla v core/protrusionDimMove.ts (jen hrana, čelní hrana = stěna, zámek = celek)
     return moveProtEdge(floor, e.prot, e.i, dx, dy, ownProtEnd(floor, e.prot, other));
+  }
+  const stId = stairOf(e);
+  if (stId) {
+    // roh / hrana schodiště: posune se celé schodiště (odstup od stěny); kóta uvnitř téhož schodiště ne (rozměry jen kótami schodiště)
+    const s = floor.stairs?.[stId];
+    if (!s || stairOf(other) === stId) return false;
+    for (const p of stairPoints(s)) {
+      p.x += dx;
+      p.y += dy;
+    }
+    return true;
   }
   if ('opening' in e) {
     const op = floor.openings[e.opening];

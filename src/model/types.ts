@@ -10,7 +10,7 @@
 
 import type { DimTarget } from '../core/dimLock';
 
-export const SCHEMA_VERSION = 25;
+export const SCHEMA_VERSION = 26;
 
 export type Id = string;
 
@@ -317,7 +317,14 @@ export type DimEnd =
   /** Bod na obloukovém úseku `i` kresby (oblouk, oblouk v lomené čáře, kruh = úseky 0 a 1), `at` = mm po oblouku od jeho začátku. */
   | { arcSeg: Id; i: number; at: number }
   /** Střed oblouku: obloukové stěny (id stěny, bez `i`) nebo obloukového úseku `i` kresby. */
-  | { center: Id; i?: number };
+  | { center: Id; i?: number }
+  /**
+   * Bod schodiště (odstup od stěny): roh `i` části `part` – `f<k>` rameno k (rohy jako `flightRect`, u oblouku bod 4 =
+   * střed), `l<k>` podesta k, `o` ruční obrys (core/stairRefs.ts).
+   */
+  | { stair: Id; part: string; i: number }
+  /** Rovná hrana `i` části schodiště (od bodu i k bodu i + 1), `at` = mm od bodu `i`. */
+  | { stairSeg: Id; part: string; i: number; at: number };
 
 /**
  * Volná kóta mezi dvěma body (POZADAVKY.md 3, rozhodnutí uživatele 2026-11-18: řídicí – zadaná délka posune zvolený
@@ -342,16 +349,28 @@ export interface StairFlight {
   b: Pt;
   width: number;
   steps: number;
-  /** Napojení na předchozí rameno přes podestu (L / U vlevo / vpravo); u 1. ramene chybí. */
-  turn?: 'left' | 'right' | 'u-left' | 'u-right';
+  /**
+   * Napojení na předchozí rameno přes podestu (L / U vlevo / vpravo); u 1. ramene chybí.
+   * `free` = rameno nakreslené ručně – stojí, kde je, podesta před ním má vlastní tvar.
+   */
+  turn?: 'left' | 'right' | 'u-left' | 'u-right' | 'free';
   /** Hloubka podesty před ramenem (mm, podél předchozího ramene); chybí = šířka ramene. */
   depth?: number;
+  /**
+   * Rameno po oblouku (obloukové i točité schodiště): střed oblouku osy. Osa vede od `a` (poloměr = |a − center|)
+   * o úhel `sweep`; `b` = konec osy (dopočítá se).
+   */
+  center?: Pt;
+  /** Úhel oblouku osy ve stupních se znaménkem (kladně = po směru hodinových ručiček na výkresu). */
+  sweep?: number;
 }
 
 /** Podesta schodiště: obrys (mnohoúhelník). */
 export interface StairLanding {
   id: Id;
   pts: Pt[];
+  /** Místo podesty zabíhavé stupně (počet stupňů v rohu L / v otočce U). */
+  winders?: number;
 }
 
 /**

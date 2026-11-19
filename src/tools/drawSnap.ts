@@ -6,6 +6,7 @@
 import { add, dist, dot, normal, scale, sub, unit } from '../core/geometry';
 import { dragParams, drawLinesFrom, linesNear, resolveDragPoint, type DragLine } from '../core/dragResolve';
 import { findDrawingPointNear } from '../core/drawing';
+import { stairPointNear } from '../core/stairRefs';
 import { findFaceNear, wallFrame, worldToProfile } from '../core/protrusion';
 import { snapEnd, snapPoint, type SnapResult } from '../core/snapping';
 import { isCurved } from '../core/floorQueries';
@@ -22,7 +23,7 @@ const NEAR_PX = 60;
 const free = (p: Pt): SnapResult => ({ pt: { x: Math.round(p.x / 10) * 10, y: Math.round(p.y / 10) * 10 }, node: null, wallHit: null, guides: [] });
 
 /**
- * Bod kresby u pera: bod jiné kresby, roh nebo zvláštní bod, líc stěny s tloušťkou, čára stěny; jinak po 10 mm
+ * Bod kresby u pera: bod jiné kresby, roh schodiště, roh nebo zvláštní bod, líc stěny s tloušťkou, čára stěny; jinak po 10 mm
  * (konec úseku `from`→ i se zarovnáním do os a s rohy). `skip` = kresba, jejíž bod se právě táhne.
  */
 export function drawSnap(floor: Floor, raw: Pt, from: Pt | null, skip?: string): DrawSnapResult {
@@ -31,6 +32,9 @@ export function drawSnap(floor: Floor, raw: Pt, from: Pt | null, skip?: string):
   const tol = HIT_PX.snapNode / camera.zoom;
   const dp = findDrawingPointNear(floor, raw, tol, skip);
   if (dp) return { pt: { x: dp.x, y: dp.y }, node: null, wallHit: null, guides: [], special: true };
+  // rohy schodišť (ramena, podesty) – kresba i další rameno navazují na schodiště
+  const sp = stairPointNear(floor, raw, tol);
+  if (sp) return { pt: { x: sp.pt.x, y: sp.pt.y }, node: null, wallHit: null, guides: [], special: true };
   const r = from ? snapEnd(floor, from, raw, snapOptions()) : snapPoint(floor, raw, snapOptions());
   if (r.node || r.special) return r;
   const face = findFaceNear(floor, raw, tol);

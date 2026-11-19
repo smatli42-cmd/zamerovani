@@ -6,6 +6,7 @@ import { OPENING_DEFAULTS } from '../model/factory';
 import type { Floor } from '../model/types';
 import { numpadValue, pressKey, setFreeDimMove, setMoveTarget, toggleCurrentLock, type NumKey } from '../store/numpadController';
 import { refLabel as endLabel } from '../core/dimRefs';
+import { STAIR_DIM_LABEL } from '../core/stairs';
 import { END_DIM_LABEL, isDimLocked } from '../core/dimLock';
 import { store, type NumPadTarget } from '../store/store';
 import { useStore } from '../store/useStore';
@@ -21,7 +22,7 @@ function title(floor: Floor | null, t: NumPadTarget): string {
   if (t.kind === 'protrusion-sagitta') return 'Výstupek – vzepětí oblouku';
   if (t.kind === 'corner-dim') return `Výstupek v rohu – podél ${t.dim === 'a' ? '1.' : '2.'} stěny`;
   if (t.kind === 'free-dim') return 'Kóta';
-  if (t.kind === 'stair-dim') return `Schodiště – ${{ length: 'délka ramene', width: 'šířka ramene', depth: 'hloubka podesty' }[t.dim]}`;
+  if (t.kind === 'stair-dim') return `Schodiště – ${STAIR_DIM_LABEL[t.dim]}`;
   if (t.kind === 'end-dim') return `Výstupek na konci stěny – ${END_DIM_LABEL[t.dim]}`;
   if (t.kind === 'protrusion-dim') {
     const p = floor?.protrusions?.[t.protrusionId];
@@ -94,7 +95,7 @@ export function NumPad() {
       <div class={`numpad-display ${np.fresh ? 'fresh' : ''}`}>
         {hasExpr && <div class="numpad-expr">{np.buffer.replace(/-/g, '−')} =</div>}
         <div class="numpad-value">
-          {value === null ? np.buffer || (t.kind === 'field' && t.allowEmpty ? '—' : '0') : Math.round(value)} <small>{t.kind === 'field' ? t.unit : 'mm'}</small>
+          {value === null ? np.buffer || (t.kind === 'field' && t.allowEmpty ? '—' : '0') : Math.round(value)} <small>{t.kind === 'field' ? t.unit : t.kind === 'stair-dim' && t.dim === 'sweep' ? '°' : 'mm'}</small>
         </div>
       </div>
 
