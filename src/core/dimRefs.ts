@@ -3,7 +3,8 @@
  * stěny, čáry, okna, dveře“, kóta rovnoběžná jako v CAD). Jediné místo, kde se konce kót hledají a počítají –
  * **nový druh prvku pro kótování přidat jen sem** (`refGeom`, `refAt`, `refSegment`).
  *
- * Bod: roh stěny, bod kresby (vrchol, střed kruhu), pevný bod. Hrana (nekonečná přímka pro výpočet, úsečka pro
+ * Bod: roh stěny, bod kresby (vrchol, střed kruhu), pevný bod, bod na oblouku (líc obloukové stěny, oblouk kresby;
+ * vrchol přednostně) a střed oblouku. Hrana (nekonečná přímka pro výpočet, úsečka pro
  * zvýraznění): líc rovné stěny (u stěny bez tloušťky její čára), rovný úsek čáry kresby (i obdélníku a dvojité čáry
  * – první čára), okraj otvoru (dveře, okno, průchod, nika) napříč stěnou.
  */
@@ -13,6 +14,9 @@ import { faceOffset } from './protrusion';
 import { bodyRange, hasBody } from './wallFace';
 import { openingSpan, openingStartFromA } from './floorQueries';
 import { doubleOffset } from './drawing';
+import { arcGeometry } from './arc';
+import { arcEndAt, arcPointAt, arcsOf, centerOf, drawArc, nearestOnArcRef, offOf, wallArc } from './dimArcRefs';
+export { arcEndAt, centerEndAt, rescueArcEnd } from './dimArcRefs';
 import { cornerOutline, cornerProtrusionsOf } from './cornerProtrusion';
 import { endOutline, endProtrusionsOf } from './endProtrusion';
 import { cornersOf, protrusionsOf } from './protrusion';
@@ -31,8 +35,6 @@ function straight(floor: Floor, w: Wall | undefined): { a: Pt; d: Pt; n: Pt; len
   return { a, d, n: normal(d), len: dist(a, b) };
 }
 
-/** Posun líce `side` od osy (0 = osa / čára stěny bez tloušťky). */
-const offOf = (w: Wall, side: 1 | -1 | 0) => (side === 0 || !hasBody(w) ? 0 : faceOffset(w, side));
 
 /** Počet úseků kresby pro kótu (`drawSeg` může u některých vrátit null – oblouk, chybějící uzavřený konec). */
 export function drawSegCount(dr: Drawing): number {
@@ -141,6 +143,15 @@ export function refGeom(floor: Floor, e: DimEnd): RefGeom | null {
     const d = unit(sg[0], sg[1]);
     return { kind: 'line', p: add(sg[0], scale(d, e.at)), d };
   }
+  if ('arcWall' in e || 'arcSeg' in e) {
+    const arc = 'arcWall' in e ? wallArc(floor, floor.walls[e.arcWall], e.side) : drawArc(floor.drawings?.[e.arcSeg], e.i);
+    const q = arc && arcPointAt(arc, e.at);
+    return q ? { kind: 'point', p: q } : null;
+  }
+  if ('center' in e) {
+    const c = centerOf(floor, e);
+    return c ? { kind: 'point', p: c } : null;
+  }
   if ('opening' in e) {
     const op = floor.openings[e.opening];
     const s = straight(floor, op && floor.walls[op.wallId]);
@@ -199,6 +210,19 @@ export function refAt(floor: Floor, p: Pt, tolPt: number, tolLine: number): DimE
       }
     });
   }
+  // vrchol oblouku a střed oblouku (přesné body)
+  for (const { arc, end, center } of arcsOf(floor)) {
+    const h = nearestOnArcRef(arc, p);
+    const g = arcGeometry(arc.a, arc.b, arc.s);
+    if (h && dist(h.apex, p) <= best) {
+      pt = end(r1((g!.r * Math.abs(g!.sweep)) / 2));
+      best = dist(h.apex, p);
+    }
+    if (g && dist(g.center, p) <= best) {
+      pt = center;
+      best = dist(g.center, p);
+    }
+  }
   if (pt) return pt;
   let line: DimEnd | null = null;
   best = tolLine;
@@ -243,6 +267,9 @@ export function refAt(floor: Floor, p: Pt, tolPt: number, tolLine: number): DimE
     if (hasBody(w)) for (const side of [1, -1] as const) take({ wall: w.id, side, at }, Math.abs(across - faceOffset(w, side)));
     else take({ wall: w.id, side: 0, at }, Math.abs(across));
   }
+  // body na obloucích (líce obloukových stěn, oblouky kresby) – kóta k bodu
+  const onArc = arcEndAt(floor, p, best);
+  if (onArc) take(onArc, refGeom(floor, onArc) ? dist(refGeom(floor, onArc)!.p, p) : Infinity);
   // rovné úseky kresby
   for (const dr of Object.values(floor.drawings ?? {})) {
     for (let i = 0; i < drawSegCount(dr); i++) {
@@ -281,6 +308,8 @@ export function refLabel(e: DimEnd): string {
   if ('seg' in e) return 'čára kresby';
   if ('opening' in e) return 'okraj otvoru';
   if ('prot' in e) return 'hrana výstupku / vybrání';
+  if ('arcWall' in e || 'arcSeg' in e) return 'bod na oblouku';
+  if ('center' in e) return 'střed oblouku';
   return 'bod výkresu';
 }
 
@@ -322,6 +351,18 @@ export function copyDimEnd(e: DimEnd, maps: CopyMaps, fallback: Pt): DimEnd {
   if ('prot' in e) {
     const n = maps.prots.get(e.prot);
     return n ? { ...e, prot: n } : fixed;
+  }
+  if ('arcWall' in e) {
+    const n = maps.walls.get(e.arcWall);
+    return n ? { ...e, arcWall: n } : fixed;
+  }
+  if ('arcSeg' in e) {
+    const n = maps.drawings.get(e.arcSeg);
+    return n ? { ...e, arcSeg: n } : fixed;
+  }
+  if ('center' in e) {
+    const n = (e.i === undefined ? maps.walls : maps.drawings).get(e.center);
+    return n ? { ...e, center: n } : fixed;
   }
   return fixed;
 }

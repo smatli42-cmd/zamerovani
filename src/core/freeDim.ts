@@ -12,13 +12,14 @@
  *   dvojitá čára: 1. / 2. čára = změna šířky, uzavřený konec = posun bodu na tom konci),
  * - okraj otvoru: otvor se posune po stěně,
  * - hrana výstupku / vybrání: core/protrusionDimMove.ts (jen hrana; čelní hrana = celá stěna; zamčený rozměr = celek),
- * - pevný bod: jen bod.
+ * - pevný bod: jen bod,
+ * - bod na oblouku / střed oblouku: obloukové stěny = celá stěna (tvar oblouku zůstane), kresby = celá kresba.
  */
 import type { DimEnd, Drawing, Floor, FreeDim, Id, Node, Pt } from '../model/types';
 import { add, dist, dot, normal, projectToSegment, scale, sub, unit } from './geometry';
 import { DEFAULT_DOUBLE_WIDTH, moveDrawingVertex, placeDrawing } from './drawing';
 import { moveNodeWithRubberBand, moveWallStretch } from './solver';
-import { drawSeg, drawSegCount, measurePoints, protById, refGeom } from './dimRefs';
+import { drawSeg, drawSegCount, measurePoints, protById, refGeom, rescueArcEnd } from './dimRefs';
 import { moveProtEdge, ownProtEnd } from './protrusionDimMove';
 import { openingSpan, openingStartFromA } from './floorQueries';
 
@@ -47,7 +48,7 @@ export function dimLine(floor: Floor, d: FreeDim): [Pt, Pt] | null {
 }
 
 /** Konec, jehož posun hýbe stěnami (roh, líc stěny). Okraj otvoru, kresba a pevný bod posunou jen sebe. */
-const movesWalls = (e: DimEnd): boolean => 'node' in e || 'wall' in e;
+const movesWalls = (e: DimEnd): boolean => 'node' in e || wallOf(e) !== null;
 
 /**
  * Výchozí posouvaný konec kóty (NumPad, panel): 2. bod; když ale 2. konec hýbe stěnami a 1. ne (okraj otvoru,
@@ -87,7 +88,11 @@ export function sameEnd(a: DimEnd, b: DimEnd): boolean {
 }
 
 /** Kresba, ke které konec patří (bod nebo úsek); null = jiný prvek. */
-const drawingOf = (e: DimEnd): Id | null => ('drawing' in e ? e.drawing : 'seg' in e ? e.seg : null);
+const drawingOf = (e: DimEnd): Id | null =>
+  'drawing' in e ? e.drawing : 'seg' in e ? e.seg : 'arcSeg' in e ? e.arcSeg : 'center' in e && e.i !== undefined ? e.center : null;
+
+/** Stěna, kterou konec posouvá celou (líc rovné stěny, bod na oblouku stěny, střed obloukové stěny). */
+const wallOf = (e: DimEnd): Id | null => ('wall' in e ? e.wall : 'arcWall' in e ? e.arcWall : 'center' in e && e.i === undefined ? e.center : null);
 
 /**
  * Dvojitá čára, posun jejího úseku (druhý konec kóty na téže kresbě): 1. / 2. čára = změna šířky (druhá čára
@@ -130,15 +135,18 @@ function moveEnd(floor: Floor, e: DimEnd, other: DimEnd, otherPt: Pt, dx: number
     moveNodeWithRubberBand(floor, n, anchor, dx, dy);
     return true;
   }
-  if ('wall' in e) {
-    // celá stěna: oba rohy, sousední stěny se protáhnou (core/solver.ts)
-    return moveWallStretch(floor, e.wall, dx, dy);
+  const wallId = wallOf(e);
+  if (wallId) {
+    // celá stěna (i oblouková – tvar oblouku zůstane): oba rohy, sousední stěny se protáhnou (core/solver.ts)
+    return moveWallStretch(floor, wallId, dx, dy);
   }
   const drId = drawingOf(e);
   if (drId) {
     const dr = floor.drawings?.[drId];
     if (!dr) return false;
     const same = drawingOf(other) === drId;
+    // bod na oblouku / střed oblouku vůči jinému bodu téže kresby: posun celé kresby by délku nezměnil
+    if (same && ('arcSeg' in e || 'center' in e)) return false;
     if (same && 'drawing' in e) {
       const q = dr.pts[e.i];
       if (!q) return false;
@@ -232,6 +240,8 @@ export function setFreeDimLength(floor: Floor, id: Id, value: number, move: 'a' 
  * - úsek kresby: úsek se stejnými body (i obráceně) → ten úsek.
  * - líc stěny, která zanikla (dělení, sloučení): líc jiné rovné stěny na stejné přímce, přednostně ta, na které
  *   leží místo dosednutí (strana se přepočítá podle směru stěny); jinak kóta zanikne,
+ * - bod na oblouku / střed oblouku: přečíslovaný úsek kresby, zkrácení / dělení (bod na místě), změna tvaru (úměrně),
+ *   narovnání (líc rovné stěny) – `rescueArcEnd` v core/dimArcRefs.ts.
  * Okraje otvorů mají stálá ID (zaniknou s otvorem).
  */
 export function rescueFreeDims(before: Floor | undefined, after: Floor): void {
@@ -259,6 +269,10 @@ export function rescueFreeDims(before: Floor | undefined, after: Floor): void {
             break;
           }
         }
+      } else if ('arcWall' in e || 'arcSeg' in e || 'center' in e) {
+        // bod na oblouku / střed: pravidla v core/dimArcRefs.ts (`rescueArcEnd`)
+        const hit = rescueArcEnd(before, after, e);
+        if (hit) d[k] = hit;
       } else if ('wall' in e && !after.walls[e.wall]) {
         const g = refGeom(before, e);
         if (g?.kind !== 'line') continue;

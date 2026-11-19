@@ -10,7 +10,7 @@
 
 import type { DimTarget } from '../core/dimLock';
 
-export const SCHEMA_VERSION = 23;
+export const SCHEMA_VERSION = 24;
 
 export type Id = string;
 
@@ -308,7 +308,16 @@ export type DimEnd =
   | { seg: Id; i: number; at: number }
   | { opening: Id; edge: 'start' | 'end'; at: number }
   /** Rovný úsek `i` obrysu výstupku / vybrání (na stěně, v rohu, na konci stěny – id se hledá ve všech třech); `at` = mm od bodu `i`. */
-  | { prot: Id; i: number; at: number };
+  | { prot: Id; i: number; at: number }
+  /**
+   * Bod na oblouku (rozhodnutí uživatele 2026-11-19): líc obloukové stěny (`side` jako u líce rovné stěny), `at` = mm
+   * po oblouku osy od rohu A. Měří se k bodu (od rovné hrany kolmo).
+   */
+  | { arcWall: Id; side: 1 | -1 | 0; at: number }
+  /** Bod na obloukovém úseku `i` kresby (oblouk, oblouk v lomené čáře, kruh = úseky 0 a 1), `at` = mm po oblouku od jeho začátku. */
+  | { arcSeg: Id; i: number; at: number }
+  /** Střed oblouku: obloukové stěny (id stěny, bez `i`) nebo obloukového úseku `i` kresby. */
+  | { center: Id; i?: number };
 
 /**
  * Volná kóta mezi dvěma body (POZADAVKY.md 3, rozhodnutí uživatele 2026-11-18: řídicí – zadaná délka posune zvolený

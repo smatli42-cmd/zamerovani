@@ -178,5 +178,5 @@ function mark(ctx: CanvasRenderingContext2D, cam: Camera, floor: Floor, e: DimEn
 export function dimToolMsg(started: boolean): string {
   return started
     ? 'Ťukni na 2. bod nebo hranu (rovnoběžnou – kóta změří kolmou vzdálenost).'
-    : 'Ťukni na 1. bod nebo hranu (roh, líc stěny, čára, okraj okna / dveří). Délku zadáš ťuknutím na číslo, odsazení tažením za čáru kóty.';
+    : 'Ťukni na 1. bod nebo hranu (roh, líc stěny, čára, okraj okna / dveří, bod na oblouku – vrchol, střed). Délku zadáš ťuknutím na číslo, odsazení tažením za čáru kóty.';
 }

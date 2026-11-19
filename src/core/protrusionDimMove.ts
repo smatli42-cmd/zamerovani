@@ -34,6 +34,8 @@ export function ownProtEnd(floor: Floor, id: Id, other: DimEnd): boolean {
   if (!k) return false;
   const walls = k.kind === 'corner' ? k.p.walls : [k.p.wallId];
   if ('wall' in other) return walls.includes(other.wall);
+  if ('arcWall' in other) return walls.includes(other.arcWall);
+  if ('center' in other && other.i === undefined) return walls.includes(other.center);
   if ('node' in other) return walls.some(w => [floor.walls[w]?.a, floor.walls[w]?.b].includes(other.node));
   return false;
 }

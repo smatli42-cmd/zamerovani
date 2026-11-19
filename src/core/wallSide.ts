@@ -119,6 +119,12 @@ export function orientLoopOutward(floor: Floor, wallId: Id): boolean {
         // oblouk se zrcadlí podle tětivy → výstupky se zrcadlí s ním a zůstanou na svém líci (I1.7);
         // u, v i vzepětí úseků obrysu zůstávají, mění se jen strana líce
         for (const p of protrusionsOf(floor)) if (p.wallId === w.id) p.side = p.side === 1 ? -1 : 1;
+        // kóty k bodu na líci oblouku: stejné místo po oblouku (at od A), líc na druhé straně (core/dimArcRefs.ts)
+        for (const d of Object.values(floor.dims ?? {}))
+          for (const k of ['a', 'b'] as const) {
+            const e = d[k];
+            if ('arcWall' in e && e.arcWall === w.id && e.side !== 0) d[k] = { ...e, side: e.side === 1 ? -1 : 1 };
+          }
       }
     }
   }
