@@ -2,7 +2,7 @@
  * Akce: stěny (kreslení, tvary, oblouky, tloušťka, popisky) a posun rohů / skupin.
  */
 import { remapDimNode } from '../../core/freeDim';
-import { placeDrawing } from '../../core/drawing';
+import { looseKind, type Transform } from '../../core/looseElements';
 import { trimExtendToCorner, trimExtendToEdge, type TrimResult } from '../../core/trimExtend';
 import { createCircleWall, createWall, newId } from '../../model/factory';
 import type { Floor, Id, LineStyle, Pt, Wall, WallLabel } from '../../model/types';
@@ -289,22 +289,15 @@ export function updateWallLabel(wallId: Id, patch: Partial<WallLabel>): void {
   });
 }
 
-/** Posun rohu (volá se během tažení uvnitř gesta). */
-/** Výchozí polohy skupiny pro společný posun (výběr obdélníkem). */
+/** Výchozí polohy skupiny pro společný posun / otočení (výběr obdélníkem). */
 export interface GroupOrigin {
   nodes: Record<Id, Pt>;
-  rooms: Record<Id, Pt>;
-  texts: Record<Id, Pt>;
-  /** Hroty odkazových šipek textů. */
-  leaders: Record<Id, Pt>;
-  /** Body kresby (core/drawing.ts). */
-  drawings: Record<Id, Pt[]>;
-  /** Pevné body vybraných volných kót (konce na prvcích jedou s prvkem samy). */
-  dims: Record<Id, { a?: Pt; b?: Pt }>;
+  /** Volné prvky (core/looseElements.ts): druh → id → výchozí poloha. */
+  loose: Record<string, Record<Id, unknown>>;
 }
 
 export function groupOrigin(floor: Floor, items: readonly { kind: string; id: Id }[]): GroupOrigin {
-  const o: GroupOrigin = { nodes: {}, rooms: {}, texts: {}, leaders: {}, drawings: {}, dims: {} };
+  const o: GroupOrigin = { nodes: {}, loose: {} };
   for (const it of items) {
     if (it.kind === 'wall') {
       const w = floor.walls[it.id];
@@ -312,42 +305,29 @@ export function groupOrigin(floor: Floor, items: readonly { kind: string; id: Id
         const n = floor.nodes[id];
         if (n) o.nodes[id] = { x: n.x, y: n.y };
       }
-    } else if (it.kind === 'dim' && floor.dims?.[it.id]) {
-      const d = floor.dims[it.id]!;
-      const fixed: { a?: Pt; b?: Pt } = {};
-      for (const k of ['a', 'b'] as const) {
-        const e = d[k];
-        if ('x' in e) fixed[k] = { x: e.x, y: e.y };
-      }
-      if (fixed.a || fixed.b) o.dims[it.id] = fixed;
-    } else if (it.kind === 'drawing' && floor.drawings?.[it.id]) o.drawings[it.id] = floor.drawings[it.id]!.pts.map(p => ({ x: p.x, y: p.y }));
-    else if (it.kind === 'room' && floor.rooms[it.id]) o.rooms[it.id] = { x: floor.rooms[it.id]!.x, y: floor.rooms[it.id]!.y };
-    else if (it.kind === 'text' && floor.texts[it.id]) {
-      const t = floor.texts[it.id]!;
-      o.texts[it.id] = { x: t.x, y: t.y };
-      if (t.leader) o.leaders[it.id] = { x: t.leader.x, y: t.leader.y };
+      continue;
     }
+    const snap = looseKind(it.kind)?.capture(floor, it.id);
+    if (snap) (o.loose[it.kind] ??= {})[it.id] = snap;
   }
   return o;
 }
 
-/** Posune skupinu o (dx, dy) od výchozích poloh (po 10 mm). */
+/** Přemístí skupinu z výchozích poloh (posun i otočení – jediné místo pro všechny druhy prvků). */
+export function placeGroup(floor: Floor, origin: GroupOrigin, t: Transform): void {
+  for (const [id, p] of Object.entries(origin.nodes)) if (floor.nodes[id]) Object.assign(floor.nodes[id]!, t.pt(p));
+  for (const [kind, snaps] of Object.entries(origin.loose)) {
+    const k = looseKind(kind);
+    if (k) for (const [id, snap] of Object.entries(snaps)) k.place(floor, id, snap, t);
+  }
+}
+
 /** Posun skupiny o (dx, dy) zaokrouhlený na `step` mm (výchozí 10; při přichycení na pomocnou čáru 1). */
 export function moveGroup(origin: GroupOrigin, dx: number, dy: number, step = 10): void {
   const mx = Math.round(dx / step) * step;
   const my = Math.round(dy / step) * step;
-  store.edit(floor => {
-    for (const [id, p] of Object.entries(origin.nodes)) if (floor.nodes[id]) Object.assign(floor.nodes[id]!, { x: p.x + mx, y: p.y + my });
-    for (const [id, p] of Object.entries(origin.rooms)) if (floor.rooms[id]) Object.assign(floor.rooms[id]!, { x: p.x + mx, y: p.y + my });
-    for (const [id, p] of Object.entries(origin.texts)) if (floor.texts[id]) Object.assign(floor.texts[id]!, { x: p.x + mx, y: p.y + my });
-    for (const [id, p] of Object.entries(origin.leaders)) if (floor.texts[id]) floor.texts[id]!.leader = { x: p.x + mx, y: p.y + my };
-    for (const [id, pts] of Object.entries(origin.drawings)) if (floor.drawings?.[id]) placeDrawing(floor.drawings[id]!, pts, mx, my);
-    for (const [id, fixed] of Object.entries(origin.dims)) {
-      const d = floor.dims?.[id];
-      if (!d) continue;
-      for (const k of ['a', 'b'] as const) if (fixed[k] && 'x' in d[k]) d[k] = { x: fixed[k]!.x + mx, y: fixed[k]!.y + my };
-    }
-  });
+  const move = (p: Pt): Pt => ({ x: p.x + mx, y: p.y + my });
+  store.edit(floor => placeGroup(floor, origin, { pt: move, exact: move, deg: 0 }));
 }
 
 export function moveNode(nodeId: Id, p: Pt): void {

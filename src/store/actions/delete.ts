@@ -4,6 +4,7 @@
 import { wallsAtNode } from '../../core/floorQueries';
 import { store } from '../store';
 import { cleanup } from './shared';
+import { looseKind } from '../../core/looseElements';
 
 export function deleteSelection(): void {
   const sel = store.get().selection;
@@ -21,23 +22,13 @@ export function deleteSelection(): void {
         case 'opening':
           delete floor.openings[sel.id];
           break;
-        case 'room':
-          delete floor.rooms[sel.id];
-          break;
-        case 'text':
-          delete floor.texts[sel.id];
-          break;
-        case 'drawing':
-          if (floor.drawings) delete floor.drawings[sel.id];
-          break;
-        case 'dim':
-          if (floor.dims) delete floor.dims[sel.id];
-          break;
         case 'protrusion':
           if (floor.protrusions) delete floor.protrusions[sel.id];
           if (floor.cornerProtrusions) delete floor.cornerProtrusions[sel.id];
           if (floor.endProtrusions) delete floor.endProtrusions[sel.id];
           break;
+        default:
+          looseKind(sel.kind)?.remove(floor, sel.id);
       }
       cleanup(floor);
     },

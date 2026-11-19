@@ -2,44 +2,15 @@
  * Výběr obdélníkem jako v CADu: zleva doprava „okno“ (jen prvky celé uvnitř),
  * zprava doleva „křížení“ (prvky, kterých se obdélník dotkne).
  */
-import type { Floor, Pt } from '../model/types';
+import type { Floor } from '../model/types';
 import { arcPolyline, circlePolyline } from './arc';
 import { openingsOnWall } from './floorQueries';
-import { drawingPolylines, drawingsOf } from './drawing';
-import { dimLine, dimPoints, freeDimsOf } from './freeDim';
+import { LOOSE_KINDS, type LooseKindId } from './looseElements';
+import { inRect as inside, segHitsRect, type Rect } from './rect';
 
-export interface Rect {
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-}
+export type RectItem = { kind: 'wall' | 'opening' | LooseKindId; id: string };
 
-export type RectItem = { kind: 'wall' | 'opening' | 'room' | 'text' | 'drawing' | 'dim'; id: string };
-
-export const normRect = (a: Pt, b: Pt): Rect => ({ x1: Math.min(a.x, b.x), y1: Math.min(a.y, b.y), x2: Math.max(a.x, b.x), y2: Math.max(a.y, b.y) });
-const inside = (r: Rect, p: Pt) => p.x >= r.x1 && p.x <= r.x2 && p.y >= r.y1 && p.y <= r.y2;
-
-/** Protíná úsečka p–q obdélník? (Liang–Barsky) */
-function segHitsRect(r: Rect, p: Pt, q: Pt): boolean {
-  let t0 = 0;
-  let t1 = 1;
-  const dx = q.x - p.x;
-  const dy = q.y - p.y;
-  const clip = (pp: number, qq: number): boolean => {
-    if (pp === 0) return qq >= 0;
-    const t = qq / pp;
-    if (pp < 0) {
-      if (t > t1) return false;
-      if (t > t0) t0 = t;
-    } else {
-      if (t < t0) return false;
-      if (t < t1) t1 = t;
-    }
-    return true;
-  };
-  return clip(-dx, p.x - r.x1) && clip(dx, r.x2 - p.x) && clip(-dy, p.y - r.y1) && clip(dy, r.y2 - p.y);
-}
+export { normRect, type Rect } from './rect';
 
 export function selectInRect(floor: Floor, r: Rect, crossing: boolean): RectItem[] {
   const out: RectItem[] = [];
@@ -58,22 +29,7 @@ export function selectInRect(floor: Floor, r: Rect, crossing: boolean): RectItem
       if (inside(r, p)) out.push({ kind: 'opening', id: po.op.id });
     }
   }
-  for (const room of Object.values(floor.rooms)) if (inside(r, room)) out.push({ kind: 'room', id: room.id });
-  for (const t of Object.values(floor.texts)) if (inside(r, t)) out.push({ kind: 'text', id: t.id });
-  for (const d of drawingsOf(floor)) {
-    const lines = drawingPolylines(d);
-    const pts = lines.flat();
-    const hit = crossing ? lines.some(pl => pl.some((p, i) => inside(r, p) || (i > 0 && segHitsRect(r, pl[i - 1]!, p)))) : pts.length > 0 && pts.every(p => inside(r, p));
-    if (hit) out.push({ kind: 'drawing', id: d.id });
-  }
-  // volná kóta: okno = měřené body i kótovací čára uvnitř; křížení = obdélník se dotkne kótovací nebo vynášecí čáry
-  for (const d of freeDimsOf(floor)) {
-    const pts = dimPoints(floor, d);
-    const line = dimLine(floor, d);
-    if (!pts || !line) continue;
-    const segs: [Pt, Pt][] = [line, [pts[0], line[0]], [pts[1], line[1]]];
-    const hit = crossing ? segs.some(([p, q]) => segHitsRect(r, p, q)) : [...pts, ...line].every(p => inside(r, p));
-    if (hit) out.push({ kind: 'dim', id: d.id });
-  }
+  // volné prvky (štítky místností, texty, kresba, kóty…) – core/looseElements.ts
+  for (const k of LOOSE_KINDS) for (const id of k.inRect(floor, r, crossing)) out.push({ kind: k.kind, id });
   return out;
 }

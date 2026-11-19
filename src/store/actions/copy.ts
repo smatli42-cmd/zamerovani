@@ -1,16 +1,14 @@
 /**
  * Akce: otočení výběru, kopírování a vkládání otvorů ze schránky.
  */
-import { drawingExtentPoints, rotateDrawing } from '../../core/drawing';
+import { LOOSE_KINDS, looseKind, type CopyContext, type LooseKindId } from '../../core/looseElements';
 import { newId, nextOpeningNumber } from '../../model/factory';
 import { endFrame } from '../../core/endProtrusion';
 import type { Id, Opening, Pt, Wall } from '../../model/types';
-import { copyDimEnd } from '../../core/dimRefs';
-import { dimPoints } from '../../core/freeDim';
 import { openingSpan, openingStartFromA, wallLength } from '../../core/floorQueries';
 import { store } from '../store';
 import { setStartFromA } from './openings';
-import { groupOrigin } from './walls';
+import { groupOrigin, placeGroup } from './walls';
 
 // ---------------------------------------------------------------- Otočení
 
@@ -21,8 +19,7 @@ export function rotateSelection(deg: number): void {
   const items = sel.kind === 'multi' ? sel.items : [sel];
   store.edit(floor => {
     const o = groupOrigin(floor, items);
-    const dimPts = Object.values(o.dims).flatMap(f => [f.a, f.b].filter((p): p is Pt => !!p));
-    const pts = [...Object.values(o.nodes), ...Object.values(o.rooms), ...Object.values(o.texts), ...Object.keys(o.drawings).flatMap(id => drawingExtentPoints(floor.drawings![id]!)), ...dimPts];
+    const pts = [...Object.values(o.nodes), ...items.flatMap(it => looseKind(it.kind)?.extent(floor, it.id) ?? [])];
     if (!pts.length) return;
     const xs = pts.map(p => p.x);
     const ys = pts.map(p => p.y);
@@ -31,23 +28,13 @@ export function rotateSelection(deg: number): void {
     const rad = (deg * Math.PI) / 180;
     const cos = Math.cos(rad);
     const sin = Math.sin(rad);
-    const rot = (p: Pt): Pt => ({ x: Math.round(cx + (p.x - cx) * cos - (p.y - cy) * sin), y: Math.round(cy + (p.x - cx) * sin + (p.y - cy) * cos) });
-    for (const [id, p] of Object.entries(o.nodes)) Object.assign(floor.nodes[id]!, rot(p));
-    for (const [id, p] of Object.entries(o.rooms)) Object.assign(floor.rooms[id]!, rot(p));
-    // kresba: přesně (bez zaokrouhlení na mm by se obdélník po otočení o úhel přestal být obdélníkem)
-    const rotExact = (p: Pt): Pt => ({ x: cx + (p.x - cx) * cos - (p.y - cy) * sin, y: cy + (p.x - cx) * sin + (p.y - cy) * cos });
-    for (const id of Object.keys(o.drawings)) rotateDrawing(floor.drawings![id]!, rotExact);
-    // pevné body vybraných volných kót (konce na prvcích se otočí s prvkem)
-    for (const [id, fixed] of Object.entries(o.dims)) {
-      const d = floor.dims?.[id];
-      for (const k of ['a', 'b'] as const) if (d && fixed[k] && 'x' in d[k]) d[k] = rot(fixed[k]!);
-    }
-    for (const [id, p] of Object.entries(o.texts)) {
-      const t = floor.texts[id]!;
-      Object.assign(t, rot(p));
-      if (o.leaders[id]) t.leader = rot(o.leaders[id]!);
-      t.angle = (((t.angle + deg) % 360) + 360) % 360;
-    }
+    // kresba přesně (bez zaokrouhlení na mm by se obdélník po otočení o úhel přestal být obdélníkem)
+    const exact = (p: Pt): Pt => ({ x: cx + (p.x - cx) * cos - (p.y - cy) * sin, y: cy + (p.x - cx) * sin + (p.y - cy) * cos });
+    const pt = (p: Pt): Pt => {
+      const q = exact(p);
+      return { x: Math.round(q.x), y: Math.round(q.y) };
+    };
+    placeGroup(floor, o, { pt, exact, deg });
   });
 }
 
@@ -69,15 +56,9 @@ export function duplicateSelection(): void {
     copyOpenings(items.map(i => i.id));
     return;
   }
-  const created: { kind: 'wall' | 'opening' | 'room' | 'text' | 'drawing' | 'dim'; id: Id }[] = [];
-  // měřené body vybraných kót z výkresu před kopií (pro konce, které se v kopii stanou pevnými body)
+  const created: { kind: 'wall' | 'opening' | LooseKindId; id: Id }[] = [];
   const before = store.floor();
-  const dimPts = new Map<Id, [Pt, Pt]>();
-  for (const it of items) {
-    const d = it.kind === 'dim' && before?.dims?.[it.id];
-    const pts = d && dimPoints(before, d);
-    if (pts) dimPts.set(it.id, pts);
-  }
+  if (!before) return;
   store.edit(floor => {
     const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
     const nodeMap = new Map<Id, Id>();
@@ -155,45 +136,14 @@ export function duplicateSelection(): void {
       (floor.endProtrusions ??= {})[ne.id] = ne;
       protMap.set(ep.id, ne.id);
     }
-    for (const it of items) {
-      if (it.kind === 'room' && floor.rooms[it.id]) {
-        const r = { ...clone(floor.rooms[it.id]!), id: newId('rm') };
-        r.x += COPY_OFFSET;
-        r.y += COPY_OFFSET;
-        floor.rooms[r.id] = r;
-        created.push({ kind: 'room', id: r.id });
-      } else if (it.kind === 'drawing' && floor.drawings?.[it.id]) {
-        const d = { ...clone(floor.drawings[it.id]!), id: newId('dr') };
-        for (const p of d.pts) {
-          p.x += COPY_OFFSET;
-          p.y += COPY_OFFSET;
-        }
-        floor.drawings[d.id] = d;
-        drawingMap.set(it.id, d.id);
-        created.push({ kind: 'drawing', id: d.id });
-      } else if (it.kind === 'text' && floor.texts[it.id]) {
-        const t = { ...clone(floor.texts[it.id]!), id: newId('tx') };
-        t.x += COPY_OFFSET;
-        t.y += COPY_OFFSET;
-        if (t.leader) t.leader = { x: t.leader.x + COPY_OFFSET, y: t.leader.y + COPY_OFFSET };
-        floor.texts[t.id] = t;
-        created.push({ kind: 'text', id: t.id });
+    // volné prvky (core/looseElements.ts) v pořadí LOOSE_KINDS – kóty až po kresbě, ke které mohou vést
+    const ctx: CopyContext = { before, shift: p => ({ x: p.x + COPY_OFFSET, y: p.y + COPY_OFFSET }), maps: { nodes: nodeMap, walls: wallMap, openings: openingMap, drawings: drawingMap, prots: protMap } };
+    for (const k of LOOSE_KINDS)
+      for (const it of items) {
+        if (it.kind !== k.kind) continue;
+        const id = k.copy(floor, it.id, ctx);
+        if (id) created.push({ kind: k.kind, id });
       }
-    }
-    // vybrané volné kóty: konec na kopírovaném prvku jede s kopií, jinak se z něj stane pevný bod (core/dimRefs.ts)
-    const maps = { nodes: nodeMap, walls: wallMap, openings: openingMap, drawings: drawingMap, prots: protMap };
-    const shift = (p: Pt): Pt => ({ x: p.x + COPY_OFFSET, y: p.y + COPY_OFFSET });
-    for (const it of items) {
-      const d = it.kind === 'dim' ? floor.dims?.[it.id] : undefined;
-      const pts = dimPts.get(it.id);
-      if (!d || !pts) continue;
-      const nd = { id: newId('dim'), a: copyDimEnd(d.a, maps, shift(pts[0])), b: copyDimEnd(d.b, maps, shift(pts[1])), offset: d.offset };
-      floor.dims![nd.id] = nd;
-      // posun čísla podél (core/dimPlace.ts) jede s kopií; zámek se nekopíruje (jako u ostatních kót)
-      const place = floor.dimPlace?.[`free-dim:${d.id}`];
-      if (place) floor.dimPlace![`free-dim:${nd.id}`] = { ...clone(place), owner: { ...place.owner, dimId: nd.id } as typeof place.owner };
-      created.push({ kind: 'dim', id: nd.id });
-    }
   });
   // Kopie je vždy skupina, aby šla uchopit a přenést celá najednou (i s otvory)
   if (created.length) store.set({ selection: { kind: 'multi', items: created }, numpad: null });
