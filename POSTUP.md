@@ -7,6 +7,9 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-19 (3) – rozhodnutí uživatele: kótování oblouků dál ne
+- **Rozhodnuto uživatelem:** kótování oblouků se dál rozvíjet nebude (při zaměřování zbytečné). Z fronty vypuštěno: hrany výstupků na obloukové stěně, zvýraznění celého oblouku pod perem, řetězová kóta polohy napojení u oblouku. Hotové kóty k oblouku (2) zůstávají.
+
 ### 2026-11-19 (2) – volná kóta k oblouku (fronta bod 2)
 - **Rozhodnuto uživatelem:** kóta se chytí bodu na oblouku tam, kde se ťukne; vrchol oblouku a střed mají přednost. Měří se k bodu (od rovné hrany kolmo), bod jede s obloukem, zadaná délka posune celou stěnu / kresbu.
 - **Co se změnilo:** nové konce kóty `arcWall` (líc obloukové stěny, `at` = mm po oblouku osy od rohu A), `arcSeg` (oblouk kresby – oblouk, oblouk v lomené čáře, kruh), `center` (střed oblouku; u kruhu je středem bod kresby). SCHEMA_VERSION 24 bez převodu. Geometrie a znovunapojení v novém `core/dimArcRefs.ts` (oddělen z `dimRefs.ts`, který by přesáhl 500 řádků). Posun: oblouková stěna celá (`moveWallStretch`, tvar zůstane), kresba celá; bod na oblouku vůči jinému bodu téže kresby / rohu téže stěny = nic se nezmění. Po úpravě (`rescueArcEnd`): zkrácení / dělení oblouku → bod zůstane na místě (i na druhé části); změna vzepětí / posun rohu → bod úměrně po oblouku; narovnání stěny → líc rovné stěny; přečíslovaný úsek kresby → úsek se stejnými body. Automatické překlopení strany oblouku otočí i stranu líce kóty (`core/wallSide.ts`). Kopie, výběr, zámky, výstupek na oblouku (`ownProtEnd`) znají nové konce. Testy `store/freeDimArc.test.ts` (19).
@@ -598,9 +601,9 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Fronta kroků:**
 1. **Chyby kótování od uživatele** – mají přednost.
-2. Volná kóta – doplnit: hrany výstupků na obloukové stěně; úhlopříčka se zachováním délek stěn (řešič). Posun ostatních kót (dimPlace) se nekopíruje s prvkem. Později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) s exportem DXF / PDF.
+2. Volná kóta – doplnit: úhlopříčka se zachováním délek stěn (řešič). Posun ostatních kót (dimPlace) se nekopíruje s prvkem. Později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) s exportem DXF / PDF.
 3. Pevné spojení i pro ostatní zamčené kóty (stěny, výstupky, napojení)? – otázka pro uživatele.
-4. Drobnosti: kopie odsazená o 300 mm zakryje roh originálu (výstupek v rohu se do odtažení nekreslí, it.fails ve `store/freeDimCopy.test.ts`); řetězová kóta polohy napojení i u oblouku; Do rohu / K hraně pro oblouky; řetězová kóta užšího otvoru při vypnutém vnitřním ostění; posun otvorů řetězem nehlídá výstupky / napojené příčky.
+4. Drobnosti: kopie odsazená o 300 mm zakryje roh originálu (výstupek v rohu se do odtažení nekreslí, it.fails ve `store/freeDimCopy.test.ts`); Do rohu / K hraně pro oblouky; řetězová kóta užšího otvoru při vypnutém vnitřním ostění; posun otvorů řetězem nehlídá výstupky / napojené příčky.
 
 ## Předchozí stav (2026-11-18, konec sezení 3)
 
