@@ -7,6 +7,10 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-19 (7) – uživatel vyzkoušel schodiště: funguje
+- **Co se změnilo:** jen fronta v „Poslední stav“ (schodiště potvrzeno, na řadě zařizovací předměty a symboly).
+- **Otevřené:** doladění schodiště jen podle potřeby (přichytávání k rohům, kóta odstupu od stěny, úchyty); vyzkoušet na tabletu.
+
 ### 2026-11-19 (6) – schodiště jako 2D značka (nový prvek, průřezové)
 - **Rozhodnuto uživatelem:** schodiště je jen 2D značka v půdorysu, žádné 3D (to až v BIM). Výška a počet stupňů se zadávají jen v panelu vlastností, výška stupně se dopočítá; značka se kreslí podle vlastností; podrobnosti se doladí postupně.
 - **Co se změnilo:** (a) samostatný commit beze změny chování: volné prvky (štítek místnosti, text, kresba, volná kóta) mají mazání, kopii, posun a otočení skupiny a výběr obdélníkem na jednom místě `core/looseElements.ts`. (b) Nový prvek `Floor.stairs` (SCHEMA_VERSION 25 bez převodu): ramena (osa a→b, šířka, počet stoupání, napojení L / U, hloubka podesty) a podesty; geometrie, nášlapy (N − 1), šipka, popisek „N × v/š“, L / U v `core/stairs.ts`; nástroj 🪜 Schodiště (tažení z rohu do rohu, přichytávání jako kresba); panel `ui/panels/StairPanel.tsx`; kóty `stair-dim` (délka / šířka ramene, hloubka podesty) jen u vybraného, se zámky; ruční obrys z uzavřené kresby (tlačítko „Označit jako schodiště“). Testy `store/stairs.test.ts` (20), `canvas/dimPlace.test.ts` (kóty schodiště).
@@ -636,11 +640,11 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Rozpracované:** nic.
 
-**Čeká na vyzkoušení:** schodiště (přímé, L, U, ruční obrys); úhlopříčka místnosti; kóta k oblouku; výběr obdélníkem a kopie s kótami; čísla nad čarami (17); kóta ke druhé čáře dvojité čáry (12), kóta k hranám výstupků (13); vybrání v rohu, kóty výstupku v rohu / na konci; na tabletu vše od 2026-11-14 (i tažení kót perem a prstem).
+**Čeká na vyzkoušení:** schodiště na tabletu (na PC uživatel potvrdil, že funguje); úhlopříčka místnosti; kóta k oblouku; výběr obdélníkem a kopie s kótami; čísla nad čarami (17); kóta ke druhé čáře dvojité čáry (12), kóta k hranám výstupků (13); vybrání v rohu, kóty výstupku v rohu / na konci; na tabletu vše od 2026-11-14 (i tažení kót perem a prstem).
 
 **Fronta kroků:**
 1. **Chyby od uživatele** (z používání a testování) – mají přednost. Kótování je jinak hotové (rozhodnutí uživatele 2026-11-19); úhlopříčka v místnosti s příčkou do T se dělat nebude.
-2. Schodiště – doladit podle zkoušky uživatele (přichytávání k rohům schodiště, kóta odstupu od stěny, úchyty). Pak zařizovací předměty a symboly → poznámkový špendlík → fotky se značkou směru pohledu.
+2. **Zařizovací předměty a symboly** (další na řadě) → poznámkový špendlík → fotky se značkou směru pohledu. Schodiště doladit jen podle potřeby (přichytávání k rohům schodiště, kóta odstupu od stěny, úchyty).
 3. Nakonec výstupy: PDF podle velikosti výkresu s razítkem, DXF s hladinami (s tím část B KOTY-ZAMEK-EXPORT.md – hlavní kóta pro export).
 4. Kóty, jen když se ukáže potřeba: pevné spojení i pro ostatní zamčené kóty; posun kót (dimPlace) se nekopíruje s prvkem; drobnosti: kopie odsazená o 300 mm zakryje roh originálu (výstupek v rohu se do odtažení nekreslí, it.fails ve `store/freeDimCopy.test.ts`); Do rohu / K hraně pro oblouky; řetězová kóta užšího otvoru při vypnutém vnitřním ostění; posun otvorů řetězem nehlídá výstupky / napojené příčky.
 
