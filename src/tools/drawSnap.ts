@@ -31,7 +31,7 @@ const free = (p: Pt): SnapResult => ({ pt: { x: Math.round(p.x / 10) * 10, y: Ma
  * Zarovnání (připomínka uživatele 2026-11-19 – čtverec čarami se nedal nakreslit bez odhadu): bod se přichytí na
  * svislici / vodorovnou přes bod kresby nebo roh stěn (i na zachycené pomocné čáře) a ukáže se čárkovaně od toho bodu.
  */
-export function drawSnap(floor: Floor, raw: Pt, from: Pt | null, skip?: string): DrawSnapResult {
+export function drawSnap(floor: Floor, raw: Pt, from: Pt | null, skip?: string, opts: { align?: boolean } = {}): DrawSnapResult {
   const { settings, camera } = store.get();
   if (!settings.snap) return free(raw);
   const tol = HIT_PX.snapNode / camera.zoom;
@@ -43,7 +43,8 @@ export function drawSnap(floor: Floor, raw: Pt, from: Pt | null, skip?: string):
   const r = from ? snapEnd(floor, from, raw, snapOptions()) : snapPoint(floor, raw, snapOptions());
   if (r.node || r.special) return r;
   const face = findFaceNear(floor, raw, tol);
-  const sources = alignSources(floor, from, skip);
+  // zarovnání jen v nástrojích, které ho ukazují (Čára, Dvojitá čára), a jen k bodům v okolí pera
+  const sources = opts.align ? alignSources(floor, from, skip, raw, ALIGN_NEAR_PX / camera.zoom) : [];
   // pomocné čáry z počátku úseku (jako u nástroje Stěna): vodorovně, svisle, kolmo ke stěně. Zachycená čára platí
   // až ke stěně: u líce / čáry stěny se konec dá na jejich PRŮSEČÍK s pomocnou čárou (kolmo na protější stěnu –
   // připomínka uživatele 2026-11-17), ne na nejbližší bod líce.
@@ -69,13 +70,22 @@ export function drawSnap(floor: Floor, raw: Pt, from: Pt | null, skip?: string):
   return alignFree(raw, r, sources, HIT_PX.snapAlign / camera.zoom);
 }
 
-/** Body pro zarovnání: body kresby (kromě `skip`) a rohy stěn; počátek úseku se vynechá. */
-function alignSources(floor: Floor, from: Pt | null, skip?: string): Pt[] {
-  const out: Pt[] = [];
-  for (const d of drawingsOf(floor)) if (d.id !== skip) out.push(...drawingSnapPoints(d));
-  for (const n of Object.values(floor.nodes)) out.push({ x: n.x, y: n.y });
-  return from ? out.filter(q => dist(q, from) > 1) : out;
+/** Do jaké vzdálenosti od pera (px) se berou body pro zarovnání (ve velkém výkresu by se zarovnávalo skoro všude). */
+const ALIGN_NEAR_PX = 500;
+
+/** Body pro zarovnání: body kresby (kromě `skip`) a rohy stěn do vzdálenosti `near` od pera; počátek úseku se vynechá. */
+function alignSources(floor: Floor, from: Pt | null, skip: string | undefined, raw: Pt, near: number): Pt[] {
+  let all = srcCache.get(floor);
+  if (!all) {
+    all = [];
+    for (const d of drawingsOf(floor)) for (const q of drawingSnapPoints(d)) all.push({ p: q, owner: d.id });
+    for (const n of Object.values(floor.nodes)) all.push({ p: { x: n.x, y: n.y }, owner: null });
+    if (Object.isFrozen(floor)) srcCache.set(floor, all);
+  }
+  return all.filter(s => s.owner !== skip || !skip).map(s => s.p).filter(q => dist(q, raw) <= near && (!from || dist(q, from) > 1));
 }
+
+const srcCache = new WeakMap<Floor, { p: Pt; owner: string | null }[]>();
 
 function alignFree(raw: Pt, r: SnapResult, sources: readonly Pt[], tol: number): SnapResult {
   let bx: Pt | null = null;

@@ -7,6 +7,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-19 (11) – kreslení čar: pomocné zarovnání, směr a kolmice; nástroj Ořezat (připomínka uživatele)
+- **Chyba od uživatele:** čtverec čarami se nedal nakreslit bez odhadu – u třetí čáry chyběla pomocná návaznost na začátek první čáry; „odpojená“ čára (nový tah z konce čáry) neměla pomocnou čáru původního směru ani kolmici. (Dřívější hlášení o neuzavřeném obrysu schodiště tím uživatel upřesnil.) Přání: nástroje prodloužit a oříznout jako ve Fusion 360 (ťuknutí na čáru).
+- **Co se změnilo:** (a) `tools/drawSnap.ts`: bod kresby se přichytí na svislici / vodorovnou přes body kresby a rohy stěn (i jako zarážka na pomocné čáře, čárkovaně od toho bodu); tah z konce / bodu čáry kresby má pomocné čáry pokračování a kolmice; kolmice k ostatním čarám kresby (pata = zarážka) a průsečíky s čarami kresby. Platí pro Čáru, Dvojitou čáru, tvary, úchyty kresby i schodiště (sdílené přichytávání). Testy `tools/drawSnap.test.ts` (5). (b) Nový nástroj **Ořezat** (`core/drawTrim.ts`, `tools/drawTrimTool.ts`, akce `trimDrawingAt` / `extendDrawingAt`): Oříznout = ťuknutý kus rovného úseku čáry / obdélníku mezi nejbližšími průsečíky (kresba, líce a čela stěn, čáry stěn bez tloušťky, obrysy schodišť) zmizí; bez průsečíku celý úsek; otevřená čára se rozpadne na dvě, uzavřená se otevře (šrafa zmizí). Prodloužit = konec otevřené čáry (bližší k ťuknutí, jen koncový úsek) k nejbližší čáře v jeho směru. Náhled při najetí (červeně co zmizí, modře čárkovaně prodloužení). Testy `store/drawTrim.test.ts` (8).
+- **Viditelně v aplikaci:** při kreslení Čárou fialová čárkovaná zarovnání a pomocné čáry směru / kolmice; v liště nový nástroj ⌿ **Ořezat** (pod Dvojitou čárou) s volbou Oříznout / Prodloužit. Ověřeno v prohlížeči (ořez mezi dvěma svislicemi, ořez konce, prodloužení ke svislici).
+- **Rozhodnuto samostatně:** jeden nástroj se dvěma režimy (ne dva nástroje); ořezává a prodlužuje se jen kresba (stěny mají „Do rohu“); oblouky v čáře, kruh, oblouk a dvojitá čára se neořezávají (hlášení); ořezávací hrany = všechny čáry výkresu včetně stěn a schodišť; zarovnání i s rohy stěn; délka podél pomocné čáry dál po 10 mm.
+- **Po kontrole revieweru opraveno:** volná kóta na oříznuté hraně obdélníku přeskočila na jinou hranu – kusy po oříznutí dostanou nová id a kóty přepojí `remapTrimDims` (úsek na stejné přímce, bod ve stejném místě; jinak kóta zanikne; zamčená kóta zaniknout nesmí → oříznutí se neprovede s hlášením); zastavení zámkem akce hlásí (`blocked`); zarovnání jen v Čáře a Dvojité čáře (kde je vidět) a jen k bodům do 500 px od pera; mezipaměť ořezávacích hran a bodů zarovnání. Testy 824.
+- **Otevřené:** vyzkoušet na tabletu (perem nemusí být náhled vidět – ukazuje se při najetí); ořez dvojité čáry a oblouků.
+
 ### 2026-11-19 (10) – schodiště: rovné s podestou a atypické T (požadavek uživatele)
 - **Požadavek uživatele:** obrázek se 13 druhy schodišť – všechny vytvořit; vyhodnotit obrys × typ s parametry. Vyhodnocení: aplikace už má obojí (ramena L / U se zabíhavými stupni, oblouk, točité = typ s parametry; ruční obrys z kresby). Chyběly „rovné s podestou“ a „atypické T“ – uživatel: „doplň obě“.
 - **Co se změnilo:** nové napojení ramene `turn: 'straight'` (podesta za koncem ramene, rameno pokračuje rovně) a `turn: 'tee'` (tlačítko „T (na obě strany)“ přidá rameno L a druhou větev z téže podesty na opačnou stranu). Vše v `core/stairs.ts` (`relayoutStair`, `canWind`, `canAppendFlight`, `addStairTee`, `arrowPaths`, `teeOverhangs`); typ beze změny verze (nové hodnoty pole `turn`, staré projekty platí). Testy `store/stairTee.test.ts` (11).
@@ -665,9 +673,9 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Rozpracované:** nic.
 
-**Chyby od uživatele (čekají):** obrys schodiště čárami se neuzavřel / nebyl vidět nad stěnou (2026-11-19 (10)) – nezopakováno, čeká na upřesnění (kterým nástrojem, PC / tablet).
+**Chyby od uživatele:** obrys čárami bez pomocného zarovnání – opraveno v (11) (zarovnání, směr, kolmice, nástroj Ořezat); čeká na vyzkoušení.
 
-**Hotové navíc:** rovné s podestou a atypické T (10).
+**Hotové navíc:** rovné s podestou a atypické T (10); pomocné čáry kresby a nástroj Ořezat (11).
 
 **Čeká na vyzkoušení:** nové druhy a zadání schodiště (8); vše na tabletu.
 

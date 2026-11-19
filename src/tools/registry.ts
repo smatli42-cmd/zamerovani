@@ -6,6 +6,7 @@ import { doorTool, nicheTool, openingTool, roomTool, windowTool } from './placeT
 import { arcTool, circleTool, rectTool } from './shapeTools';
 import { stairTool } from './stairTool';
 import { drawDoubleTool, drawLineTool } from './drawTools';
+import { drawTrimTool } from './drawTrimTool';
 import { pasteTool } from './pasteTool';
 import { leaderTool } from './leaderTool';
 import { dimTool } from './dimTool';
@@ -31,6 +32,7 @@ export const tools: Record<ToolId, Tool> = {
   circle: circleTool,
   arc: arcTool,
   drawLine: drawLineTool,
+  drawTrim: drawTrimTool,
   drawDouble: drawDoubleTool,
   text: textTool,
   leader: leaderTool,

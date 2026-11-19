@@ -9,6 +9,7 @@ import { NumField, Seg } from './panels/fields';
 import { DRAW_LINE_STYLES } from './panels/common';
 import { DRAW_COLOR_LABELS } from '../core/drawing';
 import { trimMsg, trimTool } from '../tools/trimTool';
+import { drawTrimMsg, drawTrimTool } from '../tools/drawTrimTool';
 import { tools } from '../tools/registry';
 import { splitMsg, splitTool } from '../tools/splitTool';
 import { dimToolMsg } from '../tools/dimTool';
@@ -207,6 +208,25 @@ export function ToolOptions() {
           value={settings.windowKind}
           onChange={v => store.updateSettings({ windowKind: v })}
         />
+      </div>
+    );
+  }
+  if (tool === 'drawTrim') {
+    return (
+      <div class="tool-options">
+        <Seg
+          options={[
+            { v: 'trim', label: 'Oříznout' },
+            { v: 'extend', label: 'Prodloužit' }
+          ]}
+          value={settings.drawTrimMode}
+          onChange={v => {
+            drawTrimTool.cancel?.();
+            store.updateSettings({ drawTrimMode: v });
+            store.set({ toolMsg: drawTrimMsg(v === 'extend') });
+          }}
+        />
+        <span class="small">⌿ {toolMsg ?? drawTrimMsg(settings.drawTrimMode === 'extend')}</span>
       </div>
     );
   }

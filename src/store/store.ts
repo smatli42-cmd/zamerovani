@@ -18,7 +18,7 @@ import { pruneFreeDims, rescueFreeDims } from '../core/freeDim';
 import { followDisturbsEdit, followLockedDims } from '../core/dimFollow';
 import { keepOpeningsOnResizedWalls } from '../core/openingChain';
 
-export type ToolId = 'select' | 'wall' | 'line' | 'trim' | 'split' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'drawLine' | 'drawDouble' | 'text' | 'leader' | 'dim' | 'stair' | 'paste' | 'pan';
+export type ToolId = 'select' | 'wall' | 'line' | 'trim' | 'split' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'drawLine' | 'drawDouble' | 'drawTrim' | 'text' | 'leader' | 'dim' | 'stair' | 'paste' | 'pan';
 
 export type SingleSelection =
   | { kind: 'wall'; id: Id }
@@ -97,6 +97,8 @@ export interface Settings {
   splitGap: boolean;
   /** Nástroj Do rohu: zkrátit / prodloužit jen první stěnu k hraně druhé (T) místo společného rohu (D3). */
   trimEdge: boolean;
+  /** Nástroj Ořezat (kresba): oříznout k průsečíkům, nebo prodloužit konec k nejbližší čáře. */
+  drawTrimMode: 'trim' | 'extend';
   /** Nevypínat displej, dokud je aplikace otevřená (Screen Wake Lock, input/wakeLock.ts). */
   keepAwake: boolean;
   /** Nástroj Schodiště: rameno z rohu do rohu (tažení / dvě ťuknutí), zadanými rozměry, nebo točité schodiště. */
@@ -151,7 +153,7 @@ export interface EditOptions {
 const SETTINGS_KEY = 'zamerovani.settings';
 
 function loadSettings(): Settings {
-  const defaults: Settings = { snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', drawColor: 'black', doubleWidth: 250, doubleEnds: 'open', doubleStyle: 'dashdot2', windowKind: 'window', wallShape: 'straight', wallAxis: 'face', wallChain: false, splitGap: false, trimEdge: false, keepAwake: true, stairMode: 'rect', stairWidth: 1000, stairLength: 3000 };
+  const defaults: Settings = { snap: true, showDims: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', drawColor: 'black', doubleWidth: 250, doubleEnds: 'open', doubleStyle: 'dashdot2', windowKind: 'window', wallShape: 'straight', wallAxis: 'face', wallChain: false, splitGap: false, trimEdge: false, drawTrimMode: 'trim', keepAwake: true, stairMode: 'rect', stairWidth: 1000, stairLength: 3000 };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     return raw ? { ...defaults, ...JSON.parse(raw) } : defaults;

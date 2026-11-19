@@ -6,6 +6,7 @@ import { newId } from '../../model/factory';
 import type { DrawColor, Drawing, Floor, HatchKind, Id, LineStyle, Pt } from '../../model/types';
 import { dist } from '../../core/geometry';
 import { canHatch, doubleWidthTowards, moveDrawingVertex, openLineEnds, sagittaTowards, setRectSize } from '../../core/drawing';
+import { applyTrim, extendPlan, remapTrimDims, trimPiece, type TrimFail } from '../../core/drawTrim';
 import { store } from '../store';
 
 /** Body blíž než toto (mm) jsou jeden bod (navázání a uzavření lomené čáry). */
@@ -221,4 +222,57 @@ export function flipDrawingSide(id: Id): void {
 
 export function setDrawingRect(id: Id, w: number, h: number): void {
   change(id, d => setRectSize(d, w, h));
+}
+
+/**
+ * Oříznout čáru kresby v místě ťuknutí (core/drawTrim.ts): kus mezi nejbližšími průsečíky zmizí; čára se může
+ * rozpadnout na dvě (kusy dostanou nová id a stejný vzhled), uzavřená se otevře (šrafa zmizí). Volné kóty na ní
+ * přepojí `remapTrimDims`.
+ */
+export function trimDrawingAt(id: Id, p: Pt): TrimFail | 'ok' {
+  const floor = store.floor();
+  const d = floor?.drawings?.[id];
+  if (!floor || !d) return 'notLine';
+  const piece = trimPiece(floor, d, p);
+  if (typeof piece === 'string') return piece;
+  const parts = applyTrim(d, piece);
+  let lockedDim = false;
+  const done = store.edit(
+    f => {
+      const cur = f.drawings?.[id];
+      if (!cur) return false;
+      // všechny kusy dostanou nová id – kóty na kresbu přepojí jen remapTrimDims (obecné znovunapojení je nechá být)
+      const old: Drawing = JSON.parse(JSON.stringify(cur));
+      delete f.drawings![id];
+      const look: Partial<Drawing> = { ...(cur.style ? { style: cur.style } : {}), ...(cur.color ? { color: cur.color } : {}) };
+      const made = parts.map(pts => {
+        const nid = newId('dr');
+        return (f.drawings![nid] = { id: nid, shape: 'line', pts, ...look });
+      });
+      if (!remapTrimDims(f, old, made)) {
+        lockedDim = true;
+        return false;
+      }
+      return true;
+    },
+    { selection: null }
+  );
+  if (lockedDim) store.set({ lockBlock: { key: '', text: 'Nelze – oříznutím by zanikla zamčená kóta k ořezané části čáry.' } });
+  return done ? 'ok' : 'blocked'; // zastaveno zámkem kóty (hlášení lockBlock)
+}
+
+/** Prodloužit koncový úsek otevřené čáry kresby k nejbližší čáře v jeho směru (core/drawTrim.ts). */
+export function extendDrawingAt(id: Id, p: Pt): TrimFail | 'ok' {
+  const floor = store.floor();
+  const d = floor?.drawings?.[id];
+  if (!floor || !d) return 'notLine';
+  const plan = extendPlan(floor, d, p);
+  if (typeof plan === 'string') return plan;
+  const done = change(id, cur => {
+    const q = plan.end ? cur.pts[cur.pts.length - 1] : cur.pts[0];
+    if (!q) return false;
+    q.x = plan.to.x;
+    q.y = plan.to.y;
+  });
+  return done ? 'ok' : 'blocked';
 }

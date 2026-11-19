@@ -8,6 +8,7 @@ import { trimMsg } from '../tools/trimTool';
 import { splitMsg } from '../tools/splitTool';
 import { dimToolMsg } from '../tools/dimTool';
 import { stairToolMsg } from '../tools/stairTool';
+import { drawTrimMsg } from '../tools/drawTrimTool';
 
 const TOOLS: { id: ToolId; icon: string; label: string; title: string }[] = [
   { id: 'select', icon: '👆', label: 'Vybrat', title: 'Vybrat prvek, posunout roh / otvor, ťuknutím na stěnu zadat délku' },
@@ -21,6 +22,7 @@ const TOOLS: { id: ToolId; icon: string; label: string; title: string }[] = [
   { id: 'room', icon: '🏷️', label: 'Místnost', title: 'Ťuknutím vložit štítek místnosti' },
   { id: 'drawLine', icon: '╱', label: 'Čára', title: 'Kreslit čáru (jen kresba – nikdy stěna ani výstupek); další úsek navazuje na konec, čára zpět do počátku se uzavře' },
   { id: 'drawDouble', icon: '═', label: 'Dvojitá', title: 'Dvojitá čára (překlad): dvě rovnoběžné čáry; od líce podél stěny přes celou její tloušťku' },
+  { id: 'drawTrim', icon: '⌿', label: 'Ořezat', title: 'Kresba: ťuknutím oříznout čáru k nejbližším průsečíkům, nebo prodloužit její konec k nejbližší čáře' },
   { id: 'rect', icon: '▭', label: 'Obdélník', title: 'Tažením nakreslit obdélník (kresba – sloup, komín…)' },
   { id: 'circle', icon: '◯', label: 'Kruh', title: 'Tažením od středu nakreslit kruh' },
   { id: 'arc', icon: '◠', label: 'Oblouk', title: 'Tažením mezi krajními body nakreslit oblouk, vzepětí se upřesní kótou' },
@@ -42,7 +44,7 @@ export function Toolbar() {
           title={t.title}
           onClick={() => {
             tools[store.get().tool].cancel?.();
-            store.set({ tool: t.id, hover: null, chainNode: null, stairAppend: null, toolMsg: t.id === 'trim' ? trimMsg(store.get().settings.trimEdge) : t.id === 'split' ? splitMsg(store.get().settings.splitGap) : t.id === 'dim' ? dimToolMsg(false) : t.id === 'stair' ? stairToolMsg(false) : null });
+            store.set({ tool: t.id, hover: null, chainNode: null, stairAppend: null, toolMsg: t.id === 'trim' ? trimMsg(store.get().settings.trimEdge) : t.id === 'split' ? splitMsg(store.get().settings.splitGap) : t.id === 'dim' ? dimToolMsg(false) : t.id === 'stair' ? stairToolMsg(false) : t.id === 'drawTrim' ? drawTrimMsg(store.get().settings.drawTrimMode === 'extend') : null });
           }}
         >
           <span class="tool-icon">{t.icon}</span>
