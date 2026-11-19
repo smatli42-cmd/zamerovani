@@ -17,13 +17,13 @@ function makeOpeningTool(toolKind: OpeningKind): Tool {
       const floor = store.floor();
       if (!floor) return;
       const cam = store.get().camera;
-      if (pickOpening(floor, p.world, cam)) {
+      if (pickOpening(store.view('pick')!, p.world, cam)) {
         delegating = true;
         selectTool.down?.(p);
         return;
       }
       delegating = false;
-      const hit = wallForOpening(floor, p.world, cam);
+      const hit = wallForOpening(store.view('snap')!, p.world, cam);
       if (hit && !isCurved(hit.wall)) {
         const kind: OpeningKind = toolKind === 'window' ? store.get().settings.windowKind : toolKind;
         addOpening(hit.wall.id, kind, hit.t);
@@ -54,7 +54,7 @@ export const roomTool: Tool = {
   down(p) {
     const floor = store.floor();
     if (!floor) return;
-    if (pickRoom(floor, p.world, store.get().camera)) {
+    if (pickRoom(store.view('pick')!, p.world, store.get().camera)) {
       roomDelegating = true;
       selectTool.down?.(p);
       return;

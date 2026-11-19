@@ -17,6 +17,7 @@ import { describeDim, dimKey, lockViolation, pruneLocks, reboundLocks, type DimT
 import { pruneFreeDims, rescueFreeDims } from '../core/freeDim';
 import { followDisturbsEdit, followLockedDims } from '../core/dimFollow';
 import { keepOpeningsOnResizedWalls } from '../core/openingChain';
+import { assignLayers, layerLockViolation, selectableItems, viewFloor } from '../core/layers';
 
 export type ToolId = 'select' | 'wall' | 'line' | 'trim' | 'split' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'drawLine' | 'drawDouble' | 'drawTrim' | 'text' | 'leader' | 'dim' | 'stair' | 'paste' | 'pan';
 
@@ -211,6 +212,8 @@ class Store {
   set(patch: Partial<AppState>): void {
     const prev = this.state;
     this.state = { ...prev, ...patch };
+    // vrstvy: prvek ve skryté / zamčené vrstvě nesmí zůstat vybraný (core/layers.ts)
+    if (('project' in patch || 'selection' in patch) && this.state.selection) this.state.selection = this.selectable(this.state.selection);
     if ('settings' in patch) {
       try {
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(this.state.settings));
@@ -219,6 +222,25 @@ class Store {
       }
     }
     for (const fn of this.listeners) fn(this.state, prev);
+  }
+
+  private selectable(sel: Selection): Selection {
+    const floor = this.floor();
+    if (!sel || !floor) return sel;
+    const items = sel.kind === 'multi' ? sel.items : [sel];
+    const ok = selectableItems(this.state.project, floor, items);
+    if (ok.length === items.length) return sel;
+    if (sel.kind !== 'multi' || ok.length === 0) return null;
+    return ok.length === 1 ? ok[0]! : { kind: 'multi', items: ok };
+  }
+
+  /**
+   * Podlaží pro nástroje: 'pick' = bez prvků ve skrytých a zamčených vrstvách (výběr), 'snap' = bez skrytých
+   * (přichytávání; zamčené chytají). Pravidla jen v core/layers.ts.
+   */
+  view(mode: 'pick' | 'snap'): Floor | null {
+    const floor = this.floor();
+    return floor && viewFloor(this.state.project, floor, mode);
   }
 
   /** Aktuální podlaží (jen pro čtení). */
@@ -291,6 +313,8 @@ class Store {
         if (!f) return;
         // recept vrátil false = akce nejde → nic se nezmění (žádný krok Zpět)
         if (recipe(f, p) === false) throw EDIT_ABORT;
+        // nový prvek dostane vrstvu (pravidlo 4, core/layers.ts)
+        assignLayers(p, f);
         // napojené rohy (T bez dělení) sledují svou průběžnou stěnu
         syncHosted(before, f);
         // výstupky drží místo na stěně i při změně jejího vzepětí
@@ -316,6 +340,12 @@ class Store {
             throw LOCK_ABORT;
           }
         }
+        // zamčená vrstva: úprava nesmí změnit žádný její prvek, ani přes vazbu (pravidlo 2)
+        const lockedLayer = layerLockViolation(this.state.project, before, f);
+        if (lockedLayer !== null) {
+          blocked = { key: '', text: `Nelze – úprava by změnila prvek v zamčené vrstvě „${lockedLayer}“.` };
+          throw LOCK_ABORT;
+        }
         const v = lockViolation(before, f, opts.allowKey);
         if (v) {
           blocked = { key: dimKey(v), text: `Nelze – brání zamčená kóta: ${describeDim(before!, v)}`, target: v };
@@ -324,6 +354,38 @@ class Store {
         // kóta měřená od souseda, který přibyl / zmizel, je jiná kóta – původní zámek zaniká
         for (const key of reboundLocks(before, f)) delete f.dimLocks![key];
         if (f.dimLocks && Object.keys(f.dimLocks).length === 0) delete f.dimLocks;
+      }, { ...extra, ...(this.state.lockBlock ? { lockBlock: null } : {}) });
+    } catch (e) {
+      if (e === EDIT_ABORT) return false;
+      if (e !== LOCK_ABORT) throw e;
+      this.set({ lockBlock: blocked });
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Změna vrstev projektu (platí pro všechna podlaží; core/layers.ts) – v historii Zpět/Vpřed. Po úpravě se na každém
+   * podlaží uklidí kóty a zámky smazaných prvků; úprava, která by změnila prvek v zamčené vrstvě, se neprovede.
+   */
+  editLayers(recipe: (p: Project) => void | boolean, extra: Partial<AppState> = {}): boolean {
+    const beforeP = this.state.project;
+    let blocked: AppState['lockBlock'] = null;
+    try {
+      this.editProject(p => {
+        if (recipe(p) === false) throw EDIT_ABORT;
+        for (const f of p.floors) {
+          const before = beforeP?.floors.find(x => x.id === f.id);
+          rescueFreeDims(before, f);
+          pruneFreeDims(f);
+          pruneLocks(f);
+          prunePlaces(f);
+          const lockedLayer = layerLockViolation(beforeP, before, f);
+          if (lockedLayer !== null) {
+            blocked = { key: '', text: `Nelze – úprava by změnila prvek v zamčené vrstvě „${lockedLayer}“.` };
+            throw LOCK_ABORT;
+          }
+        }
       }, { ...extra, ...(this.state.lockBlock ? { lockBlock: null } : {}) });
     } catch (e) {
       if (e === EDIT_ABORT) return false;
@@ -384,7 +446,7 @@ class Store {
   private restore(snapshot: Project): void {
     // Zpět/Vpřed nemění nastavení projektu (vybraná tloušťka a předvolby stěn)
     const cur = this.state.project;
-    const p: Project = cur ? { ...snapshot, wallThickness: cur.wallThickness, wallPresets: cur.wallPresets } : snapshot;
+    const p: Project = cur ? { ...snapshot, wallThickness: cur.wallThickness, wallPresets: cur.wallPresets, activeLayer: cur.activeLayer } : snapshot;
     const floorId = p.floors.some(f => f.id === this.state.floorId) ? this.state.floorId : (p.floors[0]?.id ?? null);
     this.set({
       project: p,

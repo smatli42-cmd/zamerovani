@@ -187,7 +187,7 @@ export const selectTool: Tool = {
     if (grabArcHandle(p, true) || grabLeaderHandle(p)) return;
     const cam = store.get().camera;
     const before = store.get().selection;
-    const hit = pickAny(floor, p.world, cam, before);
+    const hit = pickAny(store.view('pick')!, p.world, cam, before);
     downScreen = p.screen;
     dragging = false;
     drag = null;
@@ -211,12 +211,12 @@ export const selectTool: Tool = {
     store.set({ selection: hit, numpad: null });
     resetGuides();
     // pomocné čáry se počítají při uchopení (původní směr = poloha před tažením)
-    if (hit.kind === 'node') drag = { kind: 'node', id: hit.id, lines: nodeDragLines(floor, hit.id) };
+    if (hit.kind === 'node') drag = { kind: 'node', id: hit.id, lines: nodeDragLines(store.view('snap')!, hit.id) };
     // D12: tažení už vybrané stěny ji posune celou (sousední stěny se protáhnou)
     // kruh a část rozděleného oblouku (řetěz se tvaruje jako celek) se takto neposouvají
     const chain = hit.kind === 'wall' ? arcChain(floor, hit.id) : null;
     if (hit.kind === 'wall' && before?.kind === 'wall' && before.id === hit.id && floor.walls[hit.id]?.radius === undefined && !(chain && chain.pieces.length > 1)) {
-      drag = { kind: 'wall', id: hit.id, origin: groupOrigin(floor, [hit]), grab: p.world, lines: wallMoveLines(floor, hit.id, p.world) };
+      drag = { kind: 'wall', id: hit.id, origin: groupOrigin(floor, [hit]), grab: p.world, lines: wallMoveLines(store.view('snap')!, hit.id, p.world) };
     }
     // tažení už vybrané kresby / schodiště ji posune celou
     if ((hit.kind === 'drawing' || hit.kind === 'stair') && before?.kind === hit.kind && before.id === hit.id) drag = { kind: 'group', origin: groupOrigin(floor, [hit]), start: p.world };
@@ -266,7 +266,7 @@ export const selectTool: Tool = {
       moveGroup(drag.origin, p.world.x - drag.start.x, p.world.y - drag.start.y);
     } else if (drag.kind === 'node') {
       const tol = HIT_PX.snapNode / cam.zoom;
-      const other = findNodeNear(floor, p.world, tol, drag.id);
+      const other = findNodeNear(store.view('snap')!, p.world, tol, drag.id);
       let target: Pt;
       if (other) {
         target = other;
@@ -280,7 +280,7 @@ export const selectTool: Tool = {
           requestRender();
           return;
         }
-        const w = findWallNear(floor, p.world, tol * 0.7);
+        const w = findWallNear(store.view('snap')!, p.world, tol * 0.7);
         const own = w && (w.wall.a === drag.id || w.wall.b === drag.id);
         // po uvolnění prodlevou platí přesná poloha pod perem (bod 8 návrhu), jinak krok 10 mm
         target = holdFreeAt ? p.world : w && !own ? w.point : { x: roundTo(p.world.x, 10), y: roundTo(p.world.y, 10) };
@@ -338,7 +338,7 @@ export const selectTool: Tool = {
       band = null;
       const floor = store.floor();
       if (floor && Math.hypot(b.endScreen.x - b.startScreen.x, b.endScreen.y - b.startScreen.y) >= 8) {
-        const items = selectInRect(floor, normRect(b.start, b.end), b.end.x < b.start.x);
+        const items = selectInRect(store.view('pick')!, normRect(b.start, b.end), b.end.x < b.start.x);
         store.set({ selection: items.length === 0 ? null : items.length === 1 ? items[0]! : { kind: 'multi', items } });
       }
       requestRender();
@@ -357,7 +357,7 @@ export const selectTool: Tool = {
     } else if (drag?.kind === 'node' && cycleAt) {
       // opakované ťuknutí na překrývající se konce přepíná mezi nimi (D14)
       const floor = store.floor();
-      const next = floor && nextNodeAt(floor, cycleAt, HIT_PX.node / store.get().camera.zoom, drag.id);
+      const next = floor && nextNodeAt(store.view('pick')!, cycleAt, HIT_PX.node / store.get().camera.zoom, drag.id);
       if (next) store.set({ selection: { kind: 'node', id: next.id } });
     }
     cycleAt = null;
@@ -370,7 +370,7 @@ export const selectTool: Tool = {
   hover(p: PointerInput) {
     const floor = store.floor();
     if (!floor) return;
-    const hit = pickAny(floor, p.world, store.get().camera, store.get().selection);
+    const hit = pickAny(store.view('pick')!, p.world, store.get().camera, store.get().selection);
     const cur = store.get().hover;
     if (hit?.kind !== cur?.kind || (hit as { id?: Id } | null)?.id !== (cur as { id?: Id } | null)?.id) {
       store.set({ hover: hit });

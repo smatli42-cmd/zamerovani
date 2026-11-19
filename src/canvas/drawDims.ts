@@ -21,6 +21,7 @@ import { wallBodies } from '../core/wallBody';
 import { doorLayout } from '../core/doorLayout';
 import { openingStartFromA } from '../core/floorQueries';
 import { hostedChain } from '../core/hosting';
+import { wallShown } from './layerDraw';
 
 /** Těžiště každé souvislé skupiny stěn (pro určení strany „ven“). */
 function componentCentroids(floor: Floor): Map<Id, Pt> {
@@ -63,6 +64,8 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
   ctx.save();
 
   for (const wall of Object.values(floor.walls)) {
+    // automatické kóty jen u kreslené stěny (vrstvy: core/layers.ts)
+    if (!wallShown(wall.id)) continue;
     const n = wallNodes(floor, wall);
     if (!n) continue;
     if (wall.radius !== undefined) {
@@ -155,7 +158,11 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
 
 
     // řada polohy napojení (T bez dělení): A → napojení → … → B, klikací (posune napojenou stěnu)
-    const chain = hostedChain(floor, wall.id);
+    // napojení stěn skrytých vrstev se do řady nepočítají (vrstvy, pravidlo 1); řada bez nich ukazuje vzdálenosti,
+    // ale není klikací (zadání by měnilo úsek ke skrytému napojení)
+    const fullChain = hostedChain(floor, wall.id);
+    const chain = fullChain.filter(c => Object.values(floor.walls).some(w => (w.a === c.nodeId || w.b === c.nodeId) && wallShown(w.id)));
+    const whole = chain.length === fullChain.length;
     if (chain.length > 0) {
       const stops = [0, ...chain.map(c => c.at), len];
       for (let i = 0; i + 1 < stops.length; i++) {
@@ -166,7 +173,7 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
         const target: NumPadTarget = last
           ? { kind: 'junction-gap', wallId: wall.id, nodeId: chain[chain.length - 1]!.nodeId, to: 'next' }
           : { kind: 'junction-gap', wallId: wall.id, nodeId: chain[i]!.nodeId, to: 'prev' };
-        drawDimLine(ctx, lerp(a, b, from / len), lerp(a, b, to / len), out, offset, String(Math.round(to - from)), undefined, { color: '#334155', bg: '#ffffff', bold: false }, s, { type: 'numpad', target, wallId: wall.id }, { row: wallChainRow('junctions', wall) });
+        drawDimLine(ctx, lerp(a, b, from / len), lerp(a, b, to / len), out, offset, String(Math.round(to - from)), undefined, { color: '#334155', bg: '#ffffff', bold: false }, s, whole ? { type: 'numpad', target, wallId: wall.id } : null, { row: wallChainRow('junctions', wall) });
       }
       offset += rowGap;
     }

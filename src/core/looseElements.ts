@@ -14,6 +14,7 @@ import { dimLine, dimPoints } from './freeDim';
 import { inRect, polylinesInRect, segHitsRect, type Rect } from './rect';
 import { stairOutlines, stairPoints } from './stairs';
 import { dimKey } from './dimLock';
+import { fullFloorOf } from './layers';
 
 export type LooseKindId = 'room' | 'text' | 'drawing' | 'stair' | 'dim';
 
@@ -192,8 +193,8 @@ const dim: LooseKind = {
   inRect: (f, r, crossing) =>
     Object.values(f.dims ?? {})
       .filter(d => {
-        const pts = dimPoints(f, d);
-        const line = dimLine(f, d);
+        const pts = dimPoints(fullFloorOf(f), d);
+        const line = dimLine(fullFloorOf(f), d);
         if (!pts || !line) return false;
         const segs: [Pt, Pt][] = [line, [pts[0], line[0]], [pts[1], line[1]]];
         return crossing ? segs.some(([p, q]) => segHitsRect(r, p, q)) : [...pts, ...line].every(p => inRect(r, p));
@@ -205,7 +206,8 @@ const dim: LooseKind = {
     const orig = ctx.before.dims?.[id];
     const pts = orig && dimPoints(ctx.before, orig);
     if (!d || !pts) return null;
-    const nd = { id: newId('dim'), a: copyDimEnd(d.a, ctx.maps, ctx.shift(pts[0])), b: copyDimEnd(d.b, ctx.maps, ctx.shift(pts[1])), offset: d.offset };
+    // kopie zůstane ve vrstvě originálu (vrstvy, pravidlo 5)
+    const nd = { id: newId('dim'), a: copyDimEnd(d.a, ctx.maps, ctx.shift(pts[0])), b: copyDimEnd(d.b, ctx.maps, ctx.shift(pts[1])), offset: d.offset, ...(d.layerId ? { layerId: d.layerId } : {}) };
     f.dims![nd.id] = nd;
     // posun čísla podél (core/dimPlace.ts) jede s kopií; zámek se nekopíruje (jako u ostatních kót)
     const place = f.dimPlace?.[`free-dim:${d.id}`];

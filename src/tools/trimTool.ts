@@ -36,8 +36,8 @@ let hoverPt: Pt | null = null;
 function wallAt(p: PointerInput): Id | null {
   const floor = store.floor();
   if (!floor) return null;
-  const hit = findWallNear(floor, p.world, HIT_PX.wall / store.get().camera.zoom);
-  return hit?.wall.id ?? findBodyAt(floor, p.world)?.id ?? null;
+  const hit = findWallNear(store.view('pick')!, p.world, HIT_PX.wall / store.get().camera.zoom);
+  return hit?.wall.id ?? findBodyAt(store.view('pick')!, p.world)?.id ?? null;
 }
 
 export const trimTool: Tool = {

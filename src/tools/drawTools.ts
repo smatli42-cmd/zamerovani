@@ -56,7 +56,7 @@ function makeDrawTool(kind: 'line' | 'double'): Tool {
       if (handle) return;
       const floor = store.floor();
       if (!floor) return;
-      const start = drawSnap(floor, p.world, null, undefined, ALIGN);
+      const start = drawSnap(store.view('snap')!, p.world, null, undefined, ALIGN);
       s = { start, end: start, downAt: p.world, side: null };
       hoverSnap = null;
       store.set({ selection: null, numpad: null });
@@ -66,7 +66,7 @@ function makeDrawTool(kind: 'line' | 'double'): Tool {
       if (handle) return selectTool.drag?.(p);
       const floor = store.floor();
       if (!floor || !s) return;
-      s.end = drawSnap(floor, p.world, s.start.pt, undefined, ALIGN);
+      s.end = drawSnap(store.view('snap')!, p.world, s.start.pt, undefined, ALIGN);
       if (kind === 'double') s.side = sideFromPen(s.start.pt, s.end.pt, p.world, FLIP_PX / store.get().camera.zoom, s.side);
       requestRender();
     },
@@ -88,14 +88,14 @@ function makeDrawTool(kind: 'line' | 'double'): Tool {
       } else {
         // ťuknutí bez tažení = výběr prvku pod perem
         const floor = store.floor();
-        if (floor) store.set({ selection: pickAny(floor, st.downAt, store.get().camera, store.get().selection) });
+        if (floor) store.set({ selection: pickAny(store.view('pick')!, st.downAt, store.get().camera, store.get().selection) });
       }
       requestRender();
     },
     hover(p: PointerInput) {
       const floor = store.floor();
       if (!floor) return;
-      const r = drawSnap(floor, p.world, null, undefined, ALIGN);
+      const r = drawSnap(store.view('snap')!, p.world, null, undefined, ALIGN);
       hoverSnap = r.node || r.wallHit || r.special || r.guides.length ? r : null;
       requestRender();
     },

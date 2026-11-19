@@ -244,7 +244,7 @@ export function trimDrawingAt(id: Id, p: Pt): TrimFail | 'ok' {
       // všechny kusy dostanou nová id – kóty na kresbu přepojí jen remapTrimDims (obecné znovunapojení je nechá být)
       const old: Drawing = JSON.parse(JSON.stringify(cur));
       delete f.drawings![id];
-      const look: Partial<Drawing> = { ...(cur.style ? { style: cur.style } : {}), ...(cur.color ? { color: cur.color } : {}) };
+      const look: Partial<Drawing> = { ...(cur.style ? { style: cur.style } : {}), ...(cur.color ? { color: cur.color } : {}), ...(cur.layerId ? { layerId: cur.layerId } : {}) };
       const made = parts.map(pts => {
         const nid = newId('dr');
         return (f.drawings![nid] = { id: nid, shape: 'line', pts, ...look });

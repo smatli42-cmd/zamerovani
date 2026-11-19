@@ -7,6 +7,7 @@ import { hasBody } from '../core/wallFace';
 import { orientLoopOutward } from '../core/wallSide';
 import { shapesToDrawings } from './migrateDrawings';
 import { mergeArcAt, mergeStraightAt } from '../core/topology';
+import { defaultLayers, kindDefaultLayer, OWN_KINDS, ownCollection, setCollection, SYS } from '../core/layers';
 import { SCHEMA_VERSION, type Floor, type LineStyle, type Project, type Pt, type Reveal } from '../model/types';
 
 export function migrateProject(raw: unknown): Project {
@@ -40,6 +41,7 @@ export function migrateProject(raw: unknown): Project {
   // 24 → 25: schodiště (floor.stairs) – nepovinné pole, bez převodu
   // 25 → 26: schodiště – rameno po oblouku (center, sweep), ručně nakreslené rameno (turn 'free'), zabíhavé stupně (winders) – bez převodu
   // 26 → 27: schodiště – napojení ramene rovně (turn 'straight') a atypické T (turn 'tee') – bez převodu
+  // 27 → 28: vrstvy projektu (Project.layers, activeLayer) a vrstva u každého prvku (layerId) – core/layers.ts
   const old = p.schema ?? 1;
   const floors = p.floors.map(f => {
     const j = joinSemicircles(convertShapesToWalls(f));
@@ -48,7 +50,27 @@ export function migrateProject(raw: unknown): Project {
     const fixed = fixWindowFrames(revealSides({ ...out, protrusions: out.protrusions ?? {} }));
     return old < 18 ? shapesToDrawings(fixed) : fixed;
   });
-  return { ...p, floors, schema: SCHEMA_VERSION };
+  return withLayers({ ...p, floors, schema: SCHEMA_VERSION });
+}
+
+/**
+ * 27 → 28: výchozí sada vrstev a vrstva u každého prvku podle druhu (stěna a schodiště Stavba, volná kóta Kóty,
+ * text a štítek místnosti Popisky, kresba Kresba). Opakovatelné – existující vrstvy a `layerId` zůstanou.
+ */
+function withLayers(p: Project): Project {
+  const layers = p.layers?.length ? p.layers : defaultLayers();
+  const q: Project = { ...p, layers, activeLayer: layers.some(l => l.id === p.activeLayer) ? p.activeLayer : SYS.kresba };
+  const floors = p.floors.map(f => {
+    const out: Floor = { ...f };
+    for (const kind of OWN_KINDS) {
+      const rec = ownCollection(f, kind);
+      const fixed: typeof rec = {};
+      for (const [id, el] of Object.entries(rec)) fixed[id] = el.layerId && layers.some(l => l.id === el.layerId) ? el : { ...el, layerId: kindDefaultLayer(kind) };
+      setCollection(out, kind, fixed);
+    }
+    return out;
+  });
+  return { ...q, floors };
 }
 
 interface OldShape {

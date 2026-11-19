@@ -57,6 +57,8 @@ export function splitWallAt(floor: Floor, wallId: Id, nodeId: Id): [Id, Id] | nu
     if (wall.style) w.style = wall.style;
     if (wall.sideLocked) w.sideLocked = true;
     if (wall.axis) w.axis = wall.axis;
+    // obě části zůstanou ve vrstvě původní stěny (core/layers.ts)
+    if (wall.layerId) w.layerId = wall.layerId;
     return w;
   };
   const wA = part(wall.a, nodeId, sagParts ? sagParts[0] : null);

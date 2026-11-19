@@ -14,7 +14,7 @@ export const textTool: Tool = {
   down(p: PointerInput) {
     const floor = store.floor();
     if (!floor) return;
-    if (pickText(floor, p.world, store.get().camera)) {
+    if (pickText(store.view('pick')!, p.world, store.get().camera)) {
       delegating = true;
       selectTool.down?.(p);
       return;

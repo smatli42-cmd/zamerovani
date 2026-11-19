@@ -10,7 +10,7 @@
 
 import type { DimTarget } from '../core/dimLock';
 
-export const SCHEMA_VERSION = 27;
+export const SCHEMA_VERSION = 28;
 
 export type Id = string;
 
@@ -47,6 +47,8 @@ export interface WallLabel {
 /** Stěna = čára vnitřního líce mezi dvěma rohy; tělo stěny tloušťky `thickness` leží na straně `side`. */
 export interface Wall {
   id: Id;
+  /** Vrstva prvku (Project.layers, core/layers.ts); chybí = výchozí vrstva druhu. */
+  layerId?: Id;
   a: Id;
   b: Id;
   /** Tloušťka těla stěny v mm; 0 = čára bez tloušťky (tvary: obdélník, kruh, oblouk). */
@@ -132,6 +134,8 @@ export interface RoomHeight {
 /** Místnost – zatím štítek umístěný v půdorysu. */
 export interface Room {
   id: Id;
+  /** Vrstva prvku (Project.layers, core/layers.ts); chybí = výchozí vrstva druhu. */
+  layerId?: Id;
   x: number;
   y: number;
   number: string;
@@ -147,6 +151,8 @@ export type LineStyle = 'solid' | 'dashed' | 'dashdot' | 'dashdot2';
 /** Samostatný text na výkresu (poznámka, popis). Poloha = střed textu, velikost = výška písma v mm. */
 export interface TextNote {
   id: Id;
+  /** Vrstva prvku (Project.layers, core/layers.ts); chybí = výchozí vrstva druhu. */
+  layerId?: Id;
   x: number;
   y: number;
   /** Text, může mít víc řádků (oddělené 
@@ -272,6 +278,8 @@ export interface DrawPt {
  */
 export interface Drawing {
   id: Id;
+  /** Vrstva prvku (Project.layers, core/layers.ts); chybí = výchozí vrstva druhu. */
+  layerId?: Id;
   /** Čím vznikla (název v panelu, chování úchytů): `line` lomená čára, `rect`, `circle`, `arc`, `double` dvojitá čára. */
   shape: 'line' | 'rect' | 'circle' | 'arc' | 'double';
   /** Body: lomená čára / obdélník = vrcholy; oblouk = 2 body; kruh = [střed]; dvojitá čára = 2 body první čáry. */
@@ -332,6 +340,8 @@ export type DimEnd =
  */
 export interface FreeDim {
   id: Id;
+  /** Vrstva prvku (Project.layers, core/layers.ts); chybí = výchozí vrstva druhu. */
+  layerId?: Id;
   a: DimEnd;
   b: DimEnd;
   /** Odsazení kótovací čáry od spojnice bodů (mm, kladně na stranu normal(a→b)). */
@@ -381,6 +391,8 @@ export interface StairLanding {
  */
 export interface Stair {
   id: Id;
+  /** Vrstva prvku (Project.layers, core/layers.ts); chybí = výchozí vrstva druhu. */
+  layerId?: Id;
   flights: StairFlight[];
   landings: StairLanding[];
   /** Celková výška schodiště (mm); chybí = nezadaná (výška stupně se nepočítá). */
@@ -457,6 +469,23 @@ export interface Project {
   wallPresets?: number[];
   /** Výška oblouku (vzepětí) nově kreslených obloukových stěn (mm); chybí = 500. */
   wallArcHeight?: number;
+  /** Vrstvy projektu – stejné pro všechna podlaží (core/layers.ts); chybí = výchozí sada. */
+  layers?: Layer[];
+  /** Aktivní vrstva (do ní jde nová kresba); mimo historii Zpět/Vpřed. */
+  activeLayer?: Id;
+}
+
+/** Vrstva výkresu (hladina v DXF): `id` se nemění, `name` ano; `order` = pořadí kreslení (menší dřív, tedy níž). */
+export interface Layer {
+  id: Id;
+  name: string;
+  /** Barva ručních tahů a symbolů ve vrstvě (#rrggbb); stavba si drží svůj vzhled. */
+  color: string;
+  order: number;
+  visible: boolean;
+  locked: boolean;
+  /** Systémová vrstva (Stavba, Kóty, Popisky, Kresba): nejde smazat ani přejmenovat. */
+  system: boolean;
 }
 
 /** Krátký přehled projektu pro seznam projektů (bez výkresů). */

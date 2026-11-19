@@ -22,7 +22,7 @@ const MIN_SIZE = 50; // mm – menší tažení se bere jako ťuknutí
 
 function snap(p: Pt): Pt {
   const floor = store.floor();
-  return floor ? drawSnap(floor, p, null).pt : { x: roundTo(p.x, 10), y: roundTo(p.y, 10) };
+  return floor ? drawSnap(store.view('snap')!, p, null).pt : { x: roundTo(p.x, 10), y: roundTo(p.y, 10) };
 }
 
 function badge(ctx: CanvasRenderingContext2D, at: Pt, text: string): void {
@@ -82,7 +82,7 @@ function makeTool(opts: {
       if (s && e && dist(s, e) >= MIN_SIZE) opts.commit(s, e);
       else if (tap) {
         const floor = store.floor();
-        if (floor) store.set({ selection: pickAny(floor, tap, store.get().camera, store.get().selection) });
+        if (floor) store.set({ selection: pickAny(store.view('pick')!, tap, store.get().camera, store.get().selection) });
       }
       requestRender();
     },
@@ -146,13 +146,13 @@ let arcEnd: SnapResult | null = null;
 const arcBase = makeTool({
   begin: p => {
     const floor = store.floor();
-    arcStart = floor ? drawSnap(floor, p, null) : null;
+    arcStart = floor ? drawSnap(store.view('snap')!, p, null) : null;
     arcEnd = arcStart;
     return arcStart?.pt ?? p;
   },
   move: (s, p) => {
     const floor = store.floor();
-    if (floor && arcStart) arcEnd = drawSnap(floor, p, s);
+    if (floor && arcStart) arcEnd = drawSnap(store.view('snap')!, p, s);
     return arcEnd?.pt ?? p;
   },
   commit: (a, b) => {

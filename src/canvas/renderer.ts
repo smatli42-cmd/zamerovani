@@ -15,7 +15,9 @@ import { drawDrawingHandles, drawDrawings } from './drawDrawings';
 import { drawRooms } from './drawRooms';
 import { drawTexts } from './drawTexts';
 import { drawComponentDims } from './drawComponentDims';
-import { resetHitBoxes } from './hitTargets';
+import { resetHitBoxes, setHitEnabled } from './hitTargets';
+import { setWallFilter } from './layerDraw';
+import { elementLayer, kindsInLayer, layerSlice, layersOf, SYS, wallVisible } from '../core/layers';
 import { setRenderHandler } from './invalidate';
 
 let canvas: HTMLCanvasElement | null = null;
@@ -82,27 +84,44 @@ function render(): void {
 
   resetHitBoxes();
   if (floor) {
-    drawWalls(ctx, floor, cam, state.selection, state.hover);
-    drawOpenings(ctx, floor, cam, state.selection, state.hover);
-    // kresba a její šrafy nad výplní stěn i otvory (překlad nad otvorem)
-    drawDrawings(ctx, floor, cam, state.selection, state.hover);
-    // schodiště – 2D značka nad výplní stěn (core/stairs.ts)
-    drawStairs(ctx, floor, cam, state.selection, state.hover);
-    drawNodes(ctx, floor, cam, state.selection, state.hover);
-    drawRooms(ctx, floor, cam, state.selection);
-    drawTexts(ctx, floor, cam, state.selection);
+    const project = state.project;
+    const s = state.settings.dimScale;
     // ikony zámků kót jsou pomocné (jen v editoru, export výkresu je kreslit nebude)
     setDimLockContext(floor.dimLocks, state.lockBlock?.key ?? null, true);
     setDimPlaceContext(floor.dimPlace, cam.zoom);
-    if (state.settings.showDims) drawDims(ctx, floor, cam, state.settings.dimScale, state.selection);
-    if (state.settings.showDims) drawComponentDims(ctx, floor, cam, state.settings.dimScale, state.selection);
-    if (state.settings.showDims) drawBodyDims(ctx, floor, cam, state.settings.dimScale, state.selection);
-    if (state.settings.showDims) {
-      drawProtrusionDims(ctx, floor, cam, state.settings.dimScale, state.selection);
-      drawCornerEndDims(ctx, floor, cam, state.settings.dimScale, state.selection);
+    // vrstvy v pořadí kreslení; skryté se nekreslí, zamčené nemají klikací popisky (core/layers.ts)
+    for (const layer of layersOf(project)) {
+      if (!layer.visible) continue;
+      const kinds = kindsInLayer(floor, layer.id);
+      setHitEnabled(!layer.locked);
+      if (kinds.has('wall')) {
+        setWallFilter(id => elementLayer(floor, 'wall', id) === layer.id);
+        drawWalls(ctx, floor, cam, state.selection, state.hover);
+        drawOpenings(ctx, floor, cam, state.selection, state.hover);
+      }
+      const slice = layerSlice(floor, layer.id);
+      // kresba a její šrafy nad výplní stěn i otvory (překlad nad otvorem) – vrstva Kresba leží nad Stavbou
+      if (kinds.has('drawing')) drawDrawings(ctx, slice, cam, state.selection, state.hover);
+      if (kinds.has('stair')) drawStairs(ctx, slice, cam, state.selection, state.hover);
+      if (kinds.has('room')) drawRooms(ctx, slice, cam, state.selection);
+      if (kinds.has('text')) drawTexts(ctx, slice, cam, state.selection);
+      // automatické kóty patří vrstvě Kóty a kreslí se jen u viditelné stěny (rozhodnutí uživatele 2026-11-19)
+      if (layer.id === SYS.koty) {
+        setWallFilter(id => wallVisible(project, floor, id));
+        drawDims(ctx, floor, cam, s, state.selection);
+        drawComponentDims(ctx, floor, cam, s, state.selection);
+        drawBodyDims(ctx, floor, cam, s, state.selection);
+        drawProtrusionDims(ctx, floor, cam, s, state.selection);
+        drawCornerEndDims(ctx, floor, cam, s, state.selection);
+      }
+      // volné kóty jsou samostatné prvky své vrstvy – viditelné i u skrytého měřeného prvku (pravidlo 8)
+      if (kinds.has('dim')) drawFreeDims(ctx, slice, cam, s, state.selection, state.hover);
     }
-    // volné kóty jsou samostatné prvky – kreslí se i při skrytých automatických kótách
-    drawFreeDims(ctx, floor, cam, state.settings.dimScale, state.selection, state.hover);
+    setHitEnabled(true);
+    // rohy (pomůcka úprav) nad vším, jen u viditelných stěn
+    setWallFilter(id => wallVisible(project, floor, id));
+    drawNodes(ctx, floor, cam, state.selection, state.hover);
+    setWallFilter(null);
     // kóty schodiště jen u vybraného schodiště
     drawStairDims(ctx, floor, cam, state.settings.dimScale, state.selection);
     // čísla kót až nad všemi čarami kót (posunuté číslo na čáře sousední kóty zůstane čitelné)

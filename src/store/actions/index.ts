@@ -18,3 +18,4 @@ export { toggleDimLock, setDimLock, setWallDimsLocked, setRoomDimsLocked, wallLo
 export { addDrawLine, addDrawRect, addDrawCircle, addDrawArc, addDrawDouble, updateDrawing, setDrawingVertex, setDrawingBulge, dragDrawingBulge, setDrawingRadius, setDrawingWidth, dragDrawingWidth, flipDrawingSide, setDrawingRect, trimDrawingAt, extendDrawingAt } from './drawings';
 export { addFreeDim, setFreeDimOffset, beginDimDrag, dragDim } from './dims';
 export { addStair, addSizedStair, addSpiralStair, appendDrawnFlight, updateStair, setFlightSteps, addStairFlight, addStairTeeFlights, setStairTurn, setLandingWinders, setFlightArc, mirrorStairArc, removeStairFlight, flipStairDirection, drawingToStair, drawingToLanding, turnStairAxis } from './stairs';
+export { setActiveLayer, addLayer, renameLayer, setLayerColor, setLayerVisible, setLayerLocked, moveLayerTo, layerItemCount, deleteLayer, canMoveToLayer, moveSelectionToLayer, selectionElemKind } from './layers';

@@ -33,7 +33,7 @@ export function stairToolMsg(second: boolean): string {
 
 const snap = (p: Pt): Pt => {
   const floor = store.floor();
-  return floor ? drawSnap(floor, p, null).pt : p;
+  return floor ? drawSnap(store.view('snap')!, p, null).pt : p;
 };
 
 /** Rameno, které vznikne z bodů a, b v aktuálním režimu (náhled i vložení). */
@@ -99,7 +99,7 @@ export const stairTool: Tool = {
     else {
       const floor = store.floor();
       // jen ťuknutí dovnitř schodiště ho vybere – na rohu / hraně (přichycení) začne nové rameno
-      const hit = floor && !store.get().stairAppend ? pickAny(floor, tap, store.get().camera, store.get().selection) : null;
+      const hit = floor && !store.get().stairAppend ? pickAny(store.view('pick')!, tap, store.get().camera, store.get().selection) : null;
       const inside = hit?.kind === 'stair' && floor?.stairs?.[hit.id] && stairHit(floor.stairs[hit.id]!, tap, 0) && dist(s, tap) < 1;
       if (hit?.kind === 'stair' && inside) store.set({ selection: hit, toolMsg: null });
       else {

@@ -13,6 +13,7 @@ import {
   type Wall,
   type WallLabel
 } from './types';
+import { defaultLayers, SYS } from '../core/layers';
 
 let counter = 0;
 
@@ -46,7 +47,9 @@ export function createProject(fields: Partial<Pick<Project, 'name' | 'address' |
     note: fields.note ?? '',
     createdAt: now,
     updatedAt: now,
-    floors: [createFloor('1.NP')]
+    floors: [createFloor('1.NP')],
+    layers: defaultLayers(),
+    activeLayer: SYS.kresba
   };
 }
 

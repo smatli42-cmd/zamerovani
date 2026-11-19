@@ -187,7 +187,7 @@ function drawingSagitta(d: Drawing): number {
 
 export const wallTool: Tool = {
   down(p: PointerInput) {
-    const floor = store.floor();
+    const floor = store.view('snap');
     if (!floor) return;
     lineMode = store.get().tool === 'line';
     // Středový bod vybraného oblouku se dá táhnout i při kreslení stěn
@@ -205,7 +205,7 @@ export const wallTool: Tool = {
 
   drag(pen: PointerInput) {
     if (handleDrag) return selectTool.drag?.(pen);
-    const floor = store.floor();
+    const floor = store.view('snap');
     if (!floor || !drawing) return;
     const p = shifted(drawing, pen);
     const end = guidedEnd(floor, drawing, p);
@@ -251,13 +251,13 @@ export const wallTool: Tool = {
     } else {
       // Ťuknutí bez tažení = výběr prvku pod perem (otevře jeho vlastnosti); řetěz tím končí
       const floor = store.floor();
-      if (floor) store.set({ selection: pickAny(floor, d.downAt, store.get().camera, store.get().selection), chainNode: null });
+      if (floor) store.set({ selection: pickAny(store.view('pick')!, d.downAt, store.get().camera, store.get().selection), chainNode: null });
     }
     requestRender();
   },
 
   hover(p: PointerInput) {
-    const floor = store.floor();
+    const floor = store.view('snap');
     // řetěz: nabízí se konec poslední stěny (značka v drawOverlay), ne roh pod perem
     if (floor && chainStart(floor)) {
       hoverSnap = null;

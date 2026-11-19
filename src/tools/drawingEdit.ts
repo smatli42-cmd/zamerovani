@@ -43,7 +43,7 @@ export function dragDrawingHandle(h: DrawHandleDrag, p: PointerInput): void {
   if (!floor || !d) return;
   switch (h.kind) {
     case 'vertex':
-      setDrawingVertex(h.id, h.i, drawSnap(floor, p.world, null, h.id).pt);
+      setDrawingVertex(h.id, h.i, drawSnap(store.view('snap')!, p.world, null, h.id).pt);
       break;
     case 'bulge':
       dragDrawingBulge(h.id, h.seg, p.world);

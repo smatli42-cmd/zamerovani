@@ -23,7 +23,7 @@ let preview: { trim?: TrimPiece; extend?: ExtendPlan } | null = null;
 
 function drawingAt(p: Pt): string | null {
   const floor = store.floor();
-  return floor ? pickDrawing(floor, p, HIT_PX.wall / store.get().camera.zoom, true) : null;
+  return floor ? pickDrawing(store.view('pick')!, p, HIT_PX.wall / store.get().camera.zoom, true) : null;
 }
 
 export const drawTrimTool: Tool = {

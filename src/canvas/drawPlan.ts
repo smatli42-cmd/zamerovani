@@ -15,6 +15,7 @@ import { protrusionArcHandles } from '../core/protrusionEdit';
 import { protrusionPolygon, protrusionsOf } from '../core/protrusion';
 import { cornerPolygon, cornerProtrusionsOf } from '../core/cornerProtrusion';
 import { endOutline, endProtrusionsOf } from '../core/endProtrusion';
+import { wallShown } from './layerDraw';
 
 export const COLORS = {
   wall: '#0f172a',
@@ -70,6 +71,7 @@ export function drawWalls(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
     ctx.closePath();
   };
   for (const body of bodies.values()) {
+    if (!wallShown(body.wallId)) continue;
     const sel = isSel(selection, 'wall', body.wallId);
     const hov = isSel(hover, 'wall', body.wallId);
     ctx.fillStyle = sel ? '#bfdbfe' : hov ? '#dbeafe' : COLORS.body;
@@ -127,6 +129,7 @@ export function drawWalls(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
     ctx.fill();
   }
   for (const body of bodies.values()) {
+    if (!wallShown(body.wallId)) continue;
     const wall = floor.walls[body.wallId]!;
     const sel = isSel(selection, 'wall', body.wallId);
     ctx.strokeStyle = sel ? COLORS.selected : COLORS.wall;
@@ -160,7 +163,7 @@ export function drawWalls(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
   ctx.lineCap = 'round';
 
   for (const wall of Object.values(floor.walls)) {
-    if (bodies.has(wall.id)) continue;
+    if (bodies.has(wall.id) || !wallShown(wall.id)) continue;
     const n = wallNodes(floor, wall);
     if (!n) continue;
     const a = toScreen(n[0], cam);
@@ -257,7 +260,10 @@ export function drawArcHandle(ctx: CanvasRenderingContext2D, floor: Floor, cam: 
 
 export function drawNodes(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camera, selection: Selection, hover: Selection): void {
   ctx.save();
+  // roh jen u kreslené stěny (stěny skrytých vrstev se nekreslí)
+  const shown = new Set(Object.values(floor.walls).filter(w => wallShown(w.id)).flatMap(w => [w.a, w.b]));
   for (const node of Object.values(floor.nodes)) {
+    if (!shown.has(node.id)) continue;
     const p = toScreen(node, cam);
     const selected = isSel(selection, 'node', node.id);
     const hovered = isSel(hover, 'node', node.id);

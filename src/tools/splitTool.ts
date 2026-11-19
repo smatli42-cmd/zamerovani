@@ -28,8 +28,8 @@ let hoverPt: Pt | null = null;
 function wallAt(p: Pt): Id | null {
   const floor = store.floor();
   if (!floor) return null;
-  const hit = findWallNear(floor, p, HIT_PX.wall / store.get().camera.zoom);
-  return hit?.wall.id ?? findBodyAt(floor, p)?.id ?? null;
+  const hit = findWallNear(store.view('pick')!, p, HIT_PX.wall / store.get().camera.zoom);
+  return hit?.wall.id ?? findBodyAt(store.view('pick')!, p)?.id ?? null;
 }
 const alignTol = () => HIT_PX.snapAlign / store.get().camera.zoom;
 const done = (removed: number, gap: boolean) =>

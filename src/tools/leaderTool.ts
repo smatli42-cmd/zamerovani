@@ -25,14 +25,14 @@ export const leaderTool: Tool = {
       delegating = true;
       return;
     }
-    if (pickText(floor, p.world, store.get().camera)) {
+    if (pickText(store.view('pick')!, p.world, store.get().camera)) {
       delegating = true;
       selectTool.down?.(p);
       return;
     }
     delegating = false;
     // hrot se přichytí k rohu / stěně / zvláštnímu bodu
-    const tip = snapPoint(floor, p.world, snapOptions()).pt;
+    const tip = snapPoint(store.view('snap')!, p.world, snapOptions()).pt;
     drawing = { tip, end: p.world, startScreen: p.screen, endScreen: p.screen };
     store.set({ selection: null, numpad: null });
   },

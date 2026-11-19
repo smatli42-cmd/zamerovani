@@ -25,6 +25,7 @@ import { moveProtEdge, ownProtEnd } from './protrusionDimMove';
 import { setRoomDiagonal } from './diagonal';
 import { openingSpan, openingStartFromA } from './floorQueries';
 import { stairPoints } from './stairs';
+import { fullFloorOf } from './layers';
 
 export const freeDimsOf = (floor: Floor): FreeDim[] => Object.values(floor.dims ?? {});
 
@@ -65,8 +66,10 @@ export function defaultFreeDimMove(d: FreeDim): 'a' | 'b' {
 export function pickFreeDim(floor: Floor, p: Pt, tol: number): Id | null {
   let best: Id | null = null;
   let bestD = tol;
+  // pohled bez skrytých prvků (core/layers.ts): kóty z pohledu, body z celého podlaží
+  const geo = fullFloorOf(floor);
   for (const d of freeDimsOf(floor)) {
-    const line = dimLine(floor, d);
+    const line = dimLine(geo, d);
     if (!line) continue;
     const h = projectToSegment(p, line[0], line[1]).distance;
     if (h <= bestD) {

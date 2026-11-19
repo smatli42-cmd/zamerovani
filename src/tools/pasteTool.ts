@@ -12,7 +12,7 @@ export const pasteTool: Tool = {
   down(p: PointerInput) {
     const floor = store.floor();
     if (!floor) return;
-    const hit = wallForOpening(floor, p.world, store.get().camera);
+    const hit = wallForOpening(store.view('snap')!, p.world, store.get().camera);
     if (!hit || isCurved(hit.wall)) return;
     pasteOpenings(hit.wall.id, hit.t * wallLength(floor, hit.wall));
   }

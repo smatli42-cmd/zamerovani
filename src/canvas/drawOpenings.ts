@@ -10,10 +10,12 @@ import type { Camera, Selection } from '../store/store';
 import { toScreen } from './view';
 import { bodyNormal, bodyStart, hasBody } from '../core/wallFace';
 import { COLORS, isSel } from './drawPlan';
+import { wallShown } from './layerDraw';
 
 export function drawOpenings(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camera, selection: Selection, hover: Selection): void {
   ctx.save();
   for (const wall of Object.values(floor.walls)) {
+    if (!wallShown(wall.id)) continue;
     const n = wallNodes(floor, wall);
     if (!n) continue;
     const len = wallLength(floor, wall);

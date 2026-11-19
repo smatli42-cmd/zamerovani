@@ -36,8 +36,14 @@ export function resetHitBoxes(): void {
   boxes = [];
 }
 
+/** Klikací popisky vypnuté – kreslí se prvky zamčené vrstvy (core/layers.ts, pravidlo 2). */
+let enabled = true;
+export function setHitEnabled(on: boolean): void {
+  enabled = on;
+}
+
 export function addHitBox(box: HitBox): void {
-  boxes.push(box);
+  if (enabled) boxes.push(box);
 }
 
 export function allHitBoxes(): readonly HitBox[] {

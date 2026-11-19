@@ -43,11 +43,11 @@ function measure(floor: Floor, a: DimEnd, b: DimEnd): [Pt, Pt] | null {
 
 export const dimTool: Tool = {
   down(p: PointerInput) {
-    const floor = store.floor();
+    const floor = store.view('snap')!;
     if (!floor) return;
     // tažení za kótovací čáru hotové kóty mění odsazení – jen když se nezačíná nová kóta a pod perem není bod ani hrana
     const onRef = !!refAt(floor, p.world, HIT_PX.node / zoom(), (HIT_PX.wall * 0.5) / zoom());
-    const hit = first || onRef ? null : pickFreeDim(floor, p.world, (HIT_PX.wall * 0.6) / zoom());
+    const hit = first || onRef ? null : pickFreeDim(store.view('pick')!, p.world, (HIT_PX.wall * 0.6) / zoom());
     const d = hit ? floor.dims?.[hit] : null;
     if (d) {
       shifting = { id: d.id, offset: d.offset, moved: false, startScreen: p.screen };
@@ -61,7 +61,7 @@ export const dimTool: Tool = {
       if (dist(p.screen, shifting.startScreen) >= 6) shifting.moved = true;
       const o = offsetTowards(floor, d, p.world);
       if (o !== null) shifting.offset = o;
-    } else if (floor) hoverEnd = endUnder(floor, p.world);
+    } else if (floor) hoverEnd = endUnder(store.view('snap')!, p.world);
     requestRender();
   },
   up(p) {
@@ -72,7 +72,7 @@ export const dimTool: Tool = {
       requestRender();
       return;
     }
-    const floor = store.floor();
+    const floor = store.view('snap');
     if (!floor) return;
     const end = endUnder(floor, p.world);
     if (!first) {
@@ -88,7 +88,7 @@ export const dimTool: Tool = {
     requestRender();
   },
   hover(p) {
-    const floor = store.floor();
+    const floor = store.view('snap');
     if (!floor) return;
     hoverEnd = endUnder(floor, p.world);
     requestRender();
