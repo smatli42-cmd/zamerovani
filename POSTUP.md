@@ -7,6 +7,10 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-19 (12) – uživatel vyzkoušel: vše funguje
+- **Co se změnilo:** nic v kódu. Uživatel potvrdil „vše funguje jak má“ – pomocné čáry kresby a nástroj Ořezat (11); (rovné s podestou a T (10) zatím bez zvláštního potvrzení).
+- **Otevřené:** vyzkoušet na tabletu; ořez dvojité čáry a oblouků (jen když bude potřeba).
+
 ### 2026-11-19 (11) – kreslení čar: pomocné zarovnání, směr a kolmice; nástroj Ořezat (připomínka uživatele)
 - **Chyba od uživatele:** čtverec čarami se nedal nakreslit bez odhadu – u třetí čáry chyběla pomocná návaznost na začátek první čáry; „odpojená“ čára (nový tah z konce čáry) neměla pomocnou čáru původního směru ani kolmici. (Dřívější hlášení o neuzavřeném obrysu schodiště tím uživatel upřesnil.) Přání: nástroje prodloužit a oříznout jako ve Fusion 360 (ťuknutí na čáru).
 - **Co se změnilo:** (a) `tools/drawSnap.ts`: bod kresby se přichytí na svislici / vodorovnou přes body kresby a rohy stěn (i jako zarážka na pomocné čáře, čárkovaně od toho bodu); tah z konce / bodu čáry kresby má pomocné čáry pokračování a kolmice; kolmice k ostatním čarám kresby (pata = zarážka) a průsečíky s čarami kresby. Platí pro Čáru, Dvojitou čáru, tvary, úchyty kresby i schodiště (sdílené přichytávání). Testy `tools/drawSnap.test.ts` (5). (b) Nový nástroj **Ořezat** (`core/drawTrim.ts`, `tools/drawTrimTool.ts`, akce `trimDrawingAt` / `extendDrawingAt`): Oříznout = ťuknutý kus rovného úseku čáry / obdélníku mezi nejbližšími průsečíky (kresba, líce a čela stěn, čáry stěn bez tloušťky, obrysy schodišť) zmizí; bez průsečíku celý úsek; otevřená čára se rozpadne na dvě, uzavřená se otevře (šrafa zmizí). Prodloužit = konec otevřené čáry (bližší k ťuknutí, jen koncový úsek) k nejbližší čáře v jeho směru. Náhled při najetí (červeně co zmizí, modře čárkovaně prodloužení). Testy `store/drawTrim.test.ts` (8).
@@ -673,7 +677,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Rozpracované:** nic.
 
-**Chyby od uživatele:** obrys čárami bez pomocného zarovnání – opraveno v (11) (zarovnání, směr, kolmice, nástroj Ořezat); čeká na vyzkoušení.
+**Chyby od uživatele:** žádné čekající – obrys čárami bez pomocného zarovnání opraven v (11), uživatel potvrdil (12).
 
 **Hotové navíc:** rovné s podestou a atypické T (10); pomocné čáry kresby a nástroj Ořezat (11).
 
