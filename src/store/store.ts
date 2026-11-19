@@ -17,6 +17,7 @@ import { describeDim, dimKey, lockViolation, pruneLocks, reboundLocks, type DimT
 import { pruneFreeDims, rescueFreeDims } from '../core/freeDim';
 import { followDisturbsEdit, followLockedDims } from '../core/dimFollow';
 import { keepOpeningsOnResizedWalls } from '../core/openingChain';
+import type { PenShape } from '../core/strokes';
 import { assignLayers, layerLockViolation, selectableItems, viewFloor } from '../core/layers';
 
 export type ToolId = 'select' | 'wall' | 'line' | 'trim' | 'split' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'drawLine' | 'drawDouble' | 'drawTrim' | 'text' | 'leader' | 'dim' | 'stair' | 'paste' | 'pen' | 'eraser' | 'pan';
@@ -110,6 +111,8 @@ export interface Settings {
   stairLength: number;
   /** Pero: tloušťka nového ručního tahu (mm výkresu, core/strokes.ts). */
   penWidth: number;
+  /** Pero: od ruky nebo tvar (čára, obdélník, kruh, oblouk) – vždy ruční tah (core/strokes.ts). */
+  penShape: PenShape;
 }
 
 export type SaveStatus = 'saved' | 'saving' | 'dirty' | 'error';
@@ -159,7 +162,7 @@ export interface EditOptions {
 const SETTINGS_KEY = 'zamerovani.settings';
 
 function loadSettings(): Settings {
-  const defaults: Settings = { snap: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', drawColor: 'black', doubleWidth: 250, doubleEnds: 'open', doubleStyle: 'dashdot2', windowKind: 'window', wallShape: 'straight', wallAxis: 'face', wallChain: false, splitGap: false, trimEdge: false, drawTrimMode: 'trim', keepAwake: true, stairMode: 'rect', stairWidth: 1000, stairLength: 3000, penWidth: 25 };
+  const defaults: Settings = { snap: true, showGrid: true, fingerPan: true, dimScale: 1, shapeStyle: 'solid', drawColor: 'black', doubleWidth: 250, doubleEnds: 'open', doubleStyle: 'dashdot2', windowKind: 'window', wallShape: 'straight', wallAxis: 'face', wallChain: false, splitGap: false, trimEdge: false, drawTrimMode: 'trim', keepAwake: true, stairMode: 'rect', stairWidth: 1000, stairLength: 3000, penWidth: 25, penShape: 'free' };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     return raw ? { ...defaults, ...JSON.parse(raw) } : defaults;

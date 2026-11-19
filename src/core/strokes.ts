@@ -10,6 +10,7 @@
  */
 import type { Floor, Id, Pt, Stroke } from '../model/types';
 import { dist, projectToSegment } from './geometry';
+import { arcGeometry } from './arc';
 import { isSelectable, elementLayer } from './layers';
 import type { Project } from '../model/types';
 
@@ -100,4 +101,42 @@ export function strokesToErase(p: Pick<Project, 'layers' | 'activeLayer'> | null
   return strokesOf(floor)
     .filter(s => elementLayer(floor, 'stroke', s.id) === active && isSelectable(p, floor, 'stroke', s.id) && strokeHit(s, at, tol))
     .map(s => s.id);
+}
+
+/** Tvar pera: od ruky, nebo geometrie (výsledek je vždy ruční tah – lomená čára, barva vrstvy, guma ho maže celý). */
+export type PenShape = 'free' | 'line' | 'rect' | 'circle' | 'arc';
+
+/** Body oblouku a→b se vzepětím `sagitta` (po ~5°); rovný = úsečka. */
+export function arcPoints(a: Pt, b: Pt, sagitta: number): Pt[] {
+  const g = arcGeometry(a, b, sagitta);
+  if (!g) return [a, b];
+  const n = Math.max(4, Math.ceil(Math.abs(g.sweep) / (Math.PI / 36)));
+  const out: Pt[] = [];
+  for (let i = 0; i <= n; i++) {
+    const ang = g.start + (g.sweep * i) / n;
+    out.push(i === 0 ? { ...a } : i === n ? { ...b } : { x: g.center.x + g.r * Math.cos(ang), y: g.center.y + g.r * Math.sin(ang) });
+  }
+  return out;
+}
+
+/**
+ * Body tahu tvaru (mm, na 0,1 mm): čára a→b; obdélník z rohu a do protějšího b (strany podél os, uzavřený –
+ * první bod se opakuje); kruh se středem a přes bod b (72 úseků, uzavřený); oblouk a→b se vzepětím `sagitta`.
+ */
+export function shapeStroke(shape: Exclude<PenShape, 'free'>, a: Pt, b: Pt, sagitta = 0): Pt[] {
+  const r1 = (v: number) => Math.round(v * 10) / 10;
+  const R = (p: Pt) => ({ x: r1(p.x), y: r1(p.y) });
+  switch (shape) {
+    case 'line':
+      return [R(a), R(b)];
+    case 'rect':
+      return [a, { x: b.x, y: a.y }, b, { x: a.x, y: b.y }, a].map(R);
+    case 'circle': {
+      const r = dist(a, b);
+      const pts = Array.from({ length: 72 }, (_, i) => R({ x: a.x + r * Math.cos((i * Math.PI) / 36), y: a.y + r * Math.sin((i * Math.PI) / 36) }));
+      return [...pts, pts[0]!];
+    }
+    case 'arc':
+      return arcPoints(a, b, sagitta).map(R);
+  }
 }

@@ -250,7 +250,7 @@ Průřezová funkce. Pravidla jen v `src/core/layers.ts`; prvky je jen využíva
 | V9 JSON | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | n.a. | ✔ | ✔ | ✔ | ✔ | n.a. |
 | V10 export | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | n.a. |
 
-Značka detailu v aplikaci zatím není (n.a.). Ruční tah (krok 2, `core/strokes.ts`) je hotový: vektor, tloušťka v mm výkresu, barva vrstvy, nechytá, do BIM nejde; Guma maže celé tahy jen v aktivní vrstvě (ne skryté ani zamčené). Symbol, špendlík, fotka přibudou později – každý nový druh prvku s vrstvou se přidá do `OWN_KINDS` v `core/layers.ts` a do této tabulky.
+Značka detailu v aplikaci zatím není (n.a.). Ruční tah (krok 2, `core/strokes.ts`) je hotový: vektor, tloušťka v mm výkresu, barva vrstvy, nechytá, do BIM nejde; Pero kreslí od ruky i geometrii (čára, obdélník, kruh, oblouk – požadavek uživatele 2026-11-19), výsledek je vždy ruční tah; Guma maže celé tahy jen v aktivní vrstvě (ne skryté ani zamčené). Symbol, špendlík, fotka přibudou později – každý nový druh prvku s vrstvou se přidá do `OWN_KINDS` v `core/layers.ts` a do této tabulky.
 
 ## Zdroje
 - Revit, napojení stěn: [Change the Configuration of a Wall Join](https://help.autodesk.com/cloudhelp/2022/ENU/RevitLT-ArchDes/files/GUID-19EAF7A9-331F-4271-94CC-43B76B13011E.htm), [Modify Wall Joins](https://help.autodesk.com/cloudhelp/2023/ENU/Revit-ArchDesign/files/GUID-7AFCACAC-9ED2-44A4-A30E-7D7ED16E01E5.htm), [Revit Pure: wall joins tips](https://bimpure.com/blog/8-tips-to-understand-revit-wall-joins)

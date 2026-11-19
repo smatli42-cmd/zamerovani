@@ -15,7 +15,16 @@ import { splitMsg, splitTool } from '../tools/splitTool';
 import { dimToolMsg } from '../tools/dimTool';
 import { resetStairPoints, stairToolMsg } from '../tools/stairTool';
 import { eraserMsg } from '../tools/penTool';
-import { STROKE_WIDTHS } from '../core/strokes';
+import { STROKE_WIDTHS, type PenShape } from '../core/strokes';
+
+/** Pero: od ruky nebo geometrie – vždy ruční tah ve vrstvě (barva vrstvy, guma ho maže celý). */
+const PEN_SHAPES: { v: PenShape; label: string }[] = [
+  { v: 'free', label: '✍️ Ruka' },
+  { v: 'line', label: '╱ Čára' },
+  { v: 'rect', label: '▭ Obdélník' },
+  { v: 'circle', label: '◯ Kruh' },
+  { v: 'arc', label: '◠ Oblouk' }
+];
 import { layerById } from '../core/layers';
 
 export function ToolOptions() {
@@ -223,6 +232,16 @@ export function ToolOptions() {
           <span class="layer-dot" style={{ background: active?.color ?? '#0f172a' }} />
           Vrstva: <b>{active?.name ?? '—'}</b>
         </span>
+        {tool === 'pen' && (
+          <Seg
+            options={PEN_SHAPES}
+            value={settings.penShape}
+            onChange={v => {
+              tools.pen.cancel?.();
+              store.updateSettings({ penShape: v });
+            }}
+          />
+        )}
         {tool === 'pen' ? (
           <Seg options={STROKE_WIDTHS.map(w => ({ v: w, label: `${w} mm` }))} value={settings.penWidth as (typeof STROKE_WIDTHS)[number]} onChange={v => store.updateSettings({ penWidth: v })} />
         ) : (
@@ -231,6 +250,7 @@ export function ToolOptions() {
         <button class="btn btn-sm" onClick={() => store.set({ layersOpen: true })}>
           Vrstvy…
         </button>
+        {tool === 'pen' && toolMsg && <span class="small">{toolMsg}</span>}
       </div>
     );
   }

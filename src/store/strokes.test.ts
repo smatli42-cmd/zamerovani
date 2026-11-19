@@ -120,3 +120,74 @@ describe('Guma', () => {
     expect(Object.keys(f().strokes!)).toHaveLength(1);
   });
 });
+
+describe('Pero – tvary (čára, obdélník, kruh, oblouk) jsou ruční tahy', () => {
+  const at = (x: number, y: number) => ({ world: { x, y }, screen: { x: x * 0.1, y: y * 0.1 }, device: 'pen' as const });
+  const drag = async (a: [number, number], b: [number, number]) => {
+    const { penTool } = await import('../tools/penTool');
+    penTool.down!(at(...a));
+    penTool.drag!(at((a[0] + b[0]) / 2, (a[1] + b[1]) / 2));
+    penTool.drag!(at(...b));
+    penTool.up!(at(...b));
+  };
+  const strokes = () => Object.values(f().strokes ?? {});
+  beforeEach(async () => {
+    const { penTool } = await import('../tools/penTool');
+    penTool.cancel!();
+    store.set({ camera: { x: 0, y: 0, zoom: 0.1 } });
+    setActiveLayer('elektro');
+  });
+
+  it('obdélník = uzavřený tah 4 strany ve vrstvě, guma ho smaže celý', async () => {
+    store.updateSettings({ penShape: 'rect', penWidth: 25 });
+    await drag([0, 0], [2000, 1000]);
+    expect(strokes()).toHaveLength(1);
+    const s = strokes()[0]!;
+    expect(s.layerId).toBe('elektro');
+    expect(s.pts).toEqual([{ x: 0, y: 0 }, { x: 2000, y: 0 }, { x: 2000, y: 1000 }, { x: 0, y: 1000 }, { x: 0, y: 0 }]);
+    expect(eraseStrokesAt({ x: 2000, y: 500 }, 20)).toBe(1);
+    expect(strokes()).toHaveLength(0);
+  });
+
+  it('čára navazuje na konec předchozí čáry (lomená čára); dosednutím na začátek se uzavře', async () => {
+    store.updateSettings({ penShape: 'line' });
+    await drag([0, 0], [2000, 0]);
+    await drag([2000, 0], [2000, 2000]);
+    await drag([2000, 2000], [0, 2000]);
+    await drag([0, 2000], [0, 0]);
+    expect(strokes()).toHaveLength(1);
+    expect(strokes()[0]!.pts).toEqual([{ x: 0, y: 0 }, { x: 2000, y: 0 }, { x: 2000, y: 2000 }, { x: 0, y: 2000 }, { x: 0, y: 0 }]);
+    // každý úsek je krok Zpět
+    store.undo();
+    expect(strokes()[0]!.pts).toHaveLength(4);
+    // čára jinde = nový tah
+    await drag([5000, 0], [6000, 0]);
+    expect(strokes()).toHaveLength(2);
+  });
+
+  it('kruh: střed a bod na obvodu, uzavřený tah', async () => {
+    store.updateSettings({ penShape: 'circle' });
+    await drag([0, 0], [1000, 0]);
+    const s = strokes()[0]!;
+    expect(s.pts[0]).toEqual(s.pts[s.pts.length - 1]);
+    for (const p of s.pts) expect(Math.hypot(p.x, p.y)).toBeCloseTo(1000, 0);
+  });
+
+  it('oblouk: tětiva tažením, pak tažením vyklenutí; ťuknutí bez tažení nic nevytvoří', async () => {
+    const { penTool } = await import('../tools/penTool');
+    store.updateSettings({ penShape: 'arc' });
+    await drag([0, 0], [2000, 0]);
+    expect(strokes()).toHaveLength(0); // čeká na vyklenutí
+    penTool.down!(at(1000, 500));
+    penTool.drag!(at(1000, 500));
+    penTool.up!(at(1000, 500));
+    const s = strokes()[0]!;
+    expect(s.pts[0]).toEqual({ x: 0, y: 0 });
+    expect(s.pts[s.pts.length - 1]).toEqual({ x: 2000, y: 0 });
+    expect(Math.max(...s.pts.map(p => Math.abs(p.y)))).toBeCloseTo(500, 0);
+    store.updateSettings({ penShape: 'rect' });
+    penTool.down!(at(3000, 3000));
+    penTool.up!(at(3000, 3000));
+    expect(strokes()).toHaveLength(1);
+  });
+});

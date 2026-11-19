@@ -16,6 +16,17 @@ export function addStroke(pts: Pt[], width: number): Id | null {
   return ok ? id : null;
 }
 
+/** Prodlouží tah o bod na konci `end` (navázaná čára perem) – jeden krok Zpět. */
+export function appendStrokePoint(id: Id, end: 'a' | 'b', p: Pt): void {
+  store.edit(f => {
+    const s = f.strokes?.[id];
+    if (!s) return false;
+    const q = { x: p.x, y: p.y };
+    if (end === 'b') s.pts.push(q);
+    else s.pts.unshift(q);
+  });
+}
+
 /** Tloušťka tahu (mm výkresu). */
 export function setStrokeWidth(id: Id, width: number): void {
   if (!(width > 0)) return;

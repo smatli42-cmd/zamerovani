@@ -1,11 +1,16 @@
 /**
- * Nástroje Pero a Guma (ruční tahy, core/strokes.ts). Pero kreslí do aktivní vrstvy, prst posouvá a zoomuje
+ * Nástroje Pero a Guma (ruční tahy, core/strokes.ts). Pero kreslí do aktivní vrstvy od ruky nebo tvar (čára –
+ * navazuje na předchozí čáru, obdélník, kruh, oblouk – tětiva a pak vzepětí); vše je ruční tah. Prst posouvá a zoomuje
  * (input/pointer.ts – u těchto nástrojů prst vždy posouvá). Tah se při zvednutí vyhladí a uloží jako vektor.
  * Guma maže celé tahy v aktivní vrstvě; jedno gumování = jeden krok Zpět. Tahy se nechytají.
  */
-import { addStroke, eraseStrokesAt } from '../store/actions';
+import { addStroke, appendStrokePoint, eraseStrokesAt } from '../store/actions';
+import { dist } from '../core/geometry';
+import { sagittaTowards } from '../core/drawing';
+import { drawSnap } from './drawSnap';
+import { HIT_PX } from './types';
 import { layerById } from '../core/layers';
-import { smoothStroke } from '../core/strokes';
+import { shapeStroke, smoothStroke } from '../core/strokes';
 import type { Pt } from '../model/types';
 import { store, type Camera } from '../store/store';
 import { requestRender } from '../canvas/invalidate';
@@ -20,53 +25,164 @@ const activeColor = () => {
   return layerById(p, p?.activeLayer)?.color ?? '#0f172a';
 };
 
+/** Menší tažení tvaru (mm) se nebere – ťuknutí tvar nevytvoří. */
+const MIN_SHAPE = 20;
+
+/** Tvar: tažený začátek a konec; u oblouku po tětivě druhý krok – vzepětí (`bulge`). */
+let shape: { a: Pt; b: Pt; sag: number; phase: 'drag' | 'bulge' } | null = null;
+/** Poslední nakreslená čára (pokračování řetězu z jejího konce, jako u Čáry kresby). */
+let lastLine: string | null = null;
+
+const penShape = () => store.get().settings.penShape;
+
+/** Bod tvaru: přichycení jako u kresby (jen pomůcka – rohy, stěny, kresba, zarovnání; tahy se nechytají). */
+function snapShape(p: Pt, from: Pt | null): Pt {
+  const v = store.view('snap');
+  return v ? drawSnap(v, p, from).pt : p;
+}
+
+/** Konec poslední čáry pod perem → navázání (vrací bod a konec). */
+function chainEnd(p: Pt): { pt: Pt; end: 'a' | 'b' } | null {
+  const s = lastLine ? store.floor()?.strokes?.[lastLine] : null;
+  const pr = store.get().project;
+  if (!s || s.pts.length < 2 || s.layerId !== pr?.activeLayer) return null;
+  const tol = HIT_PX.node / store.get().camera.zoom;
+  const first = s.pts[0]!;
+  const last = s.pts[s.pts.length - 1]!;
+  if (dist(first, last) < 0.5) return null; // uzavřená
+  if (dist(last, p) <= tol) return { pt: last, end: 'b' };
+  if (dist(first, p) <= tol) return { pt: first, end: 'a' };
+  return null;
+}
+
+/** Nápověda v liště Pera (druhý krok oblouku). */
+export function penShapeMsg(): string | null {
+  if (shape?.phase === 'bulge') return 'Oblouk: tažením perem nastav vyklenutí (zvednutím se oblouk nakreslí).';
+  return null;
+}
+
+function lockedActive(): boolean {
+  // zamčená aktivní vrstva: pero do ní nekreslí (vrstvy V2, stejně jako guma v ní nemaže)
+  const pr = store.get().project;
+  const l = layerById(pr, pr?.activeLayer);
+  if (!l?.locked) return false;
+  store.set({ lockBlock: { key: '', text: `Aktivní vrstva „${l.name}“ je zamčená – pero do ní nekreslí.` } });
+  return true;
+}
+
+/** Výchozí vzepětí oblouku = čtvrtina tětivy (jako Oblouk kresby). */
+const defaultSag = (a: Pt, b: Pt) => Math.max(10, Math.round(dist(a, b) / 4 / 10) * 10);
+
 export const penTool: Tool = {
   down(p: PointerInput) {
-    // zamčená aktivní vrstva: pero do ní nekreslí (vrstvy V2, stejně jako guma v ní nemaže)
-    const pr = store.get().project;
-    const l = layerById(pr, pr?.activeLayer);
-    if (l?.locked) {
+    if (lockedActive()) {
       raw = null;
-      store.set({ lockBlock: { key: '', text: `Aktivní vrstva „${l.name}“ je zamčená – pero do ní nekreslí.` } });
+      shape = null;
       return;
     }
-    raw = [p.world];
     store.set({ selection: null, numpad: null });
+    const kind = penShape();
+    if (kind === 'free') {
+      raw = [p.world];
+    } else if (shape?.phase === 'bulge') {
+      shape.sag = sagittaTowards(shape.a, shape.b, p.world);
+    } else {
+      const chain = kind === 'line' ? chainEnd(p.world) : null;
+      const a = chain?.pt ?? snapShape(p.world, null);
+      shape = { a, b: a, sag: 0, phase: 'drag' };
+    }
     requestRender();
   },
   drag(p) {
-    if (!raw) return;
-    raw.push(p.world);
+    if (raw) raw.push(p.world);
+    else if (shape?.phase === 'bulge') shape.sag = sagittaTowards(shape.a, shape.b, p.world);
+    else if (shape) shape.b = snapShape(p.world, penShape() === 'line' || penShape() === 'arc' ? shape.a : null);
     requestRender();
   },
+  hover(p) {
+    if (shape?.phase === 'bulge') {
+      shape.sag = sagittaTowards(shape.a, shape.b, p.world);
+      requestRender();
+    }
+  },
   up(p) {
-    if (!raw) return;
-    raw.push(p.world);
-    const zoom = store.get().camera.zoom;
-    // vyhlazení podle zoomu: body po ~1 px, odchylka ~0,4 px
-    const pts = smoothStroke(raw, 1 / zoom, 0.4 / zoom);
-    raw = null;
-    addStroke(pts, store.get().settings.penWidth);
+    const width = store.get().settings.penWidth;
+    if (raw) {
+      raw.push(p.world);
+      const zoom = store.get().camera.zoom;
+      // vyhlazení podle zoomu: body po ~1 px, odchylka ~0,4 px
+      const pts = smoothStroke(raw, 1 / zoom, 0.4 / zoom);
+      raw = null;
+      addStroke(pts, width);
+      requestRender();
+      return;
+    }
+    if (!shape) return;
+    const kind = penShape();
+    if (kind === 'free') {
+      shape = null;
+      return;
+    }
+    if (shape.phase === 'bulge') {
+      // oblouk: druhý krok hotový
+      const s = shape;
+      shape = null;
+      addStroke(shapeStroke('arc', s.a, s.b, s.sag || defaultSag(s.a, s.b)), width);
+      store.set({ toolMsg: null });
+      requestRender();
+      return;
+    }
+    const { a, b } = shape;
+    const big = kind === 'rect' ? Math.abs(b.x - a.x) >= MIN_SHAPE && Math.abs(b.y - a.y) >= MIN_SHAPE : dist(a, b) >= MIN_SHAPE;
+    if (!big) {
+      shape = null;
+      requestRender();
+      return;
+    }
+    if (kind === 'arc') {
+      shape = { ...shape, sag: defaultSag(a, b), phase: 'bulge' };
+      store.set({ toolMsg: penShapeMsg() });
+      requestRender();
+      return;
+    }
+    shape = null;
+    if (kind === 'line') {
+      // navázání na konec poslední čáry: lomená čára (dosednutím na její začátek se uzavře)
+      const chain = chainEnd(a);
+      const end = shapeStroke('line', a, b)[1]!;
+      if (chain && lastLine && dist(chain.pt, a) < 0.5) appendStrokePoint(lastLine, chain.end, end);
+      else lastLine = addStroke(shapeStroke('line', a, b), width);
+    } else addStroke(shapeStroke(kind, a, b), width);
     requestRender();
   },
   cancel() {
     raw = null;
+    shape = null;
+    lastLine = null;
+    store.set({ toolMsg: null });
     requestRender();
   },
   drawOverlay(ctx: CanvasRenderingContext2D, cam: Camera) {
-    if (!raw || !raw.length) return;
+    const kind = penShape();
+    let pts: Pt[] | null = raw;
+    if (!pts && shape) {
+      if (kind === 'arc' && shape.phase === 'bulge') pts = shapeStroke('arc', shape.a, shape.b, shape.sag);
+      else if (kind !== 'free' && dist(shape.a, shape.b) > 0) pts = shapeStroke(kind, shape.a, shape.b);
+      else pts = [shape.a];
+    }
+    if (!pts || !pts.length) return;
     ctx.save();
     ctx.strokeStyle = activeColor();
     ctx.lineWidth = Math.max(1, store.get().settings.penWidth * cam.zoom);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
-    raw.forEach((q, i) => {
+    pts.forEach((q, i) => {
       const s = toScreen(q, cam);
       if (i === 0) ctx.moveTo(s.x, s.y);
       else ctx.lineTo(s.x, s.y);
     });
-    if (raw.length === 1) ctx.lineTo(toScreen(raw[0]!, cam).x + 0.01, toScreen(raw[0]!, cam).y);
+    if (pts.length === 1) ctx.lineTo(toScreen(pts[0]!, cam).x + 0.01, toScreen(pts[0]!, cam).y);
     ctx.stroke();
     ctx.restore();
   }
