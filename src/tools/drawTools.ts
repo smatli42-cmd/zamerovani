@@ -11,7 +11,7 @@ import { sideFromPen } from '../core/wallSide';
 import type { Drawing, Pt } from '../model/types';
 import type { SnapResult } from '../core/snapping';
 import { addDrawDouble, addDrawLine } from '../store/actions';
-import { store } from '../store/store';
+import { store, type Camera } from '../store/store';
 import { doubleAlongWall, drawSnap, type DrawSnapResult } from './drawSnap';
 import { pickAny } from './pick';
 import { drawGuides, grabArcHandle, selectTool } from './selectTool';
@@ -93,7 +93,7 @@ function makeDrawTool(kind: 'line' | 'double'): Tool {
       const floor = store.floor();
       if (!floor) return;
       const r = drawSnap(floor, p.world, null);
-      hoverSnap = r.node || r.wallHit || r.special ? r : null;
+      hoverSnap = r.node || r.wallHit || r.special || r.guides.length ? r : null;
       requestRender();
     },
     cancel() {
@@ -105,16 +105,38 @@ function makeDrawTool(kind: 'line' | 'double'): Tool {
     },
     drawOverlay(ctx, cam) {
       if (!s) {
-        if (hoverSnap) drawSnapMarker(ctx, cam, hoverSnap);
+        if (hoverSnap) {
+          drawAlignGuides(ctx, cam, hoverSnap);
+          drawSnapMarker(ctx, cam, hoverSnap);
+        }
         return;
       }
       if (s.end.guide) drawGuides(ctx, { line: s.end.guide, point: s.end.pt, lines: [] }, cam);
+      drawAlignGuides(ctx, cam, s.end);
       if (dist(s.start.pt, s.end.pt) >= 1) paintDrawing(ctx, preview(s), cam);
       drawSnapMarker(ctx, cam, s.start);
       drawSnapMarker(ctx, cam, s.end);
       drawLengthBadge(ctx, toScreen(s.start.pt, cam), toScreen(s.end.pt, cam), Math.round(dist(s.start.pt, s.end.pt)));
     }
   };
+}
+
+/** Zarovnání s bodem kresby / rohem: tečkovaně od toho bodu k přichycenému bodu (tools/drawSnap.ts). */
+export function drawAlignGuides(ctx: CanvasRenderingContext2D, cam: Camera, r: SnapResult): void {
+  if (!r.guides.length) return;
+  ctx.save();
+  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = '#a855f7';
+  ctx.lineWidth = 1;
+  for (const g of r.guides) {
+    const f = toScreen(g.from, cam);
+    const t = toScreen(g.to, cam);
+    ctx.beginPath();
+    ctx.moveTo(f.x, f.y);
+    ctx.lineTo(t.x, t.y);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 export const drawLineTool = makeDrawTool('line');

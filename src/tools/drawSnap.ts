@@ -3,9 +3,9 @@
  * Přichycení je jen pomůcka při kreslení: vrací bod, kresba si roh, stěnu ani jinou kresbu nepamatuje
  * (výsledek se nikdy nepředává akcím stěn – žádné napojení, dělení ani výstupek).
  */
-import { add, dist, dot, normal, scale, sub, unit } from '../core/geometry';
+import { add, dist, dot, normal, projectToSegment, scale, sub, unit } from '../core/geometry';
 import { dragParams, drawLinesFrom, linesNear, resolveDragPoint, type DragLine } from '../core/dragResolve';
-import { findDrawingPointNear } from '../core/drawing';
+import { drawingPaths, drawingSnapPoints, drawingsOf, findDrawingPointNear } from '../core/drawing';
 import { stairPointNear } from '../core/stairRefs';
 import { findFaceNear, wallFrame, worldToProfile } from '../core/protrusion';
 import { snapEnd, snapPoint, type SnapResult } from '../core/snapping';
@@ -15,7 +15,10 @@ import { store } from '../store/store';
 import { HIT_PX } from './types';
 import { snapOptions } from './wallTool';
 
-/** Výsledek přichycení kresby; `guide` = zachycená pomocná čára (vodorovně / svisle / kolmo ke stěně) pro náhled. */
+/**
+ * Výsledek přichycení kresby; `guide` = zachycená pomocná čára (vodorovně / svisle / kolmo ke stěně, pokračování
+ * nebo kolmice k čáře kresby) pro náhled; `guides` = zarovnání s bodem kresby / rohem (tečkovaně od toho bodu).
+ */
 export type DrawSnapResult = SnapResult & { guide?: DragLine };
 
 const NEAR_PX = 60;
@@ -25,6 +28,8 @@ const free = (p: Pt): SnapResult => ({ pt: { x: Math.round(p.x / 10) * 10, y: Ma
 /**
  * Bod kresby u pera: bod jiné kresby, roh schodiště, roh nebo zvláštní bod, líc stěny s tloušťkou, čára stěny; jinak po 10 mm
  * (konec úseku `from`→ i se zarovnáním do os a s rohy). `skip` = kresba, jejíž bod se právě táhne.
+ * Zarovnání (připomínka uživatele 2026-11-19 – čtverec čarami se nedal nakreslit bez odhadu): bod se přichytí na
+ * svislici / vodorovnou přes bod kresby nebo roh stěn (i na zachycené pomocné čáře) a ukáže se čárkovaně od toho bodu.
  */
 export function drawSnap(floor: Floor, raw: Pt, from: Pt | null, skip?: string): DrawSnapResult {
   const { settings, camera } = store.get();
@@ -38,10 +43,11 @@ export function drawSnap(floor: Floor, raw: Pt, from: Pt | null, skip?: string):
   const r = from ? snapEnd(floor, from, raw, snapOptions()) : snapPoint(floor, raw, snapOptions());
   if (r.node || r.special) return r;
   const face = findFaceNear(floor, raw, tol);
+  const sources = alignSources(floor, from, skip);
   // pomocné čáry z počátku úseku (jako u nástroje Stěna): vodorovně, svisle, kolmo ke stěně. Zachycená čára platí
   // až ke stěně: u líce / čáry stěny se konec dá na jejich PRŮSEČÍK s pomocnou čárou (kolmo na protější stěnu –
   // připomínka uživatele 2026-11-17), ne na nejbližší bod líce.
-  const g = from ? guideAt(floor, from, raw, camera.zoom) : null;
+  const g = from ? guideAt(floor, from, raw, camera.zoom, sources, skip) : null;
   if (g) {
     const line = g.line;
     if (face) {
@@ -55,25 +61,98 @@ export function drawSnap(floor: Floor, raw: Pt, from: Pt | null, skip?: string):
       const x = a && b && !isCurved(r.wallHit.wall) ? crossLines(line.origin, line.dir, a, sub(b, a)) : null;
       if (x && dist(x, raw) <= 2 * tol) return { pt: x, node: null, wallHit: null, guides: [], special: true, guide: line };
     }
-    return { pt: g.pt, node: null, wallHit: null, guides: [], guide: line };
+    return { pt: g.pt, node: null, wallHit: null, guides: g.align ? [{ from: g.align, to: g.pt }] : [], guide: line };
   }
   if (face && (!r.wallHit || face.distance < dist(raw, r.wallHit.point))) return { pt: face.point, node: null, wallHit: null, guides: [], special: true };
-  return r;
+  if (r.wallHit) return r;
+  // volný bod: přichytit x / y k bodu kresby nebo rohu (u počátku úseku jen mimo osy – ty řeší pomocné čáry)
+  return alignFree(raw, r, sources, HIT_PX.snapAlign / camera.zoom);
+}
+
+/** Body pro zarovnání: body kresby (kromě `skip`) a rohy stěn; počátek úseku se vynechá. */
+function alignSources(floor: Floor, from: Pt | null, skip?: string): Pt[] {
+  const out: Pt[] = [];
+  for (const d of drawingsOf(floor)) if (d.id !== skip) out.push(...drawingSnapPoints(d));
+  for (const n of Object.values(floor.nodes)) out.push({ x: n.x, y: n.y });
+  return from ? out.filter(q => dist(q, from) > 1) : out;
+}
+
+function alignFree(raw: Pt, r: SnapResult, sources: readonly Pt[], tol: number): SnapResult {
+  let bx: Pt | null = null;
+  let by: Pt | null = null;
+  for (const q of sources) {
+    if (Math.abs(q.x - raw.x) <= tol && (!bx || Math.abs(q.x - raw.x) < Math.abs(bx.x - raw.x))) bx = q;
+    if (Math.abs(q.y - raw.y) <= tol && (!by || Math.abs(q.y - raw.y) < Math.abs(by.y - raw.y))) by = q;
+  }
+  if (!bx && !by) return r;
+  const pt = { x: bx ? bx.x : r.pt.x, y: by ? by.y : r.pt.y };
+  return { pt, node: null, wallHit: null, guides: [bx, by].filter((q): q is Pt => !!q && dist(q, pt) > 1).map(q => ({ from: q, to: pt })) };
 }
 
 /** Zachycená pomocná čára (držení: dokud pero zůstane u stejné čáry ze stejného počátku). */
 let held: { from: Pt; id: string } | null = null;
 
-function guideAt(floor: Floor, from: Pt, raw: Pt, zoom: number): { line: DragLine; pt: Pt } | null {
-  const lines = linesNear(drawLinesFrom(floor, from, null), raw, NEAR_PX / zoom);
+/** Rovné úseky kresby (i obdélník, dvojitá čára) kromě `skip`. */
+function drawingSegs(floor: Floor, skip?: string): { id: string; a: Pt; b: Pt }[] {
+  const out: { id: string; a: Pt; b: Pt }[] = [];
+  for (const d of drawingsOf(floor)) {
+    if (d.id === skip) continue;
+    drawingPaths(d).forEach((path, k) => path.forEach((sg, i) => sg.s === 0 && dist(sg.a, sg.b) > 1 && out.push({ id: `${d.id}:${k}:${i}`, a: sg.a, b: sg.b })));
+  }
+  return out;
+}
+
+/**
+ * Pomocné čáry kresby z bodu `from`: pokračování a kolmice čáry kresby, která v něm končí nebo jím prochází
+ * („odpojená“ čára drží původní směr), kolmice k ostatním čarám kresby (pata kolmice = zarážka).
+ */
+function drawingGuideLines(from: Pt, segs: readonly { id: string; a: Pt; b: Pt }[]): DragLine[] {
+  const lines: DragLine[] = [];
+  for (const sg of segs) {
+    const u = unit(sg.a, sg.b);
+    const pr = projectToSegment(from, sg.a, sg.b);
+    if (pr.distance < 1) {
+      lines.push({ id: `dcont:${sg.id}`, origin: from, dir: u, weight: 1.2 });
+      lines.push({ id: `dperp:${sg.id}`, origin: from, dir: normal(u), weight: 1.2, perpTo: sg.id }); // bez perpSeg – nabízí se vždy, ne jen u čáry
+      continue;
+    }
+    const foot = pr.t > 1e-6 && pr.t < 1 - 1e-6 ? pr.point : null;
+    lines.push({ id: `dfoot:${sg.id}`, origin: from, dir: normal(u), weight: 1, perpTo: sg.id, perpSeg: [sg.a, sg.b], stops: foot ? [foot] : [] });
+  }
+  return lines;
+}
+
+function guideAt(floor: Floor, from: Pt, raw: Pt, zoom: number, sources: readonly Pt[], skip?: string): { line: DragLine; pt: Pt; align: Pt | null } | null {
+  const segs = drawingSegs(floor, skip);
+  const near = linesNear([...drawLinesFrom(floor, from, null), ...drawingGuideLines(from, segs)], raw, NEAR_PX / zoom);
+  // zarážky navíc: průsečík s čárami kresby a místa zarovnaná s body kresby / rohy (svisle nebo vodorovně)
+  const aligned = new Map<Pt, Pt>();
+  const lines = near.map(l => {
+    const extra: Pt[] = [];
+    for (const sg of segs) {
+      const x = crossLines(l.origin, l.dir, sg.a, sub(sg.b, sg.a));
+      if (x && projectToSegment(x, sg.a, sg.b).distance < 0.5) extra.push(x);
+    }
+    for (const q of sources) {
+      for (const x of [Math.abs(l.dir.x) > 1e-6 ? at(l, (q.x - l.origin.x) / l.dir.x) : null, Math.abs(l.dir.y) > 1e-6 ? at(l, (q.y - l.origin.y) / l.dir.y) : null]) {
+        if (x && dist(x, q) > 1) {
+          extra.push(x);
+          aligned.set(x, q);
+        }
+      }
+    }
+    return { ...l, stops: [...(l.stops ?? []), ...extra] };
+  });
   const lock = held && dist(held.from, from) < 1e-6 ? held.id : null;
   const g = resolveDragPoint(raw, lines, lock, dragParams(10, zoom));
   held = g.line ? { from, id: g.line.id } : null;
   if (!g.line) return null;
   const stop = (g.line.stops ?? []).find(q => dist(q, g.point) < 1e-6);
   const pt = stop ?? add(g.line.origin, scale(g.line.dir, Math.round(dot(sub(g.point, g.line.origin), g.line.dir) / 10) * 10));
-  return { line: g.line, pt };
+  return { line: g.line, pt, align: stop ? (aligned.get(stop) ?? null) : null };
 }
+
+const at = (l: DragLine, t: number): Pt => add(l.origin, scale(l.dir, t));
 
 /** Průsečík přímky (p, směr u) s přímkou (q, směr v); rovnoběžky = null. */
 function crossLines(p: Pt, u: Pt, q: Pt, v: Pt): Pt | null {
