@@ -10,7 +10,7 @@ import { smoothStroke, strokeHit } from '../core/strokes';
 import { snapPoint } from '../core/snapping';
 import { drawSnap } from '../tools/drawSnap';
 import { layerContents, SYS } from '../core/layers';
-import { addStroke, eraseStrokesAt, setActiveLayer, setLayerLocked, setStrokeWidth } from './actions';
+import { addStroke, eraseStrokesAt, setActiveLayer, setLayerLocked, setLayerVisible, setStrokeWidth } from './actions';
 import { store } from './store';
 
 const f = () => store.floor()!;
@@ -189,5 +189,82 @@ describe('Pero – tvary (čára, obdélník, kruh, oblouk) jsou ruční tahy', 
     penTool.down!(at(3000, 3000));
     penTool.up!(at(3000, 3000));
     expect(strokes()).toHaveLength(1);
+  });
+});
+
+describe('Pero – tvary: nálezy kontroly', () => {
+  const at = (x: number, y: number) => ({ world: { x, y }, screen: { x: x * 0.1, y: y * 0.1 }, device: 'pen' as const });
+  const pen = async () => (await import('../tools/penTool')).penTool;
+  const drag = async (a: [number, number], b: [number, number]) => {
+    const t = await pen();
+    t.down!(at(...a));
+    t.drag!(at(...b));
+    t.up!(at(...b));
+  };
+  const strokes = () => Object.values(f().strokes ?? {});
+  beforeEach(async () => {
+    (await pen()).cancel!();
+    store.set({ camera: { x: 0, y: 0, zoom: 0.1 } });
+    store.updateSettings({ penShape: 'line', penWidth: 25 });
+    setActiveLayer('elektro');
+  });
+
+  it('lomená čára se uzavře i nepřesným dosednutím na začátek (do tolerance)', async () => {
+    await drag([0, 0], [2000, 0]);
+    await drag([2000, 0], [2000, 2000]);
+    await drag([2000, 2000], [33, 47]);
+    const s = strokes()[0]!;
+    expect(strokes()).toHaveLength(1);
+    expect(s.pts[s.pts.length - 1]).toEqual(s.pts[0]);
+  });
+
+  it('navázání i na začátek čáry; ne po jiném tvaru, ne při jiné tloušťce, ne na skrytou čáru', async () => {
+    await drag([0, 0], [2000, 0]);
+    await drag([0, 0], [0, 1000]); // na začátek
+    expect(strokes()).toHaveLength(1);
+    expect(strokes()[0]!.pts[0]).toEqual({ x: 0, y: 1000 });
+    // jiná tloušťka → nový tah
+    store.updateSettings({ penWidth: 100 });
+    await drag([2000, 0], [3000, 0]);
+    expect(strokes()).toHaveLength(2);
+    // po obdélníku se na čáru nenavazuje
+    store.updateSettings({ penShape: 'rect' });
+    await drag([5000, 5000], [6000, 6000]);
+    store.updateSettings({ penShape: 'line' });
+    await drag([3000, 0], [4000, 0]);
+    expect(strokes()).toHaveLength(4);
+    // skrytá vrstva: nenaváže (nový tah vrstvu zobrazí)
+    setActiveLayer('voda');
+    await drag([0, 9000], [1000, 9000]);
+    setActiveLayer('elektro');
+    setLayerVisible('voda', false);
+    setActiveLayer('voda'); // volba aktivní vrstvy ji zobrazí – skryjeme po ní přes data
+    store.editLayers(p => void (p.layers!.find(l => l.id === 'voda')!.visible = false));
+    await drag([1000, 9000], [2000, 9000]);
+    expect(strokes().filter(s => s.layerId === 'voda')).toHaveLength(2);
+  });
+
+  it('pero do zamčené vrstvy nekreslí ani tvar; rozpracovaný oblouk se po přepnutí podlaží zahodí', async () => {
+    const t = await pen();
+    setLayerLocked('elektro', true);
+    await drag([0, 0], [2000, 0]);
+    expect(strokes()).toHaveLength(0);
+    setLayerLocked('elektro', false);
+    store.updateSettings({ penShape: 'arc' });
+    await drag([0, 0], [2000, 0]);
+    store.set({ floorId: 'jine' });
+    t.down!(at(1000, 500));
+    t.up!(at(1000, 500));
+    store.set({ floorId: store.get().project!.floors[0]!.id });
+    expect(strokes()).toHaveLength(0);
+  });
+
+  it('oblouk s vyklenutím 0 (ťuknutí na tětivu) = rovná čára', async () => {
+    const t = await pen();
+    store.updateSettings({ penShape: 'arc' });
+    await drag([0, 0], [2000, 0]);
+    t.down!(at(1000, 0));
+    t.up!(at(1000, 0));
+    expect(strokes()[0]!.pts).toEqual([{ x: 0, y: 0 }, { x: 2000, y: 0 }]);
   });
 });

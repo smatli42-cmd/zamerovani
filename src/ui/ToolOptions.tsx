@@ -16,6 +16,7 @@ import { dimToolMsg } from '../tools/dimTool';
 import { resetStairPoints, stairToolMsg } from '../tools/stairTool';
 import { eraserMsg } from '../tools/penTool';
 import { STROKE_WIDTHS, type PenShape } from '../core/strokes';
+import { layerById } from '../core/layers';
 
 /** Pero: od ruky nebo geometrie – vždy ruční tah ve vrstvě (barva vrstvy, guma ho maže celý). */
 const PEN_SHAPES: { v: PenShape; label: string }[] = [
@@ -25,7 +26,6 @@ const PEN_SHAPES: { v: PenShape; label: string }[] = [
   { v: 'circle', label: '◯ Kruh' },
   { v: 'arc', label: '◠ Oblouk' }
 ];
-import { layerById } from '../core/layers';
 
 export function ToolOptions() {
   const tool = useStore(s => s.tool);

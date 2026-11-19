@@ -9,6 +9,8 @@ import { dist } from '../core/geometry';
 import { sagittaTowards } from '../core/drawing';
 import { drawSnap } from './drawSnap';
 import { HIT_PX } from './types';
+import type { SnapResult } from '../core/snapping';
+import { drawSnapMarker } from './wallTool';
 import { layerById } from '../core/layers';
 import { shapeStroke, smoothStroke } from '../core/strokes';
 import type { Pt } from '../model/types';
@@ -28,36 +30,66 @@ const activeColor = () => {
 /** Menší tažení tvaru (mm) se nebere – ťuknutí tvar nevytvoří. */
 const MIN_SHAPE = 20;
 
-/** Tvar: tažený začátek a konec; u oblouku po tětivě druhý krok – vzepětí (`bulge`). */
-let shape: { a: Pt; b: Pt; sag: number; phase: 'drag' | 'bulge' } | null = null;
+/** Navázání na konec čáry: tah a jeho konec (`b` = poslední bod, `a` = první). */
+type Chain = { id: string; end: 'a' | 'b' };
+
+/**
+ * Tvar: tažený začátek a konec; u oblouku po tětivě druhý krok – vzepětí (`bulge`). `floorId` = podlaží, na kterém
+ * tvar začal (po přepnutí podlaží se rozpracovaný tvar zahodí). `snap` = přichycený bod (značka v náhledu).
+ */
+let shape: { a: Pt; b: Pt; sag: number; phase: 'drag' | 'bulge'; floorId: string | null; chain: Chain | null; snap: SnapResult | null } | null = null;
 /** Poslední nakreslená čára (pokračování řetězu z jejího konce, jako u Čáry kresby). */
 let lastLine: string | null = null;
 
 const penShape = () => store.get().settings.penShape;
 
 /** Bod tvaru: přichycení jako u kresby (jen pomůcka – rohy, stěny, kresba, zarovnání; tahy se nechytají). */
-function snapShape(p: Pt, from: Pt | null): Pt {
+function snapShape(p: Pt, from: Pt | null): SnapResult {
   const v = store.view('snap');
-  return v ? drawSnap(v, p, from).pt : p;
+  return v ? drawSnap(v, p, from) : { pt: p, node: null, wallHit: null, guides: [] };
 }
 
-/** Konec poslední čáry pod perem → navázání (vrací bod a konec). */
-function chainEnd(p: Pt): { pt: Pt; end: 'a' | 'b' } | null {
-  const s = lastLine ? store.floor()?.strokes?.[lastLine] : null;
+/**
+ * Konec poslední čáry pod perem → navázání. Jen viditelná a odemčená čára v aktivní vrstvě se stejnou tloušťkou
+ * (tah má jednu tloušťku); jinak vznikne nový tah.
+ */
+function chainEnd(p: Pt): { pt: Pt; chain: Chain } | null {
+  const s = lastLine ? store.view('pick')?.strokes?.[lastLine] : null;
   const pr = store.get().project;
-  if (!s || s.pts.length < 2 || s.layerId !== pr?.activeLayer) return null;
+  if (!s || s.pts.length < 2 || s.layerId !== pr?.activeLayer || s.width !== store.get().settings.penWidth) return null;
   const tol = HIT_PX.node / store.get().camera.zoom;
   const first = s.pts[0]!;
   const last = s.pts[s.pts.length - 1]!;
   if (dist(first, last) < 0.5) return null; // uzavřená
-  if (dist(last, p) <= tol) return { pt: last, end: 'b' };
-  if (dist(first, p) <= tol) return { pt: first, end: 'a' };
+  if (dist(last, p) <= tol) return { pt: last, chain: { id: s.id, end: 'b' } };
+  if (dist(first, p) <= tol) return { pt: first, chain: { id: s.id, end: 'a' } };
   return null;
+}
+
+/** Druhý konec navazované čáry (dosednutím na něj se lomená čára uzavře). */
+function closingPoint(chain: Chain | null): Pt | null {
+  const s = chain ? store.floor()?.strokes?.[chain.id] : null;
+  if (!s || s.pts.length < 2) return null;
+  return chain!.end === 'b' ? s.pts[0]! : s.pts[s.pts.length - 1]!;
+}
+
+/** Konec čáry / tvaru pod perem: u navazované čáry přednostně začátek řetězu (uzavření). */
+function shapeEnd(p: Pt): void {
+  if (!shape) return;
+  const close = penShape() === 'line' ? closingPoint(shape.chain) : null;
+  if (close && dist(close, p) <= HIT_PX.node / store.get().camera.zoom) {
+    shape.b = close;
+    shape.snap = { pt: close, node: null, wallHit: null, special: true, guides: [] };
+    return;
+  }
+  const r = snapShape(p, penShape() === 'line' || penShape() === 'arc' ? shape.a : null);
+  shape.b = r.pt;
+  shape.snap = r;
 }
 
 /** Nápověda v liště Pera (druhý krok oblouku). */
 export function penShapeMsg(): string | null {
-  if (shape?.phase === 'bulge') return 'Oblouk: tažením perem nastav vyklenutí (zvednutím se oblouk nakreslí).';
+  if (shape?.phase === 'bulge') return 'Oblouk: tažením perem nastav vyklenutí (zvednutím se oblouk nakreslí; na tětivě = rovná čára).';
   return null;
 }
 
@@ -73,11 +105,24 @@ function lockedActive(): boolean {
 /** Výchozí vzepětí oblouku = čtvrtina tětivy (jako Oblouk kresby). */
 const defaultSag = (a: Pt, b: Pt) => Math.max(10, Math.round(dist(a, b) / 4 / 10) * 10);
 
+/** Rozpracovaný tvar z jiného podlaží / projektu se zahodí. */
+function staleShape(): boolean {
+  if (shape && shape.floorId !== store.get().floorId) {
+    shape = null;
+    lastLine = null;
+    store.set({ toolMsg: null });
+    return true;
+  }
+  return false;
+}
+
 export const penTool: Tool = {
   down(p: PointerInput) {
+    staleShape();
     if (lockedActive()) {
       raw = null;
       shape = null;
+      store.set({ toolMsg: null });
       return;
     }
     store.set({ selection: null, numpad: null });
@@ -87,20 +132,21 @@ export const penTool: Tool = {
     } else if (shape?.phase === 'bulge') {
       shape.sag = sagittaTowards(shape.a, shape.b, p.world);
     } else {
-      const chain = kind === 'line' ? chainEnd(p.world) : null;
-      const a = chain?.pt ?? snapShape(p.world, null);
-      shape = { a, b: a, sag: 0, phase: 'drag' };
+      const c = kind === 'line' ? chainEnd(p.world) : null;
+      const s = c ? null : snapShape(p.world, null);
+      const a = c?.pt ?? s!.pt;
+      shape = { a, b: a, sag: 0, phase: 'drag', floorId: store.get().floorId, chain: c?.chain ?? null, snap: s };
     }
     requestRender();
   },
   drag(p) {
     if (raw) raw.push(p.world);
     else if (shape?.phase === 'bulge') shape.sag = sagittaTowards(shape.a, shape.b, p.world);
-    else if (shape) shape.b = snapShape(p.world, penShape() === 'line' || penShape() === 'arc' ? shape.a : null);
+    else if (shape) shapeEnd(p.world);
     requestRender();
   },
   hover(p) {
-    if (shape?.phase === 'bulge') {
+    if (shape?.phase === 'bulge' && !staleShape()) {
       shape.sag = sagittaTowards(shape.a, shape.b, p.world);
       requestRender();
     }
@@ -113,26 +159,28 @@ export const penTool: Tool = {
       // vyhlazení podle zoomu: body po ~1 px, odchylka ~0,4 px
       const pts = smoothStroke(raw, 1 / zoom, 0.4 / zoom);
       raw = null;
+      lastLine = null;
       addStroke(pts, width);
       requestRender();
       return;
     }
-    if (!shape) return;
+    if (!shape || staleShape()) return;
     const kind = penShape();
     if (kind === 'free') {
       shape = null;
       return;
     }
     if (shape.phase === 'bulge') {
-      // oblouk: druhý krok hotový
+      // oblouk: druhý krok hotový; vyklenutí 0 (ťuknutí na tětivu) = rovná čára
       const s = shape;
       shape = null;
-      addStroke(shapeStroke('arc', s.a, s.b, s.sag || defaultSag(s.a, s.b)), width);
+      lastLine = null;
+      addStroke(shapeStroke('arc', s.a, s.b, s.sag), width);
       store.set({ toolMsg: null });
       requestRender();
       return;
     }
-    const { a, b } = shape;
+    const { a, b, chain } = shape;
     const big = kind === 'rect' ? Math.abs(b.x - a.x) >= MIN_SHAPE && Math.abs(b.y - a.y) >= MIN_SHAPE : dist(a, b) >= MIN_SHAPE;
     if (!big) {
       shape = null;
@@ -140,7 +188,7 @@ export const penTool: Tool = {
       return;
     }
     if (kind === 'arc') {
-      shape = { ...shape, sag: defaultSag(a, b), phase: 'bulge' };
+      shape = { ...shape, sag: defaultSag(a, b), phase: 'bulge', snap: null };
       store.set({ toolMsg: penShapeMsg() });
       requestRender();
       return;
@@ -148,11 +196,14 @@ export const penTool: Tool = {
     shape = null;
     if (kind === 'line') {
       // navázání na konec poslední čáry: lomená čára (dosednutím na její začátek se uzavře)
-      const chain = chainEnd(a);
       const end = shapeStroke('line', a, b)[1]!;
-      if (chain && lastLine && dist(chain.pt, a) < 0.5) appendStrokePoint(lastLine, chain.end, end);
+      if (chain && store.floor()?.strokes?.[chain.id]) appendStrokePoint(chain.id, chain.end, end);
       else lastLine = addStroke(shapeStroke('line', a, b), width);
-    } else addStroke(shapeStroke(kind, a, b), width);
+    } else {
+      // jiný tvar ukončí řetěz čar
+      lastLine = null;
+      addStroke(shapeStroke(kind, a, b), width);
+    }
     requestRender();
   },
   cancel() {
@@ -185,6 +236,8 @@ export const penTool: Tool = {
     if (pts.length === 1) ctx.lineTo(toScreen(pts[0]!, cam).x + 0.01, toScreen(pts[0]!, cam).y);
     ctx.stroke();
     ctx.restore();
+    // značka přichyceného bodu (roh, stěna, zvláštní bod), aby bylo vidět, proč konec „skočil“
+    if (shape?.snap) drawSnapMarker(ctx, cam, shape.snap);
   }
 };
 
