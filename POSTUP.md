@@ -7,6 +7,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-19 (16) – konec sezení
+- **Co se změnilo:** sezení ukončeno; za tuto část dne vrstvy (13), ruční kresba Perem a Gumou (14) a geometrie Pera (15). Testy 939 + 1 zapsaný nález, typecheck a build OK, SCHEMA_VERSION 29.
+- **Viditelně v aplikaci:** viz (13)–(15): panel 🗂️ Vrstvy, Přesunout do vrstvy, nástroje 🖊️ Pero (Ruka / Čára / Obdélník / Kruh / Oblouk) a 🧽 Guma.
+- **Rozhodnuto samostatně:** viz (13)–(15).
+- **Otevřené:** vyzkoušet na tabletu se S-Penem; otázky pro uživatele v (14).
+- **Chyby od uživatele:** žádné nové (uživatel: tvary Pera „takhle to stačí“).
+- **Soubory nad 500 řádků:** žádné (největší `store/store.ts` 476, `model/types.ts` 458, `tools/selectTool.ts` 454).
+
 ### 2026-11-19 (15) – Pero: geometrie (čára, obdélník, kruh, oblouk) jako ruční tah (požadavek uživatele)
 - **Požadavek uživatele:** při kreslení ve vrstvách kreslit i geometrii jako u stěn (čára, obdélník…), volba v horní liště nástroje; tvary jsou jen kresba jako kreslení od ruky.
 - **Co se změnilo:** v liště Pera volba **Ruka / Čára / Obdélník / Kruh / Oblouk** (`Settings.penShape`). Tvar vznikne jako ruční tah (`core/strokes.ts` – `shapeStroke`, `arcPoints`; nástroj `tools/penTool.ts`, akce `appendStrokePoint`): aktivní vrstva, barva vrstvy, zvolená tloušťka, guma ho maže celý, výběr / posun / kopie / přesun do vrstvy jako u tahu. Beze změny struktury dat (obdélník a kruh = uzavřená lomená čára, kruh 72 úseků, oblouk po ~5°). Testy `store/strokes.test.ts` (+4), celkem 935 + 1 zapsaný nález.
@@ -695,7 +703,25 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Otevřené:** vyzkoušet na tabletu; další krok tažení a posun jako blok (D2, D11–D14).
 - **Chyby od uživatele:** zatím žádné.
 
-## Poslední stav (2026-11-19, konec sezení)
+## Poslední stav (2026-11-19, konec sezení 2)
+
+**Hotové (na webu):** **vrstvy** (13) – vrstvy projektu, skrytá / zamčená vrstva u všech prvků, přesun do vrstvy, panel Vrstvy, migrace 27 → 28, export `layerContents`, katalog sekce V; **ruční kresba** (14) – Pero (vektor, tloušťka v mm, barva vrstvy) a Guma; **geometrie Pera** (15) – čára s navazováním, obdélník, kruh, oblouk jako ruční tah. Testy 939 + 1 zapsaný nález, typecheck a build OK. SCHEMA_VERSION 29.
+
+**Rozpracované:** nic.
+
+**Chyby od uživatele:** žádné čekající.
+
+**Čeká na vyzkoušení:** vrstvy, Pero a Guma na tabletu se S-Penem (pero kreslí, prst posouvá, dva prsty zoomují, dlaň nevadí) – co nefunguje, zapsat do Deníku; schodiště (8).
+
+**Otázky pro uživatele (z (13), (14); do odpovědi platí dnešní chování):** výstupek v rohu dvou stěn z různých vrstev (skrytý / zamčený, když kterákoli stěna); smazání podlaží maže i zamčené vrstvy; schodiště z kresby jde do Stavby; stěnu s kótou v zamčené vrstvě Kóty nejde smazat; má i kresba a stěny do zamčené vrstvy nevznikat (jako Pero)?; tlačítko 🎯 nebere v úvahu kresbu, schodiště a tahy.
+
+**Fronta kroků:**
+1. Chyby z používání a testování na tabletu (vrstvy, Pero, schodiště) – mají přednost; odpovědi na otázky výše.
+2. Zařizovací předměty a symboly (návrh plánu hotový: nástroj Předměty – koupelna, kuchyň, technika, šipka k severu; čeká na schválení; symboly patří do vrstev, barva vrstvy) → poznámkový špendlík → fotky se značkou směru pohledu.
+3. Výstupy: PDF podle velikosti výkresu s razítkem (zaškrtnutí vrstev – `layerContents`), DXF s hladinami podle vrstev (s tím část B KOTY-ZAMEK-EXPORT.md).
+4. Kóty, jen když se ukáže potřeba.
+
+## Předchozí stav (2026-11-19, konec sezení)
 
 **Hotové (na webu):** **schodiště – další druhy a zadání** (2026-11-19 (8)): rameno dvěma ťuknutími a zadanými rozměry, točité, rameno po oblouku, zabíhavé stupně, ručně nakreslené rameno, podesta z kresby, kóta a přichycení k rohům / hranám schodiště; schodiště jako 2D značka (6). Testy 796 + 1 zapsaný nález, typecheck a build OK. SCHEMA_VERSION 26. **Doplněno (10):** rovné s podestou a atypické T, testy 807 + 1 zapsaný nález, SCHEMA_VERSION 27.
 
@@ -862,6 +888,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Rozhodnuto samostatně
 (Rozhodnutí mimo katalog, udělaná bez uživatele – nejnovější nahoře. Uživatel je může kdykoli změnit.)
+- 2026-11-19: Vrstvy a ruční kresba – viz Deník 2026-11-19 (13)–(15) (barvy a pořadí výchozích vrstev, aktivní vrstvu nejde skrýt, nový prvek do skryté vrstvy ji zobrazí, Pero do zamčené vrstvy nekreslí, předvolby tloušťky Pera, navazování čar Pera jen při stejné tloušťce).
 - 2026-11-18: Kóty výstupku v rohu / na konci: změna rozměru mění v poměru jen dotčenou část obrysu; přesah za čelo se kótuje u prvního líce; odstupy od sousedů se u nich nekótují. Napojení na líc platí i pro oblouk (líc = soustředný oblouk). D3 K hraně: nejdřív upravovaná stěna, pak hrana; konec mimo délku druhé stěny se neprovede.
 - 2026-11-17: Kresba – viz Deník 2026-11-17 (1)–(6) (výchozí hodnoty dvojité čáry, sada barev, pořadí výběru, rozsah migrace).
 - 2026-11-15: Výstupek při přehození strany stěny: platí I1.7 beze změny (zůstane na své straně, posune se s lícem); jen při automatickém překlopení oblouku po uzavření místnosti se výstupek zrcadlí s obloukem (zůstane na vnějším líci).
