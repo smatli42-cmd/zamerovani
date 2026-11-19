@@ -7,6 +7,15 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-19 (1) – volná kóta ve výběru: výběr obdélníkem, kopie, posun a otočení skupiny (fronta bod 2)
+- **Co se změnilo:** výběr obdélníkem zahrne volné kóty (okno = měřené body i kótovací čára uvnitř, křížení = dotyk kótovací nebo vynášecí čáry; `core/rectSelect.ts`). Kopírovat zkopíruje vybrané kóty: konec na kopírovaném prvku jede s kopií, konec na prvku, který se nekopíruje, se v kopii stane pevným bodem (přemapování všech druhů konců jen v `copyDimEnd`, `core/dimRefs.ts`). Posun a otočení skupiny posune / otočí pevné body vybraných kót (`GroupOrigin.dims`). Panel skupiny ukazuje počet kót. Testy `store/freeDimCopy.test.ts` (16).
+- **Viditelně v aplikaci:** obdélníkem jde vybrat stěny i s kótami; Kopírovat zkopíruje i kóty; tažení skupiny bere kóty s sebou (i kótu k pevnému bodu). Ověřeno v prohlížeči.
+- **Rozhodnuto samostatně:** kopírují se jen **vybrané** kóty (jako v CAD; kóta mezi kopírovanými prvky, která není vybraná, se nekopíruje); konec na nekopírovaném prvku → pevný bod (kopie má stejnou délku); zámek kóty se nekopíruje (jako u ostatních kót), posun čísla podél ano; vybraná kóta s koncem na nevybraném prvku – při posunu skupiny jede jen pevný konec (délka se změní; zamčenou zastaví zámek); výběr oknem nebere ohled na číslo odtažené podél.
+- **Tabulka konec kóty × kopie (✔ test):** roh ✔, bod kresby ✔, pevný bod ✔, líc stěny ✔ (i druhý konec → pevný bod), úsek kresby ✔, okraj otvoru ✔, hrana výstupku na stěně ✔ / v rohu ✔ / na konci ✔. Výběr obdélníkem okno ✔ / křížení ✔; posun skupiny ✔; otočení ✔; smazání ve skupině ✔. Výjimky: žádné.
+- **Nález (it.fails):** kopie se odsadí jen o 300 mm; u silných stěn tělo kopie leží přes roh originálu a výstupek v rohu originálu (i kóta k němu) se do odtažení kopie nekreslí (cornerValid). Stávající chování kopírování, ne kót.
+- **Po kontrole revieweru opraveno:** pevný bod kopie se nezaokrouhluje (délka kopie přesně jako originál); kopie posunu čísla zachová vlastníka.
+- **Otevřené:** vyzkoušet; nález s odsazením kopie u rohu; zbytek fronty bodu 2 (oblouky, úhlopříčka se zachováním délek).
+
 ### 2026-11-18 (konec sezení 3)
 - **Co se změnilo:** Sezení ukončeno; za tuto část dne opravy kótování (8)–(15), posun kót tažením za číslo (16) a čísla kót nad čarami (17). Testy 703, typecheck a build OK.
 - **Viditelně v aplikaci:** viz (16), (17).
@@ -570,7 +579,21 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Otevřené:** vyzkoušet na tabletu; další krok tažení a posun jako blok (D2, D11–D14).
 - **Chyby od uživatele:** zatím žádné.
 
-## Poslední stav (2026-11-18, konec sezení 3)
+## Poslední stav (2026-11-19, sezení 1)
+
+**Hotové (na webu):** volná kóta ve výběru – výběr obdélníkem, kopie s prvky, posun a otočení skupiny (2026-11-19 (1)). Testy 718 + 1 zapsaný nález, typecheck OK. SCHEMA_VERSION 23.
+
+**Rozpracované:** nic.
+
+**Čeká na vyzkoušení:** výběr obdélníkem a kopie s kótami; čísla nad čarami (17); kóta ke druhé čáře dvojité čáry (12), kóta k hranám výstupků (13); vybrání v rohu, kóty výstupku v rohu / na konci; na tabletu vše od 2026-11-14 (i tažení kót perem a prstem).
+
+**Fronta kroků:**
+1. **Chyby kótování od uživatele** – mají přednost.
+2. Volná kóta – doplnit: oblouky (i výstupky na oblouku) (líc obloukové stěny, oblouk kresby) – potřebuje rozhodnutí, co kóta k oblouku měří; úhlopříčka se zachováním délek stěn (řešič). Posun ostatních kót (dimPlace) se nekopíruje s prvkem. Později část B KOTY-ZAMEK-EXPORT.md (hlavní kóta pro export) s exportem DXF / PDF.
+3. Pevné spojení i pro ostatní zamčené kóty (stěny, výstupky, napojení)? – otázka pro uživatele.
+4. Drobnosti: kopie odsazená o 300 mm zakryje roh originálu (výstupek v rohu se do odtažení nekreslí, it.fails ve `store/freeDimCopy.test.ts`); řetězová kóta polohy napojení i u oblouku; Do rohu / K hraně pro oblouky; řetězová kóta užšího otvoru při vypnutém vnitřním ostění; posun otvorů řetězem nehlídá výstupky / napojené příčky.
+
+## Předchozí stav (2026-11-18, konec sezení 3)
 
 **Hotové (na webu):** opravy kótování (8)–(15); **posun kóty tažením za číslo** (16 – kolmo celá řada, číslo podél, odkazové čáry k měřeným bodům; uživatel vyzkoušel na PC: funguje) a čísla kót vždy nad čarami (17). Testy 703, typecheck a build OK. SCHEMA_VERSION 23.
 

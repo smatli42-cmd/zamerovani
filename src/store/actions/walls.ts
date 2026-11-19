@@ -299,10 +299,12 @@ export interface GroupOrigin {
   leaders: Record<Id, Pt>;
   /** Body kresby (core/drawing.ts). */
   drawings: Record<Id, Pt[]>;
+  /** Pevné body vybraných volných kót (konce na prvcích jedou s prvkem samy). */
+  dims: Record<Id, { a?: Pt; b?: Pt }>;
 }
 
 export function groupOrigin(floor: Floor, items: readonly { kind: string; id: Id }[]): GroupOrigin {
-  const o: GroupOrigin = { nodes: {}, rooms: {}, texts: {}, leaders: {}, drawings: {} };
+  const o: GroupOrigin = { nodes: {}, rooms: {}, texts: {}, leaders: {}, drawings: {}, dims: {} };
   for (const it of items) {
     if (it.kind === 'wall') {
       const w = floor.walls[it.id];
@@ -310,6 +312,14 @@ export function groupOrigin(floor: Floor, items: readonly { kind: string; id: Id
         const n = floor.nodes[id];
         if (n) o.nodes[id] = { x: n.x, y: n.y };
       }
+    } else if (it.kind === 'dim' && floor.dims?.[it.id]) {
+      const d = floor.dims[it.id]!;
+      const fixed: { a?: Pt; b?: Pt } = {};
+      for (const k of ['a', 'b'] as const) {
+        const e = d[k];
+        if ('x' in e) fixed[k] = { x: e.x, y: e.y };
+      }
+      if (fixed.a || fixed.b) o.dims[it.id] = fixed;
     } else if (it.kind === 'drawing' && floor.drawings?.[it.id]) o.drawings[it.id] = floor.drawings[it.id]!.pts.map(p => ({ x: p.x, y: p.y }));
     else if (it.kind === 'room' && floor.rooms[it.id]) o.rooms[it.id] = { x: floor.rooms[it.id]!.x, y: floor.rooms[it.id]!.y };
     else if (it.kind === 'text' && floor.texts[it.id]) {
@@ -332,6 +342,11 @@ export function moveGroup(origin: GroupOrigin, dx: number, dy: number, step = 10
     for (const [id, p] of Object.entries(origin.texts)) if (floor.texts[id]) Object.assign(floor.texts[id]!, { x: p.x + mx, y: p.y + my });
     for (const [id, p] of Object.entries(origin.leaders)) if (floor.texts[id]) floor.texts[id]!.leader = { x: p.x + mx, y: p.y + my };
     for (const [id, pts] of Object.entries(origin.drawings)) if (floor.drawings?.[id]) placeDrawing(floor.drawings[id]!, pts, mx, my);
+    for (const [id, fixed] of Object.entries(origin.dims)) {
+      const d = floor.dims?.[id];
+      if (!d) continue;
+      for (const k of ['a', 'b'] as const) if (fixed[k] && 'x' in d[k]) d[k] = { x: fixed[k]!.x + mx, y: fixed[k]!.y + my };
+    }
   });
 }
 

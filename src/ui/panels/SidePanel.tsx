@@ -64,7 +64,8 @@ export function SidePanel() {
         [count('opening'), 'otvorů'],
         [count('room'), 'místností'],
         [count('text'), 'textů'],
-        [count('drawing'), 'prvků kresby']
+        [count('drawing'), 'prvků kresby'],
+        [count('dim'), 'kót']
       ].filter(([n]) => n);
       return (
         <Panel title={`Vybráno ${selection.items.length} prvků`} onClose={close}>

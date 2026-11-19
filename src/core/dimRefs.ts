@@ -283,3 +283,45 @@ export function refLabel(e: DimEnd): string {
   if ('prot' in e) return 'hrana výstupku / vybrání';
   return 'bod výkresu';
 }
+
+/** Nová id kopírovaných prvků (kopie výběru, store/actions/copy.ts); výstupky všech tří druhů v `prots`. */
+export interface CopyMaps {
+  nodes: ReadonlyMap<Id, Id>;
+  walls: ReadonlyMap<Id, Id>;
+  openings: ReadonlyMap<Id, Id>;
+  drawings: ReadonlyMap<Id, Id>;
+  prots: ReadonlyMap<Id, Id>;
+}
+
+/**
+ * Konec kopírované kóty: konec na kopírovaném prvku se přepojí na kopii; konec na prvku, který se nekopíruje
+ * (a pevný bod), se v kopii stane pevným bodem `fallback` (měřený bod originálu posunutý jako kopie). Jediné místo pro všechny druhy konců – nový druh konce doplnit i sem.
+ */
+export function copyDimEnd(e: DimEnd, maps: CopyMaps, fallback: Pt): DimEnd {
+  const fixed = { x: fallback.x, y: fallback.y }; // bez zaokrouhlení – kopie měří přesně jako originál
+  if ('node' in e) {
+    const n = maps.nodes.get(e.node);
+    return n ? { node: n } : fixed;
+  }
+  if ('drawing' in e) {
+    const n = maps.drawings.get(e.drawing);
+    return n ? { drawing: n, i: e.i } : fixed;
+  }
+  if ('wall' in e) {
+    const n = maps.walls.get(e.wall);
+    return n ? { ...e, wall: n } : fixed;
+  }
+  if ('seg' in e) {
+    const n = maps.drawings.get(e.seg);
+    return n ? { ...e, seg: n } : fixed;
+  }
+  if ('opening' in e) {
+    const n = maps.openings.get(e.opening);
+    return n ? { ...e, opening: n } : fixed;
+  }
+  if ('prot' in e) {
+    const n = maps.prots.get(e.prot);
+    return n ? { ...e, prot: n } : fixed;
+  }
+  return fixed;
+}
