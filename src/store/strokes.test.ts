@@ -85,6 +85,29 @@ describe('Guma', () => {
     expect(Object.keys(f().strokes!).sort()).toEqual([a, b, c].sort());
   });
 
+  it('guma maže i tah mezi dvěma vzdálenými vzorky pohybu (rychlé máchnutí)', async () => {
+    const { eraserTool } = await import('../tools/penTool');
+    store.set({ camera: { x: 0, y: 0, zoom: 0.1 } });
+    const id = addStroke([{ x: 0, y: 1000 }, { x: 0, y: 2000 }], 10)!;
+    const at = (x: number) => ({ world: { x, y: 1500 }, screen: { x: x * 0.1, y: 150 }, device: 'pen' as const });
+    eraserTool.down!(at(-2000));
+    eraserTool.drag!(at(2000));
+    eraserTool.up!(at(2000));
+    expect(f().strokes![id]).toBeUndefined();
+  });
+
+  it('pero do zamčené aktivní vrstvy nekreslí (hlášení)', async () => {
+    const { penTool } = await import('../tools/penTool');
+    setActiveLayer('elektro');
+    setLayerLocked('elektro', true);
+    const at = (x: number) => ({ world: { x, y: 0 }, screen: { x, y: 0 }, device: 'pen' as const });
+    penTool.down!(at(0));
+    penTool.drag!(at(500));
+    penTool.up!(at(1000));
+    expect(Object.keys(f().strokes ?? {})).toHaveLength(0);
+    expect(store.get().lockBlock?.text).toContain('zamčená');
+  });
+
   it('zamčenou ani skrytou vrstvu nemaže', () => {
     setActiveLayer('elektro');
     addStroke([{ x: 0, y: 0 }, { x: 1000, y: 0 }], 25);

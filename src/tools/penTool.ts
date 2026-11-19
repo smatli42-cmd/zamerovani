@@ -22,6 +22,14 @@ const activeColor = () => {
 
 export const penTool: Tool = {
   down(p: PointerInput) {
+    // zamčená aktivní vrstva: pero do ní nekreslí (vrstvy V2, stejně jako guma v ní nemaže)
+    const pr = store.get().project;
+    const l = layerById(pr, pr?.activeLayer);
+    if (l?.locked) {
+      raw = null;
+      store.set({ lockBlock: { key: '', text: `Aktivní vrstva „${l.name}“ je zamčená – pero do ní nekreslí.` } });
+      return;
+    }
     raw = [p.world];
     store.set({ selection: null, numpad: null });
     requestRender();
@@ -68,10 +76,16 @@ export const penTool: Tool = {
 const ERASER_PX = 14;
 let erasing = false;
 let eraserAt: Pt | null = null;
+/** Minulá poloha gumy (mm) – maže se i mezi vzorky pohybu (rychlé máchnutí). */
+let lastErase: Pt | null = null;
 
 function erase(p: PointerInput): void {
   eraserAt = p.screen;
-  eraseStrokesAt(p.world, ERASER_PX / store.get().camera.zoom);
+  const r = ERASER_PX / store.get().camera.zoom;
+  const from = lastErase ?? p.world;
+  const n = Math.max(1, Math.ceil(Math.hypot(p.world.x - from.x, p.world.y - from.y) / r));
+  for (let i = 1; i <= n; i++) eraseStrokesAt({ x: from.x + ((p.world.x - from.x) * i) / n, y: from.y + ((p.world.y - from.y) * i) / n }, r);
+  lastErase = p.world;
   requestRender();
 }
 
@@ -85,6 +99,7 @@ export function eraserMsg(): string {
 export const eraserTool: Tool = {
   down(p) {
     erasing = true;
+    lastErase = null;
     store.beginGesture();
     erase(p);
   },

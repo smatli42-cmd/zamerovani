@@ -486,7 +486,7 @@ describe('pravidlo 10: prvky pro export podle zvolených vrstev', () => {
     expect(stavba.filter(i => i.kind === 'protrusion')).toHaveLength(1);
     const only = layerContents(P(), f(), [SYS.kresba, SYS.popisky]);
     expect(only.map(g => g.layer.id)).toEqual([SYS.kresba, SYS.popisky]);
-    expect(only[0]!.items.filter(i => i.kind === 'drawing')).toHaveLength(Object.keys(f().drawings!).length);
+    expect(only[0]!.items).toHaveLength(Object.keys(f().drawings!).length + Object.keys(f().strokes!).length);
     setLayerVisible(SYS.popisky, false);
     expect(layerContents(P(), f(), [SYS.kresba, SYS.popisky]).map(g => g.layer.id)).toEqual([SYS.kresba]);
   });

@@ -36,6 +36,8 @@
 | `src/store/protrusionRow.test.ts` | Kopírování výstupku v řadě (I1.11) |
 | `src/core/layers.ts`, `src/store/layers.test.ts` | **Vrstvy** (katalog V) – jediné místo pravidel: výchozí sada, vrstva prvku, skrytá / zamčená vrstva, pohled pro nástroje, zámek vrstvy, export (`layerContents`) |
 | `src/store/actions/layers.ts`, `src/ui/LayersPanel.tsx`, `src/ui/panels/LayerField.tsx`, `src/canvas/layerDraw.ts` | Akce vrstev / panel Vrstvy / řádek Vrstva v panelu prvku / filtr stěn při kreslení po vrstvách |
+| `src/core/strokes.ts`, `src/tools/penTool.ts`, `src/canvas/drawStrokes.ts`, `src/store/actions/strokes.ts`, `src/store/strokes.test.ts` | **Ruční tah** perem a Guma (vyhlazení na vektor, zásah, guma jen v aktivní vrstvě) |
+| `src/model/stairTypes.ts` | Datové typy schodiště (oddělené z `model/types.ts`) |
 | `src/sizeGuard.test.ts` | Hlídání velikosti zdrojových souborů (nad 700 řádků selže, nad 500 upozorní) |
 | `prototyp/` | Starý první prototyp (jen inspirace) |
 | `.claude/agents/reviewer.md` | Agent pro nezávislou kontrolu kroku |

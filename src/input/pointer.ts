@@ -158,7 +158,8 @@ export function attachPointer(canvas: HTMLCanvasElement): () => void {
 
     if (mode === 'tool' || mode === 'dim') return; // už kreslíme / táhneme kótu jiným ukazatelem
     const p = input(canvas, e);
-    const overlay = handleOverlayTap(p);
+    // Pero a Guma kreslí / gumují i přes čísla kót (ťuknutí na kótu nesmí otevřít NumPad ani přepnout zámek)
+    const overlay = state.tool === 'pen' || state.tool === 'eraser' ? false : handleOverlayTap(p);
     if (overlay === 'dim' && dimPress) {
       dimPress.pointerId = e.pointerId;
       mode = 'dim';

@@ -219,14 +219,14 @@ Souřadnice v mm jako v C2 (osa Y nahoru; v aplikaci dolů). Výchozí stěna **
 
 Průřezová funkce. Pravidla jen v `src/core/layers.ts`; prvky je jen využívají. Testy `src/store/layers.test.ts`.
 
-**Model.** Vrstvy patří projektu (`Project.layers`), stejná sada pro všechna podlaží. Vrstva: `id` (stálé), `name` (měnitelný – hladina v DXF), `color` (jen pro ruční tahy a symboly, stavba si drží vzhled), `order` (pořadí kreslení), `visible`, `locked`, `system`. Vlastní vrstvu (`layerId`) má stěna, kresba (čára, obdélník, kruh, oblouk, dvojitá čára), schodiště, štítek místnosti, text a volná kóta. **Otvor (i s ostěním) a výstupek / vybrání (na stěně, na konci, v rohu) vlastní vrstvu nemají – dědí vrstvu stěny** a samostatně se nepřesouvají. Výchozí sada: systémové **Stavba, Kóty, Popisky, Kresba** (nejdou smazat ani přejmenovat, jdou skrýt a zamknout), uživatelské Elektro, Voda, Topení, Nábytek, Poznámky.
+**Model.** Vrstvy patří projektu (`Project.layers`), stejná sada pro všechna podlaží. Vrstva: `id` (stálé), `name` (měnitelný – hladina v DXF), `color` (jen pro ruční tahy a symboly, stavba si drží vzhled), `order` (pořadí kreslení), `visible`, `locked`, `system`. Vlastní vrstvu (`layerId`) má stěna, kresba (čára, obdélník, kruh, oblouk, dvojitá čára), schodiště, štítek místnosti, text, volná kóta a ruční tah. **Otvor (i s ostěním) a výstupek / vybrání (na stěně, na konci, v rohu) vlastní vrstvu nemají – dědí vrstvu stěny** a samostatně se nepřesouvají. Výchozí sada: systémové **Stavba, Kóty, Popisky, Kresba** (nejdou smazat ani přejmenovat, jdou skrýt a zamknout), uživatelské Elektro, Voda, Topení, Nábytek, Poznámky.
 
 | ID | Pravidlo |
 |---|---|
 | V1 | **Skrytá vrstva:** prvek se nekreslí, nechytá (přichytávání), nevybírá (ťuknutím ani obdélníkem), tedy ani nemaže a neposouvá; nepočítá se do automatických kót mezi prvky (řada napojení). Do geometrie (místnosti, napojení těl, sdílené rohy) se počítá dál a úprava viditelného prvku jím smí pohnout (vy). |
 | V2 | **Zamčená vrstva:** prvek je vidět a chytá, ale nevybere se a nedá se posunout, smazat ani tažením změnit. Úprava jiného prvku, která by ho změnila (sdílený roh, napojení, zamčená kóta, změna délky, nový otvor na zamčené stěně), se **neprovede s hlášením** (vy). Klikací čísla kót zamčené vrstvy (u automatických kót vrstva Kóty) nereagují. |
 | V3 | **Přesun do jiné vrstvy:** vybraný prvek (i skupina) jedním ťuknutím (panel prvku → Přesunout do vrstvy), jeden krok Zpět. Stěna bere otvory a výstupky s sebou. |
-| V4 | **Nový prvek:** stěna a schodiště → Stavba; volná kóta → Kóty; text a štítek místnosti → Popisky; kresba (a později ruční tah, symbol) → aktivní vrstva, a když je aktivní systémová vrstva, tak Kresba (vy). Jinam přesunem (V3). Kusy vzniklé dělením / ořezem zůstanou ve vrstvě původního prvku. Nový prvek do skryté vrstvy tu vrstvu zobrazí (jinak by po vytvoření zmizel). Čára kresby navazuje jen na čáru ve vrstvě nové kresby; stěny různých vrstev se neslučují a stěna zamčené vrstvy se se svým pokračováním nesloučí. |
+| V4 | **Nový prvek:** stěna a schodiště → Stavba; volná kóta → Kóty; text a štítek místnosti → Popisky; kresba (a později symbol) → aktivní vrstva, a když je aktivní systémová vrstva, tak Kresba; **ruční tah → vždy aktivní vrstva** (i systémová; schválená tabulka a zadání kroku 2: „Pero kreslí do AKTIVNÍ vrstvy“) (vy). Pero do zamčené aktivní vrstvy nekreslí. Jinam přesunem (V3). Kusy vzniklé dělením / ořezem zůstanou ve vrstvě původního prvku. Nový prvek do skryté vrstvy tu vrstvu zobrazí (jinak by po vytvoření zmizel). Čára kresby navazuje jen na čáru ve vrstvě nové kresby; stěny různých vrstev se neslučují a stěna zamčené vrstvy se se svým pokračováním nesloučí. |
 | V5 | **Kopie** zůstane ve vrstvě originálu. |
 | V6 | **Zpět / Vpřed:** vytvoření, přejmenování, barva, pořadí, viditelnost, zámek, přesun prvku i smazání vrstvy jsou v historii. Volba aktivní vrstvy ne. |
 | V7 | **Smazání neprázdné vrstvy:** dialog – přesunout obsah do vybrané vrstvy / smazat i s obsahem / zrušit; nikdy potichu. Platí pro všechna podlaží. Systémovou ani zamčenou vrstvu smazat nejde. |
@@ -237,20 +237,20 @@ Průřezová funkce. Pravidla jen v `src/core/layers.ts`; prvky je jen využíva
 
 ### V-tabulka: pravidlo × typ prvku (✔ test, ✔k průchod kódem, n.a. nedává smysl)
 
-| pravidlo | stěna | otvor | ostění | výstupek | čára | dvojitá čára | kruh / oblouk | volná kóta | autom. kóty | text | štítek místn. | schodiště | značka detailu |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| V1 skrytá | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | n.a. |
-| V2 zamčená | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔k | ✔ | ✔ | ✔ | n.a. |
-| V3 přesun | ✔ | ✔ se stěnou | ✔ se stěnou | ✔ se stěnou | ✔ | ✔ | ✔ | ✔ | n.a. | ✔ | ✔ | ✔ | n.a. |
-| V4 výchozí | ✔ Stavba | ✔ stěna | ✔ stěna | ✔ stěna | ✔ aktivní | ✔ aktivní | ✔ aktivní | ✔ Kóty | ✔ Kóty | ✔ Popisky | ✔ Popisky | ✔ Stavba | n.a. |
-| V5 kopie | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | n.a. | ✔ | ✔ | ✔ | n.a. |
-| V6 historie | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | n.a. |
-| V7 smazání vrstvy | ✔ | ✔ | ✔k | ✔k | ✔ | ✔k | ✔k | ✔ | n.a. | ✔k | ✔k | ✔k | n.a. |
-| V8 kóty | ✔ | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | ✔ | ✔ | n.a. | n.a. | n.a. | n.a. |
-| V9 JSON | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | n.a. | ✔ | ✔ | ✔ | n.a. |
-| V10 export | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | n.a. |
+| pravidlo | stěna | otvor | ostění | výstupek | čára | dvojitá čára | kruh / oblouk | volná kóta | autom. kóty | text | štítek místn. | schodiště | ruční tah | značka detailu |
+|---|---|---|---|---|---|---|---|---|---|---|---|---| --- |---|
+| V1 skrytá | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | n.a. |
+| V2 zamčená | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔k | ✔ | ✔ | ✔ | ✔ | n.a. |
+| V3 přesun | ✔ | ✔ se stěnou | ✔ se stěnou | ✔ se stěnou | ✔ | ✔ | ✔ | ✔ | n.a. | ✔ | ✔ | ✔ | ✔ | n.a. |
+| V4 výchozí | ✔ Stavba | ✔ stěna | ✔ stěna | ✔ stěna | ✔ aktivní | ✔ aktivní | ✔ aktivní | ✔ Kóty | ✔ Kóty | ✔ Popisky | ✔ Popisky | ✔ Stavba | ✔ aktivní | n.a. |
+| V5 kopie | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | n.a. | ✔ | ✔ | ✔ | ✔ | n.a. |
+| V6 historie | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | n.a. |
+| V7 smazání vrstvy | ✔ | ✔ | ✔k | ✔k | ✔ | ✔k | ✔k | ✔ | n.a. | ✔k | ✔k | ✔k | ✔k | n.a. |
+| V8 kóty | ✔ | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | ✔ | ✔ | n.a. | n.a. | n.a. | n.a. | n.a. |
+| V9 JSON | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | n.a. | ✔ | ✔ | ✔ | ✔ | n.a. |
+| V10 export | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | n.a. |
 
-Značka detailu v aplikaci zatím není (n.a.). Ruční tah, symbol, špendlík, fotka přibudou později – každý nový druh prvku s vrstvou se přidá do `OWN_KINDS` v `core/layers.ts` a do této tabulky.
+Značka detailu v aplikaci zatím není (n.a.). Ruční tah (krok 2, `core/strokes.ts`) je hotový: vektor, tloušťka v mm výkresu, barva vrstvy, nechytá, do BIM nejde; Guma maže celé tahy jen v aktivní vrstvě (ne skryté ani zamčené). Symbol, špendlík, fotka přibudou později – každý nový druh prvku s vrstvou se přidá do `OWN_KINDS` v `core/layers.ts` a do této tabulky.
 
 ## Zdroje
 - Revit, napojení stěn: [Change the Configuration of a Wall Join](https://help.autodesk.com/cloudhelp/2022/ENU/RevitLT-ArchDes/files/GUID-19EAF7A9-331F-4271-94CC-43B76B13011E.htm), [Modify Wall Joins](https://help.autodesk.com/cloudhelp/2023/ENU/Revit-ArchDesign/files/GUID-7AFCACAC-9ED2-44A4-A30E-7D7ED16E01E5.htm), [Revit Pure: wall joins tips](https://bimpure.com/blog/8-tips-to-understand-revit-wall-joins)
