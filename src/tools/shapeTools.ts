@@ -10,7 +10,8 @@ import { arcGeometry } from '../core/arc';
 import { dist, roundTo } from '../core/geometry';
 import type { SnapResult } from '../core/snapping';
 import type { Pt } from '../model/types';
-import { addDrawArc, addDrawCircle, addDrawRect } from '../store/actions';
+import { addDrawArc, addDrawCircle, addDrawRect, addStair } from '../store/actions';
+import { defaultSteps, flightFromCorners } from '../core/stairs';
 import { store } from '../store/store';
 import { pickAny } from './pick';
 import { grabArcHandle, selectTool } from './selectTool';
@@ -119,6 +120,32 @@ export const rectTool = makeTool({
     const q = toScreen(b, cam);
     ctx.strokeRect(Math.min(p.x, q.x), Math.min(p.y, q.y), Math.abs(q.x - p.x), Math.abs(q.y - p.y));
     return `${Math.abs(Math.round(b.x - a.x))} × ${Math.abs(Math.round(b.y - a.y))} mm`;
+  }
+});
+
+/**
+ * Schodiště (přímé rameno) se táhne z rohu do protějšího rohu: osa podél delší strany, první stupeň na straně
+ * začátku tažení. L / U se přidá v panelu (podesta + další rameno).
+ */
+export const stairTool = makeTool({
+  begin: snap,
+  move: (_s, p) => snap(p),
+  commit: (a, b) => void addStair(a, b),
+  preview(ctx, a, b, cam) {
+    const p = toScreen(a, cam);
+    const q = toScreen(b, cam);
+    ctx.strokeRect(Math.min(p.x, q.x), Math.min(p.y, q.y), Math.abs(q.x - p.x), Math.abs(q.y - p.y));
+    const f = flightFromCorners('', a, b, 2);
+    const len = Math.round(Math.hypot(f.b.x - f.a.x, f.b.y - f.a.y));
+    // směr výstupu v náhledu
+    const fa = toScreen(f.a, cam);
+    const fb = toScreen(f.b, cam);
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(fa.x, fa.y);
+    ctx.lineTo(fb.x, fb.y);
+    ctx.stroke();
+    return `${len} × ${Math.round(f.width)} mm, ${defaultSteps(len)} st.`;
   }
 });
 

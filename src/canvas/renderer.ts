@@ -1,6 +1,7 @@
 /**
  * Vykreslování plátna. Kreslí se jen po změně (requestRender), ne neustále.
  */
+import { drawStairDims, drawStairs } from './drawStairs';
 import { store } from '../store/store';
 import { tools } from '../tools/registry';
 import { drawBodyDims, drawDims, drawProtrusionDims } from './drawDims';
@@ -85,6 +86,8 @@ function render(): void {
     drawOpenings(ctx, floor, cam, state.selection, state.hover);
     // kresba a její šrafy nad výplní stěn i otvory (překlad nad otvorem)
     drawDrawings(ctx, floor, cam, state.selection, state.hover);
+    // schodiště – 2D značka nad výplní stěn (core/stairs.ts)
+    drawStairs(ctx, floor, cam, state.selection, state.hover);
     drawNodes(ctx, floor, cam, state.selection, state.hover);
     drawRooms(ctx, floor, cam, state.selection);
     drawTexts(ctx, floor, cam, state.selection);
@@ -100,6 +103,8 @@ function render(): void {
     }
     // volné kóty jsou samostatné prvky – kreslí se i při skrytých automatických kótách
     drawFreeDims(ctx, floor, cam, state.settings.dimScale, state.selection, state.hover);
+    // kóty schodiště jen u vybraného schodiště
+    drawStairDims(ctx, floor, cam, state.settings.dimScale, state.selection);
     // čísla kót až nad všemi čarami kót (posunuté číslo na čáře sousední kóty zůstane čitelné)
     flushDimLabels();
     drawArcHandle(ctx, floor, cam, state.selection);

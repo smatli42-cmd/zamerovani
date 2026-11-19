@@ -7,6 +7,32 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-19 (6) – schodiště jako 2D značka (nový prvek, průřezové)
+- **Rozhodnuto uživatelem:** schodiště je jen 2D značka v půdorysu, žádné 3D (to až v BIM). Výška a počet stupňů se zadávají jen v panelu vlastností, výška stupně se dopočítá; značka se kreslí podle vlastností; podrobnosti se doladí postupně.
+- **Co se změnilo:** (a) samostatný commit beze změny chování: volné prvky (štítek místnosti, text, kresba, volná kóta) mají mazání, kopii, posun a otočení skupiny a výběr obdélníkem na jednom místě `core/looseElements.ts`. (b) Nový prvek `Floor.stairs` (SCHEMA_VERSION 25 bez převodu): ramena (osa a→b, šířka, počet stoupání, napojení L / U, hloubka podesty) a podesty; geometrie, nášlapy (N − 1), šipka, popisek „N × v/š“, L / U v `core/stairs.ts`; nástroj 🪜 Schodiště (tažení z rohu do rohu, přichytávání jako kresba); panel `ui/panels/StairPanel.tsx`; kóty `stair-dim` (délka / šířka ramene, hloubka podesty) jen u vybraného, se zámky; ruční obrys z uzavřené kresby (tlačítko „Označit jako schodiště“). Testy `store/stairs.test.ts` (20), `canvas/dimPlace.test.ts` (kóty schodiště).
+- **Viditelně v aplikaci:** nástroj Schodiště v liště; tažením vznikne přímé rameno (osa podél delší strany, první stupeň na straně začátku tažení); v panelu výška, počet stupňů, dopočtená výška a šířka stupně, tlačítka L / U vlevo / vpravo, směr výstupu, otočení o 90°, popisek zap / vyp; ťuknutí na hrot šipky přepne směr; kóty ramen jdou zadat. Ověřeno v prohlížeči (přímé, L, U, výška 2800 → 117 mm, přepnutí směru, tažení, uložení a znovunačtení).
+- **Rozhodnuto samostatně:** rameno se kreslí tažením (jako Obdélník), ne dvěma samostatnými ťuknutími; výchozí počet stoupání podle délky (cca 270 mm na stupeň), nové rameno L / U převezme šířku a počet stoupání posledního; L = podesta hloubky = šířka nového ramene, U = podesta přes obě ramena bez mezery mezi rameny; výška schodiště je jedna pro celé schodiště, počet stoupání má každé rameno; popisek bez výšky „N st. / š“, při různých šířkách stupně ramen bez š; přepnutí směru jen otočí šipku (data ramen se nemění, příznak `reverse`); kóta délky ramene posouvá vždy konec b (i při obráceném výstupu); podesta L nesmí být mělčí než šířka navazujícího ramene; ruční obrys: osa podél nejdelší hrany, „o 90°“ ji otočí; ruční obrys nemá kóty (rozměry má kresba, ze které vznikl); šipka na podlaží, kam schodiště vede, se neřeší (schodiště se mezi podlažími nepřenáší).
+- **Tabulka pravidlo × prvek** (✔ ověřeno testem / průchodem kódem, ✗ chybí, n.a. nedává smysl; „kresba“ = čára, dvojitá čára, kruh / oblouk – společný kód `core/drawing.ts`; ostění je součást otvoru; značka detailu v aplikaci zatím není → n.a. všude):
+
+| pravidlo | stěna | otvor | ostění | výstupek | dvojitá čára | čára | kruh/oblouk | kóta | štítek místn. | schodiště |
+|---|---|---|---|---|---|---|---|---|---|---|
+| výběr klepnutím (`tools/pick.ts`) | ✔ | ✔ | ✔ s otvorem | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| posun / tažení | ✔ (D12) | ✔ po stěně | ✔ s otvorem | n.a. (patří stěně) | ✔ | ✔ | ✔ | ✔ číslo / odsazení | ✔ | ✔ |
+| tažení koncových bodů | ✔ rohy | n.a. | n.a. | ✔ vzepětí úseku | ✔ úchyty | ✔ | ✔ | n.a. (konce na prvcích) | n.a. | ✗ (rozměry kótou / panelem) |
+| přichytávání při kreslení | ✔ `snapping.ts` | ✔ na stěnu | n.a. | ✔ | ✔ `drawSnap` | ✔ | ✔ | ✔ `dimRefs` | ✗ volně | ✔ `drawSnap` |
+| přichytávání k prvku | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | n.a. | n.a. | ✗ (k rohům schodiště se nic nepřichytí, kóta k němu ne) |
+| kóty a zámky (`core/dimLock.ts`) | ✔ | ✔ | ✔ | ✔ | ✔ volnou kótou | ✔ | ✔ | ✔ | n.a. | ✔ délka, šířka, podesta; ✗ odstupy od stěn |
+| mazání | ✔ | ✔ | ✔ s otvorem | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| kopírování | ✔ | ✔ schránka / se stěnou | ✔ | ✔ se stěnou | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ (nová ID, posunutá čísla kót) |
+| zpět / vpřed (`store.edit`) | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| pořadí vykreslení (nad výplní stěn) | základ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| uložení a migrace | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ (25) |
+| JSON (záloha – strukturovaný export zatím není) | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+
+- **Kde pravidlo dosud platí zvlášť:** výběr ťuknutím má pořadí priority po druzích v `tools/pick.ts` (jedna funkce); mazání, kopie a posun skupiny stěn, rohů, otvorů a výstupků mají vlastní kód vázaný na stěnu (`delete.ts`, `copy.ts`, `groupOrigin`); tažení štítku místnosti a textu má vlastní druh tažení v `selectTool.ts`; přichytávání je ve třech modulech (stěny `core/snapping.ts`, kresba a schodiště `tools/drawSnap.ts`, kóty `core/dimRefs.ts`); pořadí kreslení je seznam v `canvas/renderer.ts`.
+- **Po kontrole revieweru opraveno:** šipka přes celou osu bránila tažení (klikací je jen hrot); osa ručního obrysu u pootočeného tvaru (teď podle nejdelší hrany); podesta L mělčí než rameno; kopie nepřenášela posunutá čísla kót; otočení o 90° v panelu; drobnosti (popisek ručního obrysu, šipka nekonvexního obrysu, komentáře).
+- **Otevřené:** vyzkoušet na tabletu; přichytávání k rohům schodiště a volná kóta k hraně schodiště (odstupy od stěn); úchyty ramen; nápověda nástroje v liště; zabíhavé / točité stupně automaticky (zatím ruční obrys).
+
 ### 2026-11-19 (5) – rozhodnutí uživatele: kótování je zatím hotové
 - **Rozhodnuto uživatelem:** úhlopříčkou se dům běžně nezaměřuje – úhlopříčka v místnosti rozdělené příčkou do T zůstane, jak je (úprava se neprovede). Kóty teď fungují; další opravy jen podle problémů nalezených při používání a testování.
 - **Co se změnilo:** jen fronta v „Poslední stav“ (kótování vypuštěno, další na řadě nové prvky výkresu podle původního plánu).
@@ -606,15 +632,15 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Poslední stav (2026-11-19, sezení 1)
 
-**Hotové (na webu):** volná kóta ve výběru – výběr obdélníkem, kopie s prvky, posun a otočení skupiny (2026-11-19 (1)); **kóta k oblouku** (2026-11-19 (2)); **úhlopříčka místnosti se zachováním délek stěn** (2026-11-19 (4)). Testy 751 + 1 zapsaný nález, typecheck a build OK. SCHEMA_VERSION 24.
+**Hotové (na webu):** **schodiště jako 2D značka** (2026-11-19 (6)); volná kóta ve výběru – výběr obdélníkem, kopie s prvky, posun a otočení skupiny (2026-11-19 (1)); **kóta k oblouku** (2026-11-19 (2)); **úhlopříčka místnosti se zachováním délek stěn** (2026-11-19 (4)). Testy 772 + 1 zapsaný nález, typecheck a build OK. SCHEMA_VERSION 25.
 
 **Rozpracované:** nic.
 
-**Čeká na vyzkoušení:** úhlopříčka místnosti; kóta k oblouku; výběr obdélníkem a kopie s kótami; čísla nad čarami (17); kóta ke druhé čáře dvojité čáry (12), kóta k hranám výstupků (13); vybrání v rohu, kóty výstupku v rohu / na konci; na tabletu vše od 2026-11-14 (i tažení kót perem a prstem).
+**Čeká na vyzkoušení:** schodiště (přímé, L, U, ruční obrys); úhlopříčka místnosti; kóta k oblouku; výběr obdélníkem a kopie s kótami; čísla nad čarami (17); kóta ke druhé čáře dvojité čáry (12), kóta k hranám výstupků (13); vybrání v rohu, kóty výstupku v rohu / na konci; na tabletu vše od 2026-11-14 (i tažení kót perem a prstem).
 
 **Fronta kroků:**
 1. **Chyby od uživatele** (z používání a testování) – mají přednost. Kótování je jinak hotové (rozhodnutí uživatele 2026-11-19); úhlopříčka v místnosti s příčkou do T se dělat nebude.
-2. Nové prvky výkresu podle původního plánu: schodiště → zařizovací předměty a symboly → poznámkový špendlík → fotky se značkou směru pohledu. Pořadí potvrdí uživatel.
+2. Schodiště – doladit podle zkoušky uživatele (přichytávání k rohům schodiště, kóta odstupu od stěny, úchyty). Pak zařizovací předměty a symboly → poznámkový špendlík → fotky se značkou směru pohledu.
 3. Nakonec výstupy: PDF podle velikosti výkresu s razítkem, DXF s hladinami (s tím část B KOTY-ZAMEK-EXPORT.md – hlavní kóta pro export).
 4. Kóty, jen když se ukáže potřeba: pevné spojení i pro ostatní zamčené kóty; posun kót (dimPlace) se nekopíruje s prvkem; drobnosti: kopie odsazená o 300 mm zakryje roh originálu (výstupek v rohu se do odtažení nekreslí, it.fails ve `store/freeDimCopy.test.ts`); Do rohu / K hraně pro oblouky; řetězová kóta užšího otvoru při vypnutém vnitřním ostění; posun otvorů řetězem nehlídá výstupky / napojené příčky.
 

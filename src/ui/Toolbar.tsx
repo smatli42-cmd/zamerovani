@@ -23,6 +23,7 @@ const TOOLS: { id: ToolId; icon: string; label: string; title: string }[] = [
   { id: 'rect', icon: '▭', label: 'Obdélník', title: 'Tažením nakreslit obdélník (kresba – sloup, komín…)' },
   { id: 'circle', icon: '◯', label: 'Kruh', title: 'Tažením od středu nakreslit kruh' },
   { id: 'arc', icon: '◠', label: 'Oblouk', title: 'Tažením mezi krajními body nakreslit oblouk, vzepětí se upřesní kótou' },
+  { id: 'stair', icon: '🪜', label: 'Schodiště', title: 'Schodiště: tažením z rohu do protějšího rohu nakreslit rameno (první stupeň na straně začátku); L / U, výšku a počet stupňů v panelu' },
   { id: 'dim', icon: '📏', label: 'Kóta', title: 'Volná kóta: ťukni na dva body (roh, bod kresby, místo ve výkresu); délku zadáš ťuknutím na číslo, odsazení tažením za čáru' },
   { id: 'leader', icon: '↗️', label: 'Šipka', title: 'Odkazová šipka s textem: táhni od místa, na které se ukazuje, tam kam má přijít text' },
   { id: 'text', icon: '🅰️', label: 'Text', title: 'Ťuknutím vložit text; ťuknutím na text ho upravit, tažením přesunout' },

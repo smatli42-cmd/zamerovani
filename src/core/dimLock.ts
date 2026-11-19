@@ -8,6 +8,7 @@
  * Zámek je jediný mechanismus držení: řešič délek drží jen zamčené délky stěn a každá úprava výkresu
  * (store.edit) se zkontroluje funkcí `lockViolation` – když by změnila hodnotu zamčené kóty, neprovede se.
  */
+import { stairDimValue, type StairDim } from './stairs';
 import type { Floor, Id, Pt } from '../model/types';
 import type { MoveTarget } from './solver';
 import type { RevealPart } from './doorLayout';
@@ -64,7 +65,9 @@ export type DimTarget =
   /** Kóta výstupku na konci stěny: podél líců, přesah za čelo, hloubka od líců. */
   | { kind: 'end-dim'; protrusionId: Id; dim: EndDim }
   /** Volná kóta (core/freeDim.ts); `move` = konec, který se zadáním posune (pro zámek nezáleží). */
-  | { kind: 'free-dim'; dimId: Id; move: 'a' | 'b' };
+  | { kind: 'free-dim'; dimId: Id; move: 'a' | 'b' }
+  /** Kóta schodiště: délka / šířka ramene, hloubka podesty před ramenem (core/stairs.ts; mění jen schodiště). */
+  | { kind: 'stair-dim'; stairId: Id; flightId: Id; dim: StairDim };
 
 /** Jednoznačný klíč kóty (u délky stěny nezáleží na tom, který roh se posouvá). */
 export function dimKey(t: DimTarget): string {
@@ -96,6 +99,8 @@ export function dimKey(t: DimTarget): string {
       return `${t.kind}:${t.wallId}:${t.nodeId}:${t.to}`;
     case 'free-dim':
       return `${t.kind}:${t.dimId}`;
+    case 'stair-dim':
+      return `${t.kind}:${t.stairId}:${t.flightId}:${t.dim}`;
   }
 }
 
@@ -119,6 +124,8 @@ export function ownersExist(floor: Floor, t: DimTarget): boolean {
       return !!floor.walls[t.wallId] && !!floor.nodes[t.nodeId];
     case 'free-dim':
       return !!floor.dims?.[t.dimId];
+    case 'stair-dim':
+      return !!floor.stairs?.[t.stairId]?.flights.some(f => f.id === t.flightId);
     default:
       return !!floor.walls[t.wallId];
   }
@@ -186,6 +193,10 @@ export function dimValue(floor: Floor, t: DimTarget): number | null {
     }
     case 'free-dim':
       return freeDimValue(floor, t.dimId);
+    case 'stair-dim': {
+      const st = floor.stairs?.[t.stairId];
+      return st ? stairDimValue(st, t.flightId, t.dim) : null;
+    }
     case 'junction-gap': {
       const w = floor.walls[t.wallId];
       const a = w && floor.nodes[w.a];
@@ -317,6 +328,8 @@ export function describeDim(floor: Floor, t: DimTarget): string {
         return 'poloha napojení';
       case 'free-dim':
         return 'kóta';
+      case 'stair-dim':
+        return t.dim === 'length' ? 'délka ramene' : t.dim === 'width' ? 'šířka ramene' : 'hloubka podesty';
     }
   })();
   return name + num;

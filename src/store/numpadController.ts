@@ -43,6 +43,8 @@ export function openTarget(target: NumPadTarget): void {
   const selection =
     target.kind === 'free-dim'
       ? ({ kind: 'dim', id: target.dimId } as const)
+      : target.kind === 'stair-dim'
+      ? ({ kind: 'stair', id: target.stairId } as const)
       : target.kind === 'protrusion-dim' || target.kind === 'protrusion-sagitta' || target.kind === 'corner-dim' || target.kind === 'end-dim'
       ? ({ kind: 'protrusion', id: target.protrusionId } as const)
       : target.kind === 'junction-gap' ||
@@ -236,7 +238,7 @@ function commitAndNext(): void {
     return store.set({ numpad: null });
   }
 
-  if (t.kind === 'field' || t.kind === 'free-dim' || t.kind === 'wall-sagitta' || t.kind === 'circle-diameter' || t.kind === 'wall-thickness' || t.kind === 'wall-face-length' || t.kind === 'opening-reveal') return store.set({ numpad: null });
+  if (t.kind === 'field' || t.kind === 'free-dim' || t.kind === 'stair-dim' || t.kind === 'wall-sagitta' || t.kind === 'circle-diameter' || t.kind === 'wall-thickness' || t.kind === 'wall-face-length' || t.kind === 'opening-reveal') return store.set({ numpad: null });
 
   // Odstupy skupiny stěn od okolí: vlevo → vpravo → nahoře → dole, pak konec
   if (t.kind === 'comp-gap') {

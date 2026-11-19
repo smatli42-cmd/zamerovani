@@ -37,6 +37,7 @@ export function migrateProject(raw: unknown): Project {
   // 21 → 22: konec volné kóty na hraně výstupku / vybrání (`prot`) – bez převodu
   // 22 → 23: poloha kót posunutá tažením za číslo (floor.dimPlace) – nepovinné pole, bez převodu
   // 23 → 24: konec volné kóty na oblouku (`arcWall`, `arcSeg`) a ve středu oblouku (`center`) – bez převodu
+  // 24 → 25: schodiště (floor.stairs) – nepovinné pole, bez převodu
   const old = p.schema ?? 1;
   const floors = p.floors.map(f => {
     const j = joinSemicircles(convertShapesToWalls(f));

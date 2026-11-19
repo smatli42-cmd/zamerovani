@@ -21,6 +21,7 @@ function title(floor: Floor | null, t: NumPadTarget): string {
   if (t.kind === 'protrusion-sagitta') return 'Výstupek – vzepětí oblouku';
   if (t.kind === 'corner-dim') return `Výstupek v rohu – podél ${t.dim === 'a' ? '1.' : '2.'} stěny`;
   if (t.kind === 'free-dim') return 'Kóta';
+  if (t.kind === 'stair-dim') return `Schodiště – ${{ length: 'délka ramene', width: 'šířka ramene', depth: 'hloubka podesty' }[t.dim]}`;
   if (t.kind === 'end-dim') return `Výstupek na konci stěny – ${END_DIM_LABEL[t.dim]}`;
   if (t.kind === 'protrusion-dim') {
     const p = floor?.protrusions?.[t.protrusionId];

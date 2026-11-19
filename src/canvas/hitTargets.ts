@@ -12,6 +12,8 @@ export type HitAction =
   | { type: 'room'; roomId: Id }
   /** Dvojitá šipka u vybrané stěny – přehodí stranu těla. */
   | { type: 'flipWall'; wallId: Id }
+  /** Šipka výstupu vybraného schodiště – přepne směr. */
+  | { type: 'flipStair'; stairId: Id }
   /** Ikona zámku u zamčené kóty – ťuknutí kótu odemkne / zamkne. */
   | { type: 'lock'; target: DimTarget };
 

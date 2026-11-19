@@ -18,7 +18,7 @@ import { pruneFreeDims, rescueFreeDims } from '../core/freeDim';
 import { followDisturbsEdit, followLockedDims } from '../core/dimFollow';
 import { keepOpeningsOnResizedWalls } from '../core/openingChain';
 
-export type ToolId = 'select' | 'wall' | 'line' | 'trim' | 'split' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'drawLine' | 'drawDouble' | 'text' | 'leader' | 'dim' | 'paste' | 'pan';
+export type ToolId = 'select' | 'wall' | 'line' | 'trim' | 'split' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'drawLine' | 'drawDouble' | 'text' | 'leader' | 'dim' | 'stair' | 'paste' | 'pan';
 
 export type SingleSelection =
   | { kind: 'wall'; id: Id }
@@ -31,7 +31,9 @@ export type SingleSelection =
   /** Kresba – grafický prvek (čára, tvar, dvojitá čára; core/drawing.ts). */
   | { kind: 'drawing'; id: Id }
   /** Volná kóta mezi dvěma body (core/freeDim.ts). */
-  | { kind: 'dim'; id: Id };
+  | { kind: 'dim'; id: Id }
+  /** Schodiště – 2D značka (core/stairs.ts). */
+  | { kind: 'stair'; id: Id };
 
 /** Výběr: jeden prvek, skupina prvků (výběr obdélníkem) nebo nic. */
 export type Selection = SingleSelection | { kind: 'multi'; items: SingleSelection[] } | null;

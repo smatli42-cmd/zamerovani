@@ -13,7 +13,7 @@ import { toWorld, zoomAt } from '../canvas/view';
 import { chooseNodeAt, findNodeNear } from '../core/floorQueries';
 import type { Pt } from '../model/types';
 import { openTarget, setMoveTarget } from '../store/numpadController';
-import { beginDimDrag, dragDim, flipWallSide, toggleDimLock } from '../store/actions';
+import { beginDimDrag, dragDim, flipStairDirection, flipWallSide, toggleDimLock } from '../store/actions';
 import type { DragStart } from '../core/dimPlace';
 import { store } from '../store/store';
 import { tools } from '../tools/registry';
@@ -113,6 +113,11 @@ function handleOverlayTap(p: PointerInput): boolean | 'dim' {
   if (box?.action.type === 'flipWall') {
     cancelTool();
     flipWallSide(box.action.wallId);
+    return true;
+  }
+  if (box?.action.type === 'flipStair') {
+    cancelTool();
+    flipStairDirection(box.action.stairId);
     return true;
   }
   return false;

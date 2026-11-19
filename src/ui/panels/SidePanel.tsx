@@ -12,6 +12,7 @@ import { DimPanel } from './DimPanel';
 import { OpeningPanel } from './OpeningPanel';
 import { CornerProtrusionPanel, EndProtrusionPanel, ProtrusionPanel } from './ProtrusionPanel';
 import { RoomPanel } from './RoomPanel';
+import { StairPanel } from './StairPanel';
 import { TextPanel } from './TextPanel';
 import { WallPanel } from './WallPanel';
 
@@ -51,6 +52,10 @@ export function SidePanel() {
       const d = floor.dims?.[selection.id];
       return d ? <DimPanel key={d.id} floor={floor} d={d} /> : null;
     }
+    case 'stair': {
+      const st = floor.stairs?.[selection.id];
+      return st ? <StairPanel key={st.id} s={st} /> : null;
+    }
     case 'protrusion': {
       const p = floor.protrusions?.[selection.id];
       const cp = floor.cornerProtrusions?.[selection.id];
@@ -65,6 +70,7 @@ export function SidePanel() {
         [count('room'), 'místností'],
         [count('text'), 'textů'],
         [count('drawing'), 'prvků kresby'],
+        [count('stair'), 'schodišť'],
         [count('dim'), 'kót']
       ].filter(([n]) => n);
       return (

@@ -17,6 +17,7 @@ import { setHostedGap } from '../../core/hosting';
 import { defaultArcSign, setProtrusionSagitta } from '../../core/protrusionEdit';
 import { applyCornerDim, applyEndDim, applyProtrusionDim } from './protrusions';
 import { freeDimValue, setFreeDimLength } from '../../core/freeDim';
+import { setStairDim } from '../../core/stairs';
 
 /**
  * Míra líce u stěny s osou uprostřed (2b): délka osy se upraví tak, aby měl líc zadanou délku
@@ -87,6 +88,12 @@ export function applyNumpadValue(t: NumPadTarget, value: number, overrideLock = 
 
   function run(floor: Floor): void {
     if (t.kind === 'field') return;
+    if (t.kind === 'stair-dim') {
+      // schodiště: mění se jen schodiště (navazující ramena a podesty se dorovnají)
+      const st = floor.stairs?.[t.stairId];
+      ok = !!st && setStairDim(st, t.flightId, t.dim, Math.round(value));
+      return;
+    }
     if (t.kind === 'wall-face-length') {
       ok = setFaceLength(floor, t.wallId, t.face, value);
       // otvory zůstanou ve výkresu na místě (jako u celkové délky stěny)

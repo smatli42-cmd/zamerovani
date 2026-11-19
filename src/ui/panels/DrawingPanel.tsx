@@ -4,7 +4,7 @@
  */
 import { canHatch, DRAW_COLOR_LABELS, HATCH_LABELS, rectSize } from '../../core/drawing';
 import type { Drawing, HatchKind } from '../../model/types';
-import { deleteSelection, duplicateSelection, flipDrawingSide, setDrawingBulge, setDrawingRadius, setDrawingRect, setDrawingWidth, updateDrawing } from '../../store/actions';
+import { deleteSelection, drawingToStair, duplicateSelection, flipDrawingSide, setDrawingBulge, setDrawingRadius, setDrawingRect, setDrawingWidth, updateDrawing } from '../../store/actions';
 import { close, DRAW_LINE_STYLES } from './common';
 import { NumField, Panel, Seg } from './fields';
 
@@ -97,6 +97,11 @@ export function DrawingPanel({ d }: { d: Drawing }) {
         </>
       ) : (
         <p class="muted small">Šrafu jde zapnout jen u uzavřeného tvaru.</p>
+      )}
+      {hatchOk && d.shape !== 'double' && (
+        <button class="btn" onClick={() => drawingToStair(d.id)} title="Uzavřený tvar se stane schodištěm s ručním obrysem (zabíhavé, točité…); doplní se počet stupňů a směr">
+          🪜 Označit jako schodiště
+        </button>
       )}
       <div class="panel-actions">
         <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>

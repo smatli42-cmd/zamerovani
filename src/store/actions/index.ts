@@ -17,3 +17,4 @@ export { splitWall, cutWallSegment, splitPoint, canSplit, type SplitResult } fro
 export { toggleDimLock, setDimLock, setWallDimsLocked, setRoomDimsLocked, wallLockState, roomLockState } from './locks';
 export { addDrawLine, addDrawRect, addDrawCircle, addDrawArc, addDrawDouble, updateDrawing, setDrawingVertex, setDrawingBulge, dragDrawingBulge, setDrawingRadius, setDrawingWidth, dragDrawingWidth, flipDrawingSide, setDrawingRect } from './drawings';
 export { addFreeDim, setFreeDimOffset, beginDimDrag, dragDim } from './dims';
+export { addStair, updateStair, setFlightSteps, addStairFlight, setStairTurn, removeStairFlight, flipStairDirection, drawingToStair, turnStairAxis } from './stairs';

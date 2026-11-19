@@ -12,8 +12,10 @@ import { drawingExtentPoints, drawingPolylines, placeDrawing, rotateDrawing } fr
 import { copyDimEnd, type CopyMaps } from './dimRefs';
 import { dimLine, dimPoints } from './freeDim';
 import { inRect, polylinesInRect, segHitsRect, type Rect } from './rect';
+import { stairOutlines, stairPoints } from './stairs';
+import { dimKey } from './dimLock';
 
-export type LooseKindId = 'room' | 'text' | 'drawing' | 'dim';
+export type LooseKindId = 'room' | 'text' | 'drawing' | 'stair' | 'dim';
 
 /**
  * Přemístění skupiny: `pt` = bod zaokrouhlený na mm (rohy, štítky), `exact` = přesně (kresba – obdélník
@@ -124,6 +126,43 @@ const drawing: LooseKind = {
   },
 };
 
+/** Schodiště: posouvají / otáčejí se všechny jeho body (rozměry ramen zůstanou). */
+const stair: LooseKind = {
+  kind: 'stair',
+  remove: (f, id) => void (f.stairs && delete f.stairs[id]),
+  capture: (f, id) => (f.stairs?.[id] ? stairPoints(f.stairs[id]!).map(xy) : null),
+  place: (f, id, snap, t) => {
+    const s = f.stairs?.[id];
+    if (!s) return;
+    const from = snap as Pt[];
+    stairPoints(s).forEach((p, i) => from[i] && Object.assign(p, t.exact(from[i]!)));
+  },
+  extent: (f, id) => (f.stairs?.[id] ? stairPoints(f.stairs[id]!).map(xy) : []),
+  inRect: (f, r, crossing) => Object.values(f.stairs ?? {}).filter(s => polylinesInRect(r, stairOutlines(s).map(pl => [...pl, pl[0]!]), crossing)).map(s => s.id),
+  copy: (f, id, ctx) => {
+    const src = f.stairs?.[id];
+    if (!src) return null;
+    const s = { ...clone(src), id: newId('st') };
+    for (const p of stairPoints(s)) Object.assign(p, ctx.shift(p));
+    const fmap = new Map<Id, Id>();
+    for (const fl of s.flights) {
+      const nid = newId('sf');
+      fmap.set(fl.id, nid);
+      fl.id = nid;
+    }
+    for (const l of s.landings) l.id = newId('sl');
+    (f.stairs ??= {})[s.id] = s;
+    // posunutá čísla kót schodiště jedou s kopií (core/dimPlace.ts); zámky se nekopírují
+    for (const pl of Object.values(f.dimPlace ?? {})) {
+      const o = pl.owner;
+      if (o.kind !== 'stair-dim' || o.stairId !== id || !fmap.has(o.flightId)) continue;
+      const owner = { ...o, stairId: s.id, flightId: fmap.get(o.flightId)! };
+      f.dimPlace![dimKey(owner)] = { ...clone(pl), owner };
+    }
+    return s.id;
+  },
+};
+
 /** Volná kóta: posouvají se jen pevné body; konce na prvcích jedou s prvkem samy. */
 const dim: LooseKind = {
   kind: 'dim',
@@ -175,6 +214,6 @@ const dim: LooseKind = {
 };
 
 /** Všechny volné prvky; pořadí = pořadí kopírování (kóta až po prvcích, ke kterým může vést). */
-export const LOOSE_KINDS: readonly LooseKind[] = [room, text, drawing, dim];
+export const LOOSE_KINDS: readonly LooseKind[] = [room, text, drawing, stair, dim];
 
 export const looseKind = (kind: string): LooseKind | undefined => LOOSE_KINDS.find(k => k.kind === kind);

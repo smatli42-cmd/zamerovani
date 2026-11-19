@@ -11,6 +11,7 @@ import { protrusionOutline, protrusionPolygon, protrusionsOf } from '../core/pro
 import { cornerOutline, cornerPolygon, cornerProtrusionsOf } from '../core/cornerProtrusion';
 import { endOutline, endProtrusionsOf } from '../core/endProtrusion';
 import { pickDrawing } from '../core/drawing';
+import { stairHit, stairsOf } from '../core/stairs';
 import type { Floor, Pt } from '../model/types';
 import type { Camera, Selection } from '../store/store';
 import { HIT_PX } from './types';
@@ -113,7 +114,7 @@ export function nodePrefer(current: Selection): NodePrefer {
 }
 
 /**
- * Prvek pod bodem v pořadí priority: roh, čára kresby, otvor, text, místnost, výstupek, stěna, volná kóta, vnitřek šrafy, tělo stěny.
+ * Prvek pod bodem v pořadí priority: roh, čára kresby, otvor, text, místnost, výstupek, stěna, volná kóta, schodiště, vnitřek šrafy, tělo stěny.
  * `current` = aktuální výběr: u překrývajících se rohů má přednost konec vybrané stěny / vybraný roh (D14).
  */
 export function pickAny(floor: Floor, p: Pt, cam: Camera, current: Selection = null): Selection {
@@ -136,6 +137,9 @@ export function pickAny(floor: Floor, p: Pt, cam: Camera, current: Selection = n
   // volná kóta (kótovací čára) – až za stěnou (kóta s odsazením 0 leží na stěně; vybere se i ťuknutím na číslo)
   const dim = pickFreeDim(floor, p, tol * 0.6);
   if (dim) return { kind: 'dim', id: dim };
+  // schodiště (obrys i vnitřek) – po stěně, aby čára líce u schodiště vybrala stěnu
+  const stair = stairsOf(floor).reverse().find(st => stairHit(st, p, tol * 0.6));
+  if (stair) return { kind: 'stair', id: stair.id };
   // ťuknutí dovnitř šrafovaného tvaru
   const drawIn = pickDrawing(floor, p, 0, false);
   if (drawIn) return { kind: 'drawing', id: drawIn };

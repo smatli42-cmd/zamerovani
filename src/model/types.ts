@@ -10,7 +10,7 @@
 
 import type { DimTarget } from '../core/dimLock';
 
-export const SCHEMA_VERSION = 24;
+export const SCHEMA_VERSION = 25;
 
 export type Id = string;
 
@@ -331,6 +331,50 @@ export interface FreeDim {
   offset: number;
 }
 
+/**
+ * Rameno schodiště (2D značka, rozhodnutí uživatele 2026-11-19 – žádné 3D): obdélník kolem osy `a` → `b`
+ * (`a` = první stupeň, `b` = výstup), `width` = šířka napříč osou (půlka na každou stranu).
+ * `steps` = počet stoupání v rameni; nášlapů je `steps − 1` (poslední výstup je podesta / podlaha).
+ */
+export interface StairFlight {
+  id: Id;
+  a: Pt;
+  b: Pt;
+  width: number;
+  steps: number;
+  /** Napojení na předchozí rameno přes podestu (L / U vlevo / vpravo); u 1. ramene chybí. */
+  turn?: 'left' | 'right' | 'u-left' | 'u-right';
+  /** Hloubka podesty před ramenem (mm, podél předchozího ramene); chybí = šířka ramene. */
+  depth?: number;
+}
+
+/** Podesta schodiště: obrys (mnohoúhelník). */
+export interface StairLanding {
+  id: Id;
+  pts: Pt[];
+}
+
+/**
+ * Schodiště = ramena a podesty (L a U vznikají přidáním podesty a dalšího ramene). Ukládají se jen vstupy;
+ * šířka a výška stupně se dopočítávají (core/stairs.ts). Ramena jsou v pořadí výstupu (směr = od 1. ramene).
+ * `outline` = ruční obrys (zabíhavé, točité…): obrys schodiště, osa výstupu = `flights[0]` (šířka se nepoužije).
+ */
+export interface Stair {
+  id: Id;
+  flights: StairFlight[];
+  landings: StairLanding[];
+  /** Celková výška schodiště (mm); chybí = nezadaná (výška stupně se nepočítá). */
+  height?: number;
+  /** Ruční obrys schodiště (mm). */
+  outline?: Pt[];
+  /** Ruční obrys: čáry nášlapů se nekreslí automaticky (kreslí se ručně kresbou). */
+  manualTreads?: true;
+  /** Popisek „N × v/š“ se nekreslí. */
+  noLabel?: true;
+  /** Výstup opačným směrem (od konce posledního ramene k prvnímu); šipka se kreslí obráceně. */
+  reverse?: true;
+}
+
 /** Podlaží = jeden půdorys. */
 export interface Floor {
   id: Id;
@@ -348,6 +392,8 @@ export interface Floor {
   endProtrusions?: Record<Id, EndProtrusion>;
   /** Kresba – grafické prvky (čáry, tvary, dvojité čáry; od verze 17; chybí = žádné). */
   drawings?: Record<Id, Drawing>;
+  /** Schodiště – 2D značka v půdorysu (od verze 25; chybí = žádné; core/stairs.ts). */
+  stairs?: Record<Id, Stair>;
   /** Volné kóty mezi dvěma body (od verze 20; chybí = žádné). */
   dims?: Record<Id, FreeDim>;
   /**

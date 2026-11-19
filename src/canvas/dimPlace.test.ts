@@ -11,7 +11,7 @@ import { dimKey, type DimTarget } from '../core/dimLock';
 import { cornerProtrusionsOf } from '../core/cornerProtrusion';
 import { endProtrusionsOf } from '../core/endProtrusion';
 import { dist } from '../core/geometry';
-import { addFreeDim, addLine, addOpening, addWall, beginDimDrag, deleteSelection, dragDim, setRevealEnabled } from '../store/actions';
+import { addStair, addStairFlight, addFreeDim, addLine, addOpening, addWall, beginDimDrag, deleteSelection, dragDim, setRevealEnabled } from '../store/actions';
 import { frameOutside } from '../core/floorQueries';
 import { store, type Selection } from '../store/store';
 import { allHitBoxes, resetHitBoxes, type HitBox } from './hitTargets';
@@ -20,6 +20,7 @@ import { drawBodyDims, drawDims, drawProtrusionDims } from './drawDims';
 import { drawComponentDims } from './drawComponentDims';
 import { drawCornerEndDims } from './drawCornerEndDims';
 import { drawFreeDims } from './drawFreeDims';
+import { drawStairDims } from './drawStairs';
 
 const f = () => store.floor()!;
 const ZOOM = 0.1;
@@ -46,6 +47,7 @@ function render(selection: Selection = null): HitBox[] {
   drawProtrusionDims(ctx, floor, cam, 1, selection);
   drawCornerEndDims(ctx, floor, cam, 1, selection);
   drawFreeDims(ctx, floor, cam, 1, selection, null);
+  drawStairDims(ctx, floor, cam, 1, selection);
   flushDimLabels();
   return allHitBoxes().filter(b => b.action.type === 'numpad');
 }
@@ -241,6 +243,22 @@ describe('posun kóty tažením za číslo – každý druh kóty', () => {
     expect(f().dims![id]!.offset).toBe(-500);
     checkAlong(null, key);
     expect(f().dimPlace?.[key]?.along).toBe(400);
+  });
+});
+
+describe('kóty schodiště (jen u vybraného)', () => {
+  it('délka a šířka ramene, hloubka podesty: kolmo i podél každá sama; bez výběru se nekreslí', () => {
+    const id = addStair({ x: 0, y: 0 }, { x: 3000, y: 1000 })!;
+    addStairFlight(id, 'left');
+    expect(render(null)).toHaveLength(0);
+    const sel: Selection = { kind: 'stair', id };
+    const [f1, f2] = f().stairs![id]!.flights;
+    const keys = [`stair-dim:${id}:${f1!.id}:length`, `stair-dim:${id}:${f1!.id}:width`, `stair-dim:${id}:${f2!.id}:depth`];
+    for (const key of keys) {
+      const moved = checkPerp(sel, key);
+      for (const [k, d] of moved) if (k !== key) expect(d, k).toBeLessThan(0.01);
+      checkAlong(sel, key);
+    }
   });
 });
 
