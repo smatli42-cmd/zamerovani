@@ -7,6 +7,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-20 (10) – konec sezení
+- **Co se změnilo:** sezení ukončeno; za den vrstvy (dvě okna, zamčená vrstva nic nepřijme), přichycení posunu, sloučená značka – kroky A a B. Testy 1016 + 1 zapsaný nález, typecheck a build OK.
+- **Viditelně v aplikaci:** viz (1)–(9).
+- **Rozhodnuto samostatně:** viz (1)–(9) (číslování značek a cíl směru potvrzeny uživatelem).
+- **Otevřené:** značka krok C; velikost popisků / kót ve skice nad fotkou; úchyty tvarů ve skice.
+- **Chyby od uživatele:** žádné – vše vyzkoušené funguje.
+- **Soubory nad 500 řádků:** žádné.
+
 ### 2026-11-20 (9) – značka krok B: fotka jako podklad
 - **Co se změnilo:** `MarkPage.photo` (odkaz id + rozměr; SCHEMA_VERSION 33 bez převodu). Fotky uložené zvlášť od projektu v IndexedDB `photos` (DB verze 2, index podle projektu) – `persistence/photos.ts`: zmenšení na JPEG (delší strana 2000 px, natočení podle EXIF, původní soubor se nemění), uložení, načtení, úklid nepoužitých fotek při otevření projektu (`prunePhotos` – historie Zpět je tehdy prázdná), smazání s projektem (`deleteProject`). Záloha verze 2 nese použité fotky v base64, obnova jim dá nová id a přepíše odkazy (`restoreFromPayload`); záloha verze 1 se dál načte. Okno značky: 📷 Vyfotit (fotoaparát), 🖼️ Z galerie, ✖ Odebrat fotku (kresba zůstane), ⤢ Celá fotka; fotka leží pod skicou, kresba nad ní je vlastní vrstva (Smazat skicu fotku nechá). Ikona 📷 u značky s fotkou. Testy `persistence/photos.test.ts` (4).
 - **Viditelně v aplikaci:** v okně značky tlačítka 📷 Vyfotit a 🖼️ Z galerie; fotka se ukáže jako podklad celá v okně, kreslí se přes ni; značka s fotkou má v půdorysu ikonu 📷. Záloha projektu (💾) obsahuje i fotky. Ověřeno v prohlížeči (fotka 3200×2400 uložena jako 2000×1500, 52 kB; čára přes fotku zůstane po zavření a otevření).
@@ -776,7 +784,21 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Otevřené:** vyzkoušet na tabletu; další krok tažení a posun jako blok (D2, D11–D14).
 - **Chyby od uživatele:** zatím žádné.
 
-## Poslední stav (2026-11-19, konec sezení 2)
+## Poslední stav (2026-11-20, konec sezení)
+
+**Hotové (na webu):** vrstvy – dvě okna (horní lišta = správa všech vrstev, lišta nástroje = volba kreslicí vrstvy jen z vlastních), aktivní vrstvu jde skrýt, do zamčené vrstvy nic nepřibude; 🎯 bere celý výkres; přichycení při posunu schodiště, kresby, tahů a skupin (`core/moveSnap.ts`); **sloučená značka** – krok A (číslo Z1… + název, barevně odlišené, směr kužel / šipka s cílem ve výkresu, okno s poznámkou a skicou: Vybrat, pero, čára, obdélník, kruh, oblouk, dvojitá, text, kóta, guma) a krok B (fotka jako podklad, uložená zvlášť, v záloze). Vše vyzkoušeno uživatelem. Testy 1016 + 1 zapsaný nález, typecheck a build OK. SCHEMA_VERSION 33, IndexedDB verze 2.
+
+**Rozpracované:** nic.
+
+**Chyby od uživatele:** žádné čekající (chyby schodiště z 2026-11-19 si uživatel nevybavuje).
+
+**Fronta kroků:**
+1. Značka krok C: kreslení do fotky – popisky a kóty ve velikosti podle fotky, orientační kóty odlišené vzhledem; PDF příloha (strana na značku), DXF hladina značek. Případně úchyty pro úpravu tvarů ve skice.
+2. Výstupy: PDF podle velikosti výkresu s razítkem (zaškrtnutí vrstev – `layerContents`), DXF s hladinami podle vrstev (s tím část B KOTY-ZAMEK-EXPORT.md).
+3. Zařizovací předměty a symboly – uživatel zatím odložil (plán hotový).
+4. Kóty, jen když se ukáže potřeba.
+
+## Předchozí stav (2026-11-19, konec sezení 2)
 
 **Hotové (na webu):** **vrstvy** (13) – vrstvy projektu, skrytá / zamčená vrstva u všech prvků, přesun do vrstvy, panel Vrstvy, migrace 27 → 28, export `layerContents`, katalog sekce V; **ruční kresba** (14) – Pero (vektor, tloušťka v mm, barva vrstvy) a Guma; **geometrie Pera** (15) – čára s navazováním, obdélník, kruh, oblouk jako ruční tah. Testy 939 + 1 zapsaný nález, typecheck a build OK. SCHEMA_VERSION 29.
 
