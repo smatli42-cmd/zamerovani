@@ -18,6 +18,10 @@ import { openTarget } from '../store/numpadController';
 import { pickAny } from './pick';
 import { dragDrawingHandle, drawingHandleUnderPen, type DrawHandleDrag } from './drawingEdit';
 import { HIT_PX, type PointerInput, type Tool } from './types';
+import { moveSnapTargets, snapMove, stairGeom, type SnapGeom } from '../core/moveSnap';
+
+/** Hrany / body, ke kterým se právě přichytilo posouvané schodiště (náhled). */
+let snapHits: [Pt, Pt][] = [];
 
 type DragKind = { kind: 'node'; id: Id; lines: DragLine[] } | { kind: 'wall'; id: Id; origin: GroupOrigin; grab: Pt; lines: DragLine[] } | { kind: 'opening'; id: Id; grabOffset: number } | { kind: 'room'; id: Id; dx: number; dy: number }
   | { kind: 'text'; id: Id; dx: number; dy: number }
@@ -27,7 +31,8 @@ type DragKind = { kind: 'node'; id: Id; lines: DragLine[] } | { kind: 'wall'; id
   | { kind: 'leader'; id: Id }
   /** Úchyt vybrané kresby (tools/drawingEdit.ts). */
   | { kind: 'draw'; h: DrawHandleDrag }
-  | { kind: 'group'; origin: GroupOrigin; start: Pt };
+  /** Posun celé skupiny; u schodiště s přichycením ke stěnám a prvkům (core/moveSnap.ts). */
+  | { kind: 'group'; origin: GroupOrigin; start: Pt; snap?: { geom: SnapGeom; targets: SnapGeom } };
 
 /** Rámeček výběru: zleva doprava okno (modře), zprava doleva křížení (zeleně, čárkovaně). */
 let band: { start: Pt; end: Pt; startScreen: Pt; endScreen: Pt } | null = null;
@@ -54,6 +59,7 @@ const NEAR_PX = 60;
 const HOLD_MS = 700;
 
 function resetGuides(): void {
+  snapHits = [];
   lock = null;
   shown = null;
   holdAnchor = null;
@@ -219,7 +225,10 @@ export const selectTool: Tool = {
       drag = { kind: 'wall', id: hit.id, origin: groupOrigin(floor, [hit]), grab: p.world, lines: wallMoveLines(store.view('snap')!, hit.id, p.world) };
     }
     // tažení už vybrané kresby / schodiště ji posune celou
-    if ((hit.kind === 'drawing' || hit.kind === 'stair' || hit.kind === 'stroke') && before?.kind === hit.kind && before.id === hit.id) drag = { kind: 'group', origin: groupOrigin(floor, [hit]), start: p.world };
+    if ((hit.kind === 'drawing' || hit.kind === 'stair' || hit.kind === 'stroke') && before?.kind === hit.kind && before.id === hit.id) {
+      const geom = hit.kind === 'stair' ? stairGeom(floor, hit.id) : null;
+      drag = { kind: 'group', origin: groupOrigin(floor, [hit]), start: p.world, ...(geom ? { snap: { geom, targets: moveSnapTargets(store.view('snap')!, hit.id) } } : {}) };
+    }
     if (hit.kind === 'room') {
       const r = floor.rooms[hit.id]!;
       drag = { kind: 'room', id: hit.id, dx: p.world.x - r.x, dy: p.world.y - r.y };
@@ -263,7 +272,12 @@ export const selectTool: Tool = {
     } else if (drag.kind === 'leader') {
       updateText(drag.id, { leader: { x: Math.round(p.world.x / 10) * 10, y: Math.round(p.world.y / 10) * 10 } });
     } else if (drag.kind === 'group') {
-      moveGroup(drag.origin, p.world.x - drag.start.x, p.world.y - drag.start.y);
+      const raw = { x: p.world.x - drag.start.x, y: p.world.y - drag.start.y };
+      const r = drag.snap && store.get().settings.snap ? snapMove(drag.snap.geom, drag.snap.targets, raw, HIT_PX.snapNode / cam.zoom) : null;
+      snapHits = r?.hits ?? [];
+      // přichyceno = přesně (krok 1 mm), volně po 10 mm
+      moveGroup(drag.origin, (r?.delta ?? raw).x, (r?.delta ?? raw).y, r?.snapped ? 1 : 10);
+      requestRender();
     } else if (drag.kind === 'node') {
       const tol = HIT_PX.snapNode / cam.zoom;
       const other = findNodeNear(store.view('snap')!, p.world, tol, drag.id);
@@ -380,6 +394,7 @@ export const selectTool: Tool = {
 
   drawOverlay(ctx) {
     if (shown && drag && dragging) drawGuides(ctx, shown, store.get().camera);
+    if (snapHits.length && drag && dragging) drawSnapHits(ctx, snapHits, store.get().camera);
     if (!band) return;
     const x = Math.min(band.startScreen.x, band.endScreen.x);
     const y = Math.min(band.startScreen.y, band.endScreen.y);
@@ -449,6 +464,27 @@ export function drawGuides(ctx: CanvasRenderingContext2D, g: { line: DragLine | 
       ctx.lineTo(x + 8, y - 13);
       ctx.stroke();
     }
+  }
+  ctx.restore();
+}
+
+/** Hrany (a body), ke kterým se přichytilo posouvané schodiště – zvýrazněné fialově. */
+function drawSnapHits(ctx: CanvasRenderingContext2D, hits: [Pt, Pt][], cam: Camera): void {
+  ctx.save();
+  ctx.strokeStyle = '#a855f7';
+  ctx.fillStyle = '#a855f7';
+  ctx.lineWidth = 3;
+  for (const [a0, b0] of hits) {
+    const a = toScreen(a0, cam);
+    const b = toScreen(b0, cam);
+    ctx.beginPath();
+    if (dist(a0, b0) < 1) ctx.arc(a.x, a.y, 6, 0, Math.PI * 2);
+    else {
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+    }
+    if (dist(a0, b0) < 1) ctx.fill();
+    else ctx.stroke();
   }
   ctx.restore();
 }

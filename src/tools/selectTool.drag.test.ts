@@ -3,7 +3,9 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createProject } from '../model/factory';
-import { addWall, setWallNoJoin } from '../store/actions';
+import { addStair, addWall, setWallNoJoin } from '../store/actions';
+import { wallBodies } from '../core/wallBody';
+import { stairOutlines } from '../core/stairs';
 import { store } from '../store/store';
 import { selectTool } from './selectTool';
 import type { PointerInput } from './types';
@@ -161,5 +163,26 @@ describe('doplněno po kontrole revieweru', () => {
     const f = store.floor()!;
     expect(f.nodes[f.walls[A]!.a]).toMatchObject({ x: -600, y: 0 });
     expect(f.nodes[f.walls[B]!.a]).toMatchObject({ x: 0, y: 0 });
+  });
+});
+
+describe('posun schodiště se přichytí ke stěně (přání uživatele 2026-11-20)', () => {
+  const ys = () => stairOutlines(Object.values(store.floor()!.stairs!)[0]!).flat().map(p => p.y);
+  it('tažením k líci stěny dosedne přesně na líc; s vypnutým přichytáváním po 10 mm', () => {
+    open();
+    const W = addWall({ x: 0, y: 0 }, null, { x: 4000, y: 0 }, null, false, { thickness: 300, side: 1 })!;
+    const face = Math.max(...wallBodies(store.floor()!).get(W)!.poly.map(p => p.y));
+    const S = addStair({ x: 1000, y: 2000 }, { x: 2000, y: 5000 })!;
+    store.set({ selection: { kind: 'stair', id: S } });
+    // táhne se o 1640 mm nahoru → dolní hrana 360 mm od stěny… dál až 40 mm od líce
+    dragPath([[1500, 3500], [1500, 3000], [1500, 3500 - (2000 - face) + 40]]);
+    expect(Math.min(...ys())).toBeCloseTo(face);
+    expect(store.get().selection).toEqual({ kind: 'stair', id: S });
+    store.undo();
+    expect(Math.min(...ys())).toBeCloseTo(2000);
+    store.updateSettings({ snap: false });
+    dragPath([[1500, 3500], [1500, 3000], [1500, 3500 - (2000 - face) + 40]]);
+    expect(Math.min(...ys())).not.toBeCloseTo(face);
+    store.updateSettings({ snap: true });
   });
 });
