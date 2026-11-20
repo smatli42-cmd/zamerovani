@@ -253,15 +253,18 @@ function filterFloor(floor: Floor, drop: (kind: ElemKind, id: Id) => boolean): F
 
 /**
  * Pravidlo 2 (rozhodnutí uživatele 2026-11-19): úprava, která by změnila prvek v zamčené vrstvě – přímo i přes
- * vazbu (sdílený roh, napojení, zamčená kóta, změna délky) –, se neprovede. Vrací název vrstvy, která brání.
- * Porovnává se stav před a po úpravě (zámky podle stavu před úpravou; nový prvek v zamčené vrstvě nevadí).
+ * vazbu (sdílený roh, napojení, zamčená kóta, změna délky) –, se neprovede. Do zamčené vrstvy také nic nepřibude:
+ * nový prvek (stěna, kresba, schodiště, štítek, text, kóta, ruční tah, otvor / výstupek na zamčené stěně) ani prvek
+ * přesunutý z jiné vrstvy (rozhodnutí uživatele 2026-11-20). Vrací text hlášení, nebo null.
+ * Porovnává se stav před a po úpravě (zámky podle stavu před úpravou).
  */
 export function layerLockViolation(pBefore: Pick<Project, 'layers'> | null | undefined, before: Floor | undefined, after: Floor): string | null {
   if (!before) return null;
   const { locked } = layerState(pBefore);
   if (!locked.size) return null;
   const isLockedIn = (ids: Id[]) => ids.find(l => locked.has(l));
-  const name = (l: Id) => layerById(pBefore, l)?.name ?? l;
+  const name = (l: Id) => `Nelze – úprava by změnila prvek v zamčené vrstvě „${layerById(pBefore, l)?.name ?? l}“.`;
+  const added = (l: Id) => `Nelze – vrstva „${layerById(pBefore, l)?.name ?? l}“ je zamčená, nic do ní nepřibude.`;
   for (const kind of OWN_KINDS) {
     const b = ownCollection(before, kind);
     const a = ownCollection(after, kind);
@@ -274,6 +277,13 @@ export function layerLockViolation(pBefore: Pick<Project, 'layers'> | null | und
         const w = el as Floor['walls'][string];
         for (const n of [w.a, w.b]) if (!same(before.nodes[n], after.nodes[n])) return name(l);
       }
+    }
+    // nový prvek v zamčené vrstvě nebo prvek do ní přesunutý (V2, 2026-11-20)
+    for (const el of Object.values(a)) {
+      const l = isLockedIn([el.layerId ?? kindDefaultLayer(kind)]);
+      if (!l) continue;
+      const old = b[el.id];
+      if (!old || (old.layerId ?? kindDefaultLayer(kind)) !== (el.layerId ?? kindDefaultLayer(kind))) return added(l);
     }
   }
   const carried: [Record<Id, { id: Id }> | undefined, Record<Id, { id: Id }> | undefined, ElemKind][] = [
@@ -291,7 +301,7 @@ export function layerLockViolation(pBefore: Pick<Project, 'layers'> | null | und
     for (const el of Object.values(a ?? {})) {
       if (b?.[el.id]) continue;
       const l = isLockedIn(elementLayers(after, kind, el.id));
-      if (l) return name(l);
+      if (l) return added(l);
     }
   }
   return null;

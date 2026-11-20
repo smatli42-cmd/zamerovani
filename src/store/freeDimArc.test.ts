@@ -122,7 +122,7 @@ describe('kóta k obloukové stěně', () => {
 describe('kóta k oblouku kresby', () => {
   it('oblouk kresby: vrchol a střed; zadaná délka posune celou kresbu', () => {
     store.openProject(createProject({ name: 't' }));
-    const d = addDrawArc({ x: 0, y: 0 }, { x: 2000, y: 0 }, 500);
+    const d = addDrawArc({ x: 0, y: 0 }, { x: 2000, y: 0 }, 500)!;
     const pts0 = f().drawings![d]!.pts.map(p => ({ x: p.x, y: p.y }));
     const apex = refAt(f(), { x: 1000, y: 500 }, 30, 30)!;
     expect(apex).toMatchObject({ arcSeg: d, i: 0 });
@@ -138,7 +138,7 @@ describe('kóta k oblouku kresby', () => {
 
   it('oblouk kresby: kóta mezi vrcholem a středem téže kresby nejde zadat (nic se nezmění)', () => {
     store.openProject(createProject({ name: 't' }));
-    const d = addDrawArc({ x: 0, y: 0 }, { x: 2000, y: 0 }, 500);
+    const d = addDrawArc({ x: 0, y: 0 }, { x: 2000, y: 0 }, 500)!;
     const id = addFreeDim(refAt(f(), { x: 1000, y: 500 }, 30, 30)!, { center: d, i: 0 })!;
     expect(freeDimValue(f(), id)).toBeCloseTo(1250, 3);
     set(id, 'a', 1500);
@@ -147,7 +147,7 @@ describe('kóta k oblouku kresby', () => {
 
   it('kruh kresby: bod na kružnici; střed = bod kresby', () => {
     store.openProject(createProject({ name: 't' }));
-    const d = addDrawCircle({ x: 0, y: 0 }, 1000);
+    const d = addDrawCircle({ x: 0, y: 0 }, 1000)!;
     const q = { x: 1000 * Math.cos(1), y: 1000 * Math.sin(1) };
     const e = refAt(f(), q, 3, 30)!;
     expect('arcSeg' in e && e.arcSeg === d).toBe(true);
@@ -224,7 +224,7 @@ describe('kóta k oblouku po úpravách oblouku (nálezy revieweru)', () => {
 
   it('kresba: smazaný vrchol lomené čáry před obloukem – kóta zůstane na stejném oblouku', () => {
     store.openProject(createProject({ name: 't' }));
-    const d = addDrawArc({ x: 0, y: 0 }, { x: 2000, y: 0 }, 500);
+    const d = addDrawArc({ x: 0, y: 0 }, { x: 2000, y: 0 }, 500)!;
     // lomená čára: přímý úsek + oblouk (úsek 1)
     store.edit(fl => {
       const dr = fl.drawings![d]!;
@@ -243,7 +243,7 @@ describe('kóta k oblouku po úpravách oblouku (nálezy revieweru)', () => {
 
   it('kopie oblouku kresby s kótou', () => {
     store.openProject(createProject({ name: 't' }));
-    const d = addDrawArc({ x: 0, y: 0 }, { x: 2000, y: 0 }, 500);
+    const d = addDrawArc({ x: 0, y: 0 }, { x: 2000, y: 0 }, 500)!;
     const id = addFreeDim(refAt(f(), { x: 1000, y: 500 }, 30, 30)!, { center: d, i: 0 })!;
     store.set({ selection: { kind: 'multi', items: [{ kind: 'drawing', id: d }, { kind: 'dim', id }] } });
     duplicateSelection();

@@ -21,12 +21,13 @@ function look(style: LineStyle): Pick<Drawing, 'style' | 'color'> {
   return { ...(style !== 'solid' ? { style } : {}), ...(color !== 'black' ? { color } : {}) };
 }
 
-function insert(d: Omit<Drawing, 'id'>, select = false): Id {
+/** Vrací id nové kresby, nebo null, když nevznikla (např. zamčená vrstva). */
+function insert(d: Omit<Drawing, 'id'>, select = false): Id | null {
   const id = newId('dr');
-  store.edit(floor => {
+  const ok = store.edit(floor => {
     (floor.drawings ??= {})[id] = { ...d, id };
   }, select ? { selection: { kind: 'drawing', id } } : {});
-  return id;
+  return ok ? id : null;
 }
 
 /**
@@ -93,22 +94,22 @@ function reverseLine(d: Pick<Drawing, 'pts'>): void {
 }
 
 /** Obdélník (strany rovnoběžné s osami) z rohu p do protějšího rohu q. */
-export function addDrawRect(p: Pt, q: Pt): Id {
+export function addDrawRect(p: Pt, q: Pt): Id | null {
   const pts = [P(p), { x: q.x, y: p.y }, P(q), { x: p.x, y: q.y }];
   return insert({ shape: 'rect', pts, ...look(store.get().settings.shapeStyle) });
 }
 
-export function addDrawCircle(c: Pt, r: number): Id {
+export function addDrawCircle(c: Pt, r: number): Id | null {
   return insert({ shape: 'circle', pts: [P(c)], r, ...look(store.get().settings.shapeStyle) });
 }
 
 /** Oblouk mezi a a b se vzepětím s (výběr nového oblouku, aby šel hned upravit úchytem). */
-export function addDrawArc(a: Pt, b: Pt, s: number): Id {
+export function addDrawArc(a: Pt, b: Pt, s: number): Id | null {
   return insert({ shape: 'arc', pts: [{ ...P(a), s }, P(b)], ...look(store.get().settings.shapeStyle) }, true);
 }
 
 /** Dvojitá čára a→b (druhá čára o `width` na stranu `side`). */
-export function addDrawDouble(a: Pt, b: Pt, width: number, side: 1 | -1): Id {
+export function addDrawDouble(a: Pt, b: Pt, width: number, side: 1 | -1): Id | null {
   const { doubleEnds, doubleStyle, drawColor } = store.get().settings;
   return insert({
     shape: 'double',

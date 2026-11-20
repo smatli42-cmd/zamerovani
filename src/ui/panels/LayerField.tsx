@@ -45,6 +45,8 @@ export function LayerField() {
               <button
                 key={l.id}
                 class={`btn btn-sm ${layers.size === 1 && layers.has(l.id) ? 'active' : ''}`}
+                disabled={l.locked}
+                title={l.locked ? 'Zamčená vrstva – nic do ní nepřibude' : undefined}
                 onClick={() => {
                   moveSelectionToLayer(l.id);
                   setOpen(false);

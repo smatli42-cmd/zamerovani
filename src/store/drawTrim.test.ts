@@ -56,7 +56,7 @@ describe('Oříznout', () => {
   });
 
   it('uzavřený tvar (obdélník) se otevře, šrafa zmizí; ořezává se i o stěnu', () => {
-    const id = addDrawRect({ x: 0, y: 0 }, { x: 2000, y: 1000 });
+    const id = addDrawRect({ x: 0, y: 0 }, { x: 2000, y: 1000 })!;
     store.edit(fl => void (fl.drawings![id]!.hatch = 'diag'));
     addWall({ x: 1000, y: -500 }, null, { x: 1000, y: 1500 }, null, false, { thickness: 0 }); // čára stěny přes obdélník
     expect(trimDrawingAt(id, { x: 1500, y: 0 })).toBe('ok');
@@ -117,7 +117,7 @@ describe('volné kóty a zámky u oříznuté kresby', () => {
     store.edit(fl => void ((fl.dims ??= {})[id] = { id, a, b, offset: 300 } as never));
 
   it('kóta na zkrácené hraně obdélníku zůstane na téže přímce; na ořezaném kusu zanikne (nepřeskočí na jinou hranu)', () => {
-    const r = addDrawRect({ x: 0, y: 0 }, { x: 2000, y: 1000 });
+    const r = addDrawRect({ x: 0, y: 0 }, { x: 2000, y: 1000 })!;
     line('V', [{ x: 1000, y: -500 }, { x: 1000, y: 1500 }]);
     addDim('K1', { seg: r, i: 0, at: 500 }, { x: 500, y: -2000 }); // horní hrana v x = 500 – zůstane
     addDim('K2', { seg: r, i: 0, at: 1500 }, { x: 1500, y: -2000 }); // horní hrana v x = 1500 – ořízne se

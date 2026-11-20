@@ -156,7 +156,7 @@ describe('atypické T (podesta a dvě ramena na obě strany)', () => {
     const id = straight();
     addStairTeeFlights(id);
     const before = JSON.stringify(st(id));
-    const d = addDrawRect({ x: 2900, y: -100 }, { x: 4100, y: 1100 });
+    const d = addDrawRect({ x: 2900, y: -100 }, { x: 4100, y: 1100 })!;
     expect(drawingToLanding(d!)).toBeNull();
     expect(JSON.stringify(st(id))).toBe(before);
   });

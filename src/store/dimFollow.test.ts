@@ -29,7 +29,7 @@ const rectTop = (r: string) => f().drawings![r]!.pts[0]!.y;
 describe('zamčená volná kóta = pevné spojení', () => {
   it('obrázek uživatele: délka pravé stěny posune spodní stěnu, obdélník zamčený ke spodní stěně jede s ní', () => {
     const { right, bottom } = room();
-    const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 });
+    const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 })!;
     const lk = addFreeDim({ seg: r, i: 2, at: 500 }, { wall: bottom.id, side: 1, at: 2000 })!;
     lock(lk);
     expect(applyNumpadValue({ kind: 'wall-length', wallId: right.id, move: { nodeId: right.b } }, 5300)).toBe(true);
@@ -50,7 +50,7 @@ describe('zamčená volná kóta = pevné spojení', () => {
 
   it('řetěz dvou zamčených kót: stěna → obdélník → čára', () => {
     const { right, bottom } = room();
-    const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 });
+    const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 })!;
     const l = addDrawLine({ x: 1000, y: 1000 }, { x: 2500, y: 1000 })!;
     const k1 = addFreeDim({ seg: r, i: 2, at: 500 }, { wall: bottom.id, side: 1, at: 2000 })!;
     const k2 = addFreeDim({ seg: l, i: 0, at: 500 }, { seg: r, i: 0, at: 500 })!;
@@ -90,7 +90,7 @@ describe('zamčená volná kóta = pevné spojení', () => {
 
   it('líc stěny: kresba posunutá kótou potáhne zamčenou stěnu (sousední stěny se protáhnou)', () => {
     const { bottom } = room();
-    const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 });
+    const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 })!;
     const lk = addFreeDim({ seg: r, i: 2, at: 500 }, { wall: bottom.id, side: 1, at: 2000 })!;
     lock(lk);
     // jiná (nezamčená) kóta posune obdélník o 200 dolů
@@ -123,7 +123,7 @@ describe('zamčená volná kóta = pevné spojení', () => {
 
   it('pohnuly se oba konce (celá kresba): kóta se nemění, nic se nedorovnává', () => {
     room();
-    const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 });
+    const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 })!;
     const lk = addFreeDim({ drawing: r, i: 0 }, { drawing: r, i: 2 })!;
     lock(lk);
     expect(store.edit(fl => fl.drawings![r]!.pts.forEach(p => void (p.y += 100)))).toBe(true);
@@ -132,7 +132,7 @@ describe('zamčená volná kóta = pevné spojení', () => {
 
   it('přepisovaná zamčená kóta sama se nedorovnává (potvrzení přepsání)', () => {
     const { bottom } = room();
-    const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 });
+    const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 })!;
     const lk = addFreeDim({ seg: r, i: 2, at: 500 }, { wall: bottom.id, side: 1, at: 2000 })!;
     lock(lk);
     expect(applyNumpadValue({ kind: 'free-dim', dimId: lk, move: 'a' }, 1200, true)).toBe(true);
@@ -154,7 +154,7 @@ describe('zamčená volná kóta = pevné spojení', () => {
       return [a.y + dir * s0, a.y + dir * (s0 + openingSpan(o))].sort((x, y) => x - y);
     };
     const e0 = edgesY();
-    const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 });
+    const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 })!;
     const lk = addFreeDim({ seg: r, i: 2, at: 500 }, { wall: bottom.id, side: 1, at: 2000 })!;
     lock(lk);
     // obdélník o 200 dolů → spodní stěna o 200 dolů → levá stěna se prodlouží
@@ -169,7 +169,7 @@ describe('zamčená volná kóta = pevné spojení', () => {
   it('obdélník zamčený ke dvěma protilehlým stěnám: změna délky stěny se neprovede (dorovnání by ji vrátilo)', () => {
     const { right, bottom } = room();
     const top = wallBy(C[0]!, C[1]!);
-    const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 });
+    const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 })!;
     lock(addFreeDim({ seg: r, i: 2, at: 500 }, { wall: bottom.id, side: 1, at: 2000 })!);
     lock(addFreeDim({ seg: r, i: 0, at: 500 }, { wall: top.id, side: 1, at: 2000 })!);
     const snap = f();
@@ -180,7 +180,7 @@ describe('zamčená volná kóta = pevné spojení', () => {
 
   it('neúspěšné dorovnání stěny (zamčená délka sousední stěny) → výkres beze změny', () => {
     const { bottom } = room();
-    const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 });
+    const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 })!;
     lock(addFreeDim({ seg: r, i: 2, at: 500 }, { wall: bottom.id, side: 1, at: 2000 })!);
     const left = wallBy(C[3]!, C[0]!);
     setDimLock({ kind: 'wall-length', wallId: left.id, move: 'both' }, true);
@@ -195,7 +195,7 @@ describe('zamčená volná kóta = pevné spojení', () => {
     const op = addOpening(right.id, 'window', 0.5)!;
     // odstup od A zamčený → poslední kóta k B prodlouží stěnu (core/openingChain.ts)
     setDimLock({ kind: 'opening-offset', openingId: op, ref: right.a === nodeAt(C[1]!).id ? 'a' : 'b' }, true);
-    const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 });
+    const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 })!;
     const lk = addFreeDim({ seg: r, i: 2, at: 500 }, { wall: bottom.id, side: 1, at: 2000 })!;
     lock(lk);
     const toB = Math.round(wallLength(f(), f().walls[right.id]!) - openingStartFromA(f().openings[op]!, wallLength(f(), f().walls[right.id]!)) - openingSpan(f().openings[op]!));
@@ -206,7 +206,7 @@ describe('zamčená volná kóta = pevné spojení', () => {
 
   it('posun kresby (jeden konec): zamčená kóta potáhne druhou kresbu', () => {
     room();
-    const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 });
+    const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 })!;
     const l = addDrawLine({ x: 1000, y: 1000 }, { x: 2500, y: 1000 })!;
     const lk = addFreeDim({ seg: l, i: 0, at: 500 }, { seg: r, i: 0, at: 500 })!;
     lock(lk);

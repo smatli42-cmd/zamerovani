@@ -15,13 +15,13 @@ export function addFreeDim(a: DimEnd, b: DimEnd, offset = 0): Id | null {
   const pts = floor && dimPoints(floor, { id: '', a, b, offset: 0 });
   if (!pts || sameEnd(a, b) || dist(pts[0], pts[1]) < 1) return null;
   const id = newId('dim');
-  store.edit(
+  const ok = store.edit(
     f => {
       (f.dims ??= {})[id] = { id, a: { ...a }, b: { ...b }, offset: Math.round(offset) };
     },
     { selection: { kind: 'dim', id } }
   );
-  return id;
+  return ok ? id : null;
 }
 
 /** Odsazení kótovací čáry od spojnice bodů (mm, se znaménkem). */

@@ -353,7 +353,7 @@ class Store {
         // zamčená vrstva: úprava nesmí změnit žádný její prvek, ani přes vazbu (pravidlo 2)
         const lockedLayer = layerLockViolation(this.state.project, before, f);
         if (lockedLayer !== null) {
-          blocked = { key: '', text: `Nelze – úprava by změnila prvek v zamčené vrstvě „${lockedLayer}“.` };
+          blocked = { key: '', text: lockedLayer };
           throw LOCK_ABORT;
         }
         const v = lockViolation(before, f, opts.allowKey);
@@ -392,7 +392,7 @@ class Store {
           prunePlaces(f);
           const lockedLayer = layerLockViolation(beforeP, before, f);
           if (lockedLayer !== null) {
-            blocked = { key: '', text: `Nelze – úprava by změnila prvek v zamčené vrstvě „${lockedLayer}“.` };
+            blocked = { key: '', text: lockedLayer };
             throw LOCK_ABORT;
           }
         }

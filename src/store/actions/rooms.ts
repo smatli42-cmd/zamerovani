@@ -5,13 +5,15 @@ import { createRoom } from '../../model/factory';
 import type { Id, Pt, Room } from '../../model/types';
 import { store } from '../store';
 
-export function addRoom(p: Pt): Id {
+/** Vrací id nového štítku, nebo null, když nevznikl (zamčená vrstva Popisky). */
+export function addRoom(p: Pt): Id | null {
   let id = '';
-  store.edit(floor => {
+  const ok = store.edit(floor => {
     const room = createRoom(floor, p.x, p.y);
     floor.rooms[room.id] = room;
     id = room.id;
   });
+  if (!ok) return null;
   store.set({ selection: { kind: 'room', id } });
   return id;
 }

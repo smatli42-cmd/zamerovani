@@ -14,10 +14,10 @@ import { store } from '../store';
 const P = (v: Pt): Pt => ({ x: Math.round(v.x), y: Math.round(v.y) });
 
 /** Vloží nové schodiště s jedním ramenem a vybere ho. */
-function insertStair(f: StairFlight): Id {
+function insertStair(f: StairFlight): Id | null {
   const s: Stair = { id: newId('st'), flights: [f], landings: [] };
-  store.edit(floor => void ((floor.stairs ??= {})[s.id] = s), { selection: { kind: 'stair', id: s.id }, numpad: null });
-  return s.id;
+  const ok = store.edit(floor => void ((floor.stairs ??= {})[s.id] = s), { selection: { kind: 'stair', id: s.id }, numpad: null });
+  return ok ? s.id : null;
 }
 
 /** Nové přímé schodiště (jedno rameno) ze dvou protějších rohů; vybere se. */
@@ -209,14 +209,14 @@ export function drawingToStair(drawingId: Id): Id | null {
   const ys = pts.map(p => p.y);
   const s = stairFromOutline(newId('st'), newId('sf'), pts, 2);
   s.flights[0]!.steps = defaultSteps(Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)));
-  store.edit(
+  const ok = store.edit(
     floor => {
       if (floor.drawings) delete floor.drawings[drawingId];
       (floor.stairs ??= {})[s.id] = s;
     },
     { selection: { kind: 'stair', id: s.id }, numpad: null }
   );
-  return s.id;
+  return ok ? s.id : null;
 }
 
 /**

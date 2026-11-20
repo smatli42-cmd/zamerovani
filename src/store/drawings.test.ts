@@ -64,12 +64,12 @@ describe('dvojitá čára (krok 0, KRESLENI-PREKLADU.md)', () => {
   it('ťuknutí na čáru překladu nad otvorem vybere překlad (kresba leží nad otvorem)', () => {
     const w = wallS();
     addOpening(w, 'door', 0.4);
-    const id = addDrawDouble({ x: 1500, y: 0 }, { x: 2600, y: 0 }, 300, 1);
+    const id = addDrawDouble({ x: 1500, y: 0 }, { x: 2600, y: 0 }, 300, 1)!;
     expect(pickAny(f(), { x: 2000, y: 0 }, store.get().camera)).toEqual({ kind: 'drawing', id });
   });
 
   it('mazání, kopírování, Zpět / Vpřed', () => {
-    const id = addDrawDouble({ x: 0, y: 0 }, { x: 1000, y: 0 }, 250, 1);
+    const id = addDrawDouble({ x: 0, y: 0 }, { x: 1000, y: 0 }, 250, 1)!;
     store.set({ selection: { kind: 'drawing', id } });
     duplicateSelection();
     expect(drawings()).toHaveLength(2);
@@ -84,7 +84,7 @@ describe('dvojitá čára (krok 0, KRESLENI-PREKLADU.md)', () => {
   });
 
   it('posun tažením (výběr, skupina) a otočení', () => {
-    const id = addDrawDouble({ x: 0, y: 0 }, { x: 1000, y: 0 }, 250, 1);
+    const id = addDrawDouble({ x: 0, y: 0 }, { x: 1000, y: 0 }, 250, 1)!;
     moveGroup(groupOrigin(f(), [{ kind: 'drawing', id }]), 100, 200);
     expect(f().drawings![id]!.pts).toEqual([{ x: 100, y: 200 }, { x: 1100, y: 200 }]);
     store.set({ selection: { kind: 'drawing', id } });
@@ -94,21 +94,21 @@ describe('dvojitá čára (krok 0, KRESLENI-PREKLADU.md)', () => {
   });
 
   it('tažení už vybrané kresby nástrojem Vybrat ji posune', () => {
-    const id = addDrawDouble({ x: 0, y: 0 }, { x: 1000, y: 0 }, 250, 1);
+    const id = addDrawDouble({ x: 0, y: 0 }, { x: 1000, y: 0 }, 250, 1)!;
     store.set({ tool: 'select', selection: { kind: 'drawing', id } });
     stroke(selectTool, [{ x: 500, y: 0 }, { x: 500, y: 300 }, { x: 500, y: 500 }]);
     expect(f().drawings![id]!.pts[0]).toEqual({ x: 0, y: 500 });
   });
 
   it('úchyt druhé čáry mění vzdálenost čar (a stranu)', () => {
-    const id = addDrawDouble({ x: 0, y: 0 }, { x: 1000, y: 0 }, 250, 1);
+    const id = addDrawDouble({ x: 0, y: 0 }, { x: 1000, y: 0 }, 250, 1)!;
     store.set({ tool: 'select', selection: { kind: 'drawing', id } });
     stroke(selectTool, [{ x: 500, y: 250 }, { x: 500, y: 300 }, { x: 500, y: 400 }]);
     expect(f().drawings![id]).toMatchObject({ width: 400, side: 1 });
   });
 
   it('uložení: kresba projde migrací beze změny (schéma 17+)', () => {
-    const id = addDrawDouble({ x: 0, y: 0 }, { x: 1000, y: 0 }, 250, 1);
+    const id = addDrawDouble({ x: 0, y: 0 }, { x: 1000, y: 0 }, 250, 1)!;
     updateDrawing(id, { closedEnds: false });
     const p = migrateProject(JSON.parse(JSON.stringify(store.get().project)));
     expect(p.floors[0]!.drawings![id]).toEqual(f().drawings![id]);
@@ -313,12 +313,12 @@ describe('migrace 17 → 18: tvary ze stěn na kresbu', () => {
 
 describe('šrafy uzavřených tvarů (krok 3)', () => {
   const ids = () => {
-    const rect = addDrawRect({ x: 0, y: 0 }, { x: 400, y: 300 });
-    const circ = addDrawCircle({ x: 2000, y: 0 }, 300);
-    const arc = addDrawArc({ x: 0, y: 2000 }, { x: 1000, y: 2000 }, 200);
-    const dOpen = addDrawDouble({ x: 0, y: 4000 }, { x: 1000, y: 4000 }, 250, 1);
+    const rect = addDrawRect({ x: 0, y: 0 }, { x: 400, y: 300 })!;
+    const circ = addDrawCircle({ x: 2000, y: 0 }, 300)!;
+    const arc = addDrawArc({ x: 0, y: 2000 }, { x: 1000, y: 2000 }, 200)!;
+    const dOpen = addDrawDouble({ x: 0, y: 4000 }, { x: 1000, y: 4000 }, 250, 1)!;
     updateDrawing(dOpen, { closedEnds: false });
-    const dClosed = addDrawDouble({ x: 0, y: 5000 }, { x: 1000, y: 5000 }, 250, 1);
+    const dClosed = addDrawDouble({ x: 0, y: 5000 }, { x: 1000, y: 5000 }, 250, 1)!;
     return { rect, circ, arc, dOpen, dClosed };
   };
 
@@ -346,14 +346,14 @@ describe('šrafy uzavřených tvarů (krok 3)', () => {
   it('šrafovaný tvar přes stěnu: stěna se nemění, ťuknutí dovnitř tvaru mimo stěnu ho vybere', () => {
     wallS();
     const before = structure();
-    const id = addDrawRect({ x: 1000, y: -500 }, { x: 1600, y: 200 });
+    const id = addDrawRect({ x: 1000, y: -500 }, { x: 1600, y: 200 })!;
     updateDrawing(id, { hatch: 'diag', color: 'blue' });
     expect(structure()).toBe(before);
     expect(pickAny(f(), { x: 1300, y: -300 }, store.get().camera)).toEqual({ kind: 'drawing', id });
   });
 
   it('šrafa a barvy se uloží a projdou migrací; kopie je převezme', () => {
-    const id = addDrawCircle({ x: 0, y: 0 }, 300);
+    const id = addDrawCircle({ x: 0, y: 0 }, 300)!;
     updateDrawing(id, { hatch: 'diag', hatchColor: 'green', color: 'gray' });
     store.set({ selection: { kind: 'drawing', id } });
     duplicateSelection();

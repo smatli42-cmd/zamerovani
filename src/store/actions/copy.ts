@@ -59,7 +59,7 @@ export function duplicateSelection(): void {
   const created: { kind: 'wall' | 'opening' | LooseKindId; id: Id }[] = [];
   const before = store.floor();
   if (!before) return;
-  store.edit(floor => {
+  const ok = store.edit(floor => {
     const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
     const nodeMap = new Map<Id, Id>();
     const nodeCopy = (id: Id): Id | null => {
@@ -146,7 +146,8 @@ export function duplicateSelection(): void {
       }
   });
   // Kopie je vždy skupina, aby šla uchopit a přenést celá najednou (i s otvory)
-  if (created.length) store.set({ selection: { kind: 'multi', items: created }, numpad: null });
+  // zamčená vrstva originálu: kopie nevznikla (core/layers.ts) – nic nevybrat
+  if (ok && created.length) store.set({ selection: { kind: 'multi', items: created }, numpad: null });
 }
 
 /** Zkopíruje otvory do schránky a přepne na nástroj Vložit. */
@@ -169,7 +170,7 @@ export function pasteOpenings(wallId: Id, center: number): boolean {
   const clip = store.get().clipboard;
   if (!clip?.length) return false;
   const created: Id[] = [];
-  store.edit(floor => {
+  const ok = store.edit(floor => {
     const wall = floor.walls[wallId];
     if (!wall) return;
     const len = wallLength(floor, wall);
@@ -183,7 +184,8 @@ export function pasteOpenings(wallId: Id, center: number): boolean {
       created.push(op.id);
     }
   });
-  if (!created.length) return false;
+  // stěna v zamčené vrstvě: vložení se neprovedlo (core/layers.ts)
+  if (!ok || !created.length) return false;
   store.set({ selection: created.length === 1 ? { kind: 'opening', id: created[0]! } : { kind: 'multi', items: created.map(id => ({ kind: 'opening' as const, id })) } });
   return true;
 }

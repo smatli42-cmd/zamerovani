@@ -139,7 +139,9 @@ export function LayersPanel({ mode }: { mode: 'top' | 'tool' }) {
 
 /** Smazání neprázdné vrstvy (pravidlo 7): přesunout obsah do vybrané vrstvy / smazat i s obsahem / zrušit. */
 function DeleteLayerDialog({ layer, count, others, onClose }: { layer: Layer; count: number; others: Layer[]; onClose: () => void }) {
-  const [to, setTo] = useState<Id>(others.find(l => l.id === 'kresba')?.id ?? others[0]!.id);
+  // zamčená vrstva nic nepřijme (V2) – nabízí se jen odemčené
+  const open = others.filter(l => !l.locked);
+  const [to, setTo] = useState<Id | undefined>(open.find(l => l.id === 'kresba')?.id ?? open[0]?.id);
   return (
     <Dialog
       title={`Smazat vrstvu „${layer.name}“?`}
@@ -151,7 +153,9 @@ function DeleteLayerDialog({ layer, count, others, onClose }: { layer: Layer; co
           </button>
           <button
             class="btn btn-primary"
+            disabled={!to}
             onClick={() => {
+              if (!to) return;
               deleteLayer(layer.id, to);
               onClose();
             }}
@@ -174,7 +178,7 @@ function DeleteLayerDialog({ layer, count, others, onClose }: { layer: Layer; co
       <label class="field">
         <span>Přesunout obsah do vrstvy</span>
         <select value={to} onChange={e => setTo((e.target as HTMLSelectElement).value)}>
-          {others.map(l => (
+          {open.map(l => (
             <option key={l.id} value={l.id}>
               {l.name}
             </option>

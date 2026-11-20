@@ -14,14 +14,16 @@ export function takeFreshTextId(): Id | null {
   return id;
 }
 
-export function addText(p: Pt, leader?: Pt): Id {
+/** Vrací id nového textu, nebo null, když nevznikl (zamčená vrstva Popisky). */
+export function addText(p: Pt, leader?: Pt): Id | null {
   let id = '';
-  store.edit(floor => {
+  const ok = store.edit(floor => {
     const t = createText(p.x, p.y);
     if (leader) t.leader = { x: Math.round(leader.x), y: Math.round(leader.y) };
     floor.texts[t.id] = t;
     id = t.id;
   });
+  if (!ok) return null;
   freshTextId = id;
   store.set({ selection: { kind: 'text', id } });
   return id;

@@ -190,7 +190,7 @@ describe('L a U schodiště (podesta + další rameno)', () => {
 
 describe('ruční obrys', () => {
   it('uzavřený tvar kresby se označí jako schodiště: nášlapy rovnoměrně podél osy, osa jde otočit', () => {
-    const d = addDrawRect({ x: 0, y: 0 }, { x: 1000, y: 2700 });
+    const d = addDrawRect({ x: 0, y: 0 }, { x: 1000, y: 2700 })!;
     const id = drawingToStair(d)!;
     const s = st(id);
     expect(f().drawings?.[d]).toBeUndefined();

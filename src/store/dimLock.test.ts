@@ -124,7 +124,7 @@ describe('zámek kót', () => {
 
   it('hromadně: zamknout vše u místnosti = kóty všech čtyř stěn obrysu', () => {
     const w = rect();
-    const room = addRoom({ x: 2000, y: -1500 });
+    const room = addRoom({ x: 2000, y: -1500 })!;
     expect(new Set(roomWallIds(f(), { x: 2000, y: -1500 }))).toEqual(new Set(Object.values(w)));
     expect(setRoomDimsLocked(room, true)).toBe(true);
     for (const id of Object.values(w)) expect(isDimLocked(f(), L(id))).toBe(true);

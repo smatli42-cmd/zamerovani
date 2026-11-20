@@ -127,7 +127,7 @@ describe('volná kóta: zadání délky posune zvolený bod', () => {
 
   it('kresba – roh: kruh (sloup) se posune celý, poloměr zůstane', () => {
     room();
-    const c = addDrawCircle({ x: 1000, y: 1000 }, 150);
+    const c = addDrawCircle({ x: 1000, y: 1000 }, 150)!;
     const id = addFreeDim(N({ x: 0, y: 0 }), { drawing: c, i: 0 })!;
     const before = freeDimValue(f(), id)!;
     expect(applyNumpadValue({ kind: 'free-dim', dimId: id, move: 'b' }, before + 100)).toBe(true);
@@ -198,7 +198,7 @@ describe('volná kóta: zámek, odsazení, mazání', () => {
 
   it('smazání kresby smaže kótu k jejímu bodu', () => {
     room();
-    const c = addDrawCircle({ x: 1000, y: 1000 }, 150);
+    const c = addDrawCircle({ x: 1000, y: 1000 }, 150)!;
     addFreeDim(N({ x: 0, y: 0 }), { drawing: c, i: 0 });
     store.set({ selection: { kind: 'drawing', id: c } });
     deleteSelection();
@@ -353,7 +353,7 @@ describe('volná kóta na hranách (rozhodnutí uživatele 2026-11-18: přichyti
 
   it('líc – bod: kolmá vzdálenost bodu od líce', () => {
     room();
-    const c = addDrawCircle({ x: 1000, y: 700 }, 100);
+    const c = addDrawCircle({ x: 1000, y: 700 }, 100)!;
     const top = wallBy({ x: 0, y: 0 }, { x: 4000, y: 0 });
     const id = addFreeDim({ wall: top.id, side: 1, at: 3000 }, { drawing: c, i: 0 })!; // side 1 = vnitřní líc y = 0
     expect(freeDimValue(f(), id)).toBeCloseTo(700, 6);

@@ -279,7 +279,7 @@ describe('ručně nakreslené rameno a podesta z kresby', () => {
     const id = addStair({ x: 0, y: 0 }, { x: 3000, y: 1000 })!;
     addStairFlight(id, 'left');
     const a2 = { ...st(id).flights[1]!.a };
-    const r = addDrawRect({ x: 2900, y: -100 }, { x: 4200, y: 1100 });
+    const r = addDrawRect({ x: 2900, y: -100 }, { x: 4200, y: 1100 })!;
     expect(drawingToLanding(r)).toBe(id);
     const s = st(id);
     expect(s.landings[0]!.pts).toHaveLength(4);
@@ -291,7 +291,7 @@ describe('ručně nakreslené rameno a podesta z kresby', () => {
 
   it('kresba bez schodiště poblíž: hlášení, kresba zůstane', () => {
     addStair({ x: 0, y: 0 }, { x: 3000, y: 1000 })!;
-    const r = addDrawRect({ x: 10000, y: 10000 }, { x: 11000, y: 11000 });
+    const r = addDrawRect({ x: 10000, y: 10000 }, { x: 11000, y: 11000 })!;
     expect(drawingToLanding(r)).toBeNull();
     expect(store.get().lockBlock?.text).toContain('Podesta');
     expect(f().drawings?.[r]).toBeDefined();

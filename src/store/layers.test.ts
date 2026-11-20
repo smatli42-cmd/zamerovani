@@ -81,12 +81,12 @@ const MAKERS: Record<string, () => Made> = {
     return { kind: 'protrusion', id: pr!.id, at: { x: 2000, y: v / 2 } };
   },
   čára: () => ({ kind: 'drawing', id: addDrawLine({ x: 0, y: 2000 }, { x: 3000, y: 2000 })!, at: { x: 1500, y: 2000 } }),
-  'dvojitá čára': () => ({ kind: 'drawing', id: addDrawDouble({ x: 0, y: 3000 }, { x: 3000, y: 3000 }, 250, 1), at: { x: 1500, y: 3000 } }),
-  kruh: () => ({ kind: 'drawing', id: addDrawCircle({ x: 6000, y: 0 }, 500), at: { x: 6500, y: 0 } }),
-  oblouk: () => ({ kind: 'drawing', id: addDrawArc({ x: 6000, y: 2000 }, { x: 7000, y: 2000 }, 300), at: { x: 6000, y: 2000 } }),
+  'dvojitá čára': () => ({ kind: 'drawing', id: addDrawDouble({ x: 0, y: 3000 }, { x: 3000, y: 3000 }, 250, 1)!, at: { x: 1500, y: 3000 } }),
+  kruh: () => ({ kind: 'drawing', id: addDrawCircle({ x: 6000, y: 0 }, 500)!, at: { x: 6500, y: 0 } }),
+  oblouk: () => ({ kind: 'drawing', id: addDrawArc({ x: 6000, y: 2000 }, { x: 7000, y: 2000 }, 300)!, at: { x: 6000, y: 2000 } }),
   kóta: () => ({ kind: 'dim', id: addFreeDim({ x: 0, y: -1000 }, { x: 2000, y: -1000 })!, at: { x: 1000, y: -1000 } }),
-  text: () => ({ kind: 'text', id: addText({ x: 8000, y: 3000 }), at: { x: 8000, y: 3000 } }),
-  'štítek místnosti': () => ({ kind: 'room', id: addRoom({ x: 8000, y: 6000 }), at: { x: 8000, y: 6000 } }),
+  text: () => ({ kind: 'text', id: addText({ x: 8000, y: 3000 })!, at: { x: 8000, y: 3000 } }),
+  'štítek místnosti': () => ({ kind: 'room', id: addRoom({ x: 8000, y: 6000 })!, at: { x: 8000, y: 6000 } }),
   schodiště: () => ({ kind: 'stair', id: addStair({ x: 0, y: 6000 }, { x: 1000, y: 9000 })!, at: { x: 500, y: 7500 } }),
   'ruční tah': () => ({ kind: 'stroke', id: addStroke([{ x: 10000, y: 0 }, { x: 11000, y: 500 }, { x: 12000, y: 0 }], 25)!, at: { x: 11000, y: 500 } })
 };
@@ -373,8 +373,8 @@ describe('pravidlo 4: aktivní vrstva', () => {
     expect(f().drawings![d]!.layerId).toBe('elektro');
     const w = addWall({ x: 0, y: 1000 }, null, { x: 1000, y: 1000 }, null, false)!;
     expect(f().walls[w]!.layerId).toBe(SYS.stavba);
-    const t = addText({ x: 0, y: 5000 });
-    const r = addRoom({ x: 3000, y: 5000 });
+    const t = addText({ x: 0, y: 5000 })!;
+    const r = addRoom({ x: 3000, y: 5000 })!;
     const k = addFreeDim({ x: 0, y: 9000 }, { x: 900, y: 9000 })!;
     const st = addStair({ x: 5000, y: 0 }, { x: 6000, y: 3000 })!;
     expect(f().texts[t]!.layerId).toBe(SYS.popisky);
@@ -420,6 +420,99 @@ describe('pravidlo 4: aktivní vrstva', () => {
     expect(setLayerVisible('voda', false)).toBe(true);
     addDrawLine({ x: 0, y: 0 }, { x: 1000, y: 0 });
     expect(layersOf(P()).find(l => l.id === 'voda')!.visible).toBe(true);
+  });
+});
+
+describe('pravidlo 2: do zamčené vrstvy nic nepřibude (rozhodnutí uživatele 2026-11-20)', () => {
+  /** Stav podlaží bez ohledu na pořadí klíčů. */
+  const snap = () => JSON.stringify(f());
+  const refused = (before: string) => {
+    expect(snap()).toBe(before);
+    expect(store.get().lockBlock?.text).toContain('zamčen');
+  };
+  // otvor a výstupek nemají vlastní vrstvu: přibývají na stěně, takže zamčená je vrstva stěny (stěna vznikne před zamčením)
+  const CARRIED: Record<string, () => void> = {
+    otvor: () => void addOpening(Object.keys(f().walls)[0]!, 'window', 0.5),
+    výstupek: () => {
+      addLine({ x: 1500, y: 0 }, null, { x: 1500, y: -200 }, null);
+      addLine({ x: 1500, y: -200 }, null, { x: 2500, y: -200 }, null);
+      addLine({ x: 2500, y: -200 }, null, { x: 2500, y: 0 }, null);
+    }
+  };
+  it.each(Object.keys(MAKERS).filter(n => n !== 'ostění'))('%s', name => {
+    if (CARRIED[name]) {
+      WALL();
+      setLayerLocked(SYS.stavba, true);
+      const before = snap();
+      CARRIED[name]!();
+      expect(f().openings).toEqual({});
+      expect(Object.keys(f().protrusions ?? {})).toHaveLength(0);
+      refused(before);
+      return;
+    }
+    const layer = DEFAULT[name]!;
+    setLayerLocked(layer, true);
+    const before = snap();
+    try {
+      MAKERS[name]!();
+    } catch {
+      // tvůrce ve zkoušce čeká, že prvek vznikne – tady právě nevznikne
+    }
+    refused(before);
+  });
+
+  it('ostění: zapnutí ostění u otvoru na zamčené stěně je změna prvku zamčené vrstvy (V2)', () => {
+    const w = WALL();
+    const o = addOpening(w, 'window', 0.5)!;
+    setLayerLocked(SYS.stavba, true);
+    const before = snap();
+    setRevealEnabled(o, true);
+    refused(before);
+  });
+
+  it('vložení otvoru na stěnu zamčené vrstvy nic nevytvoří ani nevybere', async () => {
+    const { pasteOpenings } = await import('./actions');
+    const w = WALL();
+    const o = addOpening(w, 'window', 0.5)!;
+    const w2 = addWall({ x: 0, y: 5000 }, null, { x: 4000, y: 5000 }, null, false, { thickness: 300, side: 1 })!;
+    store.set({ selection: { kind: 'wall', id: w2 } });
+    moveSelectionToLayer('elektro');
+    store.set({ selection: { kind: 'opening', id: o } });
+    duplicateSelection();
+    expect(store.get().clipboard).toBeTruthy();
+    setLayerLocked('elektro', true);
+    const before = snap();
+    expect(pasteOpenings(w2, 2000)).toBe(false);
+    expect(store.get().selection).toBeNull();
+    refused(before);
+  });
+
+  it('schodiště z kresby do zamčené Stavby nevznikne, kresba zůstane', async () => {
+    const { addDrawRect, drawingToStair } = await import('./actions');
+    const d = addDrawRect({ x: 0, y: 0 }, { x: 1000, y: 3000 })!;
+    setLayerLocked(SYS.stavba, true);
+    const before = snap();
+    expect(drawingToStair(d)).toBeNull();
+    expect(f().drawings![d]).toBeTruthy();
+    refused(before);
+  });
+
+  it('smazání vrstvy s přesunem obsahu do zamčené vrstvy se neprovede', () => {
+    setActiveLayer('voda');
+    addDrawLine({ x: 0, y: 0 }, { x: 1000, y: 0 });
+    setLayerLocked('elektro', true);
+    expect(deleteLayer('voda', 'elektro')).toBe(false);
+    expect(layersOf(P()).some(l => l.id === 'voda')).toBe(true);
+  });
+
+  it('přesun prvku do zamčené vrstvy se neprovede', () => {
+    setActiveLayer('voda');
+    const d = addDrawLine({ x: 0, y: 0 }, { x: 1000, y: 0 })!;
+    setLayerLocked('elektro', true);
+    store.set({ selection: { kind: 'drawing', id: d } });
+    moveSelectionToLayer('elektro');
+    expect(f().drawings![d]!.layerId).toBe('voda');
+    expect(store.get().lockBlock?.text).toContain('zamčená');
   });
 });
 
@@ -570,14 +663,15 @@ describe('nálezy kontroly kroku 1', () => {
     // ve stejné vrstvě naváže
     const v2 = addDrawLine({ x: 1000, y: 1000 }, { x: 0, y: 1000 })!;
     expect(v2).toBe(v);
-    // zamčená vrstva: nová čára vznikne samostatně, zamčená se nezmění
+    // zamčená vrstva: nová čára nevznikne (nic do ní nepřibude, 2026-11-20), zamčená se nezmění
     setLayerLocked('voda', true);
-    const v3 = addDrawLine({ x: 0, y: 1000 }, { x: 0, y: 2000 })!;
-    expect(v3).not.toBe(v);
-    expect(f().drawings![v3]).toBeTruthy();
+    const pts = JSON.stringify(f().drawings![v]!.pts);
+    expect(addDrawLine({ x: 0, y: 1000 }, { x: 0, y: 2000 })).toBeFalsy();
+    expect(store.get().lockBlock?.text).toContain('zamčená');
+    expect(JSON.stringify(f().drawings![v]!.pts)).toBe(pts);
   });
 
-  it('stěny v různých vrstvách se neslučují; pokračování zamčené stěny vznikne samostatně', () => {
+  it('stěny v různých vrstvách se neslučují; do zamčené Stavby nová stěna nepřibude', () => {
     const w = WALL();
     store.set({ selection: { kind: 'wall', id: w } });
     moveSelectionToLayer('elektro');
@@ -585,11 +679,13 @@ describe('nálezy kontroly kroku 1', () => {
     expect(n).not.toBe(w);
     expect(f().walls[n]!.layerId).toBe(SYS.stavba);
     expect(f().walls[w]!.layerId).toBe('elektro');
-    // zamčená Stavba: další rovné pokračování stavby se nesloučí, ale vznikne
+    // zamčená Stavba: pokračování nevznikne a stávající stěna se neprodlouží (2026-11-20)
     setLayerLocked(SYS.stavba, true);
+    const len = JSON.stringify(f().walls[n]);
     const m = addWall({ x: 6000, y: 0 }, f().walls[n]!.b, { x: 8000, y: 0 }, null, false, { thickness: 300, side: 1 });
-    expect(m).toBeTruthy();
-    expect(m).not.toBe(n);
+    expect(m).toBeFalsy();
+    expect(JSON.stringify(f().walls[n])).toBe(len);
+    expect(store.get().lockBlock?.text).toContain('zamčená');
   });
 
   it('ořez kresby nebere skrytou čáru jako hranici', async () => {

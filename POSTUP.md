@@ -7,6 +7,15 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-20 (2) – do zamčené vrstvy nic nepřibude, 🎯 bere celý výkres
+- **Rozhodnuto uživatelem (odpovědi na otázky z (13), (14)):** do zamčené vrstvy nevznikne žádný nový prvek (jako u Pera); smazání stěny s kótou v zamčené vrstvě Kóty se neprovede (beze změny); smazání podlaží maže vše (beze změny); schodiště z kresby jde do Stavby (beze změny). Otázka výstupku v rohu dvou stěn z různých vrstev zůstává podle dnešního chování.
+- **Co se změnilo:** průřezové pravidlo na jednom místě – `layerLockViolation` v `core/layers.ts` (volá `store.edit` i `editLayers`) odmítne nový prvek v zamčené vrstvě i přesun prvku do ní, s hlášením „vrstva … je zamčená, nic do ní nepřibude“. Funkce, které prvek vytvářejí (kresba, text, štítek, kóta, schodiště), vrací „nic“, když prvek nevznikl, a nic nevybírají. 🎯 (Zobrazit celý výkres) bere i kresbu, schodiště, ruční tahy a volné kóty. Katalog V2 (+ řádek tabulky), V4. Testy +15 (tabulka prvek × pravidlo), celkem 956 + 1 zapsaný nález.
+- **Tabulka „nic nepřibude“ (test):** stěna ✔, otvor ✔, ostění ✔ (zapnutí = změna otvoru), výstupek ✔, čára ✔, dvojitá čára ✔, kruh ✔, oblouk ✔, volná kóta ✔, text ✔, štítek ✔, schodiště ✔, ruční tah ✔; automatické kóty n.a. (nevznikají jako prvek). Pravidlo dosud zvlášť: Pero má navíc vlastní předběžnou kontrolu (hlášení ještě před kreslením tahu).
+- **Viditelně v aplikaci:** kresba, stěna, text, kóta, schodiště do zamčené vrstvy nevzniknou, dole se ukáže hlášení. 🎯 zobrazí i výkres, kde je jen kresba nebo tahy.
+- **Rozhodnuto samostatně:** i přesun prvku do zamčené vrstvy (Přesunout do vrstvy, smazání vrstvy s přesunem obsahu do zamčené) se neprovede – je to „přibytí“ do zamčené vrstvy.
+- **Po kontrole revieweru opraveno:** vložení otvoru na stěnu zamčené vrstvy a kopie ze zamčené vrstvy vybraly neexistující prvky; schodiště z kresby vracelo id, i když nevzniklo; test otvoru a výstupku nekontroloval hlášení; 🎯 nebral odsazenou kótovací čáru. V nabídce „Přesunout do vrstvy“ a v dialogu mazání vrstvy jsou zamčené vrstvy zašedlé / nenabízí se. Testy +3, celkem 959 + 1 zapsaný nález.
+- **Otevřené:** skrytá vazba (reviewer, dnes nenastane): prvek bez `layerId` nebo s neexistující vrstvou by se při zamčené aktivní vrstvě bral jako „přibytí“ a zablokoval úpravy podlaží – migrace a mazání vrstev tomu dnes brání.
+
 ### 2026-11-20 (1) – vrstvy: dvě okna, do systémových vrstev se nekreslí, aktivní jde skrýt
 - **Chyba od uživatele:** v panelu Vrstvy nešla skrýt horní vrstva – byla zvolená jako aktivní a aktivní vrstvu nešlo skrýt. Opraveno rozhodnutím uživatele: aktivní vrstvu jde skrýt (nový prvek ji zase zobrazí).
 - **Rozhodnuto uživatelem:** aktivní (kreslicí) vrstva smí být jen vlastní vrstva, ani Kresba ne; okno Vrstvy z lišty nástroje = jen vlastní vrstvy a volba aktivní; okno z horní lišty = vpravo nahoře, všechny vrstvy i systémové, jen správa (bez volby aktivní).
@@ -722,7 +731,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 **Čeká na vyzkoušení:** vrstvy, Pero a Guma na tabletu se S-Penem (pero kreslí, prst posouvá, dva prsty zoomují, dlaň nevadí) – co nefunguje, zapsat do Deníku; schodiště (8).
 
-**Otázky pro uživatele (z (13), (14); do odpovědi platí dnešní chování):** výstupek v rohu dvou stěn z různých vrstev (skrytý / zamčený, když kterákoli stěna); smazání podlaží maže i zamčené vrstvy; schodiště z kresby jde do Stavby; stěnu s kótou v zamčené vrstvě Kóty nejde smazat; má i kresba a stěny do zamčené vrstvy nevznikat (jako Pero)?; tlačítko 🎯 nebere v úvahu kresbu, schodiště a tahy.
+**Otázky pro uživatele – zodpovězeno 2026-11-20 (viz Deník 2026-11-20 (2)); původně:** výstupek v rohu dvou stěn z různých vrstev (skrytý / zamčený, když kterákoli stěna); smazání podlaží maže i zamčené vrstvy; schodiště z kresby jde do Stavby; stěnu s kótou v zamčené vrstvě Kóty nejde smazat; má i kresba a stěny do zamčené vrstvy nevznikat (jako Pero)?; tlačítko 🎯 nebere v úvahu kresbu, schodiště a tahy.
 
 **Fronta kroků:**
 1. Chyby z používání a testování na tabletu (vrstvy, Pero, schodiště) – mají přednost; odpovědi na otázky výše.

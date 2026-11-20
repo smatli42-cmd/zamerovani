@@ -25,7 +25,7 @@ function setup() {
   const op = addOpening(wallBy(C[1]!, C[2]!).id, 'window', 0.5)!;
   setRevealEnabled(op, true);
   const bottom = wallBy(C[2]!, C[3]!);
-  const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 });
+  const r = addDrawRect({ x: 1000, y: 2000 }, { x: 2500, y: 3500 })!;
   const lk = addFreeDim({ seg: r, i: 2, at: 500 }, { wall: bottom.id, side: 1, at: 2000 })!;
   setDimLock({ kind: 'free-dim', dimId: lk, move: 'b' }, true);
   const startOf = () => {
@@ -59,7 +59,7 @@ describe('volná kóta: výchozí posouvaný konec', () => {
 
   it('roh × kresba / pevný bod: posune se kresba / pevný bod, ne roh', () => {
     const { bottom } = setup();
-    const r = addDrawRect({ x: 3000, y: 1000 }, { x: 3500, y: 1500 });
+    const r = addDrawRect({ x: 3000, y: 1000 }, { x: 3500, y: 1500 })!;
     const id1 = addFreeDim({ drawing: r, i: 0 }, { node: nodeAt(C[0]!).id })!;
     const id2 = addFreeDim({ x: 1000, y: 1000 }, { wall: bottom.id, side: 1, at: 1000 })!;
     expect(defaultFreeDimMove(f().dims![id1]!)).toBe('a');

@@ -19,7 +19,7 @@ const nodeAt = (p: Pt) => Object.values(f().nodes).find(n => dist(n, p) < 1)!;
 function setup(closedEnds = false) {
   store.openProject(createProject({ name: 't' }));
   addWall({ x: -1000, y: 0 }, null, { x: 4000, y: 0 }, null, false, { thickness: 300, side: -1 });
-  const d = addDrawDouble({ x: 0, y: 1000 }, { x: 2000, y: 1000 }, 300, 1);
+  const d = addDrawDouble({ x: 0, y: 1000 }, { x: 2000, y: 1000 }, 300, 1)!;
   if (closedEnds) store.edit(fl => void (fl.drawings![d]!.closedEnds = true));
   const wall = Object.values(f().walls)[0]!;
   return { d, wall, y2: doubleOffset(f().drawings![d]!)![0].y };
