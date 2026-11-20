@@ -11,9 +11,9 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Požadavek uživatele:** barevně odlišit číslo a název; konec šipky / kužele má při zoomu ukazovat pořád na přesné místo (dřív „odjel“).
 - **Co se změnilo:** štítek = číslo v poli barvy značky (bílé písmo) + název v bílém poli s tmavým písmem a okrajem barvy značky. Směr pohledu je nově **cíl ve výkresu** `MarkDir.to` (mm) místo úhlu a délky v px – kužel / šipka vede od štítku přesně do cíle při každém zoomu (u kužele čárkovaná osa). Cíl jede se značkou (posun, otočení skupiny, kopie – `core/looseElements.ts`). Panel: Úhel a Vzdálenost cíle (mm). SCHEMA_VERSION 32, migrace `markDirTargets` (starý úhel → cíl 1,5 m od značky). Testy upravené podle nového modelu.
 - **Viditelně v aplikaci:** číslo značky barevně, název bíle; konec kužele / šipky drží na místě ve výkresu i při přiblížení / oddálení; kulatým úchytem se cíl přesune. Ověřeno v prohlížeči (cíl na rohu schodiště, zoom).
-- **Rozhodnuto samostatně:** cíl jede se značkou při jejím posunu (stejně jako u skupiny a kopie – značka je jeden prvek); po zapnutí směru je cíl 1,5 m nahoru; když je výkres tak oddálený, že cíl leží pod štítkem, úchyt se nenabízí (tažení posune značku).
+- **Rozhodnuto samostatně:** po zapnutí směru je cíl 1,5 m nahoru; když je výkres tak oddálený, že cíl leží pod štítkem, úchyt se nenabízí (tažení posune značku).
 - **Po kontrole revieweru opraveno:** tažením úchytu na štítek šel cíl schovat pod štítek (pak nešel chytit) – cíl je teď vždy aspoň 20 px za okrajem štítku (`dirTargetFromDrag`); výplň kužele jen do 180 px na obrazovce (při velkém zoomu by zakryla výkres), dál čárkovaná osa a tečka přesně v cíli; zrušena nepoužívaná funkce. Test +1, celkem 1008 + 1 zapsaný nález.
-- **Otevřené:** potvrdit, že cíl má jet se značkou při jejím posunu (alternativa: cíl zůstane a otočí se jen kužel).
+- **Potvrzeno uživatelem 2026-11-20:** cíl směru jede se značkou při jejím posunu (i při kopii a otočení skupiny).
 
 ### 2026-11-20 (6) – značka: úpravy od uživatele
 - **Požadavek uživatele:** bez předvoleb názvů; značka nese číslo i název v jednom (kužel název nezakryje); kužel i šipka jdou protáhnout za koncový bod; ve skice stejné prvky jako kresba ve výkresu (čára, kruh…) a Vybrat s posunem prvků.
