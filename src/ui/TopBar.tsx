@@ -89,7 +89,7 @@ export function TopBar() {
       <button class="btn btn-dark" disabled={!canRedo} onClick={() => store.redo()} title="Vpřed (Ctrl+Y)">
         ↪️
       </button>
-      <button class={`btn btn-dark ${layersOpen ? 'active' : ''}`} onClick={() => store.set({ layersOpen: !layersOpen })} title="Vrstvy">
+      <button class={`btn btn-dark ${layersOpen === 'top' ? 'active' : ''}`} onClick={() => store.set({ layersOpen: layersOpen === 'top' ? false : 'top' })} title="Vrstvy">
         🗂️ Vrstvy
       </button>
       <button class="btn btn-dark" onClick={fitToDrawing} title="Zobrazit celý výkres">

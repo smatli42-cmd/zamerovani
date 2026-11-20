@@ -41,7 +41,7 @@ export function Editor() {
         <div class="canvas-wrap">
           <canvas ref={canvasRef} class="plan-canvas" />
           <ToolOptions />
-          {layersOpen && <LayersPanel />}
+          {layersOpen && <LayersPanel mode={layersOpen} />}
           <SidePanel />
           <NumPad />
           <LockNotice />

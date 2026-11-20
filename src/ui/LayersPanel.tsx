@@ -1,10 +1,14 @@
 /**
- * Panel Vrstvy (pravidla v core/layers.ts): seznam vrstev shora dolů v pořadí kreslení (nahoře = kreslí se nejvýš),
- * oko, zámek, barva, název; ťuknutí na název = aktivní vrstva; přetažení za ≡ mění pořadí; přidat, přejmenovat, smazat.
+ * Okno Vrstvy (pravidla v core/layers.ts), seznam shora dolů v pořadí kreslení (nahoře = kreslí se nejvýš).
+ * Dvě podoby podle toho, odkud se otevře (rozhodnutí uživatele 2026-11-20):
+ * - 'top' z horní lišty, vpravo nahoře – správa všech vrstev i systémových: oko, zámek, barva, přetažení za ≡ mění
+ *   pořadí, přidat, přejmenovat, smazat. Aktivní vrstva se tu nevolí.
+ * - 'tool' z lišty nástroje kresby / Pera / Gumy – jen vlastní vrstvy (do systémových se nekreslí): ťuknutí na název
+ *   = aktivní vrstva, oko, zámek, barva, přidat.
  */
 import { useState } from 'preact/hooks';
 import type { Id, Layer } from '../model/types';
-import { layersOf } from '../core/layers';
+import { activeDrawLayer, layersOf } from '../core/layers';
 import { addLayer, deleteLayer, layerItemCount, moveLayerTo, renameLayer, setActiveLayer, setLayerColor, setLayerLocked, setLayerVisible } from '../store/actions';
 import { store } from '../store/store';
 import { useStore } from '../store/useStore';
@@ -15,14 +19,16 @@ const ROW = 52;
 
 type LayerDialog = { type: 'add' } | { type: 'rename'; layer: Layer } | { type: 'delete'; layer: Layer; count: number } | null;
 
-export function LayersPanel() {
+export function LayersPanel({ mode }: { mode: 'top' | 'tool' }) {
   const project = useStore(s => s.project);
   const [dialog, setDialog] = useState<LayerDialog>(null);
   const [drag, setDrag] = useState<{ id: Id; from: number; y0: number; dy: number } | null>(null);
   if (!project) return null;
-  // shora dolů: nejvýš kreslená vrstva první
-  const list = layersOf(project).reverse();
-  const active = list.some(l => l.id === project.activeLayer) ? project.activeLayer : 'kresba';
+  const tool = mode === 'tool';
+  // shora dolů: nejvýš kreslená vrstva první; v okně nástroje jen vlastní vrstvy
+  const all = layersOf(project).reverse();
+  const list = tool ? all.filter(l => !l.system) : all;
+  const active = tool ? activeDrawLayer(project).id : null;
   const target = drag ? Math.max(0, Math.min(list.length - 1, drag.from + Math.round(drag.dy / ROW))) : -1;
 
   const onDelete = (l: Layer) => {
@@ -32,9 +38,9 @@ export function LayersPanel() {
   };
 
   return (
-    <section class="layers-panel" aria-label="Vrstvy">
+    <section class={`layers-panel ${mode}`} aria-label="Vrstvy">
       <div class="panel-head">
-        <span>Vrstvy</span>
+        <span>{tool ? 'Kreslit do vrstvy' : 'Vrstvy'}</span>
         <button class="icon-close" onClick={() => store.set({ layersOpen: false })} title="Zavřít">
           ✕
         </button>
@@ -51,6 +57,7 @@ export function LayersPanel() {
           const y = i * ROW + (dragging ? drag.dy : shift);
           return (
             <li key={l.id} class={`layer-row ${l.id === active ? 'active' : ''} ${dragging ? 'dragging' : ''}`} style={{ transform: `translateY(${y}px)` }}>
+              {!tool && (
               <span
                 class="layer-handle"
                 title="Přetažením změníte pořadí"
@@ -69,10 +76,10 @@ export function LayersPanel() {
               >
                 ≡
               </span>
+              )}
               <button
                 class="layer-btn"
-                disabled={l.id === active && l.visible}
-                title={l.id === active ? 'Aktivní vrstvu nejde skrýt' : l.visible ? 'Skrýt vrstvu' : 'Zobrazit vrstvu'}
+                title={l.visible ? 'Skrýt vrstvu' : 'Zobrazit vrstvu'}
                 onClick={() => setLayerVisible(l.id, !l.visible)}
               >
                 {l.visible ? '👁️' : '🚫'}
@@ -83,11 +90,18 @@ export function LayersPanel() {
               <label class="layer-color" title="Barva vrstvy (ruční kresba a symboly)" style={{ background: l.color }}>
                 <input type="color" value={l.color} onChange={e => setLayerColor(l.id, (e.target as HTMLInputElement).value)} />
               </label>
-              <button class={`layer-name ${l.visible ? '' : 'off'}`} title="Ťuknutím nastavíte aktivní vrstvu" onClick={() => setActiveLayer(l.id)}>
-                {l.name}
-                {l.system && <small> ·systémová</small>}
-              </button>
-              {!l.system && (
+              {tool ? (
+                <button class={`layer-name ${l.visible ? '' : 'off'}`} title="Ťuknutím sem budete kreslit" onClick={() => setActiveLayer(l.id)}>
+                  {l.name}
+                  {l.id === active && <small> ·kreslí se sem</small>}
+                </button>
+              ) : (
+                <span class={`layer-name ${l.visible ? '' : 'off'}`}>
+                  {l.name}
+                  {l.system && <small> ·systémová</small>}
+                </span>
+              )}
+              {!tool && !l.system && (
                 <>
                   <button class="layer-btn" title="Přejmenovat" onClick={() => setDialog({ type: 'rename', layer: l })}>
                     ✏️
@@ -105,7 +119,13 @@ export function LayersPanel() {
         <button class="btn" onClick={() => setDialog({ type: 'add' })}>
           ＋ Přidat vrstvu
         </button>
-        <p class="muted small">Nová kresba jde do aktivní vrstvy (zvýrazněná). Stěny a schodiště jdou do Stavby, kóty do Kót, texty a štítky do Popisků.</p>
+        {tool ? (
+          <p class="muted small">
+            {list.length ? 'Kresba a Pero kreslí do zvýrazněné vrstvy.' : 'Zatím není žádná vlastní vrstva – kreslí se do Kresby. Přidejte vrstvu.'} Systémové vrstvy (Stavba, Kresba, Popisky, Kóty) jsou v okně Vrstvy v horní liště.
+          </p>
+        ) : (
+          <p class="muted small">Stěny a schodiště jdou do Stavby, kóty do Kót, texty a štítky do Popisků. Vrstvu pro kresbu a Pero zvolíte v liště nástroje.</p>
+        )}
       </div>
 
       {dialog?.type === 'add' && <TextPrompt title="Nová vrstva" label="Název vrstvy" initial="Nová vrstva" onSubmit={name => addLayer(name)} onClose={() => setDialog(null)} />}

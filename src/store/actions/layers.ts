@@ -4,7 +4,7 @@
  */
 import type { Id, Layer, Project } from '../../model/types';
 import { newId } from '../../model/factory';
-import { CARRIED_KINDS, layerById, layersOf, OWN_KINDS, ownCollection, SYS, type ElemKind, type OwnKind } from '../../core/layers';
+import { activeDrawLayer, CARRIED_KINDS, layerById, layersOf, OWN_KINDS, ownCollection, type ElemKind, type OwnKind } from '../../core/layers';
 import { looseKind } from '../../core/looseElements';
 import { store, type SingleSelection } from '../store';
 import { cleanup } from './shared';
@@ -20,15 +20,16 @@ function renumber(ls: Layer[]): void {
   [...ls].sort((a, b) => a.order - b.order).forEach((l, i) => (l.order = i));
 }
 
-/** Aktivní vrstva – do ní jde nová kresba (core/layers.ts, `newElementLayer`). Mimo historii. */
-export function setActiveLayer(id: Id): void {
-  const p = store.get().project;
-  if (!layerById(p, id)) return;
+/** Aktivní vrstva – do ní jde nová kresba a ruční tah (core/layers.ts, `activeDrawLayer`). Mimo historii.
+ *  Systémovou vrstvu zvolit nejde (rozhodnutí uživatele 2026-11-20). Zvolená skrytá vrstva se zobrazí. */
+export function setActiveLayer(id: Id): boolean {
+  const l = layerById(store.get().project, id);
+  if (!l || l.system) return false;
   store.editProjectSettings(d => {
     d.activeLayer = id;
-    // aktivní vrstva je vždy vidět (jako v CAD: aktuální hladinu nejde zmrazit)
   });
-  if (!layerById(store.get().project, id)!.visible) setLayerVisible(id, true);
+  if (!l.visible) setLayerVisible(id, true);
+  return true;
 }
 
 /** Nová uživatelská vrstva nad aktivní vrstvou; stane se aktivní. Vrací její id. */
@@ -36,7 +37,7 @@ export function addLayer(name = 'Nová vrstva', color = '#7c3aed'): Id {
   const id = newId('ly');
   store.editLayers(p => {
     const ls = draftLayers(p);
-    const active = ls.find(l => l.id === p.activeLayer);
+    const active = ls.find(l => l.id === activeDrawLayer(p).id);
     const at = active ? active.order + 0.5 : Math.max(...ls.map(l => l.order)) + 1;
     ls.push({ id, name: name.trim() || 'Nová vrstva', color, order: at, visible: true, locked: false, system: false });
     renumber(ls);
@@ -65,13 +66,8 @@ export function setLayerColor(id: Id, color: string): void {
   });
 }
 
-/** Zobrazit / skrýt (pravidlo 1). Aktivní vrstvu skrýt nejde. */
+/** Zobrazit / skrýt (pravidlo 1). Jde i aktivní vrstva (rozhodnutí uživatele 2026-11-20) – nový prvek ji zase zobrazí. */
 export function setLayerVisible(id: Id, visible: boolean): boolean {
-  const p0 = store.get().project;
-  if (!visible && p0?.activeLayer === id) {
-    store.set({ lockBlock: { key: '', text: 'Aktivní vrstvu nejde skrýt – nejdřív zvolte jinou aktivní vrstvu.' } });
-    return false;
-  }
   return store.editLayers(p => {
     const l = draftLayers(p).find(x => x.id === id);
     if (!l || l.visible === visible) return false;
@@ -140,7 +136,11 @@ export function deleteLayer(id: Id, moveTo: Id | null | undefined): boolean {
       }
       p.layers = draftLayers(p).filter(x => x.id !== id);
       renumber(p.layers);
-      if (p.activeLayer === id) p.activeLayer = moveTo ?? SYS.kresba;
+      // přesun do systémové / smazání → activeDrawLayer vezme nejnižší vlastní vrstvu
+      if (p.activeLayer === id) {
+        if (moveTo && p.layers.some(l => l.id === moveTo && !l.system)) p.activeLayer = moveTo;
+        else delete p.activeLayer;
+      }
     },
     { selection: null }
   );

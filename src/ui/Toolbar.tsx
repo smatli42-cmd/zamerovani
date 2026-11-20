@@ -46,7 +46,7 @@ export function Toolbar() {
           title={t.title}
           onClick={() => {
             tools[store.get().tool].cancel?.();
-            store.set({ tool: t.id, hover: null, chainNode: null, stairAppend: null, toolMsg: t.id === 'trim' ? trimMsg(store.get().settings.trimEdge) : t.id === 'split' ? splitMsg(store.get().settings.splitGap) : t.id === 'dim' ? dimToolMsg(false) : t.id === 'stair' ? stairToolMsg(false) : t.id === 'drawTrim' ? drawTrimMsg(store.get().settings.drawTrimMode === 'extend') : null });
+            store.set({ tool: t.id, ...(store.get().layersOpen === 'tool' ? { layersOpen: false } : {}), hover: null, chainNode: null, stairAppend: null, toolMsg: t.id === 'trim' ? trimMsg(store.get().settings.trimEdge) : t.id === 'split' ? splitMsg(store.get().settings.splitGap) : t.id === 'dim' ? dimToolMsg(false) : t.id === 'stair' ? stairToolMsg(false) : t.id === 'drawTrim' ? drawTrimMsg(store.get().settings.drawTrimMode === 'extend') : null });
           }}
         >
           <span class="tool-icon">{t.icon}</span>

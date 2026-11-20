@@ -11,7 +11,7 @@
 import type { Floor, Id, Pt, Stroke } from '../model/types';
 import { dist, projectToSegment } from './geometry';
 import { arcGeometry } from './arc';
-import { isSelectable, elementLayer } from './layers';
+import { activeDrawLayer, isSelectable, elementLayer } from './layers';
 import type { Project } from '../model/types';
 
 /** Předvolby tloušťky tahu (mm výkresu). */
@@ -94,10 +94,10 @@ export function pickStroke(floor: Floor, p: Pt, tol: number): Id | null {
 
 /**
  * Guma: celé tahy pod bodem, jen v aktivní vrstvě a jen viditelné a odemčené (skrytou ani zamčenou vrstvu guma
- * nemaže; aktivní vrstva skrýt nejde, zamčená je možná).
+ * nemaže).
  */
 export function strokesToErase(p: Pick<Project, 'layers' | 'activeLayer'> | null, floor: Floor, at: Pt, tol: number): Id[] {
-  const active = p?.activeLayer;
+  const active = activeDrawLayer(p).id;
   return strokesOf(floor)
     .filter(s => elementLayer(floor, 'stroke', s.id) === active && isSelectable(p, floor, 'stroke', s.id) && strokeHit(s, at, tol))
     .map(s => s.id);

@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createFloor, createProject } from '../model/factory';
 import type { Floor, Id, Project, Pt } from '../model/types';
 import { SCHEMA_VERSION } from '../model/types';
-import { elementLayer, elementLayers, layerContents, layersOf, SYS, viewFloor, type ElemKind } from '../core/layers';
+import { activeDrawLayer, elementLayer, elementLayers, layerContents, layersOf, SYS, viewFloor, type ElemKind } from '../core/layers';
 import { protrusionsOf } from '../core/protrusion';
 import { snapPoint } from '../core/snapping';
 import { selectInRect } from '../core/rectSelect';
@@ -97,15 +97,16 @@ const DEFAULT: Record<string, Id> = {
   otvor: SYS.stavba,
   ostění: SYS.stavba,
   výstupek: SYS.stavba,
-  čára: SYS.kresba,
-  'dvojitá čára': SYS.kresba,
-  kruh: SYS.kresba,
-  oblouk: SYS.kresba,
+  // kresba a ruční tah → aktivní vrstva; nový projekt ji nemá zvolenou → nejnižší vlastní (Elektro), rozhodnutí 2026-11-20
+  čára: 'elektro',
+  'dvojitá čára': 'elektro',
+  kruh: 'elektro',
+  oblouk: 'elektro',
   kóta: SYS.koty,
   text: SYS.popisky,
   'štítek místnosti': SYS.popisky,
   schodiště: SYS.stavba,
-  'ruční tah': SYS.kresba // aktivní vrstva (nový projekt: Kresba)
+  'ruční tah': 'elektro'
 };
 
 const layerOf = (m: Made) => elementLayer(f(), m.kind as ElemKind, m.id);
@@ -155,7 +156,7 @@ describe('model a migrace', () => {
     expect(ls.map(l => l.name).sort()).toEqual(['Elektro', 'Kresba', 'Kóty', 'Nábytek', 'Popisky', 'Poznámky', 'Stavba', 'Topení', 'Voda'].sort());
     expect(ls.filter(l => l.system).map(l => l.id).sort()).toEqual([SYS.stavba, SYS.koty, SYS.popisky, SYS.kresba].sort());
     expect(new Set(ls.map(l => l.order)).size).toBe(ls.length);
-    expect(P().activeLayer).toBe(SYS.kresba);
+    expect(activeDrawLayer(P()).id).toBe('elektro');
   });
 
   it('starý projekt (verze 27) se otevře beze ztráty: vrstvy doplněné, prvky podle druhu, nic nezmizí', () => {
@@ -200,8 +201,7 @@ describe.each(Object.keys(MAKERS))('%s', name => {
     const m = MAKERS[name]!();
     expect(picked(m)).toBe(true);
     const l = layerOf(m)!;
-    setActiveLayer(SYS.kresba === l ? SYS.stavba : SYS.kresba);
-    expect(setLayerVisible(l, false)).toBe(true);
+    expect(setLayerVisible(l, false)).toBe(true); // i aktivní vrstva jde skrýt (2026-11-20)
     expect(picked(m)).toBe(false);
     expect(inRect(m)).toBe(false);
     expect(exists(store.view('snap')!, m)).toBe(false);
@@ -249,23 +249,23 @@ describe.each(Object.keys(MAKERS))('%s', name => {
   it('pravidlo 3 + 6: přesun do jiné vrstvy jedním krokem, Zpět / Vpřed', () => {
     const m = MAKERS[name]!();
     store.set({ selection: { kind: m.kind, id: m.id } as SingleSelection });
-    const r = moveSelectionToLayer('elektro');
+    const r = moveSelectionToLayer('voda');
     if (m.kind === 'opening' || m.kind === 'protrusion') {
       // otvor, ostění a výstupek nemají vlastní vrstvu – samostatně se nepřesunou, jdou se stěnou
       expect(r).toEqual({ moved: 0, skipped: 1 });
       expect(layerOf(m)).toBe(SYS.stavba);
       const w = m.kind === 'opening' ? f().openings[m.id]!.wallId : f().protrusions![m.id]!.wallId;
       store.set({ selection: { kind: 'wall', id: w } });
-      moveSelectionToLayer('elektro');
-      expect(layerOf(m)).toBe('elektro');
+      moveSelectionToLayer('voda');
+      expect(layerOf(m)).toBe('voda');
     } else {
       expect(r.moved).toBe(1);
-      expect(layerOf(m)).toBe('elektro');
+      expect(layerOf(m)).toBe('voda');
     }
     store.undo();
     expect(layerOf(m)).toBe(DEFAULT[name]);
     store.redo();
-    expect(layerOf(m)).toBe('elektro');
+    expect(layerOf(m)).toBe('voda');
   });
 
   it('pravidlo 5: kopie zůstane ve vrstvě originálu', () => {
@@ -367,7 +367,7 @@ describe('pravidlo 1 a 2 přes vazby', () => {
 });
 
 describe('pravidlo 4: aktivní vrstva', () => {
-  it('kresba jde do aktivní uživatelské vrstvy, u aktivní systémové do Kresby; stěna, kóta, text, štítek a schodiště mají pevnou', () => {
+  it('kresba jde do aktivní vlastní vrstvy; systémovou zvolit nejde; stěna, kóta, text, štítek a schodiště mají pevnou', () => {
     setActiveLayer('elektro');
     const d = addDrawLine({ x: 0, y: 0 }, { x: 1000, y: 0 })!;
     expect(f().drawings![d]!.layerId).toBe('elektro');
@@ -381,15 +381,45 @@ describe('pravidlo 4: aktivní vrstva', () => {
     expect(f().rooms[r]!.layerId).toBe(SYS.popisky);
     expect(f().dims![k]!.layerId).toBe(SYS.koty);
     expect(f().stairs![st]!.layerId).toBe(SYS.stavba);
-    setActiveLayer(SYS.stavba);
+    for (const id of Object.values(SYS)) expect(setActiveLayer(id)).toBe(false);
     const d2 = addDrawLine({ x: 0, y: 2000 }, { x: 1000, y: 2000 })!;
-    expect(f().drawings![d2]!.layerId).toBe(SYS.kresba);
+    expect(f().drawings![d2]!.layerId).toBe('elektro');
   });
 
-  it('aktivní vrstvu nejde skrýt; volba aktivní vrstvy není v historii', () => {
+  it('systémová aktivní vrstva ve starých datech se nebere: kreslí se do nejnižší vlastní; bez vlastních vrstev do Kresby', () => {
+    store.editProjectSettings(d => void (d.activeLayer = SYS.stavba));
+    expect(activeDrawLayer(P()).id).toBe('elektro');
+    for (const id of ['elektro', 'voda', 'topeni', 'nabytek', 'poznamky']) deleteLayer(id, null);
+    expect(activeDrawLayer(P()).id).toBe(SYS.kresba);
+    const d = addDrawLine({ x: 0, y: 0 }, { x: 1000, y: 0 })!;
+    expect(f().drawings![d]!.layerId).toBe(SYS.kresba);
+  });
+
+  it('smazání aktivní vrstvy: kreslí se do vrstvy, kam šel obsah, jinak do nejnižší vlastní', () => {
     setActiveLayer('voda');
-    expect(setLayerVisible('voda', false)).toBe(false);
+    deleteLayer('voda', 'topeni');
+    expect(activeDrawLayer(P()).id).toBe('topeni');
+    deleteLayer('topeni', SYS.kresba);
+    expect(P().activeLayer).toBeUndefined(); // systémová se jako aktivní nezapíše
+    expect(activeDrawLayer(P()).id).toBe('elektro');
+  });
+
+  it('migrace: systémová aktivní vrstva se zahodí, vlastní zůstane; opakované načtení nic nemění', () => {
+    const sys = migrateProject({ ...JSON.parse(JSON.stringify(P())), activeLayer: SYS.kresba });
+    expect(sys.activeLayer).toBeUndefined();
+    expect(activeDrawLayer(sys).id).toBe('elektro');
+    const own = migrateProject({ ...JSON.parse(JSON.stringify(P())), activeLayer: 'voda' });
+    expect(own.activeLayer).toBe('voda');
+    expect(migrateProject(JSON.parse(JSON.stringify(own)))).toEqual(own);
+    expect(migrateProject(JSON.parse(JSON.stringify(sys)))).toEqual(sys);
+  });
+
+  it('aktivní vrstvu jde skrýt (2026-11-20), nový prvek ji zobrazí; volba aktivní vrstvy není v historii', () => {
+    setActiveLayer('voda');
     expect(store.get().canUndo).toBe(false);
+    expect(setLayerVisible('voda', false)).toBe(true);
+    addDrawLine({ x: 0, y: 0 }, { x: 1000, y: 0 });
+    expect(layersOf(P()).find(l => l.id === 'voda')!.visible).toBe(true);
   });
 });
 
@@ -484,11 +514,11 @@ describe('pravidlo 10: prvky pro export podle zvolených vrstev', () => {
     const stavba = all.find(g => g.layer.id === SYS.stavba)!.items;
     expect(stavba.filter(i => i.kind === 'opening')).toHaveLength(Object.keys(f().openings).length);
     expect(stavba.filter(i => i.kind === 'protrusion')).toHaveLength(1);
-    const only = layerContents(P(), f(), [SYS.kresba, SYS.popisky]);
-    expect(only.map(g => g.layer.id)).toEqual([SYS.kresba, SYS.popisky]);
+    const only = layerContents(P(), f(), ['elektro', SYS.popisky]);
+    expect(only.map(g => g.layer.id)).toEqual(['elektro', SYS.popisky]);
     expect(only[0]!.items).toHaveLength(Object.keys(f().drawings!).length + Object.keys(f().strokes!).length);
     setLayerVisible(SYS.popisky, false);
-    expect(layerContents(P(), f(), [SYS.kresba, SYS.popisky]).map(g => g.layer.id)).toEqual([SYS.kresba]);
+    expect(layerContents(P(), f(), ['elektro', SYS.popisky]).map(g => g.layer.id)).toEqual(['elektro']);
   });
 
   it('výstupek v rohu leží ve dvou stěnách – je skrytý, když je skrytá kterákoli z nich', () => {
@@ -564,14 +594,15 @@ describe('nálezy kontroly kroku 1', () => {
 
   it('ořez kresby nebere skrytou čáru jako hranici', async () => {
     const { trimDrawingAt } = await import('./actions');
+    setActiveLayer('voda');
     const h = addDrawLine({ x: 0, y: 0 }, { x: 3000, y: 0 })!;
     setActiveLayer('elektro');
     addDrawLine({ x: 1000, y: -500 }, { x: 1000, y: 500 });
-    setActiveLayer(SYS.kresba);
+    setActiveLayer('voda');
     setLayerVisible('elektro', false);
     // bez hranice zmizí celý úsek
     expect(trimDrawingAt(h, { x: 2000, y: 0 })).toBe('ok');
-    expect(Object.values(f().drawings!).filter(d => d.layerId === SYS.kresba)).toHaveLength(0);
+    expect(Object.values(f().drawings!).filter(d => d.layerId === 'voda')).toHaveLength(0);
   });
 
   it('nový prvek do skryté vrstvy ji zobrazí (prvek nezmizí); Zpět vrátí obojí', () => {

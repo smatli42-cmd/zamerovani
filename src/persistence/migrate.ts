@@ -7,7 +7,7 @@ import { hasBody } from '../core/wallFace';
 import { orientLoopOutward } from '../core/wallSide';
 import { shapesToDrawings } from './migrateDrawings';
 import { mergeArcAt, mergeStraightAt } from '../core/topology';
-import { defaultLayers, kindDefaultLayer, OWN_KINDS, ownCollection, setCollection, SYS } from '../core/layers';
+import { defaultLayers, kindDefaultLayer, OWN_KINDS, ownCollection, setCollection } from '../core/layers';
 import { SCHEMA_VERSION, type Floor, type LineStyle, type Project, type Pt, type Reveal } from '../model/types';
 
 export function migrateProject(raw: unknown): Project {
@@ -56,11 +56,14 @@ export function migrateProject(raw: unknown): Project {
 
 /**
  * 27 → 28: výchozí sada vrstev a vrstva u každého prvku podle druhu (stěna a schodiště Stavba, volná kóta Kóty,
- * text a štítek místnosti Popisky, kresba Kresba). Opakovatelné – existující vrstvy a `layerId` zůstanou.
+ * text a štítek místnosti Popisky, kresba Kresba). Systémová aktivní vrstva se zahodí (2026-11-20). Opakovatelné – existující vrstvy a `layerId` zůstanou.
  */
 function withLayers(p: Project): Project {
   const layers = p.layers?.length ? p.layers : defaultLayers();
-  const q: Project = { ...p, layers, activeLayer: layers.some(l => l.id === p.activeLayer) ? p.activeLayer : SYS.kresba };
+  // aktivní vrstva jen platná vlastní; jinak nezvolená (core/layers.ts `activeDrawLayer` vezme nejnižší vlastní)
+  const { activeLayer, ...rest } = p;
+  const keep = layers.some(l => l.id === activeLayer && !l.system);
+  const q: Project = { ...rest, layers, ...(keep ? { activeLayer } : {}) };
   const floors = p.floors.map(f => {
     const out: Floor = { ...f };
     for (const kind of OWN_KINDS) {

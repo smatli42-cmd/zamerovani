@@ -30,13 +30,13 @@ describe('Pero', () => {
     expect(a.length).toBeLessThan(arc.length);
   });
 
-  it('nový tah jde do aktivní vrstvy (i systémové), tloušťka v mm výkresu', () => {
+  it('nový tah jde do aktivní vrstvy (systémovou zvolit nejde – 2026-11-20), tloušťka v mm výkresu', () => {
     setActiveLayer('elektro');
     const id = addStroke([{ x: 0, y: 0 }, { x: 1000, y: 0 }], 50)!;
     expect(f().strokes![id]).toMatchObject({ width: 50, layerId: 'elektro' });
-    setActiveLayer(SYS.stavba);
+    expect(setActiveLayer(SYS.stavba)).toBe(false);
     const id2 = addStroke([{ x: 0, y: 500 }, { x: 1000, y: 500 }], 25)!;
-    expect(f().strokes![id2]!.layerId).toBe(SYS.stavba);
+    expect(f().strokes![id2]!.layerId).toBe('elektro');
     setStrokeWidth(id, 100);
     expect(f().strokes![id]!.width).toBe(100);
     store.undo();

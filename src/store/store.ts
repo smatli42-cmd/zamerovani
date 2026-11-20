@@ -149,8 +149,9 @@ export interface AppState {
    * nebo jiný důvod (bez `target`, např. otvor by vyjel ze stěny). Hlášení dole na plátně.
    */
   lockBlock: { key: string; text: string; target?: DimTarget } | null;
-  /** Otevřený panel Vrstvy. */
-  layersOpen: boolean;
+  /** Otevřené okno Vrstvy: 'top' z horní lišty (správa, i systémové vrstvy, vpravo nahoře), 'tool' z lišty
+   *  nástroje (volba aktivní vrstvy, jen vlastní vrstvy, vlevo pod lištou nástroje). */
+  layersOpen: false | 'top' | 'tool';
 }
 
 /** Volby úpravy výkresu. */

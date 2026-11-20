@@ -13,7 +13,7 @@ import {
   type Wall,
   type WallLabel
 } from './types';
-import { defaultLayers, SYS } from '../core/layers';
+import { defaultLayers } from '../core/layers';
 
 let counter = 0;
 
@@ -48,8 +48,8 @@ export function createProject(fields: Partial<Pick<Project, 'name' | 'address' |
     createdAt: now,
     updatedAt: now,
     floors: [createFloor('1.NP')],
-    layers: defaultLayers(),
-    activeLayer: SYS.kresba
+    layers: defaultLayers()
+    // aktivní vrstva nezvolená → activeDrawLayer = nejnižší vlastní vrstva (Elektro)
   };
 }
 

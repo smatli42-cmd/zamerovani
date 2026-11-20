@@ -873,7 +873,7 @@ textarea {
   gap: 10px;
 }
 
-/* Panel Vrstvy (ui/LayersPanel.tsx) – vlevo nahoře pod volbami nástroje */
+/* Okno Vrstvy (ui/LayersPanel.tsx) – z lišty nástroje vlevo pod volbami nástroje, z horní lišty vpravo nahoře */
 .layers-panel {
   position: absolute;
   top: 64px;
@@ -886,6 +886,12 @@ textarea {
   border-radius: 14px;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
   z-index: 12;
+}
+.layers-panel.top {
+  top: 10px;
+  left: auto;
+  right: 10px;
+  max-height: calc(100% - 20px);
 }
 .layer-list {
   position: relative;
@@ -968,6 +974,14 @@ textarea {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--dark);
+}
+span.layer-name {
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+}
+.layer-name small {
+  margin-left: 4px;
 }
 .layer-name.off {
   color: var(--muted);

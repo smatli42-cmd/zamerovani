@@ -7,6 +7,15 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-20 (1) – vrstvy: dvě okna, do systémových vrstev se nekreslí, aktivní jde skrýt
+- **Chyba od uživatele:** v panelu Vrstvy nešla skrýt horní vrstva – byla zvolená jako aktivní a aktivní vrstvu nešlo skrýt. Opraveno rozhodnutím uživatele: aktivní vrstvu jde skrýt (nový prvek ji zase zobrazí).
+- **Rozhodnuto uživatelem:** aktivní (kreslicí) vrstva smí být jen vlastní vrstva, ani Kresba ne; okno Vrstvy z lišty nástroje = jen vlastní vrstvy a volba aktivní; okno z horní lišty = vpravo nahoře, všechny vrstvy i systémové, jen správa (bez volby aktivní).
+- **Co se změnilo:** jediné pravidlo `activeDrawLayer` v `core/layers.ts` (zvolená vlastní vrstva → nejnižší vlastní → Kresba, jen když žádná vlastní není); používá ho nová kresba, Pero, Guma i okno. `store.layersOpen` = `'top' | 'tool'`, `LayersPanel` má dvě podoby. Nový projekt aktivní vrstvu nemá zvolenou, migrace systémovou aktivní vrstvu zahodí (beze změny SCHEMA_VERSION). Katalog V4 upraven. Testy upravené podle nového rozhodnutí (výchozí vrstva kresby Elektro) + 4 nové.
+- **Viditelně v aplikaci:** v liště nástrojů Čára, Obdélník, Kruh, Oblouk, Dvojitá, Pero a Guma tlačítko s barvou a názvem aktivní vrstvy (např. „● Elektro ▾“) – otevře okno „Kreslit do vrstvy“ vlevo (jen vlastní vrstvy, ťuknutí = kreslí se sem, oko, zámek, barva, přidat). 🗂️ Vrstvy v horní liště otevře okno vpravo nahoře se všemi vrstvami (pořadí, přejmenovat, smazat), bez volby aktivní. Nová kresba jde výchozí do Elektra (dřív do Kresby).
+- **Rozhodnuto samostatně:** tlačítko vrstvy i u nástrojů kresby (Čára…), protože kresba jde nově do vlastní vrstvy a bez něj by nebylo vidět kam; v okně nástroje není přetahování pořadí, přejmenování ani mazání (jen v horní liště); bez vlastních vrstev se kreslí do Kresby a okno to napíše; Guma u skryté aktivní vrstvy hlásí, že nic nesmaže.
+- **Po kontrole revieweru opraveno:** smazání aktivní vrstvy s přesunem do systémové zapsalo systémovou jako aktivní; okno „Kreslit do vrstvy“ zůstalo otevřené po přepnutí na jiný nástroj (teď se zavře); doplněn test migrace (zahození systémové aktivní vrstvy, opakované načtení). Celkem 942 + 1 zapsaný nález.
+- **Otevřené:** otázky z (13)–(14) dál platí. Zpět po „Přidat vrstvu“ nevrátí předchozí aktivní vrstvu (kreslí se pak do nejnižší vlastní – volba aktivní není v historii, V6). Okno Vrstvy z horní lišty vpravo nahoře zakryje panel vybraného prvku, dokud se nezavře.
+
 ### 2026-11-19 (16) – konec sezení
 - **Co se změnilo:** sezení ukončeno; za tuto část dne vrstvy (13), ruční kresba Perem a Gumou (14) a geometrie Pera (15). Testy 939 + 1 zapsaný nález, typecheck a build OK, SCHEMA_VERSION 29.
 - **Viditelně v aplikaci:** viz (13)–(15): panel 🗂️ Vrstvy, Přesunout do vrstvy, nástroje 🖊️ Pero (Ruka / Čára / Obdélník / Kruh / Oblouk) a 🧽 Guma.

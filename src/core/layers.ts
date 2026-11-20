@@ -91,17 +91,24 @@ export function kindDefaultLayer(kind: OwnKind): Id {
 }
 
 /**
- * Vrstva NOVÉHO prvku (pravidlo 4, rozhodnutí uživatele 2026-11-19): stěna a schodiště → Stavba, volná kóta → Kóty,
- * text a štítek místnosti → Popisky; kresba (a později ruční tah, symbol) → aktivní vrstva, a když je aktivní
- * systémová vrstva, tak Kresba. Jinam se prvek přesune tlačítkem „Přesunout do vrstvy“.
+ * Aktivní vrstva = vrstva, do které se kreslí (rozhodnutí uživatele 2026-11-20): jen VLASTNÍ vrstva, systémová
+ * (Stavba, Kresba, Popisky, Kóty) aktivní být nemůže. Zvolená vlastní vrstva, jinak nejnižší vlastní vrstva;
+ * jen když žádná vlastní vrstva není, Kresba. Všichni (nové prvky, Pero, Guma, panel) se ptají jen tady.
+ */
+export function activeDrawLayer(p: Pick<Project, 'layers' | 'activeLayer'> | null | undefined): Layer {
+  const chosen = layerById(p, p?.activeLayer);
+  if (chosen && !chosen.system) return chosen;
+  const ls = layersOf(p);
+  return ls.find(l => !l.system) ?? ls.find(l => l.id === SYS.kresba) ?? ls[0]!;
+}
+
+/**
+ * Vrstva NOVÉHO prvku (pravidlo 4, rozhodnutí uživatele 2026-11-19, upraveno 2026-11-20): stěna a schodiště → Stavba,
+ * volná kóta → Kóty, text a štítek místnosti → Popisky; kresba a ruční tah (později symbol) → aktivní vrstva
+ * (`activeDrawLayer` – vždy vlastní, do systémové se nekreslí). Jinam se prvek přesune tlačítkem „Přesunout do vrstvy“.
  */
 export function newElementLayer(p: Pick<Project, 'layers' | 'activeLayer'> | null, kind: OwnKind): Id {
-  const fixed = FIXED[kind];
-  if (fixed) return fixed;
-  const active = layerById(p, p?.activeLayer);
-  // ruční tah (Pero) kreslí vždy do aktivní vrstvy (zadání kroku 2), i do systémové
-  if (kind === 'stroke') return active?.id ?? SYS.kresba;
-  return active && !active.system ? active.id : SYS.kresba;
+  return FIXED[kind] ?? activeDrawLayer(p).id;
 }
 
 /**

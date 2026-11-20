@@ -16,7 +16,7 @@ import { dimToolMsg } from '../tools/dimTool';
 import { resetStairPoints, stairToolMsg } from '../tools/stairTool';
 import { eraserMsg } from '../tools/penTool';
 import { STROKE_WIDTHS, type PenShape } from '../core/strokes';
-import { layerById } from '../core/layers';
+import { activeDrawLayer } from '../core/layers';
 
 /** Pero: od ruky nebo geometrie – vždy ruční tah ve vrstvě (barva vrstvy, guma ho maže celý). */
 const PEN_SHAPES: { v: PenShape; label: string }[] = [
@@ -178,6 +178,7 @@ export function ToolOptions() {
         <Seg options={DRAW_LINE_STYLES} value={settings.shapeStyle} onChange={v => store.updateSettings({ shapeStyle: v })} />
         <span class="muted small">Barva</span>
         <Seg options={DRAW_COLOR_LABELS} value={settings.drawColor} onChange={v => store.updateSettings({ drawColor: v })} />
+        <LayerButton />
       </div>
     );
   }
@@ -205,6 +206,7 @@ export function ToolOptions() {
         <Seg options={DRAW_LINE_STYLES} value={settings.doubleStyle} onChange={v => store.updateSettings({ doubleStyle: v })} />
         <span class="muted small">Barva</span>
         <Seg options={DRAW_COLOR_LABELS} value={settings.drawColor} onChange={v => store.updateSettings({ drawColor: v })} />
+        <LayerButton />
       </div>
     );
   }
@@ -224,14 +226,9 @@ export function ToolOptions() {
     );
   }
   if (tool === 'pen' || tool === 'eraser') {
-    const p = project;
-    const active = layerById(p, p?.activeLayer);
     return (
       <div class="tool-options">
-        <span class="small">
-          <span class="layer-dot" style={{ background: active?.color ?? '#0f172a' }} />
-          Vrstva: <b>{active?.name ?? '—'}</b>
-        </span>
+        <LayerButton />
         {tool === 'pen' && (
           <Seg
             options={PEN_SHAPES}
@@ -247,9 +244,6 @@ export function ToolOptions() {
         ) : (
           <span class="small">{eraserMsg()}</span>
         )}
-        <button class="btn btn-sm" onClick={() => store.set({ layersOpen: true })}>
-          Vrstvy…
-        </button>
         {tool === 'pen' && toolMsg && <span class="small">{toolMsg}</span>}
       </div>
     );
@@ -303,4 +297,17 @@ export function ToolOptions() {
     );
   }
   return null;
+}
+
+/** Aktivní vrstva v liště nástroje kresby / Pera / Gumy; ťuknutí otevře okno Vrstvy pro nástroj (jen vlastní vrstvy). */
+function LayerButton() {
+  const project = useStore(s => s.project);
+  const open = useStore(s => s.layersOpen);
+  const l = activeDrawLayer(project);
+  return (
+    <button class={`btn btn-sm ${open === 'tool' ? 'active' : ''}`} title="Vrstva, do které se kreslí" onClick={() => store.set({ layersOpen: open === 'tool' ? false : 'tool' })}>
+      <span class="layer-dot" style={{ background: l.color }} />
+      {l.name} ▾
+    </button>
+  );
 }

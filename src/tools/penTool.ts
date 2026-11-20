@@ -11,7 +11,7 @@ import { drawSnap } from './drawSnap';
 import { HIT_PX } from './types';
 import type { SnapResult } from '../core/snapping';
 import { drawSnapMarker } from './wallTool';
-import { layerById } from '../core/layers';
+import { activeDrawLayer } from '../core/layers';
 import { shapeStroke, smoothStroke } from '../core/strokes';
 import type { Pt } from '../model/types';
 import { store, type Camera } from '../store/store';
@@ -24,7 +24,7 @@ let raw: Pt[] | null = null;
 /** Barva aktivní vrstvy (náhled tahu). */
 const activeColor = () => {
   const p = store.get().project;
-  return layerById(p, p?.activeLayer)?.color ?? '#0f172a';
+  return activeDrawLayer(p).color;
 };
 
 /** Menší tažení tvaru (mm) se nebere – ťuknutí tvar nevytvoří. */
@@ -56,7 +56,7 @@ function snapShape(p: Pt, from: Pt | null): SnapResult {
 function chainEnd(p: Pt): { pt: Pt; chain: Chain } | null {
   const s = lastLine ? store.view('pick')?.strokes?.[lastLine] : null;
   const pr = store.get().project;
-  if (!s || s.pts.length < 2 || s.layerId !== pr?.activeLayer || s.width !== store.get().settings.penWidth) return null;
+  if (!s || s.pts.length < 2 || s.layerId !== activeDrawLayer(pr).id || s.width !== store.get().settings.penWidth) return null;
   const tol = HIT_PX.node / store.get().camera.zoom;
   const first = s.pts[0]!;
   const last = s.pts[s.pts.length - 1]!;
@@ -96,8 +96,8 @@ export function penShapeMsg(): string | null {
 function lockedActive(): boolean {
   // zamčená aktivní vrstva: pero do ní nekreslí (vrstvy V2, stejně jako guma v ní nemaže)
   const pr = store.get().project;
-  const l = layerById(pr, pr?.activeLayer);
-  if (!l?.locked) return false;
+  const l = activeDrawLayer(pr);
+  if (!l.locked) return false;
   store.set({ lockBlock: { key: '', text: `Aktivní vrstva „${l.name}“ je zamčená – pero do ní nekreslí.` } });
   return true;
 }
@@ -260,9 +260,10 @@ function erase(p: PointerInput): void {
 
 export function eraserMsg(): string {
   const p = store.get().project;
-  const l = layerById(p, p?.activeLayer);
-  if (l?.locked) return `Aktivní vrstva „${l.name}“ je zamčená – guma nic nesmaže.`;
-  return `Guma maže celé ruční tahy jen v aktivní vrstvě „${l?.name ?? ''}“.`;
+  const l = activeDrawLayer(p);
+  if (l.locked) return `Aktivní vrstva „${l.name}“ je zamčená – guma nic nesmaže.`;
+  if (!l.visible) return `Aktivní vrstva „${l.name}“ je skrytá – guma nic nesmaže.`;
+  return `Guma maže celé ruční tahy jen v aktivní vrstvě „${l.name}“.`;
 }
 
 export const eraserTool: Tool = {
