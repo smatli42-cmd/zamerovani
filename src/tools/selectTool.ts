@@ -297,7 +297,8 @@ export const selectTool: Tool = {
 
     if (drag.kind === 'markDir') {
       const m = floor.marks?.[drag.id];
-      if (m) setMarkDir(drag.id, { angle: angleTowards(m, p.world) });
+      // koncový bod směru: úhel i délka (px na obrazovce – značka má stálou velikost)
+      if (m) setMarkDir(drag.id, { angle: angleTowards(m, p.world), len: dist(toScreen(m, cam), p.screen) });
     } else if (drag.kind === 'draw') {
       dragDrawingHandle(drag.h, p);
     } else if (drag.kind === 'leader') {

@@ -3,7 +3,7 @@
  * prvků (core/looseElements.ts). Každá akce = jeden krok Zpět.
  */
 import type { Id, Mark, MarkPage, Pt } from '../../model/types';
-import { createMark, defaultDir, markNumberError, nextMarkNumber } from '../../core/marks';
+import { clampDirLength, createMark, defaultDir, markNumberError, nextMarkNumber } from '../../core/marks';
 import { store } from '../store';
 
 /** Nová značka klepnutím (číslo = další v projektu); vybere se. Vrací id, nebo null (např. zamčená vrstva Popisky). */
@@ -43,8 +43,8 @@ export function setMarkNumber(id: Id, num: number): string | null {
   return null;
 }
 
-/** Směr pohledu: zapnout / vypnout, styl, úhel (tažení úchytu). */
-export function setMarkDir(id: Id, patch: { on?: boolean; style?: 'cone' | 'arrow'; angle?: number }): void {
+/** Směr pohledu: zapnout / vypnout, styl, úhel a délka (tažení koncového bodu, px na obrazovce). */
+export function setMarkDir(id: Id, patch: { on?: boolean; style?: 'cone' | 'arrow'; angle?: number; len?: number }): void {
   store.edit(floor => {
     const m = floor.marks?.[id];
     if (!m) return false;
@@ -52,6 +52,7 @@ export function setMarkDir(id: Id, patch: { on?: boolean; style?: 'cone' | 'arro
     if (patch.on !== undefined) d.on = patch.on;
     if (patch.style !== undefined) d.style = patch.style;
     if (patch.angle !== undefined) d.angle = Math.round(patch.angle);
+    if (patch.len !== undefined) d.len = clampDirLength(patch.len);
   });
 }
 

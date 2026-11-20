@@ -8,7 +8,6 @@
  */
 import type { Floor, Id, Mark, MarkDirStyle, MarkPage, Project, Pt } from '../model/types';
 import { newId } from '../model/factory';
-import { projectToSegment } from './geometry';
 
 /** Předpona čísla značky – JEDINÉ místo (Z1, Z2…). */
 export const MARK_PREFIX = 'Z';
@@ -16,11 +15,44 @@ export const MARK_PREFIX = 'Z';
 /** Barvy značky (výchozí první). */
 export const MARK_COLORS = ['#7c3aed', '#dc2626', '#2563eb', '#059669', '#ea580c', '#0f172a'] as const;
 
-/** Předvolby názvů (převzato z prototypu – názvy detailů). */
-export const MARK_NAME_PRESETS = ['Ostění okna', 'Nadpraží / Překlad', 'Parapet', 'Sokl / Práh', 'Styk příčky', 'Stropní trám', 'Vlhkost', 'Trhlina'] as const;
+/** Velikost značky na obrazovce (px) – stálá, nezávisí na zoomu: výška štítku, výchozí / nejkratší / nejdelší směr, úchyt. */
+export const MARK_PX = { h: 26, dirLen: 70, dirMin: 24, dirMax: 600, handle: 12 } as const;
 
-/** Velikost značky na obrazovce (px) – stálá, nezávisí na zoomu. */
-export const MARK_PX = { r: 14, dirLen: 54, handle: 12 } as const;
+/** Text štítku: číslo i název v jednom (přání uživatele 2026-11-20 – směr pak název nezakrývá). */
+export function markLabel(m: Pick<Mark, 'num' | 'name'>): string {
+  return m.name ? `${markCode(m)}  ${m.name}` : markCode(m);
+}
+
+/** Šířka znaku štítku (px) – odhad s rezervou; kreslení písmo zmenší, kdyby text přesto přetekl (canvas/drawMarks.ts). */
+const CHAR_PX = 8;
+
+/** Rozměr štítku na obrazovce (px; odhad podle počtu znaků – kreslení i zásah perem). Střed = poloha značky. */
+export function markBoxPx(m: Pick<Mark, 'num' | 'name'>): { w: number; h: number } {
+  return { w: Math.max(MARK_PX.h, markLabel(m).length * CHAR_PX + 18), h: MARK_PX.h };
+}
+
+/** Šířka části štítku s číslem (px) – jen tahle část má při ťuknutí přednost před rohem (tools/pick.ts). */
+export function markCodePx(m: Pick<Mark, 'num'>): number {
+  return markCode(m).length * CHAR_PX + 18;
+}
+
+/** Nejmenší délka směru ve směru `angle`: vždy vyčnívá ze štítku (úchyt nikdy neleží pod ním). */
+function minDirLength(m: Pick<Mark, 'num' | 'name'>, angle: number): number {
+  const { w, h } = markBoxPx(m);
+  const u = dirVector(angle);
+  return Math.abs(u.x) * (w / 2) + Math.abs(u.y) * (h / 2) + 20;
+}
+
+/** Délka směru na obrazovce (px): zadaná (tažením), výchozí 70 px, vždy aspoň mimo štítek. */
+export function dirLength(m: Pick<Mark, 'dir' | 'num' | 'name'>): number {
+  const angle = m.dir?.angle ?? 0;
+  return Math.max(m.dir?.len ?? MARK_PX.dirLen, minDirLength(m, angle));
+}
+
+/** Délka směru z tažení koncového bodu (px, omezená). */
+export function clampDirLength(px: number): number {
+  return Math.round(Math.max(MARK_PX.dirMin, Math.min(MARK_PX.dirMax, px)));
+}
 
 export function marksOf(floor: Floor): Mark[] {
   return Object.values(floor.marks ?? {});
@@ -91,14 +123,4 @@ export function angleTowards(m: Pt, p: Pt): number {
 /** Úhel po otočení skupiny o `deg` (0–359). */
 export function rotateAngle(angle: number, deg: number): number {
   return (((Math.round(angle + deg) % 360) + 360) % 360);
-}
-
-/** Guma ve skice: smaže tahy, kóty a popisky pod bodem (tolerance v jednotkách skici). Vrací novou stranu, nebo null = nic. */
-export function eraseInPage(p: MarkPage, at: Pt, tol: number): MarkPage | null {
-  const hitPoly = (pts: Pt[]) => pts.some((q, i) => (i === 0 ? Math.hypot(at.x - q.x, at.y - q.y) <= tol : projectToSegment(at, pts[i - 1]!, q).distance <= tol));
-  const strokes = p.strokes.filter(s => !hitPoly(s.pts));
-  const dims = p.dims.filter(d => projectToSegment(at, d.a, d.b).distance > tol);
-  const labels = p.labels.filter(l => Math.hypot(at.x - l.x, at.y - l.y) > tol * 1.7);
-  if (strokes.length === p.strokes.length && dims.length === p.dims.length && labels.length === p.labels.length) return null;
-  return { ...p, strokes, dims, labels };
 }

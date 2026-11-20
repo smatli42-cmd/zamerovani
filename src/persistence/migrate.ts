@@ -44,6 +44,7 @@ export function migrateProject(raw: unknown): Project {
   // 27 → 28: vrstvy projektu (Project.layers, activeLayer) a vrstva u každého prvku (layerId) – core/layers.ts
   // 28 → 29: ruční tahy perem (floor.strokes) – nepovinné pole, bez převodu
   // 29 → 30: značky v půdorysu (floor.marks, ZNACKY-POZNAMKY-DETAILY.md) – nepovinné pole, bez převodu; vrstva Popisky (withLayers)
+  // 30 → 31: značka – délka směru (`dir.len`), tvary ve skice (obdélník, kruh, oblouk, dvojitá čára) – nepovinné, bez převodu
   const old = p.schema ?? 1;
   const floors = p.floors.map(f => {
     const j = joinSemicircles(convertShapesToWalls(f));

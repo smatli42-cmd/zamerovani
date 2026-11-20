@@ -1,10 +1,10 @@
 /**
- * Panel značky (ZNACKY-POZNAMKY-DETAILY.md): číslo (ruční změna s kontrolou duplicity), název s předvolbami,
+ * Panel značky (ZNACKY-POZNAMKY-DETAILY.md): číslo (ruční změna s kontrolou duplicity), název,
  * barva, směr pohledu (kužel / šipka, úhel), otevření okna s poznámkou a skicou, kopie, smazání s potvrzením.
  * Vrstva a přesun do vrstvy jsou dole (LayerField).
  */
 import type { Mark } from '../../model/types';
-import { defaultDir, markCode, MARK_COLORS, MARK_NAME_PRESETS, MARK_PREFIX } from '../../core/marks';
+import { defaultDir, markCode, MARK_COLORS, MARK_PREFIX } from '../../core/marks';
 import { duplicateSelection, setMarkDir, setMarkNumber, updateMark } from '../../store/actions';
 import { store } from '../../store/store';
 import { requestDelete } from '../deleteConfirm';
@@ -22,13 +22,6 @@ export function MarkPanel({ m }: { m: Mark }) {
         <span>Název (může být prázdný)</span>
         <input type="text" value={m.name} key={m.name} placeholder="např. Sokl u terasy" onChange={e => updateMark(m.id, { name: (e.target as HTMLInputElement).value })} />
       </label>
-      <div class="chips">
-        {MARK_NAME_PRESETS.map(n => (
-          <button key={n} type="button" class={`chip ${m.name === n ? 'active' : ''}`} onClick={() => updateMark(m.id, { name: n })}>
-            {n}
-          </button>
-        ))}
-      </div>
       <div class="field-grid">
         <NumField
           label={`Číslo (${MARK_PREFIX})`}
@@ -67,7 +60,7 @@ export function MarkPanel({ m }: { m: Mark }) {
           <div class="field-grid">
             <NumField label="Úhel" value={dir.angle} unit="°" min={-360} onCommit={v => v !== null && setMarkDir(m.id, { angle: v })} />
           </div>
-          <p class="muted small">Směr otočíte tažením kulatého úchytu na konci kužele / šipky.</p>
+          <p class="muted small">Tažením kulatého úchytu na konci kužele / šipky směr otočíte i prodloužíte / zkrátíte.</p>
         </>
       )}
       <div class="panel-actions">

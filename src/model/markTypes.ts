@@ -13,14 +13,22 @@ export interface MarkDir {
   /** Úhel ve stupních (0 = doprava, po směru hodinových ručiček, osa Y dolů jako na obrazovce). */
   angle: number;
   style: MarkDirStyle;
+  /** Délka kužele / šipky na obrazovce (px; tažení koncového bodu). Chybí = výchozí. */
+  len?: number;
 }
 
-/** Tah perem nebo přímka ve skice (souřadnice skici – px při zoomu 100 %). */
+/**
+ * Prvek kresby ve skice (souřadnice skici – px při zoomu 100 %; geometrie core/sketch.ts): pero (`free`, body),
+ * čára (a, b), obdélník (protější rohy), kruh (střed, bod na obvodu), oblouk (a, b, vzepětí `s`),
+ * dvojitá čára (a, b, vzdálenost čar `w`).
+ */
 export interface SketchStroke {
-  mode: 'free' | 'line';
+  mode: 'free' | 'line' | 'rect' | 'circle' | 'arc' | 'double';
   color: string;
   width: number;
   pts: Pt[];
+  s?: number;
+  w?: number;
 }
 
 /** Textový popisek ve skice. */

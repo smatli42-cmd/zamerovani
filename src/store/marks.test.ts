@@ -6,7 +6,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createFloor, createProject } from '../model/factory';
 import type { MarkPage, Project } from '../model/types';
 import { SCHEMA_VERSION } from '../model/types';
-import { eraseInPage, markCode, markContent, MARK_PREFIX, MARK_PX, nextMarkNumber } from '../core/marks';
+import { dirLength, markCode, markContent, MARK_PREFIX, nextMarkNumber } from '../core/marks';
+import { eraseInPage, hitSketch, moveSketchItem, removeSketchItem, sketchPolylines } from '../core/sketch';
+import { markBoxPx } from '../core/marks';
 import { selectTool } from '../tools/selectTool';
 import { markTool } from '../tools/markTool';
 import type { PointerInput } from '../tools/types';
@@ -173,12 +175,16 @@ describe('skica a ovládání v půdorysu', () => {
     expect(f().marks![id]).toMatchObject({ x: 3000, y: 1000 });
     expect(store.get().markOpen).toBeNull();
     setMarkDir(id, { on: true, angle: 0 });
-    const handle = at(3000 + MARK_PX.dirLen / Z, 1000);
+    const handle = at(3000 + dirLength(f().marks![id]!) / Z, 1000);
     selectTool.down!(handle);
     selectTool.drag!(at(3000, 1000 + 200));
-    selectTool.drag!(at(3000, 1000 + MARK_PX.dirLen / Z));
-    selectTool.up!(at(3000, 1000 + MARK_PX.dirLen / Z));
-    expect(f().marks![id]!.dir!.angle).toBe(90);
+    // koncový bod 150 px pod značkou: úhel 90° a délka 150 px (přání uživatele 2026-11-20 – protažení za konec)
+    selectTool.drag!(at(3000, 1000 + 150 / Z));
+    selectTool.up!(at(3000, 1000 + 150 / Z));
+    expect(f().marks![id]!.dir).toMatchObject({ angle: 90, len: 150 });
+    // délka je omezená
+    setMarkDir(id, { len: 5 });
+    expect(f().marks![id]!.dir!.len).toBe(24);
   });
 });
 
@@ -215,5 +221,98 @@ describe('nálezy kontroly kroku A', () => {
     setLayerLocked(SYS.popisky, true);
     expect(setMarkContent(a, 'nová', f().marks![a]!.pages)).toBe(false);
     expect(f().marks![a]!.note).toBe('');
+  });
+});
+
+describe('úpravy 2026-11-20: štítek, tvary a výběr ve skice', () => {
+  it('štítek značky nese číslo i název (směr ho nezakrývá); zásah perem po celé šířce štítku', () => {
+    const a = addMark({ x: 0, y: 0 })!;
+    updateMark(a, { name: 'Sokl u terasy' });
+    const m = f().marks![a]!;
+    const { w } = markBoxPx(m);
+    expect(w).toBeGreaterThan(markBoxPx({ num: 1, name: '' }).w);
+    store.set({ camera: { x: 0, y: 0, zoom: 0.1 } });
+    // bod u pravého okraje štítku (kde je název) vybere značku
+    expect(pickAny(store.view('pick')!, { x: (w / 2 - 4) / 0.1, y: 0 }, store.get().camera, null)).toEqual({ kind: 'mark', id: a });
+  });
+
+  it('tvary skici: čára, obdélník, kruh, oblouk, dvojitá čára mají geometrii; výběr, posun a smazání prvku', () => {
+    const c = '#000';
+    const page: MarkPage = {
+      id: 'p',
+      strokes: [
+        { mode: 'line', color: c, width: 2, pts: [{ x: 0, y: 0 }, { x: 100, y: 0 }] },
+        { mode: 'rect', color: c, width: 2, pts: [{ x: 200, y: 0 }, { x: 300, y: 100 }] },
+        { mode: 'circle', color: c, width: 2, pts: [{ x: 500, y: 0 }, { x: 550, y: 0 }] },
+        { mode: 'arc', color: c, width: 2, pts: [{ x: 0, y: 300 }, { x: 200, y: 300 }], s: 50 },
+        { mode: 'double', color: c, width: 2, pts: [{ x: 0, y: 500 }, { x: 200, y: 500 }], w: 12 }
+      ],
+      labels: [{ x: 700, y: 0, text: 'EPS', color: c }],
+      dims: []
+    };
+    expect(sketchPolylines(page.strokes[1]!)[0]).toHaveLength(5);
+    expect(sketchPolylines(page.strokes[2]!)[0]!.length).toBeGreaterThan(20);
+    expect(sketchPolylines(page.strokes[4]!)).toHaveLength(2);
+    expect(hitSketch(page, { x: 300, y: 50 }, 5)).toEqual({ kind: 'stroke', index: 1 });
+    expect(hitSketch(page, { x: 550, y: 0 }, 5)).toEqual({ kind: 'stroke', index: 2 });
+    expect(hitSketch(page, { x: 100, y: 512 }, 5)).toEqual({ kind: 'stroke', index: 4 });
+    expect(hitSketch(page, { x: 700, y: 0 }, 5)).toEqual({ kind: 'label', index: 0 });
+    expect(hitSketch(page, { x: 400, y: 400 }, 5)).toBeNull();
+    const moved = moveSketchItem(page, { kind: 'stroke', index: 1 }, 10, 20);
+    expect(moved.strokes[1]!.pts).toEqual([{ x: 210, y: 20 }, { x: 310, y: 120 }]);
+    expect(moved.strokes[0]).toBe(page.strokes[0]);
+    expect(moveSketchItem(page, { kind: 'label', index: 0 }, 5, 5).labels[0]).toMatchObject({ x: 705, y: 5 });
+    expect(removeSketchItem(page, { kind: 'stroke', index: 0 }).strokes).toHaveLength(4);
+    // tvar uložený ve značce se zachová
+    const a = addMark({ x: 0, y: 0 })!;
+    setMarkContent(a, '', [page]);
+    expect(f().marks![a]!.pages[0]).toEqual(page);
+  });
+});
+
+describe('nálezy kontroly úprav 2026-11-20', () => {
+  it('úchyt směru je vždy mimo štítek (i po zkrácení a delším názvu)', () => {
+    const a = addMark({ x: 0, y: 0 })!;
+    setMarkDir(a, { on: true, angle: 0, len: 30 });
+    updateMark(a, { name: 'Ostění okna v obývacím pokoji' });
+    const m = f().marks![a]!;
+    expect(dirLength(m)).toBeGreaterThan(markBoxPx(m).w / 2 + 10);
+    setMarkDir(a, { angle: 90 });
+    expect(dirLength(f().marks![a]!)).toBeGreaterThan(markBoxPx(m).h / 2 + 10);
+  });
+
+  it('roh pod názvem dlouhého štítku jde vybrat; číslo značky má přednost i před rohem', () => {
+    store.set({ camera: { x: 0, y: 0, zoom: 0.1 } });
+    const a = addMark({ x: 0, y: 0 })!;
+    updateMark(a, { name: 'Ostění okna v obývacím pokoji' });
+    const { w } = markBoxPx(f().marks![a]!);
+    // roh stěny pod pravou částí štítku (název)
+    const x = (w / 2 - 20) / 0.1;
+    addWall({ x, y: 0 }, null, { x: x + 3000, y: 0 }, null, false, { thickness: 300, side: 1 });
+    expect(pickAny(store.view('pick')!, { x, y: 0 }, store.get().camera, null)?.kind).toBe('node');
+    // roh pod číslem: vybere se značka
+    const x2 = (-w / 2 + 12) / 0.1;
+    addWall({ x: x2, y: 0 }, null, { x: x2, y: -3000 }, null, false, { thickness: 300, side: 1 });
+    expect(pickAny(store.view('pick')!, { x: x2, y: 0 }, store.get().camera, null)).toEqual({ kind: 'mark', id: a });
+  });
+
+  it('stará data (verze 30): značka bez délky směru a skica jen s perem / přímkou se načte a funguje', () => {
+    const old = JSON.parse(JSON.stringify(createProject({ name: 'x' }))) as Project;
+    old.schema = 30;
+    const pg: MarkPage = { id: 'pg', strokes: [{ mode: 'free', color: '#000', width: 2, pts: [{ x: 0, y: 0 }, { x: 5, y: 5 }, { x: 40, y: 0 }] }, { mode: 'line', color: '#000', width: 2, pts: [{ x: 0, y: 100 }, { x: 100, y: 100 }] }], labels: [], dims: [] };
+    old.floors[0]!.marks = { mk1: { id: 'mk1', num: 1, name: '', x: 0, y: 0, color: '#7c3aed', note: '', dir: { on: true, angle: 0, style: 'cone' }, pages: [pg] } };
+    const m = migrateProject(old);
+    const mk = m.floors[0]!.marks!.mk1!;
+    expect(dirLength(mk)).toBe(70);
+    expect(hitSketch(mk.pages[0]!, { x: 50, y: 100 }, 5)).toEqual({ kind: 'stroke', index: 1 });
+    expect(hitSketch(mk.pages[0]!, { x: 20, y: 2 }, 5)).toEqual({ kind: 'stroke', index: 0 });
+  });
+
+  it('guma maže obdélník a kruh po obrysu; ťuknutí dovnitř obdélníku ho nevybere', () => {
+    const pg: MarkPage = { id: 'p', strokes: [{ mode: 'rect', color: '#000', width: 2, pts: [{ x: 0, y: 0 }, { x: 100, y: 100 }] }, { mode: 'circle', color: '#000', width: 2, pts: [{ x: 300, y: 0 }, { x: 350, y: 0 }] }], labels: [], dims: [] };
+    expect(hitSketch(pg, { x: 50, y: 50 }, 5)).toBeNull();
+    expect(eraseInPage(pg, { x: 100, y: 50 }, 5)!.strokes).toHaveLength(1);
+    expect(eraseInPage(pg, { x: 300, y: 50 }, 5)!.strokes).toHaveLength(1);
+    expect(eraseInPage(pg, { x: 300, y: 0 }, 5)).toBeNull();
   });
 });

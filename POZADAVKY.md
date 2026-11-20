@@ -88,7 +88,7 @@ Doplňuj klidně přímo sem – škrtej, přepisuj, přidávej do sekce „Moje
 
 - ✅ **[MVP]** ~~Značka detailu v půdorysu (D1, D2…)~~ → sloučená značka (Z1, Z2…) s názvem.
 - ✅ **[MVP]** Samostatná skica detailu – pero, přímka, text, kóta, guma, zoom/posun, barvy, zpět.
-- ✅ Poznámky k detailu (skladba, materiály), předvolby názvů.
+- ✅ Poznámky k detailu (skladba, materiály). ~~Předvolby názvů~~ (2026-11-20: uživatel je nechce).
 - 💡 Fotka jako podklad skici detailu (kreslení přímo přes fotku).
 - 💡 Volitelně detail jako řez stěnou s vrstvami (skladba konstrukce).
 

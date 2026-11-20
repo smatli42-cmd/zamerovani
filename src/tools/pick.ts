@@ -13,7 +13,7 @@ import { endOutline, endProtrusionsOf } from '../core/endProtrusion';
 import { pickDrawing } from '../core/drawing';
 import { stairHit, stairsOf } from '../core/stairs';
 import { pickStroke } from '../core/strokes';
-import { marksOf, MARK_PX } from '../core/marks';
+import { markBoxPx, markCodePx, marksOf, MARK_PX } from '../core/marks';
 import { markDirHandle } from '../canvas/drawMarks';
 import { toScreen } from '../canvas/view';
 import type { Floor, Pt } from '../model/types';
@@ -65,12 +65,19 @@ export function pickRoom(floor: Floor, p: Pt, cam: Camera): string | null {
   return null;
 }
 
-/** Značka pod perem (kroužek stálé velikosti na obrazovce); poslední nakreslená má přednost. */
-export function pickMark(floor: Floor, p: Pt, cam: Camera): string | null {
+/**
+ * Značka pod perem (štítek stálé velikosti na obrazovce); poslední nakreslená má přednost. `codeOnly` = jen část
+ * s číslem (ta má přednost před rohem; zbytek štítku s názvem až po rozích a kresbě – rohy pod dlouhým názvem jdou vybrat).
+ */
+export function pickMark(floor: Floor, p: Pt, cam: Camera, codeOnly = false): string | null {
   const ms = marksOf(floor);
   for (let i = ms.length - 1; i >= 0; i--) {
     const m = ms[i]!;
-    if (Math.hypot(p.x - m.x, p.y - m.y) * cam.zoom <= MARK_PX.r + 6) return m.id;
+    const { w, h } = markBoxPx(m);
+    const dx = (p.x - m.x) * cam.zoom;
+    const dy = (p.y - m.y) * cam.zoom;
+    if (Math.abs(dy) > h / 2 + 6) continue;
+    if (codeOnly ? dx >= -w / 2 - 6 && dx <= -w / 2 + markCodePx(m) : Math.abs(dx) <= w / 2 + 6) return m.id;
   }
   return null;
 }
@@ -141,11 +148,13 @@ export function nodePrefer(current: Selection): NodePrefer {
  * `current` = aktuální výběr: u překrývajících se rohů má přednost konec vybrané stěny / vybraný roh (D14).
  */
 export function pickAny(floor: Floor, p: Pt, cam: Camera, current: Selection = null): Selection {
-  // značka (vrstva Popisky) leží nad vším a je malá – má přednost i před rohem (značka detailu u rohu)
-  const mark = pickMark(floor, p, cam);
-  if (mark) return { kind: 'mark', id: mark };
+  // číslo značky (vrstva Popisky) má přednost i před rohem (značka detailu u rohu); zbytek štítku až po rozích
+  const code = pickMark(floor, p, cam, true);
+  if (code) return { kind: 'mark', id: code };
   const node = chooseNodeAt(floor, p, HIT_PX.node / cam.zoom, nodePrefer(current));
   if (node) return { kind: 'node', id: node.id };
+  const mark = pickMark(floor, p, cam);
+  if (mark) return { kind: 'mark', id: mark };
   // kresba leží nad stěnami a otvory (překlad nad otvorem) – její čára má přednost
   const tol = HIT_PX.wall / cam.zoom;
   const drawEdge = pickDrawing(floor, p, tol * 0.8, true);

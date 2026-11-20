@@ -1,27 +1,37 @@
 /**
- * Okno značky (ZNACKY-POZNAMKY-DETAILY.md, krok A): textová poznámka a skica (pero, přímka, text, kóta, guma,
- * zoom / posun, barvy, zpět) – převzato z prototypu (prototyp/src/input/detailsUI.js).
+ * Okno značky (ZNACKY-POZNAMKY-DETAILY.md, krok A): textová poznámka a skica – převzato z prototypu
+ * (prototyp/src/input/detailsUI.js) a doplněno o stejné prvky jako kresba ve výkresu (přání uživatele 2026-11-20):
+ * Vybrat (posun a smazání prvku), pero, čára, obdélník, kruh, oblouk, dvojitá čára, text, kóta, guma, posun, zoom,
+ * barvy, zpět. Geometrie skici jen v core/sketch.ts.
  * Kreslení má vlastní Zpět (jen v okně); do výkresu se obsah zapíše při zavření jako jeden krok Zpět.
  * Pero / myš kreslí, prst posouvá (jako v půdorysu).
  */
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { MarkPage, Pt, SketchDim, SketchStroke } from '../model/types';
-import { emptyPage, eraseInPage, markCode, MARK_NAME_PRESETS, pageIsEmpty } from '../core/marks';
-import { drawSketch, sketchTextBox, type SketchView } from '../canvas/drawSketch';
+import { emptyPage, markCode, pageIsEmpty } from '../core/marks';
+import { defaultArcSagitta, eraseInPage, hitSketch, moveSketchItem, removeSketchItem, SKETCH_DOUBLE_W, type SketchRef } from '../core/sketch';
+import { drawSketch, type SketchView } from '../canvas/drawSketch';
 import { setMarkContent, updateMark } from '../store/actions';
 import { store } from '../store/store';
 import { useStore } from '../store/useStore';
 import { TextPrompt } from './Dialog';
 
-type SketchTool = 'pen' | 'line' | 'text' | 'dim' | 'eraser' | 'pan';
+type ShapeMode = Exclude<SketchStroke['mode'], 'free'>;
+type SketchTool = 'select' | 'pen' | ShapeMode | 'text' | 'dim' | 'eraser' | 'pan';
 const TOOLS: { v: SketchTool; label: string }[] = [
+  { v: 'select', label: '👆 Vybrat' },
   { v: 'pen', label: '🖊️ Pero' },
-  { v: 'line', label: '📏 Přímka' },
+  { v: 'line', label: '╱ Čára' },
+  { v: 'rect', label: '▭ Obdélník' },
+  { v: 'circle', label: '◯ Kruh' },
+  { v: 'arc', label: '◠ Oblouk' },
+  { v: 'double', label: '═ Dvojitá' },
   { v: 'text', label: '🏷️ Text' },
   { v: 'dim', label: '📐 Kóta' },
   { v: 'eraser', label: '🧹 Guma' },
   { v: 'pan', label: '✋ Posun' }
 ];
+const SHAPES: readonly string[] = ['line', 'rect', 'circle', 'arc', 'double'];
 const COLORS = ['#0f172a', '#dc2626', '#2563eb', '#059669'];
 const clone = (p: MarkPage): MarkPage => JSON.parse(JSON.stringify(p)) as MarkPage;
 
@@ -61,12 +71,27 @@ function MarkWindowBody({ id }: { id: string }) {
   const [page, setPage] = useState<MarkPage>(() => clone(mark.pages[0] ?? emptyPage()));
   const [saveError, setSaveError] = useState<string | null>(null);
   const [history, setHistory] = useState<MarkPage[]>([]);
-  const [tool, setTool] = useState<SketchTool>('pen');
+  const [tool, setToolRaw] = useState<SketchTool>('pen');
+  // vybraný prvek skici (nástroj Vybrat)
+  const [sel, setSel] = useState<SketchRef | null>(null);
+  const setTool = (t: SketchTool) => {
+    setToolRaw(t);
+    if (t !== 'select') setSel(null);
+  };
   const [color, setColor] = useState(COLORS[0]!);
   const [view, setView] = useState<SketchView>({ s: 1, ox: 0, oy: 0 });
   const [prompt, setPrompt] = useState<{ title: string; initial: string; done: (t: string) => void } | null>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
-  const live = useRef<{ stroke?: SketchStroke | null; dim?: SketchDim | null; pan?: { sx: number; sy: number; ox: number; oy: number }; erased?: boolean; start?: MarkPage; pushed?: boolean }>({});
+  const live = useRef<{
+    stroke?: SketchStroke | null;
+    dim?: SketchDim | null;
+    pan?: { sx: number; sy: number; ox: number; oy: number };
+    erased?: boolean;
+    start?: MarkPage;
+    pushed?: boolean;
+    /** Posun vybraného prvku: odkud se táhne a stav před posunem. */
+    moving?: { ref: SketchRef; from: Pt; orig: MarkPage };
+  }>({});
   const eraseAt = (pt: Pt) => {
     const L = live.current;
     setPage(p => {
@@ -84,6 +109,11 @@ function MarkWindowBody({ id }: { id: string }) {
   const commit = (next: MarkPage) => {
     setHistory(h => [...h, page]);
     setPage(next);
+  };
+  const removeSelected = () => {
+    if (!sel) return;
+    commit(removeSketchItem(page, sel));
+    setSel(null);
   };
   const close = () => {
     if (nameDraft.trim() !== name) updateMark(id, { name: nameDraft });
@@ -107,12 +137,18 @@ function MarkWindowBody({ id }: { id: string }) {
       c.width = w;
       c.height = h;
     }
-    drawSketch(c.getContext('2d')!, w, h, { s: view.s * dpr, ox: view.ox * dpr, oy: view.oy * dpr }, page, live.current);
+    drawSketch(c.getContext('2d')!, w, h, { s: view.s * dpr, ox: view.ox * dpr, oy: view.oy * dpr }, page, { ...live.current, selected: sel });
   });
   useEffect(() => {
     const onResize = () => redraw(n => n + 1);
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !prompt && !store.get().deleteConfirm) close();
+      if (prompt || store.get().deleteConfirm) return;
+      if (e.key === 'Escape') close();
+      const t = e.target;
+      if (e.key === 'Delete' && sel && !(t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement)) {
+        e.preventDefault();
+        removeSelected();
+      }
     };
     window.addEventListener('resize', onResize);
     window.addEventListener('keydown', onKey);
@@ -134,15 +170,7 @@ function MarkWindowBody({ id }: { id: string }) {
     const f = s / view.s;
     setView({ s, ox: p.x - (p.x - view.ox) * f, oy: p.y - (p.y - view.oy) * f });
   };
-  const hitText = (pt: Pt): number => {
-    const ctx = canvas.current!.getContext('2d')!;
-    for (let i = page.labels.length - 1; i >= 0; i--) {
-      const l = page.labels[i]!;
-      const b = sketchTextBox(ctx, l.text, l.x, l.y);
-      if (pt.x >= b.x && pt.x <= b.x + b.w && pt.y >= b.y && pt.y <= b.y + b.h) return i;
-    }
-    return -1;
-  };
+  const tol = () => 10 / view.s;
 
   const down = (e: PointerEvent) => {
     e.preventDefault();
@@ -153,8 +181,15 @@ function MarkWindowBody({ id }: { id: string }) {
       live.current = { pan: { sx: px.x, sy: px.y, ox: view.ox, oy: view.oy } };
       return;
     }
+    if (tool === 'select') {
+      const hit = hitSketch(page, pt, tol());
+      setSel(hit);
+      if (hit) live.current = { moving: { ref: hit, from: pt, orig: page } };
+      return;
+    }
     if (tool === 'text') {
-      const i = hitText(pt);
+      const h = hitSketch(page, pt, 0);
+      const i = h?.kind === 'label' ? h.index : -1;
       if (i >= 0) {
         setPrompt({ title: 'Upravit text', initial: page.labels[i]!.text, done: t => commit({ ...page, labels: page.labels.map((l, k) => (k === i ? { ...l, text: t } : l)) }) });
       } else {
@@ -167,7 +202,10 @@ function MarkWindowBody({ id }: { id: string }) {
       // guma: jeden krok Zpět za celé gesto (i tažením), jen když něco smazala
       live.current = { erased: true, start: page, pushed: false };
       eraseAt(pt);
-    } else live.current = { stroke: { mode: tool === 'line' ? 'line' : 'free', color, width: 2.5, pts: [pt, { ...pt }] } };
+    } else {
+      const mode: SketchStroke['mode'] = SHAPES.includes(tool) ? (tool as ShapeMode) : 'free';
+      live.current = { stroke: { mode, color, width: 2.5, pts: [pt, { ...pt }], ...(mode === 'double' ? { w: SKETCH_DOUBLE_W } : {}) } };
+    }
     redraw(n => n + 1);
   };
   const move = (e: PointerEvent) => {
@@ -178,9 +216,23 @@ function MarkWindowBody({ id }: { id: string }) {
       return;
     }
     const pt = toWorld(px);
+    if (L.moving) {
+      const { ref, from, orig } = L.moving;
+      // jeden krok Zpět za celý posun
+      if (!L.pushed && (pt.x !== from.x || pt.y !== from.y)) {
+        L.pushed = true;
+        setHistory(h => [...h, orig]);
+      }
+      setPage(moveSketchItem(orig, ref, pt.x - from.x, pt.y - from.y));
+      return;
+    }
     if (L.dim) L.dim = { ...L.dim, b: orthoSnap(L.dim.a, pt) };
-    else if (L.stroke?.mode === 'line') L.stroke.pts[1] = orthoSnap(L.stroke.pts[0]!, pt);
-    else if (L.stroke) {
+    else if (L.stroke && L.stroke.mode !== 'free') {
+      const a = L.stroke.pts[0]!;
+      const m = L.stroke.mode;
+      L.stroke.pts[1] = m === 'line' || m === 'double' ? orthoSnap(a, pt) : pt;
+      if (m === 'arc') L.stroke.s = defaultArcSagitta(a, pt);
+    } else if (L.stroke) {
       const last = L.stroke.pts[L.stroke.pts.length - 1]!;
       if (Math.hypot(pt.x - last.x, pt.y - last.y) * view.s >= 2) L.stroke.pts.push(pt);
     } else if (L.erased) {
@@ -199,7 +251,8 @@ function MarkWindowBody({ id }: { id: string }) {
       const pts = L.stroke.pts;
       const a = pts[0]!;
       const b = pts[pts.length - 1]!;
-      if (pts.length >= 2 && (Math.hypot(b.x - a.x, b.y - a.y) >= 3 || pts.length > 3)) commit({ ...page, strokes: [...page.strokes, L.stroke] });
+      const shape = L.stroke.mode !== 'free';
+      if (shape ? Math.hypot(b.x - a.x, b.y - a.y) >= 3 : pts.length >= 2 && (Math.hypot(b.x - a.x, b.y - a.y) >= 3 || pts.length > 3)) commit({ ...page, strokes: [...page.strokes, L.stroke] });
     }
     redraw(n => n + 1);
   };
@@ -212,13 +265,6 @@ function MarkWindowBody({ id }: { id: string }) {
         <button class="btn btn-primary" onClick={close}>
           ✔ Hotovo
         </button>
-      </div>
-      <div class="chips">
-        {MARK_NAME_PRESETS.map(n => (
-          <button key={n} type="button" class={`chip ${name === n ? 'active' : ''}`} onClick={() => updateMark(id, { name: n })}>
-            {n}
-          </button>
-        ))}
       </div>
       <div class="mark-toolbar">
         {TOOLS.map(t => (
@@ -239,10 +285,19 @@ function MarkWindowBody({ id }: { id: string }) {
         <button class="btn btn-sm" disabled={!history.length} onClick={() => {
           setPage(history[history.length - 1]!);
           setHistory(history.slice(0, -1));
+          setSel(null);
         }}>
           ↩ Zpět
         </button>
-        <button class="btn btn-sm btn-danger" disabled={pageIsEmpty(page)} onClick={() => commit({ ...page, strokes: [], labels: [], dims: [] })}>
+        {sel && (
+          <button class="btn btn-sm btn-danger" onClick={removeSelected}>
+            🗑️ Smazat vybrané
+          </button>
+        )}
+        <button class="btn btn-sm btn-danger" disabled={pageIsEmpty(page)} onClick={() => {
+          commit({ ...page, strokes: [], labels: [], dims: [] });
+          setSel(null);
+        }}>
           ✖ Smazat skicu
         </button>
       </div>

@@ -7,6 +7,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-20 (6) – značka: úpravy od uživatele
+- **Požadavek uživatele:** bez předvoleb názvů; značka nese číslo i název v jednom (kužel název nezakryje); kužel i šipka jdou protáhnout za koncový bod; ve skice stejné prvky jako kresba ve výkresu (čára, kruh…) a Vybrat s posunem prvků.
+- **Co se změnilo:** předvolby názvů odstraněny (panel i okno). Štítek = zaoblený obdélník „Z1  Název“ (`markLabel`, `markBoxPx` v `core/marks.ts`), směr se kreslí pod štítky. `MarkDir.len` – délka směru v px na obrazovce, úchyt na konci mění úhel i délku (omezeno 24–600 px; výchozí podle šířky štítku). Skica: nový `core/sketch.ts` (tvary `rect`, `circle`, `arc`, `double` vedle `free` / `line`, zásah perem, posun, smazání, guma), okno má Vybrat (posun tažením, zvýraznění, Smazat vybrané / Delete), Čára, Obdélník, Kruh, Oblouk, Dvojitá. SCHEMA_VERSION 31 (nepovinná pole, bez převodu). Testy +2.
+- **Viditelně v aplikaci:** značka je štítek s číslem i názvem; u vybrané značky kulatý úchyt na konci kužele / šipky – tažením otočí i prodlouží. V okně značky nástroje 👆 Vybrat, ╱ Čára, ▭ Obdélník, ◯ Kruh, ◠ Oblouk, ═ Dvojitá; vybraný prvek jde posunout tažením a smazat. Ověřeno v prohlížeči.
+- **Rozhodnuto samostatně:** oblouk ve skice se kreslí tažením mezi konci s vyklenutím čtvrtina tětivy (jako Oblouk ve výkresu); dvojitá čára ve skice má pevnou vzdálenost čar 12 (jednotky skici); kruh tažením od středu; čára, dvojitá čára a kóta se do 6° srovnají vodorovně / svisle; posun ve skice bez přichytávání.
+- **Po kontrole revieweru opraveno:** úchyt směru mohl zapadnout pod štítek (zkrácení / delší název) a brát tažení za štítek – délka je teď vždy aspoň mimo štítek; dlouhý štítek bral přednost rohům pod sebou – přednost před rohem má jen část s číslem; šířka štítku a popisků ve skice s rezervou (písmo štítku se při přetečení zmenší, popisky skici kreslí a zasahují stejný rámeček); Backspace ve skice nemaže (jen Delete); zadání ZNACKY-POZNAMKY-DETAILY.md, POZADAVKY a CLAUDE.md doplněny o změny. Testy +4, celkem 1007 + 1 zapsaný nález.
+- **Otevřené:** úprava tvarů ve skice úchyty (konce, poloměr, vyklenutí) zatím není – jen posun a smazání.
+
 ### 2026-11-20 (5) – sloučená značka v půdorysu, krok A (ZNACKY-POZNAMKY-DETAILY.md)
 - **Zadání:** `ZNACKY-POZNAMKY-DETAILY.md` (závazné, commitnuto zvlášť). Dokument `zadani-osteni-a-detaily.md` zmíněný v zadání v repu není – nepoužit.
 - **Rozhodnuto uživatelem:** značka patří do vrstvy **Popisky**; záloha projektu (JSON) značky **obsahuje**, do BIM / IFC se nedávají; **kopie** dostane nové číslo a nese název, barvu, poznámku i skicu (otočení skupiny otočí i směr).
