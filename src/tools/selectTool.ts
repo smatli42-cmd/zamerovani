@@ -10,11 +10,12 @@ import { dist, projectToSegment, roundTo } from '../core/geometry';
 import type { Id, Pt } from '../model/types';
 import { selectInRect, normRect } from '../core/rectSelect';
 import { dragParams, linesNear, nodeDragLines, resolveDragPoint, wallMoveLines, type DragLine } from '../core/dragResolve';
-import { groupOrigin, type GroupOrigin, mergeNodeIfCoincident, moveGroup, moveNode, moveOpeningTo, moveRoom, moveText, updateText, setCircleRadius, setWallSagitta, setProtrusionArc } from '../store/actions';
+import { setMarkDir, groupOrigin, type GroupOrigin, mergeNodeIfCoincident, moveGroup, moveNode, moveOpeningTo, moveRoom, moveText, updateText, setCircleRadius, setWallSagitta, setProtrusionArc } from '../store/actions';
 import { store } from '../store/store';
 import { protrusionArcHandles, sagittaFromPoint } from '../core/protrusionEdit';
 import { openTarget } from '../store/numpadController';
-import { pickAny } from './pick';
+import { pickAny, pickMarkDirHandle } from './pick';
+import { angleTowards } from '../core/marks';
 import { dragDrawingHandle, drawingHandleUnderPen, type DrawHandleDrag } from './drawingEdit';
 import { HIT_PX, type PointerInput, type Tool } from './types';
 import { drawGuides, drawSnapHits } from './dragOverlay';
@@ -38,6 +39,8 @@ type DragKind = { kind: 'node'; id: Id; lines: DragLine[] } | { kind: 'wall'; id
   /** Úchyt vzepětí úseku obrysu vybraného výstupku (I1.10). */
   | { kind: 'protArc'; id: Id; seg: number }
   | { kind: 'leader'; id: Id }
+  /** Úchyt směru pohledu vybrané značky (core/marks.ts). */
+  | { kind: 'markDir'; id: Id }
   /** Úchyt vybrané kresby (tools/drawingEdit.ts). */
   | { kind: 'draw'; h: DrawHandleDrag }
   /** Posun celé skupiny; u schodiště s přichycením ke stěnám a prvkům (core/moveSnap.ts). */
@@ -150,7 +153,16 @@ export function grabLeaderHandle(p: PointerInput): boolean {
 }
 
 /** Je pod perem úchyt oblouku stěny nebo výstupku? (má přednost před kótami) */
-export const anyHandleUnderPen = (p: PointerInput): boolean => !!drawingHandleUnderPen(p) || !!protArcUnderPen(p) || !!arcUnderPen(p);
+export const anyHandleUnderPen = (p: PointerInput): boolean => !!markDirUnderPen(p) || !!drawingHandleUnderPen(p) || !!protArcUnderPen(p) || !!arcUnderPen(p);
+
+/** Úchyt směru pohledu vybrané značky pod perem. */
+function markDirUnderPen(p: PointerInput): Id | null {
+  const floor = store.view('pick');
+  return floor ? pickMarkDirHandle(floor, p.world, store.get().camera, store.get().selection) : null;
+}
+
+/** Klepnutí (bez tažení) na značku otevře její okno – poznámka a skica (ZNACKY-POZNAMKY-DETAILY.md). */
+let markTap: Id | null = null;
 
 /** Úchyt oblouku v obrysu vybraného výstupku pod perem. */
 export function protArcUnderPen(p: PointerInput): { id: Id; seg: number } | null {
@@ -172,6 +184,13 @@ export function protArcUnderPen(p: PointerInput): { id: Id; seg: number } | null
 
 /** `drawing` = i úchyty vybrané kresby (jen nástroj Vybrat – v nástrojích kreslení tah z konce čáry kreslí dál). */
 export function grabArcHandle(p: PointerInput, drawing = false): boolean {
+  const md = markDirUnderPen(p);
+  if (md) {
+    drag = { kind: 'markDir', id: md };
+    downScreen = p.screen;
+    dragging = false;
+    return true;
+  }
   const dh = drawing ? drawingHandleUnderPen(p) : null;
   if (dh) {
     drag = { kind: 'draw', h: dh };
@@ -206,6 +225,7 @@ export const selectTool: Tool = {
     downScreen = p.screen;
     dragging = false;
     drag = null;
+    markTap = hit?.kind === 'mark' ? hit.id : null;
     // D14: ťuknutí znovu na vybraný roh, pod kterým leží další (oddělený roh) → po zvednutí bez tažení přepnout
     cycleAt = hit?.kind === 'node' && before?.kind === 'node' && before.id === hit.id ? p.world : null;
 
@@ -235,6 +255,8 @@ export const selectTool: Tool = {
     }
     // tažení už vybrané kresby / schodiště / tahu ji posune celou (s přichycením, core/moveSnap.ts)
     if ((hit.kind === 'drawing' || hit.kind === 'stair' || hit.kind === 'stroke') && before?.kind === hit.kind && before.id === hit.id) drag = groupDrag([hit], p.world);
+    // značka se táhne hned (jako text / štítek), posun společnou cestou volných prvků
+    if (hit.kind === 'mark') drag = groupDrag([hit], p.world);
     if (hit.kind === 'room') {
       const r = floor.rooms[hit.id]!;
       drag = { kind: 'room', id: hit.id, dx: p.world.x - r.x, dy: p.world.y - r.y };
@@ -273,7 +295,10 @@ export const selectTool: Tool = {
     if (!floor) return;
     const cam = store.get().camera;
 
-    if (drag.kind === 'draw') {
+    if (drag.kind === 'markDir') {
+      const m = floor.marks?.[drag.id];
+      if (m) setMarkDir(drag.id, { angle: angleTowards(m, p.world) });
+    } else if (drag.kind === 'draw') {
       dragDrawingHandle(drag.h, p);
     } else if (drag.kind === 'leader') {
       updateText(drag.id, { leader: { x: Math.round(p.world.x / 10) * 10, y: Math.round(p.world.y / 10) * 10 } });
@@ -380,6 +405,8 @@ export const selectTool: Tool = {
       const next = floor && nextNodeAt(store.view('pick')!, cycleAt, HIT_PX.node / store.get().camera.zoom, drag.id);
       if (next) store.set({ selection: { kind: 'node', id: next.id } });
     }
+    if (markTap && !dragging && store.floor()?.marks?.[markTap]) store.set({ markOpen: markTap });
+    markTap = null;
     cycleAt = null;
     resetGuides();
     drag = null;

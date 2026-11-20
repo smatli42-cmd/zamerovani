@@ -1,8 +1,9 @@
 /**
  * Panel místnosti.
  */
+import { requestDelete } from '../deleteConfirm';
 import type { Room } from '../../model/types';
-import { deleteSelection, duplicateSelection, roomLockState, setRoomDimsLocked, updateRoom } from '../../store/actions';
+import { duplicateSelection, roomLockState, setRoomDimsLocked, updateRoom } from '../../store/actions';
 import { store } from '../../store/store';
 import { useStore } from '../../store/useStore';
 import { openField } from '../../store/numpadController';
@@ -63,7 +64,7 @@ export function RoomPanel({ room }: { room: Room }) {
       <TextField label="Poznámka" value={room.note} onCommit={v => set({ note: v })} />
       <div class="panel-actions">
         <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
-        <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
+        <button class="btn btn-danger" onClick={requestDelete}>🗑️ Smazat</button>
       </div>
     </Panel>
   );

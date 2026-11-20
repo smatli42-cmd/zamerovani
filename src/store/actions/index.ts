@@ -20,3 +20,4 @@ export { addFreeDim, setFreeDimOffset, beginDimDrag, dragDim } from './dims';
 export { addStair, addSizedStair, addSpiralStair, appendDrawnFlight, updateStair, setFlightSteps, addStairFlight, addStairTeeFlights, setStairTurn, setLandingWinders, setFlightArc, mirrorStairArc, removeStairFlight, flipStairDirection, drawingToStair, drawingToLanding, turnStairAxis } from './stairs';
 export { setActiveLayer, addLayer, renameLayer, setLayerColor, setLayerVisible, setLayerLocked, moveLayerTo, layerItemCount, deleteLayer, canMoveToLayer, moveSelectionToLayer, selectionElemKind } from './layers';
 export { addStroke, appendStrokePoint, setStrokeWidth, eraseStrokesAt } from './strokes';
+export { addMark, updateMark, setMarkNumber, setMarkDir, setMarkContent } from './marks';

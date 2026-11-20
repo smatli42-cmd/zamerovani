@@ -29,6 +29,7 @@ import {
   deleteLayer,
   deleteSelection,
   duplicateSelection,
+  addMark,
   moveLayerTo,
   moveNode,
   moveSelectionToLayer,
@@ -88,7 +89,8 @@ const MAKERS: Record<string, () => Made> = {
   text: () => ({ kind: 'text', id: addText({ x: 8000, y: 3000 })!, at: { x: 8000, y: 3000 } }),
   'štítek místnosti': () => ({ kind: 'room', id: addRoom({ x: 8000, y: 6000 })!, at: { x: 8000, y: 6000 } }),
   schodiště: () => ({ kind: 'stair', id: addStair({ x: 0, y: 6000 }, { x: 1000, y: 9000 })!, at: { x: 500, y: 7500 } }),
-  'ruční tah': () => ({ kind: 'stroke', id: addStroke([{ x: 10000, y: 0 }, { x: 11000, y: 500 }, { x: 12000, y: 0 }], 25)!, at: { x: 11000, y: 500 } })
+  'ruční tah': () => ({ kind: 'stroke', id: addStroke([{ x: 10000, y: 0 }, { x: 11000, y: 500 }, { x: 12000, y: 0 }], 25)!, at: { x: 11000, y: 500 } }),
+  značka: () => ({ kind: 'mark', id: addMark({ x: 12000, y: 6000 })!, at: { x: 12000, y: 6000 } })
 };
 
 /** Výchozí vrstva nového prvku (pravidlo 4, schválená tabulka). */
@@ -106,7 +108,8 @@ const DEFAULT: Record<string, Id> = {
   text: SYS.popisky,
   'štítek místnosti': SYS.popisky,
   schodiště: SYS.stavba,
-  'ruční tah': 'elektro'
+  'ruční tah': 'elektro',
+  značka: SYS.popisky
 };
 
 const layerOf = (m: Made) => elementLayer(f(), m.kind as ElemKind, m.id);
@@ -121,6 +124,7 @@ const exists = (fl: Floor, m: Made): boolean => {
     case 'room': return !!fl.rooms[m.id];
     case 'stair': return !!fl.stairs?.[m.id];
     case 'stroke': return !!fl.strokes?.[m.id];
+    case 'mark': return !!fl.marks?.[m.id];
     default: return false;
   }
 };
@@ -142,6 +146,7 @@ function touch(fl: Floor, m: Made): void {
     case 'room': fl.rooms[m.id]!.x += 100; break;
     case 'stair': fl.stairs![m.id]!.flights[0]!.a.x += 100; break;
     case 'stroke': fl.strokes![m.id]!.pts[0]!.x += 100; break;
+    case 'mark': fl.marks![m.id]!.x += 100; break;
   }
 }
 
@@ -184,7 +189,8 @@ describe('model a migrace', () => {
     for (const make of Object.values(MAKERS)) make();
     const json = JSON.parse(JSON.stringify(P())) as Project;
     expect(json.layers).toEqual(P().layers);
-    for (const rec of [json.floors[0]!.walls, json.floors[0]!.rooms, json.floors[0]!.texts, json.floors[0]!.drawings!, json.floors[0]!.dims!, json.floors[0]!.stairs!]) {
+    for (const rec of [json.floors[0]!.walls, json.floors[0]!.rooms, json.floors[0]!.texts, json.floors[0]!.drawings!, json.floors[0]!.dims!, json.floors[0]!.stairs!, json.floors[0]!.strokes!, json.floors[0]!.marks!]) {
+      expect(Object.keys(rec).length).toBeGreaterThan(0);
       for (const el of Object.values(rec)) expect((el as { layerId?: Id }).layerId).toBeTruthy();
     }
     expect(migrateProject(json)).toEqual(json);
@@ -239,6 +245,7 @@ describe.each(Object.keys(MAKERS))('%s', name => {
       else if (m.kind === 'room') delete fl.rooms[m.id];
       else if (m.kind === 'stair') delete fl.stairs![m.id];
       else if (m.kind === 'stroke') delete fl.strokes![m.id];
+      else if (m.kind === 'mark') delete fl.marks![m.id];
     })).toBe(false);
     expect(exists(f(), m)).toBe(true);
     // po odemčení jde upravit
@@ -293,6 +300,7 @@ function allIds(fl: Floor, kind: SingleSelection['kind']): Id[] {
     case 'room': return Object.keys(fl.rooms);
     case 'stair': return Object.keys(fl.stairs ?? {});
     case 'stroke': return Object.keys(fl.strokes ?? {});
+    case 'mark': return Object.keys(fl.marks ?? {});
     default: return [];
   }
 }

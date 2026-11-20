@@ -1,12 +1,13 @@
 /**
  * Panel volné kóty (core/freeDim.ts): délka (posune zvolený bod), odsazení, zámek, smazání.
  */
+import { requestDelete } from '../deleteConfirm';
 import { useState } from 'preact/hooks';
 import { defaultFreeDimMove, freeDimValue } from '../../core/freeDim';
 import { refLabel as endLabel } from '../../core/dimRefs';
 import { isDimLocked } from '../../core/dimLock';
 import type { Floor, FreeDim } from '../../model/types';
-import { applyNumpadValue, deleteSelection, setFreeDimOffset, toggleDimLock } from '../../store/actions';
+import { applyNumpadValue, setFreeDimOffset, toggleDimLock } from '../../store/actions';
 import { close } from './common';
 import { NumField, Panel, Seg } from './fields';
 
@@ -39,7 +40,7 @@ export function DimPanel({ floor, d }: { floor: Floor; d: FreeDim }) {
         <button class={`btn btn-sm lock-toggle ${locked ? 'on' : ''}`} onClick={() => toggleDimLock(target)}>
           {locked ? '🔒 Zamčeno – odemknout' : '🔓 Zamknout kótu'}
         </button>
-        <button class="btn btn-danger" onClick={deleteSelection}>
+        <button class="btn btn-danger" onClick={requestDelete}>
           🗑️ Smazat
         </button>
       </div>

@@ -16,6 +16,7 @@ function drawingPoints(floor: Floor): Pt[] {
     ...Object.values(floor.nodes),
     ...Object.values(floor.rooms),
     ...Object.values(floor.texts),
+    ...Object.values(floor.marks ?? {}),
     ...Object.values(floor.drawings ?? {}).flatMap(d => drawingPolylines(d).flat()),
     ...Object.values(floor.stairs ?? {}).flatMap(st => stairOutlines(st).flat()),
     ...strokesOf(floor).flatMap(st => st.pts),

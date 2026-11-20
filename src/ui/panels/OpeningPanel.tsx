@@ -1,11 +1,12 @@
 /**
  * Panel otvoru (dveře, okno, francouzské okno, průchod, nika), ostění a zárubeň / rám.
  */
+import { requestDelete } from '../deleteConfirm';
 import { openingThickness, revealPartValue, type RevealPart } from '../../core/doorLayout';
 import { openingCornerWarning } from '../../core/cornerOverlap';
 import { hasLeaf, isWindowKind, OPENING_DEFAULTS } from '../../model/factory';
 import type { Opening } from '../../model/types';
-import { applyNumpadValue, deleteSelection, duplicateSelection, setOpeningRef, setRevealEnabled, setRevealSides, setWindowKind, updateOpening } from '../../store/actions';
+import { applyNumpadValue, duplicateSelection, setOpeningRef, setRevealEnabled, setRevealSides, setWindowKind, updateOpening } from '../../store/actions';
 import { openTarget } from '../../store/numpadController';
 import { store } from '../../store/store';
 import { close } from './common';
@@ -154,7 +155,7 @@ export function OpeningPanel({ op }: { op: Opening }) {
       </div>
       <div class="panel-actions">
         <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
-        <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
+        <button class="btn btn-danger" onClick={requestDelete}>🗑️ Smazat</button>
       </div>
     </Panel>
   );

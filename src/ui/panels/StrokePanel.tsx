@@ -1,9 +1,10 @@
 /**
  * Panel ručního tahu (core/strokes.ts): tloušťka, kopie, smazání. Vrstva a přesun do vrstvy jsou dole (LayerField).
  */
+import { requestDelete } from '../deleteConfirm';
 import type { Stroke } from '../../model/types';
 import { STROKE_WIDTHS } from '../../core/strokes';
-import { deleteSelection, duplicateSelection, setStrokeWidth } from '../../store/actions';
+import { duplicateSelection, setStrokeWidth } from '../../store/actions';
 import { close } from './common';
 import { Panel, Seg } from './fields';
 
@@ -18,7 +19,7 @@ export function StrokePanel({ s }: { s: Stroke }) {
       </div>
       <div class="panel-actions">
         <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
-        <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
+        <button class="btn btn-danger" onClick={requestDelete}>🗑️ Smazat</button>
       </div>
     </Panel>
   );

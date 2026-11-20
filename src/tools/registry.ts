@@ -11,6 +11,7 @@ import { pasteTool } from './pasteTool';
 import { leaderTool } from './leaderTool';
 import { dimTool } from './dimTool';
 import { textTool } from './textTool';
+import { markTool } from './markTool';
 import { trimTool } from './trimTool';
 import { splitTool } from './splitTool';
 import { selectTool } from './selectTool';
@@ -42,5 +43,6 @@ export const tools: Record<ToolId, Tool> = {
   paste: pasteTool,
   pen: penTool,
   eraser: eraserTool,
+  mark: markTool,
   pan: {}
 };

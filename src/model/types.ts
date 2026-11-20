@@ -10,7 +10,7 @@
 
 import type { DimTarget } from '../core/dimLock';
 
-export const SCHEMA_VERSION = 29;
+export const SCHEMA_VERSION = 30;
 
 export type Id = string;
 
@@ -351,6 +351,8 @@ export interface FreeDim {
 // Schodiště (StairFlight, StairLanding, Stair) – model/stairTypes.ts
 import type { Stair } from './stairTypes';
 export type { Stair, StairFlight, StairLanding } from './stairTypes';
+export type { Mark, MarkDir, MarkDirStyle, MarkPage, SketchDim, SketchLabel, SketchStroke } from './markTypes';
+import type { Mark } from './markTypes';
 
 /**
  * Ruční tah perem (zadání Vrstvy, krok 2): vyhlazená lomená čára (vektor, ne bitmapa) v mm, tloušťka v mm výkresu,
@@ -387,6 +389,8 @@ export interface Floor {
   strokes?: Record<Id, Stroke>;
   /** Volné kóty mezi dvěma body (od verze 20; chybí = žádné). */
   dims?: Record<Id, FreeDim>;
+  /** Značky v půdorysu – poznámka + skica (od verze 30; chybí = žádné; core/marks.ts). */
+  marks?: Record<Id, Mark>;
   /**
    * Zamčené kóty (KOTY-ZAMEK-EXPORT.md, A): klíč = `dimKey(kóta)`, hodnota = popis kóty. Chybí = vše odemčeno.
    * Zamčená kóta drží hodnotu – úprava, která by ji změnila, se neprovede (core/dimLock.ts).

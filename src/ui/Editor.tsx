@@ -7,6 +7,8 @@ import { attachKeyboard } from '../input/keyboard';
 import { attachPointer } from '../input/pointer';
 import { NumPad } from './NumPad';
 import { LockNotice } from './LockNotice';
+import { MarkWindow } from './MarkWindow';
+import { DeleteConfirm } from './deleteConfirm';
 import { LayersPanel } from './LayersPanel';
 import { useStore } from '../store/useStore';
 import { ToolOptions } from './ToolOptions';
@@ -45,6 +47,8 @@ export function Editor() {
           <SidePanel />
           <NumPad />
           <LockNotice />
+          <MarkWindow />
+          <DeleteConfirm />
         </div>
       </div>
     </div>

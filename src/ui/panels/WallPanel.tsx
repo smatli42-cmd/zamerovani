@@ -1,10 +1,11 @@
 /**
  * Panel stěny (rovná, oblouk, kruh) a jejího popisku.
  */
+import { requestDelete } from '../deleteConfirm';
 import { arcChain } from '../../core/arcChain';
 import { wallLength } from '../../core/floorQueries';
 import type { Floor, Wall, WallType } from '../../model/types';
-import { deleteSelection, duplicateSelection, flipWallSide, setWallAxis, setWallDimsLocked, wallLockState, setWallNoJoin, setWallThickness, updateWall, updateWallLabel } from '../../store/actions';
+import { duplicateSelection, flipWallSide, setWallAxis, setWallDimsLocked, wallLockState, setWallNoJoin, setWallThickness, updateWall, updateWallLabel } from '../../store/actions';
 import { openTarget } from '../../store/numpadController';
 import { close, LINE_STYLES } from './common';
 import { NumField, Panel, Seg, TextField } from './fields';
@@ -128,7 +129,7 @@ export function WallPanel({ floor, wall }: { floor: Floor; wall: Wall }) {
 
       <div class="panel-actions">
         <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
-        <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
+        <button class="btn btn-danger" onClick={requestDelete}>🗑️ Smazat</button>
       </div>
     </Panel>
   );

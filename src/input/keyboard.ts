@@ -1,7 +1,7 @@
 /**
  * Klávesové zkratky (PC, tablet s klávesnicí, dálkoměr v režimu klávesnice).
  */
-import { deleteSelection } from '../store/actions';
+import { requestDelete } from '../ui/deleteConfirm';
 import { openTarget, pressKey, type NumKey } from '../store/numpadController';
 import { store } from '../store/store';
 import { tools } from '../tools/registry';
@@ -12,6 +12,8 @@ export function attachKeyboard(): () => void {
     if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement) return;
     const state = store.get();
     const ctrl = e.ctrlKey || e.metaKey;
+    // okno značky je modální – Zpět / Delete / zkratky výkresu v něm nepůsobí (vlastní Zpět skici, Esc zavře okno)
+    if (state.markOpen) return;
 
     if (ctrl && e.key.toLowerCase() === 'z') {
       e.preventDefault();
@@ -47,7 +49,7 @@ export function attachKeyboard(): () => void {
     }
 
     if (e.key === 'Delete') {
-      deleteSelection();
+      requestDelete();
     } else if (e.key === 'Escape') {
       tools[state.tool].cancel?.();
       // Esc ukončí i kreslení řetězem

@@ -32,6 +32,7 @@ const TOOLS: { id: ToolId; icon: string; label: string; title: string }[] = [
   { id: 'dim', icon: '📏', label: 'Kóta', title: 'Volná kóta: ťukni na dva body (roh, bod kresby, místo ve výkresu); délku zadáš ťuknutím na číslo, odsazení tažením za čáru' },
   { id: 'leader', icon: '↗️', label: 'Šipka', title: 'Odkazová šipka s textem: táhni od místa, na které se ukazuje, tam kam má přijít text' },
   { id: 'text', icon: '🅰️', label: 'Text', title: 'Ťuknutím vložit text; ťuknutím na text ho upravit, tažením přesunout' },
+  { id: 'mark', icon: '📍', label: 'Značka', title: 'Značka v půdorysu (poznámka, detail, skica): ťuknutím založit s dalším číslem; ťuknutím na značku otevřít poznámku a skicu, tažením přesunout' },
   { id: 'pan', icon: '✋', label: 'Posun', title: 'Posouvat výkres' }
 ];
 

@@ -93,7 +93,7 @@ export function stairGeom(floor: Floor, id: Id): SnapGeom | null {
 /** Druhy prvků s vlastní geometrií přichycení. */
 const SNAP_KINDS = ['stair', 'drawing', 'stroke'] as const;
 /** Druhy, které ve skupině jen jedou s ní (hrany nemají). */
-const RIDE_KINDS = ['room', 'text', 'dim'];
+const RIDE_KINDS = ['room', 'text', 'dim', 'mark'];
 
 function itemGeom(floor: Floor, kind: string, id: Id): SnapGeom | null {
   if (kind === 'stair') return stairGeom(floor, id);

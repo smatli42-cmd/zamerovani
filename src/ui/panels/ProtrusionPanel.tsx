@@ -1,6 +1,7 @@
 /**
  * Panel výstupku / vybrání stěny (KATALOG-STEN.md, sekce I): rozměry, výška, název, materiál, poznámka.
  */
+import { requestDelete } from '../deleteConfirm';
 import { protrusionDims } from '../../core/protrusionEdit';
 import { protrusionCornerWarning } from '../../core/cornerOverlap';
 import type { CornerProtrusion, EndProtrusion, Floor, Protrusion } from '../../model/types';
@@ -8,7 +9,7 @@ import { cornerDims } from '../../core/cornerProtrusion';
 import { endDims, type EndDim } from '../../core/endProtrusion';
 import { END_DIM_LABEL } from '../../core/dimLock';
 import { useState } from 'preact/hooks';
-import { applyNumpadValue, copyProtrusionRow, deleteSelection, updateProtrusion } from '../../store/actions';
+import { applyNumpadValue, copyProtrusionRow, updateProtrusion } from '../../store/actions';
 import { close } from './common';
 import { NumField, Panel, Seg, TextField } from './fields';
 
@@ -31,7 +32,7 @@ export function ProtrusionPanel({ floor, p }: { floor: Floor; p: Protrusion }) {
       <TextField label="Poznámka" value={p.note} onCommit={v => updateProtrusion(p.id, { note: v })} />
       <RowCopy p={p} width={d ? Math.round(d.width) : 0} />
       <div class="panel-actions">
-        <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
+        <button class="btn btn-danger" onClick={requestDelete}>🗑️ Smazat</button>
       </div>
     </Panel>
   );
@@ -93,7 +94,7 @@ export function CornerProtrusionPanel({ cp }: { cp: CornerProtrusion }) {
       <TextField label="Materiál" value={cp.material} onCommit={v => updateProtrusion(cp.id, { material: v })} />
       <TextField label="Poznámka" value={cp.note} onCommit={v => updateProtrusion(cp.id, { note: v })} />
       <div class="panel-actions">
-        <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
+        <button class="btn btn-danger" onClick={requestDelete}>🗑️ Smazat</button>
       </div>
     </Panel>
   );
@@ -116,7 +117,7 @@ export function EndProtrusionPanel({ ep }: { ep: EndProtrusion }) {
       <TextField label="Materiál" value={ep.material} onCommit={v => updateProtrusion(ep.id, { material: v })} />
       <TextField label="Poznámka" value={ep.note} onCommit={v => updateProtrusion(ep.id, { note: v })} />
       <div class="panel-actions">
-        <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
+        <button class="btn btn-danger" onClick={requestDelete}>🗑️ Smazat</button>
       </div>
     </Panel>
   );

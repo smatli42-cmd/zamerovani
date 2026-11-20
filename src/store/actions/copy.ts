@@ -1,6 +1,7 @@
 /**
  * Akce: otočení výběru, kopírování a vkládání otvorů ze schránky.
  */
+import { nextMarkNumber } from '../../core/marks';
 import { LOOSE_KINDS, looseKind, type CopyContext, type LooseKindId } from '../../core/looseElements';
 import { newId, nextOpeningNumber } from '../../model/factory';
 import { endFrame } from '../../core/endProtrusion';
@@ -59,8 +60,9 @@ export function duplicateSelection(): void {
   const created: { kind: 'wall' | 'opening' | LooseKindId; id: Id }[] = [];
   const before = store.floor();
   if (!before) return;
-  const ok = store.edit(floor => {
+  const ok = store.edit((floor, project) => {
     const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+    let markNum = nextMarkNumber(project);
     const nodeMap = new Map<Id, Id>();
     const nodeCopy = (id: Id): Id | null => {
       const old = floor.nodes[id];
@@ -137,7 +139,7 @@ export function duplicateSelection(): void {
       protMap.set(ep.id, ne.id);
     }
     // volné prvky (core/looseElements.ts) v pořadí LOOSE_KINDS – kóty až po kresbě, ke které mohou vést
-    const ctx: CopyContext = { before, shift: p => ({ x: p.x + COPY_OFFSET, y: p.y + COPY_OFFSET }), maps: { nodes: nodeMap, walls: wallMap, openings: openingMap, drawings: drawingMap, prots: protMap, stairs: new Map<Id, Id>() } };
+    const ctx: CopyContext = { before, shift: p => ({ x: p.x + COPY_OFFSET, y: p.y + COPY_OFFSET }), maps: { nodes: nodeMap, walls: wallMap, openings: openingMap, drawings: drawingMap, prots: protMap, stairs: new Map<Id, Id>() }, markNum: () => markNum++ };
     for (const k of LOOSE_KINDS)
       for (const it of items) {
         if (it.kind !== k.kind) continue;

@@ -2,8 +2,9 @@
  * Panel vlastností vybraného prvku (stěna, otvor, místnost, roh) – vybere panel podle výběru.
  * Jednotlivé panely jsou ve vlastních souborech.
  */
+import { requestDelete } from '../deleteConfirm';
 import { wallsAtNode } from '../../core/floorQueries';
-import { deleteSelection, duplicateSelection, rotateSelection } from '../../store/actions';
+import { duplicateSelection, rotateSelection } from '../../store/actions';
 import { useStore } from '../../store/useStore';
 import { close } from './common';
 import { NumField, Panel } from './fields';
@@ -16,6 +17,7 @@ import { StairPanel } from './StairPanel';
 import { TextPanel } from './TextPanel';
 import { WallPanel } from './WallPanel';
 import { StrokePanel } from './StrokePanel';
+import { MarkPanel } from './MarkPanel';
 
 export { LINE_STYLES } from './common';
 
@@ -61,6 +63,10 @@ export function SidePanel() {
       const s = floor.strokes?.[selection.id];
       return s ? <StrokePanel key={s.id} s={s} /> : null;
     }
+    case 'mark': {
+      const m = floor.marks?.[selection.id];
+      return m ? <MarkPanel key={m.id} m={m} /> : null;
+    }
     case 'protrusion': {
       const p = floor.protrusions?.[selection.id];
       const cp = floor.cornerProtrusions?.[selection.id];
@@ -77,7 +83,8 @@ export function SidePanel() {
         [count('drawing'), 'prvků kresby'],
         [count('stair'), 'schodišť'],
         [count('dim'), 'kót'],
-        [count('stroke'), 'ručních tahů']
+        [count('stroke'), 'ručních tahů'],
+        [count('mark'), 'značek']
       ].filter(([n]) => n);
       return (
         <Panel title={`Vybráno ${selection.items.length} prvků`} onClose={close}>
@@ -95,7 +102,7 @@ export function SidePanel() {
           </div>
           <div class="panel-actions">
             <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
-            <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
+            <button class="btn btn-danger" onClick={requestDelete}>🗑️ Smazat</button>
           </div>
         </Panel>
       );
@@ -105,7 +112,7 @@ export function SidePanel() {
         <Panel title="Roh" onClose={close}>
           <p class="muted small">Tažením roh posunete. Přetažením na jiný roh se rohy spojí.</p>
           <p class="small">Napojené stěny: {wallsAtNode(floor, selection.id).length}</p>
-          <button class="btn btn-danger" onClick={deleteSelection}>
+          <button class="btn btn-danger" onClick={requestDelete}>
             🗑️ Smazat roh i se stěnami
           </button>
         </Panel>

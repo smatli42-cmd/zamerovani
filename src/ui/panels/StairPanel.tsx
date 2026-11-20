@@ -3,6 +3,7 @@
  * dopočítají. Rozměry ramen a podest se mění kótami na výkresu (jen u vybraného schodiště) nebo zde; tvar ramene
  * (rovné / po oblouku), napojení dalšího ramene (L, U, volně), zabíhavé stupně místo podesty.
  */
+import { requestDelete } from '../deleteConfirm';
 import { isArcFlight } from '../../core/stairFlight';
 import { canAppendFlight, canWind, flightLength, isTee, isUTurn, stairDimValue, stairLabel, stepHeight, totalSteps, treadDepth, type StairDim, type StairJoin, type StairTurn } from '../../core/stairs';
 import { WINDERS } from '../../core/stairWinders';
@@ -11,7 +12,6 @@ import {
   addStairFlight,
   addStairTeeFlights,
   applyNumpadValue,
-  deleteSelection,
   duplicateSelection,
   flipStairDirection,
   mirrorStairArc,
@@ -213,7 +213,7 @@ export function StairPanel({ s }: { s: Stair }) {
       )}
       <div class="panel-actions">
         <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
-        <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
+        <button class="btn btn-danger" onClick={requestDelete}>🗑️ Smazat</button>
       </div>
     </Panel>
   );

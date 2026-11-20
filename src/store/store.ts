@@ -20,7 +20,7 @@ import { keepOpeningsOnResizedWalls } from '../core/openingChain';
 import type { PenShape } from '../core/strokes';
 import { assignLayers, layerLockViolation, selectableItems, viewFloor } from '../core/layers';
 
-export type ToolId = 'select' | 'wall' | 'line' | 'trim' | 'split' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'drawLine' | 'drawDouble' | 'drawTrim' | 'text' | 'leader' | 'dim' | 'stair' | 'paste' | 'pen' | 'eraser' | 'pan';
+export type ToolId = 'select' | 'wall' | 'line' | 'trim' | 'split' | 'door' | 'window' | 'opening' | 'niche' | 'room' | 'rect' | 'circle' | 'arc' | 'drawLine' | 'drawDouble' | 'drawTrim' | 'text' | 'leader' | 'dim' | 'stair' | 'paste' | 'pen' | 'eraser' | 'mark' | 'pan';
 
 export type SingleSelection =
   | { kind: 'wall'; id: Id }
@@ -37,7 +37,9 @@ export type SingleSelection =
   /** Schodiště – 2D značka (core/stairs.ts). */
   | { kind: 'stair'; id: Id }
   /** Ruční tah perem (core/strokes.ts). */
-  | { kind: 'stroke'; id: Id };
+  | { kind: 'stroke'; id: Id }
+  /** Značka v půdorysu – poznámka + skica (core/marks.ts). */
+  | { kind: 'mark'; id: Id };
 
 /** Výběr: jeden prvek, skupina prvků (výběr obdélníkem) nebo nic. */
 export type Selection = SingleSelection | { kind: 'multi'; items: SingleSelection[] } | null;
@@ -152,6 +154,10 @@ export interface AppState {
   /** Otevřené okno Vrstvy: 'top' z horní lišty (správa, i systémové vrstvy, vpravo nahoře), 'tool' z lišty
    *  nástroje (volba aktivní vrstvy, jen vlastní vrstvy, vlevo pod lištou nástroje). */
   layersOpen: false | 'top' | 'tool';
+  /** Otevřené okno značky (poznámka + skica, ui/MarkWindow.tsx) – id značky. */
+  markOpen: Id | null;
+  /** Čeká potvrzení smazání výběru (výběr obsahuje značku – ZNACKY-POZNAMKY-DETAILY.md; ui/deleteConfirm.tsx). */
+  deleteConfirm: boolean;
 }
 
 /** Volby úpravy výkresu. */
@@ -200,7 +206,9 @@ class Store {
     chainNode: null,
     stairAppend: null,
     lockBlock: null,
-    layersOpen: false
+    layersOpen: false,
+    markOpen: null,
+    deleteConfirm: false
   };
 
   private listeners = new Set<Listener>();

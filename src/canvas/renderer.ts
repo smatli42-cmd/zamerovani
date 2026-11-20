@@ -14,6 +14,7 @@ import { drawOpenings } from './drawOpenings';
 import { drawDrawingHandles, drawDrawings } from './drawDrawings';
 import { drawRooms } from './drawRooms';
 import { drawTexts } from './drawTexts';
+import { drawMarks } from './drawMarks';
 import { drawStrokes } from './drawStrokes';
 import { drawComponentDims } from './drawComponentDims';
 import { resetHitBoxes, setHitEnabled } from './hitTargets';
@@ -106,6 +107,8 @@ function render(): void {
       if (kinds.has('stair')) drawStairs(ctx, slice, cam, state.selection, state.hover);
       if (kinds.has('room')) drawRooms(ctx, slice, cam, state.selection);
       if (kinds.has('text')) drawTexts(ctx, slice, cam, state.selection);
+      // značky (poznámka + skica) – stálá velikost na obrazovce (core/marks.ts)
+      if (kinds.has('mark')) drawMarks(ctx, slice, cam, state.selection);
       // ruční tahy barvou vrstvy (core/strokes.ts)
       if (kinds.has('stroke')) drawStrokes(ctx, slice, cam, layer.color, state.selection, state.hover);
       // automatické kóty patří vrstvě Kóty a kreslí se jen u viditelné stěny (rozhodnutí uživatele 2026-11-19)

@@ -2,11 +2,12 @@
  * Panel kresby (samostatná čára, obdélník, kruh, oblouk, dvojitá čára): styl a barva čáry, šrafa u uzavřeného
  * tvaru (pravidlo canHatch v core/drawing.ts), rozměry podle tvaru.
  */
+import { requestDelete } from '../deleteConfirm';
 import { canHatch, DRAW_COLOR_LABELS, HATCH_LABELS, rectSize } from '../../core/drawing';
 import type { Drawing, Floor, HatchKind } from '../../model/types';
 import { stairsOf } from '../../core/stairs';
 import { store } from '../../store/store';
-import { deleteSelection, drawingToLanding, drawingToStair, duplicateSelection, flipDrawingSide, setDrawingBulge, setDrawingRadius, setDrawingRect, setDrawingWidth, updateDrawing } from '../../store/actions';
+import { drawingToLanding, drawingToStair, duplicateSelection, flipDrawingSide, setDrawingBulge, setDrawingRadius, setDrawingRect, setDrawingWidth, updateDrawing } from '../../store/actions';
 import { close, DRAW_LINE_STYLES } from './common';
 import { NumField, Panel, Seg } from './fields';
 
@@ -114,7 +115,7 @@ export function DrawingPanel({ d }: { d: Drawing }) {
       )}
       <div class="panel-actions">
         <button class="btn" onClick={duplicateSelection}>📄 Kopírovat</button>
-        <button class="btn btn-danger" onClick={deleteSelection}>🗑️ Smazat</button>
+        <button class="btn btn-danger" onClick={requestDelete}>🗑️ Smazat</button>
       </div>
     </Panel>
   );

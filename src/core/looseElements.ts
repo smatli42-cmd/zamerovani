@@ -1,5 +1,6 @@
 /**
- * Volné prvky výkresu = prvky bez vazby na graf stěn: štítek místnosti, text, kresba, volná kóta (a další).
+ * Volné prvky výkresu = prvky bez vazby na graf stěn: štítek místnosti, text, kresba, schodiště, ruční tah,
+ * značka, volná kóta.
  * JEDINÉ místo, kde se pro ně určuje mazání, kopie, posun a otočení skupiny a výběr obdélníkem.
  * Akce (store/actions) jen procházejí `LOOSE_KINDS`. **Nový volný prvek přidat jen sem** (+ výběr ťuknutím
  * v tools/pick.ts, kreslení v canvas/renderer.ts).
@@ -15,8 +16,9 @@ import { inRect, polylinesInRect, segHitsRect, type Rect } from './rect';
 import { stairOutlines, stairPoints } from './stairs';
 import { dimKey } from './dimLock';
 import { fullFloorOf } from './layers';
+import { rotateAngle } from './marks';
 
-export type LooseKindId = 'room' | 'text' | 'drawing' | 'stair' | 'dim' | 'stroke';
+export type LooseKindId = 'room' | 'text' | 'drawing' | 'stair' | 'dim' | 'stroke' | 'mark';
 
 /**
  * Přemístění skupiny: `pt` = bod zaokrouhlený na mm (rohy, štítky), `exact` = přesně (kresba – obdélník
@@ -34,6 +36,8 @@ export interface CopyContext {
   before: Floor;
   shift(p: Pt): Pt;
   maps: CopyMaps & { drawings: Map<Id, Id>; stairs: Map<Id, Id> };
+  /** Číslo pro kopii značky (další volné v projektu, core/marks.ts). */
+  markNum(): number;
 }
 
 export interface LooseKind {
@@ -238,7 +242,37 @@ const stroke: LooseKind = {
   },
 };
 
+/**
+ * Značka (core/marks.ts): posouvá se bod, otočení skupiny otočí i směr pohledu; kopie dostane další číslo
+ * v projektu a nese název, barvu, poznámku i skicu (rozhodnutí uživatele 2026-11-20), ve vrstvě originálu.
+ */
+const mark: LooseKind = {
+  kind: 'mark',
+  remove: (f, id) => void (f.marks && delete f.marks[id]),
+  capture: (f, id) => {
+    const m = f.marks?.[id];
+    return m ? { at: xy(m), angle: m.dir?.angle } : null;
+  },
+  place: (f, id, snap, t) => {
+    const m = f.marks?.[id];
+    const s = snap as { at: Pt; angle?: number };
+    if (!m) return;
+    Object.assign(m, t.pt(s.at));
+    if (t.deg && m.dir && s.angle !== undefined) m.dir.angle = rotateAngle(s.angle, t.deg);
+  },
+  extent: (f, id) => (f.marks?.[id] ? [xy(f.marks[id]!)] : []),
+  inRect: (f, r) => Object.values(f.marks ?? {}).filter(m => inRect(r, m)).map(m => m.id),
+  copy: (f, id, ctx) => {
+    const src = f.marks?.[id];
+    if (!src) return null;
+    const m = { ...clone(src), id: newId('mk'), num: ctx.markNum(), ...ctx.shift(src) };
+    for (const pg of m.pages) pg.id = newId('pg');
+    f.marks![m.id] = m;
+    return m.id;
+  },
+};
+
 /** Všechny volné prvky; pořadí = pořadí kopírování (kóta až po prvcích, ke kterým může vést). */
-export const LOOSE_KINDS: readonly LooseKind[] = [room, text, drawing, stair, stroke, dim];
+export const LOOSE_KINDS: readonly LooseKind[] = [room, text, drawing, stair, stroke, mark, dim];
 
 export const looseKind = (kind: string): LooseKind | undefined => LOOSE_KINDS.find(k => k.kind === kind);

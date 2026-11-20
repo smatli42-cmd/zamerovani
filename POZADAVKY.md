@@ -84,7 +84,9 @@ Doplňuj klidně přímo sem – škrtej, přepisuj, přidávej do sekce „Moje
 - 💡 Výpis místností (tabulka s plochami) – do PDF i DXF.
 
 ## 7. Konstrukční detaily
-- ✅ **[MVP]** Značka detailu v půdorysu (D1, D2…) s názvem.
+> **Nahrazeno 2026-11-20:** značka detailu, značka fotky (sekce 8) a poznámkový špendlík (sekce 9) jsou **jedna sloučená značka** v půdorysu (číslo Z1, Z2… + název, poznámka, skica, později fotka, volitelný směr pohledu) – viz `ZNACKY-POZNAMKY-DETAILY.md`. Krok A hotový (bez fotky).
+
+- ✅ **[MVP]** ~~Značka detailu v půdorysu (D1, D2…)~~ → sloučená značka (Z1, Z2…) s názvem.
 - ✅ **[MVP]** Samostatná skica detailu – pero, přímka, text, kóta, guma, zoom/posun, barvy, zpět.
 - ✅ Poznámky k detailu (skladba, materiály), předvolby názvů.
 - 💡 Fotka jako podklad skici detailu (kreslení přímo přes fotku).
@@ -92,14 +94,14 @@ Doplňuj klidně přímo sem – škrtej, přepisuj, přidávej do sekce „Moje
 
 ## 8. Fotografie
 - 💡 **[MVP]** Vyfotit přímo z aplikace (fotoaparát tabletu) nebo vybrat z galerie.
-- 💡 **[MVP]** Značka fotky v půdorysu se **směrem pohledu** (šipka/kužel), číslování F1, F2…
+- 💡 **[MVP]** ~~Značka fotky F1, F2…~~ → sloučená značka se **směrem pohledu** (šipka/kužel) – směr hotový (krok A), fotka krok B.
 - 💡 **[MVP]** Přiřazení fotky k místnosti / stěně / otvoru / detailu.
 - 💡 Kreslení a popisky přímo do fotky (šipky, kóty, poznámky).
 - 💡 Automatické zmenšení fotek (úspora místa), galerie fotek projektu.
 
 ## 9. Poznámky a skici
 - ✅ **[MVP]** Kreslení od ruky v samostatné vrstvě (barvy, tloušťky, guma, skrýt/zobrazit).
-- 💡 **[MVP]** Poznámkový „špendlík“ v půdorysu s textem (např. „vlhkost u paty zdi“).
+- ✅ **[MVP]** ~~Poznámkový „špendlík“~~ → sloučená značka s textovou poznámkou (krok A).
 - 💡 Obecné poznámky k podlaží / projektu.
 - 💡 Hlasová poznámka (nahrát na místě, přepsat později).
 
