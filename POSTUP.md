@@ -7,6 +7,10 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-20 (8) – vyzkoušeno uživatelem
+- **Chyby od uživatele:** žádné – značka (krok A s úpravami (6), (7)), vrstvy a přichytávání posunu fungují, jak mají.
+- **Další krok:** značka krok B – fotka jako podklad (ZNACKY-POZNAMKY-DETAILY.md).
+
 ### 2026-11-20 (7) – značka: barevně odlišené číslo a název, konec směru ukotvený ve výkresu
 - **Požadavek uživatele:** barevně odlišit číslo a název; konec šipky / kužele má při zoomu ukazovat pořád na přesné místo (dřív „odjel“).
 - **Co se změnilo:** štítek = číslo v poli barvy značky (bílé písmo) + název v bílém poli s tmavým písmem a okrajem barvy značky. Směr pohledu je nově **cíl ve výkresu** `MarkDir.to` (mm) místo úhlu a délky v px – kužel / šipka vede od štítku přesně do cíle při každém zoomu (u kužele čárkovaná osa). Cíl jede se značkou (posun, otočení skupiny, kopie – `core/looseElements.ts`). Panel: Úhel a Vzdálenost cíle (mm). SCHEMA_VERSION 32, migrace `markDirTargets` (starý úhel → cíl 1,5 m od značky). Testy upravené podle nového modelu.
