@@ -7,6 +7,15 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-20 (4) – přichycení i při posunu kresby, tahů a skupiny
+- **Rozhodnuto uživatelem:** přichytávat i při posunu kresby (odpověď „Ano, i kresba“ na otázku o kresbě a skupinách).
+- **Co se změnilo:** předem samostatný commit – náhled tažení ze `tools/selectTool.ts` (490 řádků) do `tools/dragOverlay.ts`. `core/moveSnap.ts` zobecněn: `movingGeom` (schodiště, kresba, ruční tah; štítek, text a kóta ve skupině jen jedou), cíle `moveSnapTargets` přeskakují všechny posouvané prvky a nově berou i ruční tahy; nové přichycení bodu kolmo na hranu – jen u prvku bez rovných hran (kruh, oblouk), u ostatních (i schodiště) beze změny. Nástroj Vybrat: `groupDrag` pro jeden prvek i skupinu. Testy +12 (tabulka + tažení v nástroji Vybrat), celkem 981 + 1 zapsaný nález.
+- **Tabulka posouvaný prvek × přichycení (test):** schodiště ✔, čára ✔, obdélník ✔, dvojitá čára ✔, kruh ✔ (body), oblouk ✔ (body), ruční tah ✔ (tvary Pera; od ruky konce a úseky ≥ 100 mm po zjednodušení tahu), skupina kresba + schodiště + text ✔; skupina se stěnou ✗ záměrně (stěny mají vlastní tažení D11–D13); štítek, text, volná kóta samotné ✗ (nemají hrany, posouvají se vlastním tažením). **Cíle:** líce stěn ✔, stěna bez tloušťky ✔, kresba ✔, schodiště ✔, ruční tah ✔, oblouková / kruhová stěna jen konce.
+- **Viditelně v aplikaci:** tažení vybrané kresby (čára, obdélník, kruh, oblouk, dvojitá čára), tahu perem nebo skupiny z nich (i se schodištěm) se přichytí ke stěnám z obou stran, kresbě, schodišti a tahům, hrana se zvýrazní fialově. Ověřeno v prohlížeči (obdélník k líci stěny).
+- **Návrh čekající na potvrzení uživatele (průřezová funkce):** u tahu se berou konce a úseky ≥ 100 mm (body po ~1 px hrany nedávají); kruh a oblouk se chytají body (střed, kvadranty, konce, vrchol) – na roh i kolmo na hranu; pořadí: hrana k hraně → bod na bod → bod na hranu.
+- **Po kontrole revieweru opraveno:** bod na hranu omylem měnil i chování schodiště (teď jen u prvků bez rovných hran, původní test vrácen); CLAUDE.md „tah nechytá“ upřesněno; doplněny testy přes nástroj Vybrat (kresba, skupina se stěnou se nepřichytí).
+- **Otevřené:** nic.
+
 ### 2026-11-20 (3) – posun schodiště se přichytí ke stěnám a prvkům
 - **Přání uživatele:** schodiště se po vybrání při posouvání přichytí ke stěnám z obou stran a klidně i k ostatním prvkům. (Chyby schodiště z minula si uživatel už nevybavuje – zapsáno, nic k opravě.)
 - **Co se změnilo:** nový `core/moveSnap.ts` – jediné místo: cíle (`moveSnapTargets`: oba líce a čela stěn, stěna bez tloušťky, rovné úseky a body kresby, obrysy ostatních schodišť, rohy) a výpočet (`snapMove`). Nástroj Vybrat ho použije při tažení vybraného schodiště. Testy `core/moveSnap.test.ts` (7) + tažení v `tools/selectTool.drag.test.ts`, celkem 967 + 1 zapsaný nález.

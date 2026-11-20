@@ -3,7 +3,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createProject } from '../model/factory';
-import { addStair, addWall, setWallNoJoin } from '../store/actions';
+import { addDrawRect, addStair, addWall, setWallNoJoin } from '../store/actions';
 import { wallBodies } from '../core/wallBody';
 import { stairOutlines } from '../core/stairs';
 import { store } from '../store/store';
@@ -184,5 +184,35 @@ describe('posun schodiště se přichytí ke stěně (přání uživatele 2026-1
     dragPath([[1500, 3500], [1500, 3000], [1500, 3500 - (2000 - face) + 40]]);
     expect(Math.min(...ys())).not.toBeCloseTo(face);
     store.updateSettings({ snap: true });
+  });
+});
+
+describe('posun kresby a skupiny se přichytí (rozhodnutí uživatele 2026-11-20 – i kresba)', () => {
+  const rectTop = (id: string) => Math.min(...store.floor()!.drawings![id]!.pts.map(p => p.y));
+  const setup = () => {
+    open();
+    const W = addWall({ x: 0, y: 0 }, null, { x: 4000, y: 0 }, null, false, { thickness: 300, side: 1 })!;
+    const face = Math.max(...wallBodies(store.floor()!).get(W)!.poly.map(p => p.y));
+    const R = addDrawRect({ x: 1000, y: 2000 }, { x: 2000, y: 3000 })!;
+    return { W, face, R };
+  };
+  it('vybraný obdélník dosedne na líc stěny', () => {
+    const { face, R } = setup();
+    store.set({ selection: { kind: 'drawing', id: R } });
+    dragPath([[1500, 2000], [1500, 1500], [1500, 2000 - (2000 - face) + 40]]);
+    expect(rectTop(R)).toBeCloseTo(face);
+  });
+  it('skupina obdélník + schodiště dosedne; skupina se stěnou se nepřichytí (po 10 mm)', () => {
+    const { W, face, R } = setup();
+    const S = addStair({ x: 2500, y: 2000 }, { x: 3500, y: 5000 })!;
+    store.set({ selection: { kind: 'multi', items: [{ kind: 'drawing', id: R }, { kind: 'stair', id: S }] } });
+    dragPath([[1500, 2000], [1500, 1500], [1500, 2000 - (2000 - face) + 40]]);
+    expect(rectTop(R)).toBeCloseTo(face);
+    store.undo();
+    const W2 = addWall({ x: 6000, y: 2000 }, null, { x: 7000, y: 2000 }, null, false, { thickness: 100, side: 1 })!;
+    expect(W2).not.toBe(W);
+    store.set({ selection: { kind: 'multi', items: [{ kind: 'drawing', id: R }, { kind: 'wall', id: W2 }] } });
+    dragPath([[1500, 2000], [1500, 1500], [1500, 2000 - (2000 - face) + 43]]);
+    expect(rectTop(R) - face).toBeGreaterThan(20);
   });
 });

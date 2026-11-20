@@ -20,7 +20,14 @@ import { HIT_PX, type PointerInput, type Tool } from './types';
 import { drawGuides, drawSnapHits } from './dragOverlay';
 
 export { drawGuides } from './dragOverlay';
-import { moveSnapTargets, snapMove, stairGeom, type SnapGeom } from '../core/moveSnap';
+import { moveSnapTargets, movingGeom, snapMove, type SnapGeom } from '../core/moveSnap';
+
+/** Posun skupiny prvků; přichytí se, když to jde (kresba, schodiště, tahy – core/moveSnap.ts). */
+function groupDrag(items: { kind: string; id: Id }[], start: Pt): DragKind {
+  const floor = store.floor()!;
+  const geom = movingGeom(floor, items);
+  return { kind: 'group', origin: groupOrigin(floor, items as Parameters<typeof groupOrigin>[1]), start, ...(geom ? { snap: { geom, targets: moveSnapTargets(store.view('snap')!, items) } } : {}) };
+}
 
 /** Hrany / body, ke kterým se právě přichytilo posouvané schodiště (náhled). */
 let snapHits: [Pt, Pt][] = [];
@@ -212,7 +219,7 @@ export const selectTool: Tool = {
     if (cur?.kind === 'multi') {
       const member = cur.items.some(i => (i.kind === hit.kind && i.id === (hit as { id: Id }).id) || (hit.kind === 'node' && i.kind === 'wall' && (floor.walls[i.id]?.a === (hit as { id: Id }).id || floor.walls[i.id]?.b === (hit as { id: Id }).id)));
       if (member) {
-        drag = { kind: 'group', origin: groupOrigin(floor, cur.items), start: p.world };
+        drag = groupDrag(cur.items, p.world);
         return;
       }
     }
@@ -226,11 +233,8 @@ export const selectTool: Tool = {
     if (hit.kind === 'wall' && before?.kind === 'wall' && before.id === hit.id && floor.walls[hit.id]?.radius === undefined && !(chain && chain.pieces.length > 1)) {
       drag = { kind: 'wall', id: hit.id, origin: groupOrigin(floor, [hit]), grab: p.world, lines: wallMoveLines(store.view('snap')!, hit.id, p.world) };
     }
-    // tažení už vybrané kresby / schodiště ji posune celou
-    if ((hit.kind === 'drawing' || hit.kind === 'stair' || hit.kind === 'stroke') && before?.kind === hit.kind && before.id === hit.id) {
-      const geom = hit.kind === 'stair' ? stairGeom(floor, hit.id) : null;
-      drag = { kind: 'group', origin: groupOrigin(floor, [hit]), start: p.world, ...(geom ? { snap: { geom, targets: moveSnapTargets(store.view('snap')!, hit.id) } } : {}) };
-    }
+    // tažení už vybrané kresby / schodiště / tahu ji posune celou (s přichycením, core/moveSnap.ts)
+    if ((hit.kind === 'drawing' || hit.kind === 'stair' || hit.kind === 'stroke') && before?.kind === hit.kind && before.id === hit.id) drag = groupDrag([hit], p.world);
     if (hit.kind === 'room') {
       const r = floor.rooms[hit.id]!;
       drag = { kind: 'room', id: hit.id, dx: p.world.x - r.x, dy: p.world.y - r.y };
