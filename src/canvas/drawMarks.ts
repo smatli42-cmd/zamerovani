@@ -139,7 +139,7 @@ export function drawMarks(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
     const content = markContent(m);
     if (content) {
       ctx.font = '11px system-ui, sans-serif';
-      ctx.fillText(content === 'sketch' ? '✏️' : '📝', x + w - 2, y - 1);
+      ctx.fillText(content === 'photo' ? '📷' : content === 'sketch' ? '✏️' : '📝', x + w - 2, y - 1);
     }
     ctx.restore();
     if (selected) drawHandle(ctx, m, cam);

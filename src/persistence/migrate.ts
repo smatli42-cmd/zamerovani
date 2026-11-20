@@ -47,6 +47,7 @@ export function migrateProject(raw: unknown): Project {
   // 29 → 30: značky v půdorysu (floor.marks, ZNACKY-POZNAMKY-DETAILY.md) – nepovinné pole, bez převodu; vrstva Popisky (withLayers)
   // 30 → 31: značka – délka směru (`dir.len`), tvary ve skice (obdélník, kruh, oblouk, dvojitá čára) – nepovinné, bez převodu
   // 31 → 32: směr značky = cíl ve výkresu `dir.to` (mm) místo úhlu a délky v px – převod `markDirTargets`
+  // 32 → 33: fotka jako podklad strany značky (`MarkPage.photo` – odkaz na úložiště fotek) – nepovinné, bez převodu
   const old = p.schema ?? 1;
   const floors = p.floors.map(f => {
     const j = joinSemicircles(convertShapesToWalls(f));

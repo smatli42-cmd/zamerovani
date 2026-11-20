@@ -6,6 +6,7 @@ import { createProject } from '../model/factory';
 import type { Project, ProjectSummary } from '../model/types';
 import { downloadBackup, importBackup } from '../persistence/backup';
 import { deleteProject, listProjects, loadProject, saveProject } from '../persistence/db';
+import { prunePhotos } from '../persistence/photos';
 import { store } from '../store/store';
 import { ConfirmDialog } from './Dialog';
 import { ProjectForm } from './ProjectForm';
@@ -38,8 +39,10 @@ export function ProjectList() {
 
   const open = async (id: string) => {
     const p = await loadProject(id);
-    if (p) store.openProject(p);
-    else setError('Projekt se nepodařilo otevřít.');
+    if (!p) return setError('Projekt se nepodařilo otevřít.');
+    store.openProject(p);
+    // fotky, na které už nic neodkazuje (smazaná značka / odebraná fotka) – historie Zpět je teď prázdná
+    void prunePhotos(p).catch(() => undefined);
   };
 
   const onImport = async (e: Event) => {
@@ -112,7 +115,7 @@ export function ProjectList() {
                 title="Stáhnout zálohu projektu do souboru"
                 onClick={async () => {
                   const full = await loadProject(p.id);
-                  if (full) downloadBackup(full);
+                  if (full) downloadBackup(full).catch(() => setError('Zálohu se nepodařilo vytvořit.'));
                 }}
               >
                 💾 Záloha

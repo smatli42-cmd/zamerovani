@@ -114,8 +114,9 @@ export function pageIsEmpty(p: MarkPage): boolean {
   return !p.strokes.length && !p.labels.length && !p.dims.length;
 }
 
-/** Co značka obsahuje (ikona v půdorysu): skica má přednost před textem. */
-export function markContent(m: Mark): 'sketch' | 'text' | null {
+/** Co značka obsahuje (ikona v půdorysu): fotka, pak skica, pak text. */
+export function markContent(m: Mark): 'photo' | 'sketch' | 'text' | null {
+  if ((m.pages ?? []).some(p => p.photo)) return 'photo';
   if ((m.pages ?? []).some(p => !pageIsEmpty(p))) return 'sketch';
   if (m.note.trim()) return 'text';
   return null;
@@ -130,4 +131,32 @@ export function defaultDir(m: Pt, style: MarkDirStyle = 'cone'): MarkDir {
 export function dirVector(angle: number): Pt {
   const a = (angle * Math.PI) / 180;
   return { x: Math.cos(a), y: Math.sin(a) };
+}
+
+/** Delší strana uložené fotky (px) – fotka se při vložení zmenší (ZNACKY-POZNAMKY-DETAILY.md). */
+export const PHOTO_MAX_PX = 2000;
+
+/** Rozměr zmenšené fotky (delší strana nejvýš `max`; menší fotka se nezvětšuje). */
+export function photoFitSize(w: number, h: number, max = PHOTO_MAX_PX): { w: number; h: number } {
+  const k = Math.min(1, max / Math.max(w, h, 1));
+  return { w: Math.max(1, Math.round(w * k)), h: Math.max(1, Math.round(h * k)) };
+}
+
+/** Id fotek, na které projekt odkazuje (všechna podlaží, všechny značky a strany). */
+export function projectPhotoIds(project: Pick<Project, 'floors'>): Set<Id> {
+  const out = new Set<Id>();
+  for (const f of project.floors) for (const m of marksOf(f)) for (const p of m.pages ?? []) if (p.photo) out.add(p.photo.id);
+  return out;
+}
+
+/** Projekt s přejmenovanými fotkami (import zálohy jako kopie – id fotek musí být nová). */
+export function remapPhotoIds<P extends Pick<Project, 'floors'>>(project: P, map: ReadonlyMap<Id, Id>): P {
+  return {
+    ...project,
+    floors: project.floors.map(f =>
+      f.marks
+        ? { ...f, marks: Object.fromEntries(Object.entries(f.marks).map(([k, m]) => [k, { ...m, pages: m.pages.map(p => (p.photo && map.has(p.photo.id) ? { ...p, photo: { ...p.photo, id: map.get(p.photo.id)! } } : p)) }])) }
+        : f
+    )
+  };
 }

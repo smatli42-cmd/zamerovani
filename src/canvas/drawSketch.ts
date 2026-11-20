@@ -107,30 +107,28 @@ function drawDim(ctx: CanvasRenderingContext2D, d: SketchDim): void {
 }
 
 /** Vykreslí stranu skici; `extra` = rozpracovaný tah / kóta. */
-export function drawSketch(ctx: CanvasRenderingContext2D, w: number, h: number, v: SketchView, page: MarkPage, extra: { stroke?: SketchStroke | null; dim?: SketchDim | null; selected?: SketchRef | null } = {}): void {
+/** Načtená fotka strany (podklad skici – krok B). */
+export interface SketchPhoto {
+  img: CanvasImageSource;
+  w: number;
+  h: number;
+}
+
+export function drawSketch(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  v: SketchView,
+  page: MarkPage,
+  extra: { stroke?: SketchStroke | null; dim?: SketchDim | null; selected?: SketchRef | null; photo?: SketchPhoto | null } = {}
+): void {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, w, h);
   ctx.setTransform(v.s, 0, 0, v.s, v.ox, v.oy);
-  // jemná čtverečková mřížka (20 jednotek)
-  const x0 = -v.ox / v.s;
-  const y0 = -v.oy / v.s;
-  const x1 = (w - v.ox) / v.s;
-  const y1 = (h - v.oy) / v.s;
-  ctx.save();
-  ctx.strokeStyle = '#f1f5f9';
-  ctx.lineWidth = 1 / v.s;
-  ctx.beginPath();
-  for (let x = Math.floor(x0 / 20) * 20; x <= x1; x += 20) {
-    ctx.moveTo(x, y0);
-    ctx.lineTo(x, y1);
-  }
-  for (let y = Math.floor(y0 / 20) * 20; y <= y1; y += 20) {
-    ctx.moveTo(x0, y);
-    ctx.lineTo(x1, y);
-  }
-  ctx.stroke();
-  ctx.restore();
+  // fotka jako podklad (kresba leží nad ní ve vlastní vrstvě); bez fotky jemná mřížka
+  if (extra.photo) ctx.drawImage(extra.photo.img, 0, 0, extra.photo.w, extra.photo.h);
+  else drawGrid(ctx, w, h, v);
   if (extra.selected) drawSelected(ctx, page, extra.selected);
   ctx.save();
   ctx.lineCap = 'round';
@@ -158,4 +156,26 @@ export function drawSketch(ctx: CanvasRenderingContext2D, w: number, h: number, 
   }
   ctx.restore();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+/** Jemná čtverečková mřížka skici (20 jednotek) přes viditelnou oblast. */
+function drawGrid(ctx: CanvasRenderingContext2D, w: number, h: number, v: SketchView): void {
+  const x0 = -v.ox / v.s;
+  const y0 = -v.oy / v.s;
+  const x1 = (w - v.ox) / v.s;
+  const y1 = (h - v.oy) / v.s;
+  ctx.save();
+  ctx.strokeStyle = '#f1f5f9';
+  ctx.lineWidth = 1 / v.s;
+  ctx.beginPath();
+  for (let x = Math.floor(x0 / 20) * 20; x <= x1; x += 20) {
+    ctx.moveTo(x, y0);
+    ctx.lineTo(x, y1);
+  }
+  for (let y = Math.floor(y0 / 20) * 20; y <= y1; y += 20) {
+    ctx.moveTo(x0, y);
+    ctx.lineTo(x1, y);
+  }
+  ctx.stroke();
+  ctx.restore();
 }

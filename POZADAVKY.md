@@ -93,11 +93,11 @@ Doplňuj klidně přímo sem – škrtej, přepisuj, přidávej do sekce „Moje
 - 💡 Volitelně detail jako řez stěnou s vrstvami (skladba konstrukce).
 
 ## 8. Fotografie
-- 💡 **[MVP]** Vyfotit přímo z aplikace (fotoaparát tabletu) nebo vybrat z galerie.
+- ✅ **[MVP]** Vyfotit přímo z aplikace (fotoaparát tabletu) nebo vybrat z galerie – fotka ke značce (krok B, 2026-11-20).
 - 💡 **[MVP]** ~~Značka fotky F1, F2…~~ → sloučená značka se **směrem pohledu** (šipka/kužel) – směr hotový (krok A), fotka krok B.
 - 💡 **[MVP]** Přiřazení fotky k místnosti / stěně / otvoru / detailu.
 - 💡 Kreslení a popisky přímo do fotky (šipky, kóty, poznámky).
-- 💡 Automatické zmenšení fotek (úspora místa), galerie fotek projektu.
+- ✅ Automatické zmenšení fotek (úspora místa, delší strana 2000 px). 💡 Galerie fotek projektu.
 
 ## 9. Poznámky a skici
 - ✅ **[MVP]** Kreslení od ruky v samostatné vrstvě (barvy, tloušťky, guma, skrýt/zobrazit).

@@ -43,6 +43,11 @@ export function TopBar() {
         title="Zpět na seznam projektů"
         onClick={async () => {
           await saveNow();
+          // uložení selhalo (např. plné úložiště) → projekt nezavírat, jinak by se ztratila poslední změna (i odkaz na fotku)
+          if (store.get().saveStatus === 'error') {
+            store.set({ lockBlock: { key: '', text: 'Projekt se nepodařilo uložit – zůstává otevřený. Uvolněte místo v tabletu nebo stáhněte zálohu (💾).' } });
+            return;
+          }
           store.closeProject();
         }}
       >
@@ -98,7 +103,7 @@ export function TopBar() {
       <button data-settings-btn class={`btn btn-dark ${showSettings ? 'active' : ''}`} onClick={() => setShowSettings(!showSettings)} title="Nastavení kreslení">
         ⚙️
       </button>
-      <button class="btn btn-dark" onClick={() => downloadBackup(project)} title="Stáhnout zálohu projektu do souboru">
+      <button class="btn btn-dark" onClick={() => downloadBackup(project).catch(() => store.set({ lockBlock: { key: '', text: 'Zálohu se nepodařilo vytvořit.' } }))} title="Stáhnout zálohu projektu do souboru">
         💾
       </button>
       <span class={`save-status save-${saveStatus}`}>{SAVE_TEXT[saveStatus]}</span>

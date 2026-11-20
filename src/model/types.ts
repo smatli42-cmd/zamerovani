@@ -10,7 +10,7 @@
 
 import type { DimTarget } from '../core/dimLock';
 
-export const SCHEMA_VERSION = 32;
+export const SCHEMA_VERSION = 33;
 
 export type Id = string;
 
@@ -351,7 +351,7 @@ export interface FreeDim {
 // Schodiště (StairFlight, StairLanding, Stair) – model/stairTypes.ts
 import type { Stair } from './stairTypes';
 export type { Stair, StairFlight, StairLanding } from './stairTypes';
-export type { Mark, MarkDir, MarkDirStyle, MarkPage, SketchDim, SketchLabel, SketchStroke } from './markTypes';
+export type { Mark, MarkDir, MarkDirStyle, MarkPage, MarkPhoto, SketchDim, SketchLabel, SketchStroke } from './markTypes';
 import type { Mark } from './markTypes';
 
 /**

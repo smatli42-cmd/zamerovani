@@ -10,7 +10,8 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { MarkPage, Pt, SketchDim, SketchStroke } from '../model/types';
 import { emptyPage, markCode, pageIsEmpty } from '../core/marks';
 import { defaultArcSagitta, eraseInPage, hitSketch, moveSketchItem, removeSketchItem, SKETCH_DOUBLE_W, type SketchRef } from '../core/sketch';
-import { drawSketch, type SketchView } from '../canvas/drawSketch';
+import { drawSketch, type SketchPhoto, type SketchView } from '../canvas/drawSketch';
+import { addPhoto, getPhoto } from '../persistence/photos';
 import { setMarkContent, updateMark } from '../store/actions';
 import { store } from '../store/store';
 import { useStore } from '../store/useStore';
@@ -70,6 +71,11 @@ function MarkWindowBody({ id }: { id: string }) {
   const [note, setNote] = useState(mark.note);
   const [page, setPage] = useState<MarkPage>(() => clone(mark.pages[0] ?? emptyPage()));
   const [saveError, setSaveError] = useState<string | null>(null);
+  // fotka jako podklad (krok B): načtená z úložiště fotek podle odkazu na straně
+  const [photo, setPhoto] = useState<SketchPhoto | null>(null);
+  const [photoBusy, setPhotoBusy] = useState<string | null>(null);
+  const camInput = useRef<HTMLInputElement>(null);
+  const galleryInput = useRef<HTMLInputElement>(null);
   const [history, setHistory] = useState<MarkPage[]>([]);
   const [tool, setToolRaw] = useState<SketchTool>('pen');
   // vybraný prvek skici (nástroj Vybrat)
@@ -137,13 +143,38 @@ function MarkWindowBody({ id }: { id: string }) {
       c.width = w;
       c.height = h;
     }
-    drawSketch(c.getContext('2d')!, w, h, { s: view.s * dpr, ox: view.ox * dpr, oy: view.oy * dpr }, page, { ...live.current, selected: sel });
+    drawSketch(c.getContext('2d')!, w, h, { s: view.s * dpr, ox: view.ox * dpr, oy: view.oy * dpr }, page, { ...live.current, selected: sel, photo });
   });
+  // načtení fotky strany (při otevření a po vložení / odebrání)
+  const photoId = page.photo?.id;
+  useEffect(() => {
+    let alive = true;
+    if (!photoId) {
+      setPhoto(null);
+      return;
+    }
+    void getPhoto(photoId)
+      .then(async stored => {
+        if (!alive || !stored) return;
+        const img = await createImageBitmap(stored.blob);
+        if (!alive) return img.close();
+        bitmap = img;
+        setPhoto({ img, w: stored.w, h: stored.h });
+        fitTo(stored.w, stored.h);
+      })
+      .catch(() => alive && setSaveError('Fotku se nepodařilo načíst.'));
+    // uvolnit dekódovanou fotku (≈ 12 MB) při výměně / odebrání fotky a zavření okna
+    let bitmap: ImageBitmap | null = null;
+    return () => {
+      alive = false;
+      bitmap?.close();
+    };
+  }, [photoId]);
   useEffect(() => {
     const onResize = () => redraw(n => n + 1);
     const onKey = (e: KeyboardEvent) => {
       if (prompt || store.get().deleteConfirm) return;
-      if (e.key === 'Escape') close();
+      if (e.key === 'Escape' && !photoBusy) close();
       const t = e.target;
       if (e.key === 'Delete' && sel && !(t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement)) {
         e.preventDefault();
@@ -166,11 +197,38 @@ function MarkWindowBody({ id }: { id: string }) {
   const zoomAt = (k: number, px?: Pt) => {
     const c = canvas.current!;
     const p = px ?? { x: c.clientWidth / 2, y: c.clientHeight / 2 };
-    const s = Math.max(0.3, Math.min(8, view.s * k));
+    // nejmenší zoom: 30 %, nebo celá fotka, je-li menší
+    const minS = Math.min(0.3, photo ? Math.min(c.clientWidth / photo.w, c.clientHeight / photo.h) * 0.95 : 0.3);
+    const s = Math.max(minS, Math.min(8, view.s * k));
     const f = s / view.s;
     setView({ s, ox: p.x - (p.x - view.ox) * f, oy: p.y - (p.y - view.oy) * f });
   };
   const tol = () => 10 / view.s;
+  /** Zobrazí celý obdélník w × h (fotku) v okně. */
+  const fitTo = (w: number, h: number) => {
+    const c = canvas.current;
+    if (!c || !c.clientWidth || !c.clientHeight) return;
+    const s = Math.min(c.clientWidth / w, c.clientHeight / h) * 0.95;
+    setView({ s, ox: (c.clientWidth - w * s) / 2, oy: (c.clientHeight - h * s) / 2 });
+  };
+  const onPhotoFile = async (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    const projectId = store.get().project?.id;
+    if (!file || !projectId) return;
+    setPhotoBusy('Zmenšuji a ukládám fotku…');
+    try {
+      const ph = await addPhoto(projectId, file);
+      // fotka je podklad strany – skica nad ní zůstane (vlastní vrstva)
+      commit({ ...page, photo: ph });
+      setSaveError(null);
+    } catch {
+      setSaveError('Fotku se nepodařilo vložit.');
+    } finally {
+      setPhotoBusy(null);
+    }
+  };
 
   const down = (e: PointerEvent) => {
     e.preventDefault();
@@ -204,7 +262,9 @@ function MarkWindowBody({ id }: { id: string }) {
       eraseAt(pt);
     } else {
       const mode: SketchStroke['mode'] = SHAPES.includes(tool) ? (tool as ShapeMode) : 'free';
-      live.current = { stroke: { mode, color, width: 2.5, pts: [pt, { ...pt }], ...(mode === 'double' ? { w: SKETCH_DOUBLE_W } : {}) } };
+      // tloušťka čáry stejná na obrazovce při každém zoomu (nad zmenšenou fotkou by byla tenká)
+      const k = 1 / view.s;
+      live.current = { stroke: { mode, color, width: Math.round(2.5 * k * 10) / 10, pts: [pt, { ...pt }], ...(mode === 'double' ? { w: Math.round(SKETCH_DOUBLE_W * k) } : {}) } };
     }
     redraw(n => n + 1);
   };
@@ -262,7 +322,7 @@ function MarkWindowBody({ id }: { id: string }) {
       <div class="mark-head">
         <b class="mark-code" style={{ background: mark.color }}>{markCode(mark)}</b>
         <input type="text" value={nameDraft} placeholder="Název značky (např. Sokl u terasy)" onInput={e => setNameDraft((e.target as HTMLInputElement).value)} onChange={e => updateMark(id, { name: (e.target as HTMLInputElement).value })} />
-        <button class="btn btn-primary" onClick={close}>
+        <button class="btn btn-primary" onClick={close} disabled={!!photoBusy} title={photoBusy ? 'Počkejte, fotka se ukládá' : undefined}>
           ✔ Hotovo
         </button>
       </div>
@@ -294,7 +354,25 @@ function MarkWindowBody({ id }: { id: string }) {
             🗑️ Smazat vybrané
           </button>
         )}
-        <button class="btn btn-sm btn-danger" disabled={pageIsEmpty(page)} onClick={() => {
+        <button class="btn btn-sm" onClick={() => camInput.current?.click()} disabled={!!photoBusy} title="Vyfotit fotoaparátem tabletu">
+          📷 Vyfotit
+        </button>
+        <button class="btn btn-sm" onClick={() => galleryInput.current?.click()} disabled={!!photoBusy} title="Vybrat fotku z galerie">
+          🖼️ Z galerie
+        </button>
+        {page.photo && (
+          <button class="btn btn-sm" title="Odebrat fotku (kresba zůstane)" onClick={() => commit({ ...page, photo: undefined })}>
+            ✖ Odebrat fotku
+          </button>
+        )}
+        {page.photo && (
+          <button class="btn btn-sm" title="Celá fotka" onClick={() => fitTo(page.photo!.w, page.photo!.h)}>
+            ⤢ Celá fotka
+          </button>
+        )}
+        <input ref={camInput} type="file" accept="image/*" capture="environment" hidden onChange={onPhotoFile} />
+        <input ref={galleryInput} type="file" accept="image/*" hidden onChange={onPhotoFile} />
+        <button class="btn btn-sm btn-danger" disabled={pageIsEmpty(page)} title="Smazat kresbu (fotka zůstane)" onClick={() => {
           commit({ ...page, strokes: [], labels: [], dims: [] });
           setSel(null);
         }}>
@@ -318,6 +396,7 @@ function MarkWindowBody({ id }: { id: string }) {
         <span>Poznámka (skladba, materiály, rozměry)</span>
         <textarea rows={3} value={note} placeholder="např. EPS tl. 160 mm, hydroizolační pás vytažen 150 mm nad terén…" onInput={e => setNote((e.target as HTMLTextAreaElement).value)} />
       </label>
+      {photoBusy && <p class="muted small">{photoBusy}</p>}
       {saveError && <p class="mark-error">⚠️ {saveError} Okno zůstává otevřené, skica se neztratila.</p>}
       {prompt && <TextPrompt title={prompt.title} label="Text" initial={prompt.initial} onSubmit={prompt.done} onClose={() => setPrompt(null)} />}
     </div>

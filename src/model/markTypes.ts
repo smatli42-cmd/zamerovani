@@ -48,11 +48,22 @@ export interface SketchDim {
 }
 
 /**
- * Strana obsahu značky: skica (krok A). Seznam stran připravuje přidání fotek bez migrace (krok B – fotka jako
- * podklad strany, kresba nad ní).
+ * Fotka jako podklad strany (krok B): zmenšená fotka uložená zvlášť od dat projektu (IndexedDB `photos`,
+ * persistence/photos.ts), tady jen odkaz a rozměr v px. Ve skice leží v (0, 0) v měřítku 1 jednotka = 1 px fotky.
+ */
+export interface MarkPhoto {
+  id: Id;
+  w: number;
+  h: number;
+}
+
+/**
+ * Strana obsahu značky: skica a volitelně fotka pod ní (kresba ve vlastní vrstvě nad fotkou – fotku i kresbu jde
+ * smazat zvlášť). Seznam stran připravuje víc fotek bez migrace; UI zatím nabízí jednu stranu.
  */
 export interface MarkPage {
   id: Id;
+  photo?: MarkPhoto;
   strokes: SketchStroke[];
   labels: SketchLabel[];
   dims: SketchDim[];
