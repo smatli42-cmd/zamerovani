@@ -14,6 +14,7 @@
 | `ZADANI-OKNA-DVERE.md` | Zadání oken, dveří, ostění a dalších fází |
 | `bim-export.md` | Zásady budoucího exportu pro BIM (vrstvy jsou součástí modelu, symboly ve stejných vrstvách, ruční tahy ne) |
 | `POZADAVKY.md` | Celkové požadavky a plán po fázích |
+| `ZNACKY-POZNAMKY-DETAILY.md` | **Závazné** rozhodnutí a zadání sloučené značky v půdorysu (poznámka + detail + fotka, číslo + název, směr pohledu); kroky A, B, C |
 | `PREPNUTI-POCITACE.md` | Postup přepnutí mezi počítači pro uživatele |
 | `src/` | Zdrojový kód (struktura v `CLAUDE.md`) |
 | `src/core/wallJoins.catalog.test.ts` | Testy z příkladů katalogu C2 |
