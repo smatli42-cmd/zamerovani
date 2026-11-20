@@ -15,7 +15,7 @@ import { store } from '../store/store';
 import { protrusionArcHandles, sagittaFromPoint } from '../core/protrusionEdit';
 import { openTarget } from '../store/numpadController';
 import { pickAny, pickMarkDirHandle } from './pick';
-import { angleTowards } from '../core/marks';
+import { dirTargetFromDrag } from '../core/marks';
 import { dragDrawingHandle, drawingHandleUnderPen, type DrawHandleDrag } from './drawingEdit';
 import { HIT_PX, type PointerInput, type Tool } from './types';
 import { drawGuides, drawSnapHits } from './dragOverlay';
@@ -297,8 +297,8 @@ export const selectTool: Tool = {
 
     if (drag.kind === 'markDir') {
       const m = floor.marks?.[drag.id];
-      // koncový bod směru: úhel i délka (px na obrazovce – značka má stálou velikost)
-      if (m) setMarkDir(drag.id, { angle: angleTowards(m, p.world), len: dist(toScreen(m, cam), p.screen) });
+      // konec směru = bod ve výkresu (mm) – při zoomu ukazuje pořád na stejné místo
+      if (m) setMarkDir(drag.id, { to: dirTargetFromDrag(m, p.world, cam.zoom) });
     } else if (drag.kind === 'draw') {
       dragDrawingHandle(drag.h, p);
     } else if (drag.kind === 'leader') {

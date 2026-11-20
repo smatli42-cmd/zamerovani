@@ -7,14 +7,15 @@ import type { Id, Pt } from './types';
 /** Styl směru pohledu: kužel (výchozí) nebo šipka. */
 export type MarkDirStyle = 'cone' | 'arrow';
 
-/** Volitelný směr pohledu značky. */
+/**
+ * Volitelný směr pohledu značky. Konec kužele / šipky je bod ve výkresu (mm) – při zoomu ukazuje pořád na stejné
+ * místo (přání uživatele 2026-11-20); jede se značkou při posunu, otočení i kopii.
+ */
 export interface MarkDir {
   on: boolean;
-  /** Úhel ve stupních (0 = doprava, po směru hodinových ručiček, osa Y dolů jako na obrazovce). */
-  angle: number;
   style: MarkDirStyle;
-  /** Délka kužele / šipky na obrazovce (px; tažení koncového bodu). Chybí = výchozí. */
-  len?: number;
+  /** Cíl – konec kužele / šipky ve výkresu (mm). */
+  to: Pt;
 }
 
 /**

@@ -1,53 +1,71 @@
 /**
- * Značky v půdorysu (core/marks.ts): štítek s číslem i názvem (jeden celek – směr pohledu ho nezakrývá), ikona
- * podle obsahu, volitelný směr pohledu (kužel / šipka) pod štítkem s úchytem na konci (úhel i délka).
- * Velikost je na obrazovce stálá (nezávisí na zoomu).
+ * Značky v půdorysu (core/marks.ts): štítek s barevně odlišeným číslem (barva značky, bílé písmo) a názvem (bílé pole,
+ * tmavé písmo) – přání uživatele 2026-11-20; ikona podle obsahu; volitelný směr pohledu (kužel / šipka) pod
+ * štítkem až do cíle ve výkresu (mm – při zoomu ukazuje pořád na stejné místo), úchyt na cíli.
+ * Štítek má na obrazovce stálou velikost (nezávisí na zoomu).
  */
 import type { Floor, Mark } from '../model/types';
-import { dirLength, dirVector, markBoxPx, markContent, markLabel, marksOf, MARK_PX } from '../core/marks';
+import { markBoxPx, markCode, markCodePx, markContent, marksOf, MARK_PX } from '../core/marks';
 import { isSelected, type Camera, type Selection } from '../store/store';
 import { toScreen } from './view';
 
-/** Koncový bod směru na obrazovce (px) – úchyt pro otočení a délku; kreslení i zásah perem (tools/pick.ts). */
+/** Konec směru na obrazovce (px) – úchyt; null, když leží pod štítkem (pak se táhne štítek). Kreslení i zásah (tools/pick.ts). */
 export function markDirHandle(m: Mark, cam: Camera): { x: number; y: number } | null {
   if (!m.dir?.on) return null;
   const c = toScreen(m, cam);
-  const u = dirVector(m.dir.angle);
-  const L = dirLength(m);
-  return { x: c.x + u.x * L, y: c.y + u.y * L };
+  const t = toScreen(m.dir.to, cam);
+  const { w, h } = markBoxPx(m);
+  if (Math.abs(t.x - c.x) <= w / 2 + 4 && Math.abs(t.y - c.y) <= h / 2 + 4) return null;
+  return t;
 }
+
+/** Největší poloměr výplně kužele na obrazovce (px). */
+const CONE_MAX_PX = 180;
 
 function drawDir(ctx: CanvasRenderingContext2D, m: Mark, cam: Camera): void {
   if (!m.dir?.on) return;
   const c = toScreen(m, cam);
-  const a = (m.dir.angle * Math.PI) / 180;
-  const L = dirLength(m);
+  const t = toScreen(m.dir.to, cam);
+  const L = Math.hypot(t.x - c.x, t.y - c.y);
+  if (L < 2) return;
+  const a = Math.atan2(t.y - c.y, t.x - c.x);
   ctx.save();
   ctx.strokeStyle = m.color;
   ctx.fillStyle = m.color;
   if (m.dir.style === 'cone') {
     const half = (30 * Math.PI) / 180;
+    // výplň kužele jen do CONE_MAX_PX (velký zoom by zakryl výkres), dál čárkovaná osa přesně do cíle
+    const R = Math.min(L, CONE_MAX_PX);
     ctx.globalAlpha = 0.22;
     ctx.beginPath();
     ctx.moveTo(c.x, c.y);
-    ctx.arc(c.x, c.y, L, a - half, a + half);
+    ctx.arc(c.x, c.y, R, a - half, a + half);
     ctx.closePath();
     ctx.fill();
     ctx.globalAlpha = 0.9;
     ctx.lineWidth = 1.5;
     ctx.stroke();
+    // osa kužele až do cíle (přesné místo) a značka cíle
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    ctx.moveTo(c.x, c.y);
+    ctx.lineTo(t.x, t.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, 3, 0, Math.PI * 2);
+    ctx.fill();
   } else {
-    const tip = { x: c.x + Math.cos(a) * L, y: c.y + Math.sin(a) * L };
     ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.moveTo(c.x, c.y);
-    ctx.lineTo(tip.x, tip.y);
+    ctx.lineTo(t.x, t.y);
     ctx.stroke();
-    const h = 11;
+    const hd = 11;
     ctx.beginPath();
-    ctx.moveTo(tip.x, tip.y);
-    ctx.lineTo(tip.x - Math.cos(a - 0.45) * h, tip.y - Math.sin(a - 0.45) * h);
-    ctx.lineTo(tip.x - Math.cos(a + 0.45) * h, tip.y - Math.sin(a + 0.45) * h);
+    ctx.moveTo(t.x, t.y);
+    ctx.lineTo(t.x - Math.cos(a - 0.45) * hd, t.y - Math.sin(a - 0.45) * hd);
+    ctx.lineTo(t.x - Math.cos(a + 0.45) * hd, t.y - Math.sin(a + 0.45) * hd);
     ctx.closePath();
     ctx.fill();
   }
@@ -68,6 +86,14 @@ function drawHandle(ctx: CanvasRenderingContext2D, m: Mark, cam: Camera): void {
   ctx.restore();
 }
 
+/** Text do šířky `w` (písmo se zmenší, kdyby odhad šířky nestačil). */
+function fitText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, w: number, weight: number): void {
+  ctx.font = `${weight} 12px system-ui, sans-serif`;
+  const tw = ctx.measureText(text).width;
+  if (tw > w - 10) ctx.font = `${weight} ${Math.max(8, Math.floor((12 * (w - 10)) / tw))}px system-ui, sans-serif`;
+  ctx.fillText(text, x, y);
+}
+
 export function drawMarks(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camera, selection: Selection): void {
   const marks = marksOf(floor);
   // směry pod štítky (žádný kužel nezakryje číslo ani název)
@@ -76,32 +102,39 @@ export function drawMarks(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
     const selected = isSelected(selection, 'mark', m.id);
     const c = toScreen(m, cam);
     const { w, h } = markBoxPx(m);
+    const cw = Math.min(w, markCodePx(m));
     const x = c.x - w / 2;
     const y = c.y - h / 2;
+    const r = h / 2;
     ctx.save();
     if (selected) {
       ctx.strokeStyle = '#2563eb';
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.roundRect(x - 4, y - 4, w + 8, h + 8, h / 2 + 4);
+      ctx.roundRect(x - 4, y - 4, w + 8, h + 8, r + 4);
       ctx.stroke();
     }
-    ctx.fillStyle = m.color;
-    ctx.strokeStyle = '#ffffff';
+    // celý štítek: bílé pole s okrajem barvy značky (název)
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = m.color;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(x, y, w, h, h / 2);
+    ctx.roundRect(x, y, w, h, r);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '700 12px system-ui, sans-serif';
+    // část s číslem: barva značky, bílé písmo
+    ctx.fillStyle = m.color;
+    ctx.beginPath();
+    ctx.roundRect(x, y, cw, h, cw >= w ? r : [r, 0, 0, r]);
+    ctx.fill();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    // šířka štítku je odhad – široká písmena by text vytlačila ven, písmo se pak zmenší
-    const label = markLabel(m);
-    const tw = ctx.measureText(label).width;
-    if (tw > w - 14) ctx.font = `700 ${Math.max(8, Math.floor((12 * (w - 14)) / tw))}px system-ui, sans-serif`;
-    ctx.fillText(label, c.x, c.y + 0.5);
+    ctx.fillStyle = '#ffffff';
+    fitText(ctx, markCode(m), x + cw / 2, c.y + 0.5, cw, 800);
+    if (m.name) {
+      ctx.fillStyle = '#0f172a';
+      fitText(ctx, m.name, x + cw + (w - cw) / 2, c.y + 0.5, w - cw, 600);
+    }
     // ikona podle obsahu (jen text / skica) na rohu štítku
     const content = markContent(m);
     if (content) {

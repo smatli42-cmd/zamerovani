@@ -4,9 +4,11 @@
  */
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createFloor, createProject } from '../model/factory';
-import type { MarkPage, Project } from '../model/types';
+import type { MarkDir, MarkPage, Project } from '../model/types';
 import { SCHEMA_VERSION } from '../model/types';
-import { dirLength, markCode, markContent, MARK_PREFIX, nextMarkNumber } from '../core/marks';
+import { dirAngle, dirDistance, dirTargetFromDrag, markCode, markContent, MARK_PREFIX, nextMarkNumber } from '../core/marks';
+import { markDirHandle } from '../canvas/drawMarks';
+import { toScreen } from '../canvas/view';
 import { eraseInPage, hitSketch, moveSketchItem, removeSketchItem, sketchPolylines } from '../core/sketch';
 import { markBoxPx } from '../core/marks';
 import { selectTool } from '../tools/selectTool';
@@ -117,10 +119,13 @@ describe('kopie, otočení, vrstva', () => {
   it('otočení skupiny otočí i směr pohledu; nová značka jde do vrstvy Popisky', () => {
     const a = addMark({ x: 0, y: 0 })!;
     expect(f().marks![a]!.layerId).toBe(SYS.popisky);
-    setMarkDir(a, { on: true, style: 'arrow', angle: 0 });
+    setMarkDir(a, { on: true, style: 'arrow', to: { x: 1500, y: 0 } });
     store.set({ selection: { kind: 'mark', id: a } });
     rotateSelection(90);
-    expect(f().marks![a]!.dir).toMatchObject({ on: true, style: 'arrow', angle: 90 });
+    const m = f().marks![a]!;
+    expect(m.dir).toMatchObject({ on: true, style: 'arrow' });
+    expect(dirAngle(m)).toBe(90);
+    expect(dirDistance(m)).toBe(1500);
   });
 });
 
@@ -174,17 +179,13 @@ describe('skica a ovládání v půdorysu', () => {
     selectTool.up!(at(3000, 1000));
     expect(f().marks![id]).toMatchObject({ x: 3000, y: 1000 });
     expect(store.get().markOpen).toBeNull();
-    setMarkDir(id, { on: true, angle: 0 });
-    const handle = at(3000 + dirLength(f().marks![id]!) / Z, 1000);
-    selectTool.down!(handle);
-    selectTool.drag!(at(3000, 1000 + 200));
-    // koncový bod 150 px pod značkou: úhel 90° a délka 150 px (přání uživatele 2026-11-20 – protažení za konec)
-    selectTool.drag!(at(3000, 1000 + 150 / Z));
-    selectTool.up!(at(3000, 1000 + 150 / Z));
-    expect(f().marks![id]!.dir).toMatchObject({ angle: 90, len: 150 });
-    // délka je omezená
-    setMarkDir(id, { len: 5 });
-    expect(f().marks![id]!.dir!.len).toBe(24);
+    setMarkDir(id, { on: true, to: { x: 5000, y: 1000 } });
+    selectTool.down!(at(5000, 1000));
+    selectTool.drag!(at(4000, 2000));
+    // konec směru = bod ve výkresu (přání uživatele 2026-11-20 – při zoomu ukazuje pořád na stejné místo)
+    selectTool.drag!(at(3000, 2500));
+    selectTool.up!(at(3000, 2500));
+    expect(f().marks![id]!.dir!.to).toEqual({ x: 3000, y: 2500 });
   });
 });
 
@@ -271,14 +272,22 @@ describe('úpravy 2026-11-20: štítek, tvary a výběr ve skice', () => {
 });
 
 describe('nálezy kontroly úprav 2026-11-20', () => {
-  it('úchyt směru je vždy mimo štítek (i po zkrácení a delším názvu)', () => {
+  it('konec směru ukazuje při každém zoomu na stejné místo výkresu; pod štítkem úchyt není (táhne se štítek)', () => {
     const a = addMark({ x: 0, y: 0 })!;
-    setMarkDir(a, { on: true, angle: 0, len: 30 });
-    updateMark(a, { name: 'Ostění okna v obývacím pokoji' });
+    setMarkDir(a, { on: true, to: { x: 2000, y: 1000 } });
     const m = f().marks![a]!;
-    expect(dirLength(m)).toBeGreaterThan(markBoxPx(m).w / 2 + 10);
+    for (const zoom of [0.05, 0.2, 1]) {
+      const cam = { x: 0, y: 0, zoom };
+      const h = markDirHandle(m, cam);
+      expect(h).toEqual(toScreen({ x: 2000, y: 1000 }, cam));
+    }
+    // velmi oddálený výkres: cíl pod štítkem → úchyt se nenabízí
+    expect(markDirHandle(m, { x: 0, y: 0, zoom: 0.001 })).toBeNull();
+    // úhel a vzdálenost z panelu
     setMarkDir(a, { angle: 90 });
-    expect(dirLength(f().marks![a]!)).toBeGreaterThan(markBoxPx(m).h / 2 + 10);
+    expect(f().marks![a]!.dir!.to).toEqual({ x: 0, y: Math.round(Math.hypot(2000, 1000)) });
+    setMarkDir(a, { dist: 500 });
+    expect(f().marks![a]!.dir!.to).toEqual({ x: 0, y: 500 });
   });
 
   it('roh pod názvem dlouhého štítku jde vybrat; číslo značky má přednost i před rohem', () => {
@@ -296,14 +305,15 @@ describe('nálezy kontroly úprav 2026-11-20', () => {
     expect(pickAny(store.view('pick')!, { x: x2, y: 0 }, store.get().camera, null)).toEqual({ kind: 'mark', id: a });
   });
 
-  it('stará data (verze 30): značka bez délky směru a skica jen s perem / přímkou se načte a funguje', () => {
+  it('stará data (verze 30 / 31): směr z úhlu se převede na cíl ve výkresu; skica jen s perem / přímkou funguje', () => {
     const old = JSON.parse(JSON.stringify(createProject({ name: 'x' }))) as Project;
-    old.schema = 30;
+    old.schema = 31;
     const pg: MarkPage = { id: 'pg', strokes: [{ mode: 'free', color: '#000', width: 2, pts: [{ x: 0, y: 0 }, { x: 5, y: 5 }, { x: 40, y: 0 }] }, { mode: 'line', color: '#000', width: 2, pts: [{ x: 0, y: 100 }, { x: 100, y: 100 }] }], labels: [], dims: [] };
-    old.floors[0]!.marks = { mk1: { id: 'mk1', num: 1, name: '', x: 0, y: 0, color: '#7c3aed', note: '', dir: { on: true, angle: 0, style: 'cone' }, pages: [pg] } };
+    old.floors[0]!.marks = { mk1: { id: 'mk1', num: 1, name: '', x: 0, y: 0, color: '#7c3aed', note: '', dir: { on: true, angle: 0, len: 150, style: 'cone' } as unknown as MarkDir, pages: [pg] } };
     const m = migrateProject(old);
     const mk = m.floors[0]!.marks!.mk1!;
-    expect(dirLength(mk)).toBe(70);
+    expect(mk.dir).toEqual({ on: true, style: 'cone', to: { x: 1500, y: 0 } });
+    expect(migrateProject(JSON.parse(JSON.stringify(m)))).toEqual(m);
     expect(hitSketch(mk.pages[0]!, { x: 50, y: 100 }, 5)).toEqual({ kind: 'stroke', index: 1 });
     expect(hitSketch(mk.pages[0]!, { x: 20, y: 2 }, 5)).toEqual({ kind: 'stroke', index: 0 });
   });
@@ -314,5 +324,26 @@ describe('nálezy kontroly úprav 2026-11-20', () => {
     expect(eraseInPage(pg, { x: 100, y: 50 }, 5)!.strokes).toHaveLength(1);
     expect(eraseInPage(pg, { x: 300, y: 50 }, 5)!.strokes).toHaveLength(1);
     expect(eraseInPage(pg, { x: 300, y: 0 }, 5)).toBeNull();
+  });
+});
+
+describe('nálezy kontroly cíle směru', () => {
+  it('tažení úchytu na štítek nebo na značku uloží cíl aspoň kousek za okrajem štítku (úchyt nezapadne)', () => {
+    const a = addMark({ x: 0, y: 0 })!;
+    updateMark(a, { name: 'Dlouhý název značky' });
+    setMarkDir(a, { on: true, to: { x: 0, y: -3000 } });
+    const zoom = 0.1;
+    const m = f().marks![a]!;
+    const { w } = markBoxPx(m);
+    // pero 10 px vpravo od středu (na štítku)
+    const to = dirTargetFromDrag(m, { x: 10 / zoom, y: 0 }, zoom);
+    expect(to.y).toBe(0);
+    expect(to.x * zoom).toBeGreaterThanOrEqual(w / 2 + 19);
+    // pero přesně na značce: původní směr (nahoru)
+    const up = dirTargetFromDrag(m, { x: 0, y: 0 }, zoom);
+    expect(up.x).toBe(0);
+    expect(up.y).toBeLessThan(0);
+    setMarkDir(a, { to });
+    expect(markDirHandle(f().marks![a]!, { x: 0, y: 0, zoom })).not.toBeNull();
   });
 });

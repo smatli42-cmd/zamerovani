@@ -4,7 +4,7 @@
  * Vrstva a přesun do vrstvy jsou dole (LayerField).
  */
 import type { Mark } from '../../model/types';
-import { defaultDir, markCode, MARK_COLORS, MARK_PREFIX } from '../../core/marks';
+import { defaultDir, dirAngle, dirDistance, markCode, MARK_COLORS, MARK_PREFIX } from '../../core/marks';
 import { duplicateSelection, setMarkDir, setMarkNumber, updateMark } from '../../store/actions';
 import { store } from '../../store/store';
 import { requestDelete } from '../deleteConfirm';
@@ -12,7 +12,7 @@ import { close } from './common';
 import { NumField, Panel, Seg } from './fields';
 
 export function MarkPanel({ m }: { m: Mark }) {
-  const dir = m.dir ?? { ...defaultDir(), on: false };
+  const dir = m.dir ?? { ...defaultDir(m), on: false };
   return (
     <Panel title={`Značka ${markCode(m)}`} onClose={close}>
       <button class="btn btn-primary btn-lg" style="width:100%" onClick={() => store.set({ markOpen: m.id })}>
@@ -58,9 +58,10 @@ export function MarkPanel({ m }: { m: Mark }) {
       {dir.on && (
         <>
           <div class="field-grid">
-            <NumField label="Úhel" value={dir.angle} unit="°" min={-360} onCommit={v => v !== null && setMarkDir(m.id, { angle: v })} />
+            <NumField label="Úhel" value={dirAngle(m)} unit="°" min={-360} onCommit={v => v !== null && setMarkDir(m.id, { angle: v })} />
+            <NumField label="Vzdálenost cíle" value={dirDistance(m)} min={1} onCommit={v => v !== null && setMarkDir(m.id, { dist: v })} />
           </div>
-          <p class="muted small">Tažením kulatého úchytu na konci kužele / šipky směr otočíte i prodloužíte / zkrátíte.</p>
+          <p class="muted small">Konec kužele / šipky je bod ve výkresu – při zoomu ukazuje pořád na stejné místo. Tažením kulatého úchytu ho přesunete.</p>
         </>
       )}
       <div class="panel-actions">

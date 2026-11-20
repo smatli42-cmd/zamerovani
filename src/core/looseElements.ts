@@ -16,7 +16,6 @@ import { inRect, polylinesInRect, segHitsRect, type Rect } from './rect';
 import { stairOutlines, stairPoints } from './stairs';
 import { dimKey } from './dimLock';
 import { fullFloorOf } from './layers';
-import { rotateAngle } from './marks';
 
 export type LooseKindId = 'room' | 'text' | 'drawing' | 'stair' | 'dim' | 'stroke' | 'mark';
 
@@ -249,16 +248,17 @@ const stroke: LooseKind = {
 const mark: LooseKind = {
   kind: 'mark',
   remove: (f, id) => void (f.marks && delete f.marks[id]),
+  // cíl směru (bod ve výkresu) jede se značkou – posun i otočení skupiny
   capture: (f, id) => {
     const m = f.marks?.[id];
-    return m ? { at: xy(m), angle: m.dir?.angle } : null;
+    return m ? { at: xy(m), to: m.dir ? xy(m.dir.to) : undefined } : null;
   },
   place: (f, id, snap, t) => {
     const m = f.marks?.[id];
-    const s = snap as { at: Pt; angle?: number };
+    const s = snap as { at: Pt; to?: Pt };
     if (!m) return;
     Object.assign(m, t.pt(s.at));
-    if (t.deg && m.dir && s.angle !== undefined) m.dir.angle = rotateAngle(s.angle, t.deg);
+    if (m.dir && s.to) m.dir.to = t.pt(s.to);
   },
   extent: (f, id) => (f.marks?.[id] ? [xy(f.marks[id]!)] : []),
   inRect: (f, r) => Object.values(f.marks ?? {}).filter(m => inRect(r, m)).map(m => m.id),
@@ -266,6 +266,7 @@ const mark: LooseKind = {
     const src = f.marks?.[id];
     if (!src) return null;
     const m = { ...clone(src), id: newId('mk'), num: ctx.markNum(), ...ctx.shift(src) };
+    if (m.dir) m.dir.to = ctx.shift(m.dir.to);
     for (const pg of m.pages) pg.id = newId('pg');
     f.marks![m.id] = m;
     return m.id;

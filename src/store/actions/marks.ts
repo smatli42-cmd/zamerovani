@@ -3,7 +3,7 @@
  * prvků (core/looseElements.ts). Každá akce = jeden krok Zpět.
  */
 import type { Id, Mark, MarkPage, Pt } from '../../model/types';
-import { clampDirLength, createMark, defaultDir, markNumberError, nextMarkNumber } from '../../core/marks';
+import { createMark, defaultDir, dirAngle, dirDistance, dirTarget, markNumberError, nextMarkNumber } from '../../core/marks';
 import { store } from '../store';
 
 /** Nová značka klepnutím (číslo = další v projektu); vybere se. Vrací id, nebo null (např. zamčená vrstva Popisky). */
@@ -43,16 +43,23 @@ export function setMarkNumber(id: Id, num: number): string | null {
   return null;
 }
 
-/** Směr pohledu: zapnout / vypnout, styl, úhel a délka (tažení koncového bodu, px na obrazovce). */
-export function setMarkDir(id: Id, patch: { on?: boolean; style?: 'cone' | 'arrow'; angle?: number; len?: number }): void {
+/**
+ * Směr pohledu: zapnout / vypnout, styl, cíl ve výkresu (`to` – tažení koncového bodu), nebo úhel / vzdálenost
+ * (panel; druhá hodnota zůstane).
+ */
+export function setMarkDir(id: Id, patch: { on?: boolean; style?: 'cone' | 'arrow'; to?: Pt; angle?: number; dist?: number }): void {
   store.edit(floor => {
     const m = floor.marks?.[id];
     if (!m) return false;
-    const d = (m.dir ??= { ...defaultDir(), on: false });
+    const d = (m.dir ??= { ...defaultDir(m), on: false });
     if (patch.on !== undefined) d.on = patch.on;
     if (patch.style !== undefined) d.style = patch.style;
-    if (patch.angle !== undefined) d.angle = Math.round(patch.angle);
-    if (patch.len !== undefined) d.len = clampDirLength(patch.len);
+    if (patch.to) d.to = { x: Math.round(patch.to.x), y: Math.round(patch.to.y) };
+    if (patch.angle !== undefined || patch.dist !== undefined) {
+      // cíl ležící přesně na značce nemá směr – pak nahoru (výchozí)
+      const angle = patch.angle ?? (dirDistance(m) > 0 ? dirAngle(m) : -90);
+      d.to = dirTarget(m, angle, Math.max(1, patch.dist ?? dirDistance(m)));
+    }
   });
 }
 

@@ -8,7 +8,8 @@ import { orientLoopOutward } from '../core/wallSide';
 import { shapesToDrawings } from './migrateDrawings';
 import { mergeArcAt, mergeStraightAt } from '../core/topology';
 import { defaultLayers, kindDefaultLayer, OWN_KINDS, ownCollection, setCollection } from '../core/layers';
-import { SCHEMA_VERSION, type Floor, type LineStyle, type Project, type Pt, type Reveal } from '../model/types';
+import { DIR_DEFAULT_MM, dirTarget } from '../core/marks';
+import { SCHEMA_VERSION, type Floor, type LineStyle, type MarkDir, type Project, type Pt, type Reveal } from '../model/types';
 
 export function migrateProject(raw: unknown): Project {
   const p = raw as Project;
@@ -45,13 +46,15 @@ export function migrateProject(raw: unknown): Project {
   // 28 → 29: ruční tahy perem (floor.strokes) – nepovinné pole, bez převodu
   // 29 → 30: značky v půdorysu (floor.marks, ZNACKY-POZNAMKY-DETAILY.md) – nepovinné pole, bez převodu; vrstva Popisky (withLayers)
   // 30 → 31: značka – délka směru (`dir.len`), tvary ve skice (obdélník, kruh, oblouk, dvojitá čára) – nepovinné, bez převodu
+  // 31 → 32: směr značky = cíl ve výkresu `dir.to` (mm) místo úhlu a délky v px – převod `markDirTargets`
   const old = p.schema ?? 1;
   const floors = p.floors.map(f => {
     const j = joinSemicircles(convertShapesToWalls(f));
     const r = removePairing(addWallThickness({ ...j, texts: j.texts ?? {} }));
     const out = old < 9 ? joinSplitWalls(r) : r;
     const fixed = fixWindowFrames(revealSides({ ...out, protrusions: out.protrusions ?? {} }));
-    return old < 18 ? shapesToDrawings(fixed) : fixed;
+    const f2 = old < 18 ? shapesToDrawings(fixed) : fixed;
+    return old < 32 ? markDirTargets(f2) : f2;
   });
   return withLayers({ ...p, floors, schema: SCHEMA_VERSION });
 }
@@ -259,4 +262,23 @@ export function fixWindowFrames(floor: Floor): Floor {
     changed = true;
   }
   return changed ? { ...floor, openings } : floor;
+}
+
+/**
+ * 31 → 32: směr značky ze starého úhlu (`angle`, °) a délky v px (`len`) na cíl ve výkresu `to` (mm) – ve stejném
+ * úhlu, 1,5 m od značky (délka v px nemá v mm obdobu). Opakovatelné – značka s `to` zůstane.
+ */
+function markDirTargets(f: Floor): Floor {
+  if (!f.marks) return f;
+  const marks: NonNullable<Floor['marks']> = {};
+  for (const [id, m] of Object.entries(f.marks)) {
+    const d = m.dir as (Partial<MarkDir> & { angle?: number; len?: number }) | undefined;
+    if (!d || d.to) {
+      marks[id] = m;
+      continue;
+    }
+    const angle = d.angle ?? -90;
+    marks[id] = { ...m, dir: { on: !!d.on, style: d.style ?? 'cone', to: dirTarget(m, angle, DIR_DEFAULT_MM) } };
+  }
+  return { ...f, marks };
 }
