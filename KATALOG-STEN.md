@@ -170,7 +170,7 @@ Souřadnice v mm. Vnitřní roh místnosti = (0, 0), místnost leží v kladném
 3. **Posun celé stěny** (D12): volný posun, k původnímu směru se přichytí pomocnou čárou. Přibývá **přichycení kolmice s ikonou ⊥** (D13).
 4. **Tažení konce s držením směru** (D11) je rozhodnuté dříve a zatím nenaprogramované.
 5. **Výběr z překrývajících se koncových bodů** (D14): přednost má konec vybrané stěny, opakované ťuknutí přepíná.
-6. **Automatické vytváření a počítání místností není potřeba** (rozhodnuto dříve, potvrzeno 2026-11-11). Detekce uzavřených smyček pro natočení těl ven se proto nesmí na oddělených rozích zlomit, ale plocha ani obvod místností se neřeší.
+6. **Automatické vytváření místností není potřeba** (rozhodnuto dříve, potvrzeno 2026-11-11). Detekce uzavřených smyček pro natočení těl ven se nesmí na oddělených rozích zlomit. **Plocha místnosti se počítá** (změna rozhodnutím uživatele 2026-11-21, dříve „plocha ani obvod se neřeší“): štítek místnosti ukazuje světlou plochu mezi líci stěn (bez tloušťky stěn); výstupky do místnosti se odečtou, vybrání přičtou; otvory (dveře, okna, průchody, niky) plochu nemění; příčka nebo sloup uvnitř místnosti se odečte; neuzavřený prostor plochu nemá. Pravidlo jen v `core/roomArea.ts`, testy `store/roomArea.test.ts`. Obvod se zatím neřeší.
 
 ## I. Výstupek a vybrání (přizdívka, pilastr, podpěra, výklenek)
 
