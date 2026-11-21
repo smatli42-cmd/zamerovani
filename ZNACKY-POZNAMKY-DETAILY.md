@@ -25,7 +25,7 @@ Nahrazuje tři dřívější samostatné body v `POZADAVKY.md`: značka detailu 
 ## Pořadí práce
 - **A:** datový model, značka v půdorysu s číslem a názvem, posun, mazání, okno s textem a skicou (převzít z prototypu), volitelný směr (kužel/šipka).
 - **B:** fotka jako podklad (pořízení/výběr, zmenšení, uložení zvlášť, export/import projektu).
-- **C:** kreslení do fotky ve vlastní vrstvě, orientační kóty, PDF příloha, DXF hladina.
+- **C:** kreslení do fotky ve vlastní vrstvě, orientační kóty, PDF příloha, DXF hladina. *(2026-11-21: kreslení do fotky a orientační kóty hotové; PDF příloha a DXF hladina se udělají s krokem Výstupy – export v aplikaci zatím není.)*
 
 ## Průřezovost
 Značka je nový druh prvku, takže se dotýká pravidel, která už platí pro ostatní prvky: výběr, posun, mazání, zpět/vpřed, kopírování, zamykání, vrstvy/skrytí, export. Postupovat podle `metoda-pruchozi-funkce.md`: pravidlo na jednom centrálním místě, tabulka „pravidlo × typ prvku“ včetně značky jako kritérium hotovo.

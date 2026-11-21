@@ -1,9 +1,10 @@
 /**
  * Skica značky (okno značky, ui/MarkWindow.tsx) – JEDINÉ místo geometrie skici: tvary (pero, čára, obdélník, kruh,
- * oblouk, dvojitá čára – jako kresba ve výkresu, přání uživatele 2026-11-20), zásah perem, posun prvku, guma.
+ * oblouk, dvojitá čára – jako kresba ve výkresu, přání uživatele 2026-11-20), zásah perem, posun prvku, guma,
+ * velikost popisků a kót podle zoomu při vzniku (`sketchScale`) a orientační kóty na fotce (`dimIsOrient`).
  * Souřadnice skici = px při zoomu 100 %. Kresba skici je jen obrázek – žádné vazby ani přichytávání ke stěnám.
  */
-import type { MarkPage, Pt, SketchStroke } from '../model/types';
+import type { MarkPage, Pt, SketchDim, SketchLabel, SketchStroke } from '../model/types';
 import { normal, projectToSegment, scale, add, unit } from './geometry';
 import { arcPoints } from './strokes';
 
@@ -51,20 +52,53 @@ export function defaultArcSagitta(a: Pt, b: Pt): number {
 const nearPolylines = (pls: Pt[][], at: Pt, tol: number): boolean =>
   pls.some(pl => pl.some((q, i) => (i === 0 ? Math.hypot(at.x - q.x, at.y - q.y) <= tol : projectToSegment(at, pl[i - 1]!, q).distance <= tol)));
 
-/** Rámeček popisku a textu kóty (bez plátna – stejný pro kreslení i zásah): písmo 13 px, ~8,5 px na znak s rezervou. */
-export function labelBox(text: string, cx: number, cy: number): { x: number; y: number; w: number; h: number } {
-  const w = Math.max(1, text.length) * 8.5 + 12;
-  return { x: cx - w / 2, y: cy - 11, w, h: 22 };
+/** Velikost písma popisků a kót skici při měřítku 1. */
+export const SKETCH_FONT_PX = 13;
+
+/**
+ * Měřítko nového popisku / kóty podle zoomu okna (krok C): na obrazovce stejně velké při každém zoomu – nad zmenšenou
+ * fotkou by jinak byly drobné. Stejné měřítko dostane i tloušťka nové čáry (ui/MarkWindow.tsx).
+ */
+export function sketchScale(viewS: number): number {
+  return Math.max(0.01, Math.round(100 / viewS) / 100);
+}
+
+/**
+ * Rámeček popisku a textu kóty (bez plátna – stejný pro kreslení i zásah): písmo 13 px × `k`, ~8,5 px na znak
+ * s rezervou.
+ */
+export function labelBox(text: string, cx: number, cy: number, k = 1): { x: number; y: number; w: number; h: number } {
+  const w = (Math.max(1, text.length) * 8.5 + 12) * k;
+  return { x: cx - w / 2, y: cy - 11 * k, w, h: 22 * k };
+}
+
+/** Kóty na straně s fotkou jsou jen orientační (perspektiva, ne měřítko) – kreslí se odlišeně a se znakem ≈. */
+export function dimIsOrient(p: MarkPage): boolean {
+  return !!p.photo;
+}
+
+/** Zobrazený text kóty (orientační se znakem ≈). */
+export function dimText(p: MarkPage, d: SketchDim): string {
+  if (!d.text) return '';
+  return dimIsOrient(p) ? `≈ ${d.text}` : d.text;
+}
+
+const inBox = (b: { x: number; y: number; w: number; h: number }, at: Pt, tol: number): boolean =>
+  at.x >= b.x - tol && at.x <= b.x + b.w + tol && at.y >= b.y - tol && at.y <= b.y + b.h + tol;
+
+const labelHit = (l: SketchLabel, at: Pt, tol: number): boolean => inBox(labelBox(l.text, l.x, l.y, l.k), at, tol);
+
+/** Zásah kóty: čára, nebo rámeček jejího textu. */
+function dimHit(p: MarkPage, d: SketchDim, at: Pt, tol: number): boolean {
+  if (projectToSegment(at, d.a, d.b).distance <= tol) return true;
+  const t = dimText(p, d);
+  return !!t && inBox(labelBox(t, (d.a.x + d.b.x) / 2, (d.a.y + d.b.y) / 2, d.k), at, tol);
 }
 
 /** Prvek skici pod bodem (popisky nahoře, pak kóty, pak tahy od posledního). */
 export function hitSketch(p: MarkPage, at: Pt, tol: number): SketchRef | null {
-  for (let i = p.labels.length - 1; i >= 0; i--) {
-    const l = p.labels[i]!;
-    const b = labelBox(l.text, l.x, l.y);
-    if (at.x >= b.x - tol && at.x <= b.x + b.w + tol && at.y >= b.y - tol && at.y <= b.y + b.h + tol) return { kind: 'label', index: i };
-  }
-  for (let i = p.dims.length - 1; i >= 0; i--) if (projectToSegment(at, p.dims[i]!.a, p.dims[i]!.b).distance <= tol) return { kind: 'dim', index: i };
+  for (let i = p.labels.length - 1; i >= 0; i--) if (labelHit(p.labels[i]!, at, tol)) return { kind: 'label', index: i };
+  for (let i = p.dims.length - 1; i >= 0; i--) if (dimHit(p, p.dims[i]!, at, tol)) return { kind: 'dim', index: i };
   for (let i = p.strokes.length - 1; i >= 0; i--) if (nearPolylines(sketchPolylines(p.strokes[i]!), at, tol)) return { kind: 'stroke', index: i };
   return null;
 }
@@ -86,8 +120,8 @@ export function removeSketchItem(p: MarkPage, ref: SketchRef): MarkPage {
 /** Guma: smaže tahy / tvary, kóty a popisky pod bodem. Vrací novou stranu, nebo null = nic. */
 export function eraseInPage(p: MarkPage, at: Pt, tol: number): MarkPage | null {
   const strokes = p.strokes.filter(s => !nearPolylines(sketchPolylines(s), at, tol));
-  const dims = p.dims.filter(d => projectToSegment(at, d.a, d.b).distance > tol);
-  const labels = p.labels.filter(l => Math.hypot(at.x - l.x, at.y - l.y) > tol * 1.7);
+  const dims = p.dims.filter(d => !dimHit(p, d, at, tol));
+  const labels = p.labels.filter(l => !labelHit(l, at, tol));
   if (strokes.length === p.strokes.length && dims.length === p.dims.length && labels.length === p.labels.length) return null;
   return { ...p, strokes, dims, labels };
 }

@@ -1,11 +1,12 @@
 /**
  * Kreslení skici značky (okno značky, ui/MarkWindow.tsx) – převzato z prototypu (prototyp/src/input/detailsUI.js):
- * mřížka, tahy a tvary (geometrie core/sketch.ts), kóty s libovolným textem (oranžové, šikmé zarážky), popisky,
+ * mřížka, tahy a tvary (geometrie core/sketch.ts), kóty s libovolným textem (oranžové, šikmé zarážky; na fotce
+ * orientační – fialové, čárkovaně, s ≈), popisky (velikost podle měřítka `k`),
  * zvýraznění vybraného prvku.
  * Souřadnice skici = px při zoomu 100 %; `view` = zoom `s` a posun `ox`, `oy` (px plátna).
  */
 import type { MarkPage, SketchDim, SketchStroke } from '../model/types';
-import { labelBox, sketchPolylines, type SketchRef } from '../core/sketch';
+import { dimIsOrient, dimText, labelBox, SKETCH_FONT_PX, sketchPolylines, type SketchRef } from '../core/sketch';
 
 export interface SketchView {
   s: number;
@@ -15,7 +16,9 @@ export interface SketchView {
 
 /** Barva kót skici (odlišené od kresby). */
 export const SKETCH_DIM_COLOR = '#ea580c';
-const FONT = '700 13px system-ui, sans-serif';
+/** Barva orientačních kót na fotce (krok C – jen orientační, ne měřítko): fialová, čárkovaná čára, text s ≈. */
+export const SKETCH_ORIENT_COLOR = '#7c3aed';
+const font = (k = 1): string => `700 ${SKETCH_FONT_PX * k}px system-ui, sans-serif`;
 
 
 function drawStroke(ctx: CanvasRenderingContext2D, st: SketchStroke, color = st.color, width = st.width): void {
@@ -44,27 +47,41 @@ function drawSelected(ctx: CanvasRenderingContext2D, page: MarkPage, ref: Sketch
     const d = page.dims[ref.index];
     if (d) {
       ctx.strokeStyle = SELECT_COLOR;
-      ctx.lineWidth = 9;
+      ctx.lineWidth = 9 * (d.k ?? 1);
       ctx.beginPath();
       ctx.moveTo(d.a.x, d.a.y);
       ctx.lineTo(d.b.x, d.b.y);
       ctx.stroke();
+      // i rámeček textu (kótu jde vybrat i ťuknutím na text)
+      const t = dimText(page, d);
+      if (t) {
+        const k = d.k ?? 1;
+        const b = labelBox(t, (d.a.x + d.b.x) / 2, (d.a.y + d.b.y) / 2, k);
+        ctx.lineWidth = 5 * k;
+        ctx.beginPath();
+        ctx.roundRect(b.x - 3 * k, b.y - 3 * k, b.w + 6 * k, b.h + 6 * k, 7 * k);
+        ctx.stroke();
+      }
     }
   } else {
     const l = page.labels[ref.index];
     if (l) {
-      const b = labelBox(l.text, l.x, l.y);
+      const k = l.k ?? 1;
+      const b = labelBox(l.text, l.x, l.y, k);
       ctx.strokeStyle = SELECT_COLOR;
-      ctx.lineWidth = 5;
+      ctx.lineWidth = 5 * k;
       ctx.beginPath();
-      ctx.roundRect(b.x - 3, b.y - 3, b.w + 6, b.h + 6, 7);
+      ctx.roundRect(b.x - 3 * k, b.y - 3 * k, b.w + 6 * k, b.h + 6 * k, 7 * k);
       ctx.stroke();
     }
   }
   ctx.restore();
 }
 
-function drawDim(ctx: CanvasRenderingContext2D, d: SketchDim): void {
+function drawDim(ctx: CanvasRenderingContext2D, page: MarkPage, d: SketchDim): void {
+  const k = d.k ?? 1;
+  const orient = dimIsOrient(page);
+  const color = orient ? SKETCH_ORIENT_COLOR : SKETCH_DIM_COLOR;
   const dx = d.b.x - d.a.x;
   const dy = d.b.y - d.a.y;
   const len = Math.hypot(dx, dy) || 1;
@@ -72,14 +89,19 @@ function drawDim(ctx: CanvasRenderingContext2D, d: SketchDim): void {
   const uy = dy / len;
   const nx = -uy;
   const ny = ux;
-  const tick = 7;
+  const tick = 7 * k;
   ctx.save();
-  ctx.strokeStyle = SKETCH_DIM_COLOR;
-  ctx.lineWidth = 1.6;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.6 * k;
   ctx.lineCap = 'round';
+  // čára kóty (orientační čárkovaně), zarážky plně
+  ctx.setLineDash(orient ? [8 * k, 5 * k] : []);
   ctx.beginPath();
   ctx.moveTo(d.a.x, d.a.y);
   ctx.lineTo(d.b.x, d.b.y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();
   for (const p of [d.a, d.b]) {
     ctx.moveTo(p.x - (ux + nx) * tick, p.y - (uy + ny) * tick);
     ctx.lineTo(p.x + (ux + nx) * tick, p.y + (uy + ny) * tick);
@@ -87,21 +109,22 @@ function drawDim(ctx: CanvasRenderingContext2D, d: SketchDim): void {
     ctx.lineTo(p.x + nx * tick, p.y + ny * tick);
   }
   ctx.stroke();
-  if (d.text) {
+  const text = dimText(page, d);
+  if (text) {
     const mx = (d.a.x + d.b.x) / 2;
     const my = (d.a.y + d.b.y) / 2;
-    const b = labelBox(d.text, mx, my);
-    ctx.fillStyle = '#fff7ed';
-    ctx.lineWidth = 1.2;
+    const b = labelBox(text, mx, my, k);
+    ctx.fillStyle = orient ? '#f5f3ff' : '#fff7ed';
+    ctx.lineWidth = 1.2 * k;
     ctx.beginPath();
-    ctx.roundRect(b.x, b.y, b.w, b.h, 5);
+    ctx.roundRect(b.x, b.y, b.w, b.h, 5 * k);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = SKETCH_DIM_COLOR;
-    ctx.font = FONT;
+    ctx.fillStyle = color;
+    ctx.font = font(k);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(d.text, mx, my + 0.5);
+    ctx.fillText(text, mx, my + 0.5 * k);
   }
   ctx.restore();
 }
@@ -136,23 +159,24 @@ export function drawSketch(
   for (const st of page.strokes) drawStroke(ctx, st);
   if (extra.stroke) drawStroke(ctx, extra.stroke);
   ctx.restore();
-  for (const d of page.dims) drawDim(ctx, d);
-  if (extra.dim) drawDim(ctx, extra.dim);
+  for (const d of page.dims) drawDim(ctx, page, d);
+  if (extra.dim) drawDim(ctx, page, extra.dim);
   ctx.save();
   for (const lb of page.labels) {
-    const b = labelBox(lb.text, lb.x, lb.y);
+    const k = lb.k ?? 1;
+    const b = labelBox(lb.text, lb.x, lb.y, k);
     ctx.fillStyle = 'rgba(255,255,255,0.92)';
     ctx.strokeStyle = lb.color;
-    ctx.lineWidth = 1.4;
+    ctx.lineWidth = 1.4 * k;
     ctx.beginPath();
-    ctx.roundRect(b.x, b.y, b.w, b.h, 5);
+    ctx.roundRect(b.x, b.y, b.w, b.h, 5 * k);
     ctx.fill();
     ctx.stroke();
-    ctx.font = FONT;
+    ctx.font = font(k);
     ctx.fillStyle = lb.color;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(lb.text, lb.x, lb.y + 0.5);
+    ctx.fillText(lb.text, lb.x, lb.y + 0.5 * k);
   }
   ctx.restore();
   ctx.setTransform(1, 0, 0, 1, 0, 0);

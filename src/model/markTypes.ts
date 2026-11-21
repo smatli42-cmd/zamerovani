@@ -38,13 +38,17 @@ export interface SketchLabel {
   y: number;
   text: string;
   color: string;
+  /** Měřítko velikosti (písmo, rámeček) podle zoomu při vzniku – nad fotkou stejně velké na obrazovce (krok C); chybí = 1. */
+  k?: number;
 }
 
-/** Kóta ve skice: čára s libovolným textem (ne měřená). */
+/** Kóta ve skice: čára s libovolným textem (ne měřená). Na straně s fotkou jen orientační (core/sketch.ts `dimIsOrient`). */
 export interface SketchDim {
   a: Pt;
   b: Pt;
   text: string;
+  /** Měřítko velikosti (písmo, zarážky, tloušťka) podle zoomu při vzniku; chybí = 1. */
+  k?: number;
 }
 
 /**

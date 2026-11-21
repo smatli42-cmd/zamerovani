@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-21 (1) – značka krok C: kreslení do fotky, orientační kóty
+- **Co se změnilo:** nový popisek a kóta ve skice dostanou měřítko velikosti podle zoomu okna při vzniku (`SketchLabel.k`, `SketchDim.k`, `sketchScale` v `core/sketch.ts` – stejné měřítko i pro tloušťku nové čáry); kóty na straně s fotkou se kreslí jako orientační (`dimIsOrient`, `dimText`). Zásah, výběr i guma berou rámeček popisku a textu kóty. SCHEMA_VERSION 34 (nepovinná pole, bez převodu). Testy `core/sketch.test.ts` (+7), celkem 1023 + 1 zapsaný nález.
+- **Viditelně v aplikaci:** text a kóta nakreslené na fotku jsou čitelné při každém zoomu (dřív nad zmenšenou fotkou drobné) a při přiblížení rostou s fotkou; kóta na fotce je fialová, čárkovaná a má před textem „≈“ (jen orientační), bez fotky zůstává oranžová. Ověřeno v prohlížeči.
+- **Rozhodnuto samostatně:** PDF příloha a DXF hladina značek (zbytek kroku C) se udělají s krokem Výstupy – export v aplikaci zatím není. Orientační je kóta podle toho, zda strana **má** fotku (ne příznak při vzniku): po odebrání fotky se kóty kreslí zase obyčejně. Popisky a kóty ze starších dat zůstávají ve velikosti 1. Kresba nad fotkou jde smazat celá tlačítkem ✖ Smazat skicu (fotka zůstane – už od kroku B).
+- **Po kontrole revieweru opraveno:** výběr kóty zvýrazní i její text; jedno měřítko pro čáry i texty; test gumy na textu kóty; pořadí poznámky v migraci.
+- **Otevřené:** PDF / DXF značek s výstupy; úchyty tvarů ve skice.
+
 ### 2026-11-20 (10) – konec sezení
 - **Co se změnilo:** sezení ukončeno; za den vrstvy (dvě okna, zamčená vrstva nic nepřijme), přichycení posunu, sloučená značka – kroky A a B. Testy 1016 + 1 zapsaný nález, typecheck a build OK.
 - **Viditelně v aplikaci:** viz (1)–(9).
@@ -793,8 +800,8 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 **Chyby od uživatele:** žádné čekající (chyby schodiště z 2026-11-19 si uživatel nevybavuje).
 
 **Fronta kroků:**
-1. Značka krok C: kreslení do fotky – popisky a kóty ve velikosti podle fotky, orientační kóty odlišené vzhledem; PDF příloha (strana na značku), DXF hladina značek. Případně úchyty pro úpravu tvarů ve skice.
-2. Výstupy: PDF podle velikosti výkresu s razítkem (zaškrtnutí vrstev – `layerContents`), DXF s hladinami podle vrstev (s tím část B KOTY-ZAMEK-EXPORT.md).
+1. ~~Značka krok C: kreslení do fotky~~ hotové 2026-11-21 (1) – čeká na vyzkoušení; PDF příloha a DXF hladina značek jdou s výstupy (bod 2). Případně úchyty pro úpravu tvarů ve skice.
+2. Výstupy: PDF podle velikosti výkresu s razítkem (zaškrtnutí vrstev – `layerContents`), DXF s hladinami podle vrstev (s tím část B KOTY-ZAMEK-EXPORT.md); PDF příloha značek (strana na značku) a DXF hladina značek.
 3. Zařizovací předměty a symboly – uživatel zatím odložil (plán hotový).
 4. Kóty, jen když se ukáže potřeba.
 

@@ -9,7 +9,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { MarkPage, Pt, SketchDim, SketchStroke } from '../model/types';
 import { emptyPage, markCode, pageIsEmpty } from '../core/marks';
-import { defaultArcSagitta, eraseInPage, hitSketch, moveSketchItem, removeSketchItem, SKETCH_DOUBLE_W, type SketchRef } from '../core/sketch';
+import { defaultArcSagitta, eraseInPage, hitSketch, moveSketchItem, removeSketchItem, SKETCH_DOUBLE_W, sketchScale, type SketchRef } from '../core/sketch';
 import { drawSketch, type SketchPhoto, type SketchView } from '../canvas/drawSketch';
 import { addPhoto, getPhoto } from '../persistence/photos';
 import { setMarkContent, updateMark } from '../store/actions';
@@ -251,11 +251,12 @@ function MarkWindowBody({ id }: { id: string }) {
       if (i >= 0) {
         setPrompt({ title: 'Upravit text', initial: page.labels[i]!.text, done: t => commit({ ...page, labels: page.labels.map((l, k) => (k === i ? { ...l, text: t } : l)) }) });
       } else {
-        setPrompt({ title: 'Text do skici', initial: '', done: t => commit({ ...page, labels: [...page.labels, { x: pt.x, y: pt.y, text: t, color }] }) });
+        setPrompt({ title: 'Text do skici', initial: '', done: t => commit({ ...page, labels: [...page.labels, { x: pt.x, y: pt.y, text: t, color, k: sketchScale(view.s) }] }) });
       }
       return;
     }
-    if (tool === 'dim') live.current = { dim: { a: pt, b: pt, text: '' } };
+    // popisky a kóty stejně velké na obrazovce při každém zoomu (nad zmenšenou fotkou by byly drobné – krok C)
+    if (tool === 'dim') live.current = { dim: { a: pt, b: pt, text: '', k: sketchScale(view.s) } };
     else if (tool === 'eraser') {
       // guma: jeden krok Zpět za celé gesto (i tažením), jen když něco smazala
       live.current = { erased: true, start: page, pushed: false };
@@ -263,8 +264,8 @@ function MarkWindowBody({ id }: { id: string }) {
     } else {
       const mode: SketchStroke['mode'] = SHAPES.includes(tool) ? (tool as ShapeMode) : 'free';
       // tloušťka čáry stejná na obrazovce při každém zoomu (nad zmenšenou fotkou by byla tenká)
-      const k = 1 / view.s;
-      live.current = { stroke: { mode, color, width: Math.round(2.5 * k * 10) / 10, pts: [pt, { ...pt }], ...(mode === 'double' ? { w: Math.round(SKETCH_DOUBLE_W * k) } : {}) } };
+      const k = sketchScale(view.s);
+      live.current = { stroke: { mode, color, width: Math.round(2.5 * k * 100) / 100, pts: [pt, { ...pt }], ...(mode === 'double' ? { w: Math.round(SKETCH_DOUBLE_W * k) } : {}) } };
     }
     redraw(n => n + 1);
   };
@@ -306,7 +307,7 @@ function MarkWindowBody({ id }: { id: string }) {
     live.current = {};
     if (L.dim) {
       const d = L.dim;
-      if (Math.hypot(d.b.x - d.a.x, d.b.y - d.a.y) >= 8) setPrompt({ title: 'Text kóty (číslo nebo text, např. „120 mm“)', initial: '', done: t => commit({ ...page, dims: [...page.dims, { ...d, text: t }] }) });
+      if (Math.hypot(d.b.x - d.a.x, d.b.y - d.a.y) * view.s >= 8) setPrompt({ title: page.photo ? 'Text kóty – na fotce jen orientační (≈)' : 'Text kóty (číslo nebo text, např. „120 mm“)', initial: '', done: t => commit({ ...page, dims: [...page.dims, { ...d, text: t }] }) });
     } else if (L.stroke) {
       const pts = L.stroke.pts;
       const a = pts[0]!;
