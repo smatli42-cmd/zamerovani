@@ -16,21 +16,23 @@ import { setMarkContent, updateMark } from '../store/actions';
 import { store } from '../store/store';
 import { useStore } from '../store/useStore';
 import { TextPrompt } from './Dialog';
+import { Icon, type IconName } from './icons';
 
 type ShapeMode = Exclude<SketchStroke['mode'], 'free'>;
 type SketchTool = 'select' | 'pen' | ShapeMode | 'text' | 'dim' | 'eraser' | 'pan';
-const TOOLS: { v: SketchTool; label: string }[] = [
-  { v: 'select', label: '👆 Vybrat' },
-  { v: 'pen', label: '🖊️ Pero' },
-  { v: 'line', label: '╱ Čára' },
-  { v: 'rect', label: '▭ Obdélník' },
-  { v: 'circle', label: '◯ Kruh' },
-  { v: 'arc', label: '◠ Oblouk' },
-  { v: 'double', label: '═ Dvojitá' },
-  { v: 'text', label: '🏷️ Text' },
-  { v: 'dim', label: '📐 Kóta' },
-  { v: 'eraser', label: '🧹 Guma' },
-  { v: 'pan', label: '✋ Posun' }
+/** Nástroje skici – stejné ikony jako nástroje výkresu (ui/icons.tsx). */
+const TOOLS: { v: SketchTool; icon: IconName; label: string }[] = [
+  { v: 'select', icon: 'select', label: 'Vybrat' },
+  { v: 'pen', icon: 'pen', label: 'Pero' },
+  { v: 'line', icon: 'line', label: 'Čára' },
+  { v: 'rect', icon: 'rect', label: 'Obdélník' },
+  { v: 'circle', icon: 'circle', label: 'Kruh' },
+  { v: 'arc', icon: 'arc', label: 'Oblouk' },
+  { v: 'double', icon: 'double', label: 'Dvojitá' },
+  { v: 'text', icon: 'text', label: 'Text' },
+  { v: 'dim', icon: 'dim', label: 'Kóta' },
+  { v: 'eraser', icon: 'eraser', label: 'Guma' },
+  { v: 'pan', icon: 'pan', label: 'Posun' }
 ];
 const SHAPES: readonly string[] = ['line', 'rect', 'circle', 'arc', 'double'];
 const COLORS = ['#0f172a', '#dc2626', '#2563eb', '#059669'];
@@ -324,20 +326,26 @@ function MarkWindowBody({ id }: { id: string }) {
         <b class="mark-code" style={{ background: mark.color }}>{markCode(mark)}</b>
         <input type="text" value={nameDraft} placeholder="Název značky (např. Sokl u terasy)" onInput={e => setNameDraft((e.target as HTMLInputElement).value)} onChange={e => updateMark(id, { name: (e.target as HTMLInputElement).value })} />
         <button class="btn btn-primary" onClick={close} disabled={!!photoBusy} title={photoBusy ? 'Počkejte, fotka se ukládá' : undefined}>
-          ✔ Hotovo
+          <Icon name="check" size={20} />
+          Hotovo
         </button>
       </div>
       <div class="mark-toolbar">
         {TOOLS.map(t => (
-          <button key={t.v} class={`btn btn-sm ${tool === t.v ? 'active' : ''}`} onClick={() => setTool(t.v)}>
-            {t.label}
+          <button key={t.v} class={`btn btn-sm mark-tool ${tool === t.v ? 'active' : ''}`} onClick={() => setTool(t.v)} title={t.label}>
+            <Icon name={t.icon} size={22} />
+            <span>{t.label}</span>
           </button>
         ))}
-        <button class="btn btn-sm" onClick={() => zoomAt(1 / 1.25)} title="Oddálit">−</button>
+        <button class="btn btn-sm" onClick={() => zoomAt(1 / 1.25)} title="Oddálit" aria-label="Oddálit">
+          <Icon name="minus" size={20} />
+        </button>
         <button class="btn btn-sm" onClick={() => setView({ s: 1, ox: 0, oy: 0 })} title="Zpět na 100 %">
           {Math.round(view.s * 100)} %
         </button>
-        <button class="btn btn-sm" onClick={() => zoomAt(1.25)} title="Přiblížit">+</button>
+        <button class="btn btn-sm" onClick={() => zoomAt(1.25)} title="Přiblížit" aria-label="Přiblížit">
+          <Icon name="plus" size={20} />
+        </button>
         <span class="mark-colors">
           {COLORS.map(c => (
             <button key={c} type="button" class={`color-dot ${color === c ? 'active' : ''}`} style={{ background: c }} onClick={() => setColor(c)} />
@@ -348,27 +356,33 @@ function MarkWindowBody({ id }: { id: string }) {
           setHistory(history.slice(0, -1));
           setSel(null);
         }}>
-          ↩ Zpět
+          <Icon name="undo" size={20} />
+          Zpět
         </button>
         {sel && (
           <button class="btn btn-sm btn-danger" onClick={removeSelected}>
-            🗑️ Smazat vybrané
+            <Icon name="trash" size={20} />
+            Smazat vybrané
           </button>
         )}
         <button class="btn btn-sm" onClick={() => camInput.current?.click()} disabled={!!photoBusy} title="Vyfotit fotoaparátem tabletu">
-          📷 Vyfotit
+          <Icon name="camera" size={20} />
+          Vyfotit
         </button>
         <button class="btn btn-sm" onClick={() => galleryInput.current?.click()} disabled={!!photoBusy} title="Vybrat fotku z galerie">
-          🖼️ Z galerie
+          <Icon name="gallery" size={20} />
+          Z galerie
         </button>
         {page.photo && (
           <button class="btn btn-sm" title="Odebrat fotku (kresba zůstane)" onClick={() => commit({ ...page, photo: undefined })}>
-            ✖ Odebrat fotku
+            <Icon name="photoOff" size={20} />
+            Odebrat fotku
           </button>
         )}
         {page.photo && (
           <button class="btn btn-sm" title="Celá fotka" onClick={() => fitTo(page.photo!.w, page.photo!.h)}>
-            ⤢ Celá fotka
+            <Icon name="fit" size={20} />
+            Celá fotka
           </button>
         )}
         <input ref={camInput} type="file" accept="image/*" capture="environment" hidden onChange={onPhotoFile} />
@@ -377,7 +391,8 @@ function MarkWindowBody({ id }: { id: string }) {
           commit({ ...page, strokes: [], labels: [], dims: [] });
           setSel(null);
         }}>
-          ✖ Smazat skicu
+          <Icon name="trash" size={20} />
+          Smazat skicu
         </button>
       </div>
       <canvas
@@ -398,7 +413,7 @@ function MarkWindowBody({ id }: { id: string }) {
         <textarea rows={3} value={note} placeholder="např. EPS tl. 160 mm, hydroizolační pás vytažen 150 mm nad terén…" onInput={e => setNote((e.target as HTMLTextAreaElement).value)} />
       </label>
       {photoBusy && <p class="muted small">{photoBusy}</p>}
-      {saveError && <p class="mark-error">⚠️ {saveError} Okno zůstává otevřené, skica se neztratila.</p>}
+      {saveError && <p class="mark-error">{saveError} Okno zůstává otevřené, skica se neztratila.</p>}
       {prompt && <TextPrompt title={prompt.title} label="Text" initial={prompt.initial} onSubmit={prompt.done} onClose={() => setPrompt(null)} />}
     </div>
   );

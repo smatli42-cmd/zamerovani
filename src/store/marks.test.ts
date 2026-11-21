@@ -10,7 +10,7 @@ import { dirAngle, dirDistance, dirTargetFromDrag, markCode, markContent, MARK_P
 import { markDirHandle } from '../canvas/drawMarks';
 import { toScreen } from '../canvas/view';
 import { eraseInPage, hitSketch, moveSketchItem, removeSketchItem, sketchPolylines } from '../core/sketch';
-import { markBoxPx } from '../core/marks';
+import { markBoxPx, markIconPx } from '../core/marks';
 import { selectTool } from '../tools/selectTool';
 import { markTool } from '../tools/markTool';
 import type { PointerInput } from '../tools/types';
@@ -234,6 +234,20 @@ describe('úpravy 2026-11-20: štítek, tvary a výběr ve skice', () => {
     expect(w).toBeGreaterThan(markBoxPx({ num: 1, name: '' }).w);
     store.set({ camera: { x: 0, y: 0, zoom: 0.1 } });
     // bod u pravého okraje štítku (kde je název) vybere značku
+    expect(pickAny(store.view('pick')!, { x: (w / 2 - 4) / 0.1, y: 0 }, store.get().camera, null)).toEqual({ kind: 'mark', id: a });
+  });
+
+  it('štítek značky s obsahem má pole s ikonou (o 24 px širší) a ťuknutí u pravého okraje ji vybere', () => {
+    const a = addMark({ x: 0, y: 0 })!;
+    updateMark(a, { name: 'Sokl' });
+    expect(markIconPx(f().marks![a]!)).toBe(0);
+    const w0 = markBoxPx(f().marks![a]!).w;
+    setMarkContent(a, 'EPS 160 mm', f().marks![a]!.pages);
+    const m = f().marks![a]!;
+    expect(markIconPx(m)).toBe(24);
+    const { w } = markBoxPx(m);
+    expect(w).toBe(w0 + 24);
+    store.set({ camera: { x: 0, y: 0, zoom: 0.1 } });
     expect(pickAny(store.view('pick')!, { x: (w / 2 - 4) / 0.1, y: 0 }, store.get().camera, null)).toEqual({ kind: 'mark', id: a });
   });
 

@@ -13,6 +13,7 @@ import { ProjectForm } from './ProjectForm';
 import { fitToDrawing } from './viewActions';
 import { Icon } from './icons';
 import { MoreMenu, type MoreAction } from './MoreMenu';
+import { ToolBadge } from './ToolHead';
 
 const SAVE_TEXT: Record<SaveStatus, string> = {
   saved: 'Uloženo',
@@ -61,7 +62,7 @@ export function TopBar() {
         }}
       >
         <Icon name="back" size={22} />
-        Projekty
+        <span class="btn-label">Projekty</span>
       </button>
       <button class="project-title" title="Upravit údaje projektu" onClick={() => setEditInfo(true)}>
         {project.name}
@@ -85,7 +86,7 @@ export function TopBar() {
         </select>
       </div>
 
-      <div class="spacer" />
+      <ToolBadge />
 
       <button class="btn btn-dark top-icon boxed" disabled={!canUndo} onClick={() => store.undo()} title="Zpět (Ctrl+Z)" aria-label="Zpět">
         <Icon name="undo" />
@@ -96,11 +97,11 @@ export function TopBar() {
       <span class="top-sep" />
       <button class={`btn btn-dark ${layersOpen === 'top' ? 'active' : ''}`} onClick={() => store.set({ layersOpen: layersOpen === 'top' ? false : 'top' })} title="Vrstvy">
         <Icon name="layers" />
-        Vrstvy
+        <span class="btn-label">Vrstvy</span>
       </button>
       <button class="btn btn-dark" onClick={fitToDrawing} title="Zobrazit celý výkres">
         <Icon name="fit" />
-        Celý výkres
+        <span class="btn-label">Celý výkres</span>
       </button>
       <button data-more-btn class={`btn btn-dark top-icon ${showMore ? 'active' : ''}`} onClick={() => setShowMore(!showMore)} title="Další: údaje projektu, podlaží, záloha, nastavení" aria-label="Další">
         <Icon name="more" />

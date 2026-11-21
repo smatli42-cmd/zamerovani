@@ -1,8 +1,8 @@
 /**
- * Aktivní nástroj na první pohled (návrh ovládání, rozhodnutí uživatele 2026-11-21): barevná karta nástroje
- * vlevo nahoře na výkresu (ikona, název, nápověda; ✕ = zpět na Vybrat), barevný rámeček kolem výkresu
- * a ikona nástroje u hrotu pera / kurzoru, když pero visí nad displejem. Ve Vybrat se rámeček ani ikona
- * u pera nekreslí. Barvy a texty z ui/toolGroups.ts.
+ * Aktivní nástroj na první pohled (návrh ovládání, rozhodnutí uživatele 2026-11-21): nástroj s nápovědou
+ * v horní liště (`ToolBadge`, ✕ = zpět na Vybrat – karta na výkresu zabírala místo, přání uživatele),
+ * barevný rámeček kolem výkresu a ikona nástroje u hrotu pera / kurzoru, když pero visí nad displejem.
+ * Ve Vybrat se rámeček ani ikona u pera nekreslí. Barvy a texty z ui/toolGroups.ts.
  */
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
@@ -12,23 +12,28 @@ import { activateTool, toolInfo } from './toolGroups';
 
 const isNeutral = (tool: string) => tool === 'select' || tool === 'pan';
 
-/** Karta nástroje a pod ní volby nástroje (`children`) – jeden sloupec vlevo nahoře na výkresu. */
+/** Volby nástroje (`children`) a okno vrstev nástroje – jeden sloupec vlevo nahoře na výkresu. */
 export function ToolHead({ children }: { children: ComponentChildren }) {
+  return <div class="tool-head">{children}</div>;
+}
+
+/** Aktivní nástroj v horní liště: ikona v barvě skupiny, název, nápověda, ✕ = zpět na Vybrat. */
+export function ToolBadge() {
   const tool = useStore(s => s.tool);
   const { group, def } = toolInfo(tool);
+  const neutral = isNeutral(tool);
   return (
-    <div class="tool-head" style={{ '--gc': group.color }}>
-      <div class="tool-chip" title={def.title}>
-        <Icon name={def.icon} size={26} />
-        <b>{def.label}</b>
-        <span class="tool-chip-hint">{def.hint}</span>
-        {tool !== 'select' && (
-          <button type="button" class="tool-chip-x" title="Zpět na Vybrat" aria-label="Zpět na Vybrat" onClick={() => activateTool('select')}>
-            <Icon name="close" size={20} />
-          </button>
-        )}
-      </div>
-      {children}
+    <div class={`tool-badge ${neutral ? 'neutral' : ''}`} style={{ '--gc': group.color }} title={def.title}>
+      <span class="tool-badge-ico">
+        <Icon name={def.icon} size={24} />
+      </span>
+      <b>{def.label}</b>
+      <span class="tool-badge-hint">{def.hint}</span>
+      {tool !== 'select' && (
+        <button type="button" class="tool-badge-x" title="Zpět na Vybrat" aria-label="Zpět na Vybrat" onClick={() => activateTool('select')}>
+          <Icon name="close" size={18} />
+        </button>
+      )}
     </div>
   );
 }

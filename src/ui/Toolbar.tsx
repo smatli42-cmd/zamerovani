@@ -86,14 +86,14 @@ function RailItem({ g, active, open, shown, tool }: { g: ToolGroup; active: bool
           activateTool(shown.id);
         }}
       >
-        <Icon name={shown.icon} size={30} />
+        <Icon name={shown.icon} size={34} />
         <span class="rail-label">{shown.label}</span>
       </button>
       {open && (
         <div class="rail-fly" role="group" aria-label={g.name}>
           {g.tools.map(t => (
             <button key={t.id} type="button" class={`fly-btn ${t.id === tool ? 'on' : ''}`} title={t.title} onClick={() => activateTool(t.id)}>
-              <Icon name={t.icon} size={28} />
+              <Icon name={t.icon} size={32} />
               <span>{t.label}</span>
             </button>
           ))}

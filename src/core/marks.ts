@@ -32,8 +32,13 @@ export function markNamePx(m: Pick<Mark, 'name'>): number {
 }
 
 /** Rozměr štítku na obrazovce (px; číslo + název, odhad podle počtu znaků – kreslení i zásah perem). Střed = poloha značky. */
-export function markBoxPx(m: Pick<Mark, 'num' | 'name'>): { w: number; h: number } {
-  return { w: Math.max(MARK_PX.h, markCodePx(m) + markNamePx(m)), h: MARK_PX.h };
+export function markBoxPx(m: Pick<Mark, 'num' | 'name'> & Partial<Pick<Mark, 'pages' | 'note'>>): { w: number; h: number } {
+  return { w: Math.max(MARK_PX.h, markCodePx(m) + markIconPx(m) + markNamePx(m)), h: MARK_PX.h };
+}
+
+/** Šířka pole s ikonou obsahu (fotka / skica / poznámka) mezi číslem a názvem (px; 0 = prázdná značka). */
+export function markIconPx(m: Partial<Pick<Mark, 'pages' | 'note'>>): number {
+  return markContent(m) ? 24 : 0;
 }
 
 /** Výchozí vzdálenost cíle směru od značky po zapnutí (mm). */
@@ -115,10 +120,10 @@ export function pageIsEmpty(p: MarkPage): boolean {
 }
 
 /** Co značka obsahuje (ikona v půdorysu): fotka, pak skica, pak text. */
-export function markContent(m: Mark): 'photo' | 'sketch' | 'text' | null {
+export function markContent(m: Partial<Pick<Mark, 'pages' | 'note'>>): 'photo' | 'sketch' | 'text' | null {
   if ((m.pages ?? []).some(p => p.photo)) return 'photo';
   if ((m.pages ?? []).some(p => !pageIsEmpty(p))) return 'sketch';
-  if (m.note.trim()) return 'text';
+  if (m.note?.trim()) return 'text';
   return null;
 }
 

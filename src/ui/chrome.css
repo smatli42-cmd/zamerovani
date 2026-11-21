@@ -7,6 +7,26 @@
   flex: none;
   display: block;
 }
+/* dvoubarevné ikony: základ = currentColor, zvýraznění = --ic-acc (modrá) */
+.ico .a {
+  stroke: var(--ic-acc, #0284c7);
+}
+.ico .af {
+  fill: var(--ic-acc, #0284c7);
+  stroke: none;
+}
+.ico .al {
+  fill: var(--ic-acc, #0284c7);
+  fill-opacity: 0.18;
+  stroke: none;
+}
+.ico .bf {
+  fill: currentColor;
+  stroke: none;
+}
+.topbar {
+  --ic-acc: #38bdf8;
+}
 
 /* ------------------------------------------------------------------ Levá lišta */
 .toolbar.rail {
@@ -27,10 +47,10 @@
 .rail-btn {
   position: relative;
   flex: 1;
-  border: 0;
+  border: 1.5px solid #cbd5e1;
   border-radius: 12px;
-  background: transparent;
-  color: var(--dark-3);
+  background: #fff;
+  color: #1e293b;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -64,7 +84,9 @@
 }
 .rail-btn.on {
   background: var(--gc);
+  border-color: var(--gc);
   color: #fff;
+  --ic-acc: #bae6fd;
   box-shadow: 0 4px 12px -5px var(--gc);
 }
 .rail-btn.on::before {
@@ -94,10 +116,10 @@
 .fly-btn {
   width: 84px;
   height: 72px;
-  border: 0;
+  border: 1.5px solid #cbd5e1;
   border-radius: 10px;
-  background: transparent;
-  color: var(--dark-3);
+  background: #fff;
+  color: #1e293b;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -112,10 +134,12 @@
 }
 .fly-btn.on {
   background: var(--gc);
+  border-color: var(--gc);
   color: #fff;
+  --ic-acc: #bae6fd;
 }
 
-/* ------------------------------------------------------------------ Karta nástroje + volby (vlevo nahoře na výkresu) */
+/* ------------------------------------------------------------------ Volby nástroje (vlevo nahoře na výkresu) a nástroj v horní liště */
 .tool-head {
   position: absolute;
   top: 12px;
@@ -135,31 +159,48 @@
   position: static;
   max-width: 100%;
 }
-.tool-chip {
+/* aktivní nástroj v horní liště (místo karty na výkresu – přání uživatele 2026-11-21) */
+.tool-badge {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 46px;
-  padding: 0 6px 0 12px;
+  height: 44px;
+  margin: 0 8px;
+  padding: 0 4px 0 4px;
   border-radius: 12px;
   background: var(--gc);
   color: #fff;
-  box-shadow: 0 6px 18px -8px rgba(15, 23, 42, 0.55);
-  max-width: 100%;
+  --ic-acc: #bae6fd;
 }
-.tool-chip b {
-  font-size: 16px;
+.tool-badge.neutral {
+  background: rgba(255, 255, 255, 0.08);
+  --ic-acc: #7dd3fc;
+}
+.tool-badge-ico {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.16);
+  flex: none;
+}
+.tool-badge b {
+  font-size: 15px;
   white-space: nowrap;
 }
-.tool-chip-hint {
+.tool-badge-hint {
+  flex: 1;
+  min-width: 0;
   font-size: 13px;
-  opacity: 0.92;
-  padding-right: 6px;
+  opacity: 0.9;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.tool-chip-x {
+.tool-badge-x {
   width: 36px;
   height: 36px;
   border: 0;
@@ -171,7 +212,7 @@
   cursor: pointer;
   flex: none;
 }
-.tool-chip-x:hover {
+.tool-badge-x:hover {
   background: rgba(255, 255, 255, 0.3);
 }
 /* okno vrstvy pro nástroj leží v toku pod kartou a volbami (nepřekryje je, ať jsou volby jakkoli vysoké) */
@@ -190,6 +231,7 @@
 }
 /* ikona nástroje u hrotu pera / kurzoru (pero visí nad displejem) */
 .pen-tag {
+  --ic-acc: #bae6fd;
   position: absolute;
   top: 0;
   left: 0;
@@ -224,6 +266,7 @@
 .topbar .btn-dark.active {
   background: var(--primary);
   border-color: var(--primary);
+  --ic-acc: #bae6fd;
 }
 .top-icon {
   padding: 0 10px;
@@ -254,6 +297,7 @@
 
 /* ------------------------------------------------------------------ Nabídka „…“ */
 .more-menu {
+  --ic-acc: #0284c7;
   width: 300px;
   max-height: calc(100dvh - 80px);
   overflow-y: auto;
@@ -282,6 +326,7 @@
 }
 .more-action.danger {
   color: var(--danger);
+  --ic-acc: currentColor;
 }
 .more-sep {
   margin: 8px 6px 2px;
@@ -292,4 +337,42 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--muted);
+}
+
+/* ------------------------------------------------------------------ Okno značky: nástroje skici s ikonami */
+.mark-toolbar .btn {
+  gap: 6px;
+}
+.mark-tool.active {
+  background: #7c3aed;
+  border-color: #7c3aed;
+  color: #fff;
+  --ic-acc: #ddd6fe;
+}
+.btn-danger .ico,
+.btn-primary .ico {
+  --ic-acc: currentColor;
+}
+
+/* ------------------------------------------------------------------ Úzký displej (tablet na výšku): horní lišta bez přetečení */
+@media (max-width: 1000px) {
+  .tool-badge-hint {
+    display: none;
+  }
+  .topbar .btn-label {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .tool-badge b {
+    display: none;
+  }
+  .save-status {
+    min-width: 0;
+    font-size: 0;
+  }
+  .save-dot {
+    width: 10px;
+    height: 10px;
+  }
 }

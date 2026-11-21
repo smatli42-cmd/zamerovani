@@ -1,13 +1,15 @@
 /**
  * Značky v půdorysu (core/marks.ts): štítek s barevně odlišeným číslem (barva značky, bílé písmo) a názvem (bílé pole,
- * tmavé písmo) – přání uživatele 2026-11-20; ikona podle obsahu; volitelný směr pohledu (kužel / šipka) pod
+ * tmavé písmo) – přání uživatele 2026-11-20; ikona podle obsahu (fotka / skica / poznámka) v poli mezi číslem a názvem,
+ * kreslená stejně jako ikony ovládání (ui/icons.tsx – stejné obrysy); volitelný směr pohledu (kužel / šipka) pod
  * štítkem až do cíle ve výkresu (mm – při zoomu ukazuje pořád na stejné místo), úchyt na cíli.
  * Štítek má na obrazovce stálou velikost (nezávisí na zoomu).
  */
 import type { Floor, Mark } from '../model/types';
-import { markBoxPx, markCode, markCodePx, markContent, marksOf, MARK_PX } from '../core/marks';
+import { markBoxPx, markCode, markCodePx, markContent, markIconPx, marksOf, MARK_PX } from '../core/marks';
 import { isSelected, type Camera, type Selection } from '../store/store';
 import { toScreen } from './view';
+import { CONTENT_ICONS } from '../ui/iconPaths';
 
 /** Konec směru na obrazovce (px) – úchyt; null, když leží pod štítkem (pak se táhne štítek). Kreslení i zásah (tools/pick.ts). */
 export function markDirHandle(m: Mark, cam: Camera): { x: number; y: number } | null {
@@ -94,6 +96,37 @@ function fitText(ctx: CanvasRenderingContext2D, text: string, x: number, y: numb
   ctx.fillText(text, x, y);
 }
 
+let iconPaths: Map<string, Path2D> | null = null;
+const path2d = (d: string): Path2D => {
+  iconPaths ??= new Map();
+  let p = iconPaths.get(d);
+  if (!p) iconPaths.set(d, (p = new Path2D(d)));
+  return p;
+};
+
+/** Ikona obsahu značky (16 px) se středem v (cx, cy): obrys tmavě, zvýraznění barvou značky. */
+function drawContentIcon(ctx: CanvasRenderingContext2D, kind: 'photo' | 'sketch' | 'text', cx: number, cy: number, color: string): void {
+  if (typeof Path2D === 'undefined') return;
+  const ic = CONTENT_ICONS[kind];
+  const k = 16 / 24;
+  ctx.save();
+  ctx.translate(cx - 12 * k, cy - 12 * k);
+  ctx.scale(k, k);
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = '#1e293b';
+  ctx.stroke(path2d(ic.base));
+  ctx.strokeStyle = color;
+  if (ic.acc) ctx.stroke(path2d(ic.acc));
+  if (ic.circle) {
+    ctx.beginPath();
+    ctx.arc(ic.circle[0], ic.circle[1], ic.circle[2], 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 export function drawMarks(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camera, selection: Selection): void {
   const marks = marksOf(floor);
   // směry pod štítky (žádný kužel nezakryje číslo ani název)
@@ -103,6 +136,7 @@ export function drawMarks(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
     const c = toScreen(m, cam);
     const { w, h } = markBoxPx(m);
     const cw = Math.min(w, markCodePx(m));
+    const iw = markIconPx(m);
     const x = c.x - w / 2;
     const y = c.y - h / 2;
     const r = h / 2;
@@ -133,14 +167,11 @@ export function drawMarks(ctx: CanvasRenderingContext2D, floor: Floor, cam: Came
     fitText(ctx, markCode(m), x + cw / 2, c.y + 0.5, cw, 800);
     if (m.name) {
       ctx.fillStyle = '#0f172a';
-      fitText(ctx, m.name, x + cw + (w - cw) / 2, c.y + 0.5, w - cw, 600);
+      fitText(ctx, m.name, x + cw + iw + (w - cw - iw) / 2, c.y + 0.5, w - cw - iw, 600);
     }
-    // ikona podle obsahu (jen text / skica) na rohu štítku
+    // ikona podle obsahu v poli za číslem (barva značky)
     const content = markContent(m);
-    if (content) {
-      ctx.font = '11px system-ui, sans-serif';
-      ctx.fillText(content === 'photo' ? '📷' : content === 'sketch' ? '✏️' : '📝', x + w - 2, y - 1);
-    }
+    if (content && iw) drawContentIcon(ctx, content, x + cw + iw / 2, c.y, m.color);
     ctx.restore();
     if (selected) drawHandle(ctx, m, cam);
   }

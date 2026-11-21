@@ -31,7 +31,7 @@ export function fitToDrawing(): void {
   const pts = floor ? drawingPoints(floor) : [];
   // Na širokém displeji necháme vpravo místo pro panel vlastností / NumPad
   const reserve = width > 900 ? 330 : 0;
-  // nahoře karta aktivního nástroje a jeho volby (ui/ToolHead.tsx) – výkres pod ně nevede (skutečná výška karty)
+  // nahoře volby aktivního nástroje (ui/ToolHead.tsx) – výkres pod ně nevede (skutečná výška)
   const head = typeof document !== 'undefined' ? document.querySelector('.tool-head') : null;
   const top = head ? Math.min(height / 3, head.getBoundingClientRect().height + 12) : 0;
   store.set({ camera: fitCamera(pts, width, height, 80, reserve, top) });
