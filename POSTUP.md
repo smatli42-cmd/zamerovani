@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-21 (5) – „Značka“ se v aplikaci jmenuje „Poznámka“ (přání uživatele)
+- **Vyzkoušeno uživatelem:** nové ikony, nástroj v horní liště a okno poznámky – vše v pořádku.
+- **Co se změnilo:** všechny texty v aplikaci (tlačítko v liště, nápověda, panel „Poznámka Z1“, okno, potvrzení smazání, hlášení u čísla) říkají Poznámka místo Značka; pole s textem v okně se jmenuje „Text“. V kódu a v dokumentaci zůstává `mark` / značka. Test hlášení duplicitního čísla upraven na nové znění (změna zadání uživatelem).
+- **Viditelně v aplikaci:** v levé liště „Poznámka“, panel „Poznámka Z1“, tlačítko „Text, skica a fotka…“.
+- **Rozhodnuto samostatně:** předpona čísla zůstává Z (Z1, Z2…) – čísla jsou už použitá v projektech; dá se změnit na jednom místě (`MARK_PREFIX`).
+- **Otevřené:** volby nástroje v jednom řádku s ikonami; panely vlastností na karty bez rolování; ikony v panelech, NumPadu a okně vrstev.
+
 ### 2026-11-21 (4) – nové ovládání, krok 2: dvoubarevné ikony, nástroj v horní liště, ikony v okně značky (požadavek uživatele)
 - **Požadavek uživatele:** modernější ikony ve stylu předlohy (obrázek: tmavý obrys, modré zvýraznění, dlaždice); karta nástroje na výkresu zabírá místo – dát ji do horní lišty; stejné ikony v okně značky (kreslení); ikona obsahu značky (skica / fotka) má vypadat hezky – dřív malé emoji přes okraj štítku.
 - **Co se změnilo:** `ui/icons.tsx` – nová dvoubarevná sada (základ `currentColor`, zvýraznění `--ic-acc`; třídy `a`, `af`, `al`), obrysy kreslené i do plátna sdílí `ui/iconPaths.ts`; tlačítka levé lišty a rozbalené řady jako dlaždice s rámečkem, větší ikony; aktivní nástroj s nápovědou a ✕ v horní liště (`ToolBadge`), karta na výkresu zrušena; okno značky – nástroje skici, fotka, zpět, zoom s ikonami, aktivní nástroj skici zvýrazněný; štítek značky – ikona obsahu (fotka / skica / poznámka) v poli mezi číslem a názvem (`markIconPx`, šířka štítku i zásah). Horní lišta se na užším displeji zkrátí (bez nápovědy a popisků tlačítek). Test šířky štítku s ikonou, celkem 1052 + 1 zapsaný nález.

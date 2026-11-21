@@ -30,8 +30,8 @@ export function DeleteConfirm() {
   const label = names.map(m => `${markCode(m)}${m.name ? ` ${m.name}` : ''}`).join(', ');
   return (
     <ConfirmDialog
-      title={ids.length > 1 ? 'Smazat značky?' : 'Smazat značku?'}
-      message={`${label} – smaže se i poznámka a skica. Krok jde vrátit tlačítkem Zpět.`}
+      title={ids.length > 1 ? 'Smazat poznámky?' : 'Smazat poznámku?'}
+      message={`${label} – smaže se i text, skica a fotka. Krok jde vrátit tlačítkem Zpět.`}
       confirmLabel="Smazat"
       danger
       onConfirm={deleteSelection}

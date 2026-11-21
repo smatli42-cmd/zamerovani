@@ -128,7 +128,7 @@ function MarkWindowBody({ id }: { id: string }) {
     const rest = store.floor()?.marks?.[id]?.pages.slice(1) ?? [];
     // zápis se neprovedl (např. zamčená vrstva Popisky) → okno zůstane otevřené, skica se neztratí
     if (!setMarkContent(id, note, [page, ...rest])) {
-      setSaveError(store.get().lockBlock?.text ?? 'Obsah značky se nepodařilo uložit.');
+      setSaveError(store.get().lockBlock?.text ?? 'Obsah poznámky se nepodařilo uložit.');
       return;
     }
     store.set({ markOpen: null });
@@ -321,10 +321,10 @@ function MarkWindowBody({ id }: { id: string }) {
   };
 
   return (
-    <div class="mark-window" role="dialog" aria-label="Značka">
+    <div class="mark-window" role="dialog" aria-label="Poznámka">
       <div class="mark-head">
         <b class="mark-code" style={{ background: mark.color }}>{markCode(mark)}</b>
-        <input type="text" value={nameDraft} placeholder="Název značky (např. Sokl u terasy)" onInput={e => setNameDraft((e.target as HTMLInputElement).value)} onChange={e => updateMark(id, { name: (e.target as HTMLInputElement).value })} />
+        <input type="text" value={nameDraft} placeholder="Název poznámky (např. Sokl u terasy)" onInput={e => setNameDraft((e.target as HTMLInputElement).value)} onChange={e => updateMark(id, { name: (e.target as HTMLInputElement).value })} />
         <button class="btn btn-primary" onClick={close} disabled={!!photoBusy} title={photoBusy ? 'Počkejte, fotka se ukládá' : undefined}>
           <Icon name="check" size={20} />
           Hotovo
@@ -409,7 +409,7 @@ function MarkWindowBody({ id }: { id: string }) {
         }}
       />
       <label class="field mark-note">
-        <span>Poznámka (skladba, materiály, rozměry)</span>
+        <span>Text (skladba, materiály, rozměry)</span>
         <textarea rows={3} value={note} placeholder="např. EPS tl. 160 mm, hydroizolační pás vytažen 150 mm nad terén…" onInput={e => setNote((e.target as HTMLTextAreaElement).value)} />
       </label>
       {photoBusy && <p class="muted small">{photoBusy}</p>}

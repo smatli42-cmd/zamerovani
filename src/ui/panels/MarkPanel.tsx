@@ -3,6 +3,7 @@
  * barva, směr pohledu (kužel / šipka, úhel), otevření okna s poznámkou a skicou, kopie, smazání s potvrzením.
  * Vrstva a přesun do vrstvy jsou dole (LayerField).
  */
+import { Icon } from '../icons';
 import type { Mark } from '../../model/types';
 import { defaultDir, dirAngle, dirDistance, markCode, MARK_COLORS, MARK_PREFIX } from '../../core/marks';
 import { duplicateSelection, setMarkDir, setMarkNumber, updateMark } from '../../store/actions';
@@ -14,9 +15,10 @@ import { NumField, Panel, Seg } from './fields';
 export function MarkPanel({ m }: { m: Mark }) {
   const dir = m.dir ?? { ...defaultDir(m), on: false };
   return (
-    <Panel title={`Značka ${markCode(m)}`} onClose={close}>
+    <Panel title={`Poznámka ${markCode(m)}`} onClose={close}>
       <button class="btn btn-primary btn-lg" style="width:100%" onClick={() => store.set({ markOpen: m.id })}>
-        📝 Poznámka a skica…
+        <Icon name="note" size={22} />
+        Text, skica a fotka…
       </button>
       <label class="field">
         <span>Název (může být prázdný)</span>

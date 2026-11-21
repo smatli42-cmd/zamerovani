@@ -87,9 +87,9 @@ export const TOOL_GROUPS: ToolGroup[] = [
   },
   {
     id: 'mark',
-    name: 'Značka',
+    name: 'Poznámka',
     color: '#7c3aed',
-    tools: [{ id: 'mark', icon: 'mark', label: 'Značka', hint: 'Ťukni – poznámka, skica, fotka', title: 'Značka v půdorysu: ťuknutím založit s dalším číslem; ťuknutím na značku otevřít poznámku a skicu' }]
+    tools: [{ id: 'mark', icon: 'mark', label: 'Poznámka', hint: 'Ťukni – text, skica, fotka', title: 'Poznámka v půdorysu: ťuknutím založit s dalším číslem; ťuknutím na poznámku otevřít text, skicu a fotku' }]
   },
   {
     id: 'draw',

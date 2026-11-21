@@ -101,8 +101,8 @@ export function nextMarkNumber(project: Pick<Project, 'floors'>): number {
 
 /** Ruční změna čísla: kladné celé číslo, které v projektu nemá jiná značka. */
 export function markNumberError(project: Pick<Project, 'floors'>, markId: Id, num: number): string | null {
-  if (!Number.isInteger(num) || num < 1) return 'Číslo značky musí být kladné celé číslo.';
-  if (usedNumbers(project, markId).has(num)) return `Číslo ${MARK_PREFIX}${num} už má jiná značka.`;
+  if (!Number.isInteger(num) || num < 1) return 'Číslo poznámky musí být kladné celé číslo.';
+  if (usedNumbers(project, markId).has(num)) return `Číslo ${MARK_PREFIX}${num} už má jiná poznámka.`;
   return null;
 }
 

@@ -54,7 +54,7 @@ describe('číslování', () => {
   it('ruční změna čísla s kontrolou duplicity (i na jiném podlaží)', () => {
     const a = addMark({ x: 0, y: 0 })!;
     addMark({ x: 1000, y: 0 });
-    expect(setMarkNumber(a, 2)).toContain('už má jiná značka');
+    expect(setMarkNumber(a, 2)).toContain('už má jiná poznámka');
     expect(setMarkNumber(a, 0)).toContain('kladné celé');
     expect(setMarkNumber(a, 7)).toBeNull();
     expect(f().marks![a]!.num).toBe(7);
