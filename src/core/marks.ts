@@ -3,14 +3,14 @@
  * ikona podle obsahu, směr pohledu, obsah skici (guma, prázdnost). Výběr / posun / kopie / mazání / vrstvy jdou
  * přes společná pravidla volných prvků (core/looseElements.ts, core/layers.ts).
  *
- * Číslo: pořadové, unikátní v celém projektu (všechna podlaží), zobrazuje se s předponou `MARK_PREFIX` (Z1, Z2…).
+ * Číslo: pořadové, unikátní v celém projektu (všechna podlaží), zobrazuje se s předponou `MARK_PREFIX` (P1, P2… – poznámka; dříve Z).
  * Smazání značky ostatní nepřečísluje; nová značka dostane číslo o 1 vyšší než nejvyšší v projektu.
  */
 import type { Floor, Id, Mark, MarkDir, MarkDirStyle, MarkPage, Project, Pt } from '../model/types';
 import { newId } from '../model/factory';
 
-/** Předpona čísla značky – JEDINÉ místo (Z1, Z2…). */
-export const MARK_PREFIX = 'Z';
+/** Předpona čísla značky – JEDINÉ místo (P1, P2… – přání uživatele 2026-11-21). */
+export const MARK_PREFIX = 'P';
 
 /** Barvy značky (výchozí první). */
 export const MARK_COLORS = ['#7c3aed', '#dc2626', '#2563eb', '#059669', '#ea580c', '#0f172a'] as const;

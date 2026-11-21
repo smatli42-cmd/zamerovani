@@ -11,7 +11,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Vyzkoušeno uživatelem:** nové ikony, nástroj v horní liště a okno poznámky – vše v pořádku.
 - **Co se změnilo:** všechny texty v aplikaci (tlačítko v liště, nápověda, panel „Poznámka Z1“, okno, potvrzení smazání, hlášení u čísla) říkají Poznámka místo Značka; pole s textem v okně se jmenuje „Text“. V kódu a v dokumentaci zůstává `mark` / značka. Test hlášení duplicitního čísla upraven na nové znění (změna zadání uživatelem).
 - **Viditelně v aplikaci:** v levé liště „Poznámka“, panel „Poznámka Z1“, tlačítko „Text, skica a fotka…“.
-- **Rozhodnuto samostatně:** předpona čísla zůstává Z (Z1, Z2…) – čísla jsou už použitá v projektech; dá se změnit na jednom místě (`MARK_PREFIX`).
+- **Předpona čísla:** na přání uživatele P (P1, P2…) místo Z – jen zobrazení (`MARK_PREFIX`), uložená čísla se nemění, starší projekty ukážou P se stejným číslem.
 - **Otevřené:** volby nástroje v jednom řádku s ikonami; panely vlastností na karty bez rolování; ikony v panelech, NumPadu a okně vrstev.
 
 ### 2026-11-21 (4) – nové ovládání, krok 2: dvoubarevné ikony, nástroj v horní liště, ikony v okně značky (požadavek uživatele)
