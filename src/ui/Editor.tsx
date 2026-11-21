@@ -15,6 +15,7 @@ import { ToolOptions } from './ToolOptions';
 import { SidePanel } from './panels/SidePanel';
 import { Toolbar } from './Toolbar';
 import { TopBar } from './TopBar';
+import { ToolFrame, ToolHead } from './ToolHead';
 import { fitToDrawing } from './viewActions';
 
 export function Editor() {
@@ -42,8 +43,12 @@ export function Editor() {
         <Toolbar />
         <div class="canvas-wrap">
           <canvas ref={canvasRef} class="plan-canvas" />
-          <ToolOptions />
-          {layersOpen && <LayersPanel mode={layersOpen} />}
+          <ToolFrame />
+          <ToolHead>
+            <ToolOptions />
+            {layersOpen === 'tool' && <LayersPanel mode="tool" />}
+          </ToolHead>
+          {layersOpen === 'top' && <LayersPanel mode="top" />}
           <SidePanel />
           <NumPad />
           <LockNotice />

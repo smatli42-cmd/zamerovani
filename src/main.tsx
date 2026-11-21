@@ -11,6 +11,7 @@ import { useStore } from './store/useStore';
 import { Editor } from './ui/Editor';
 import { ProjectList } from './ui/ProjectList';
 import './styles.css';
+import './ui/chrome.css';
 
 function App() {
   const screen = useStore(s => s.screen);

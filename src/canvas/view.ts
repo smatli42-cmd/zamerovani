@@ -21,9 +21,10 @@ export function zoomAt(cam: Camera, screen: Pt, factor: number): Camera {
 }
 
 /** Kamera, která zobrazí zadané body na celou plochu. `rightReserve` = šířka (px) vpravo zakrytá panelem. */
-export function fitCamera(pts: Pt[], width: number, height: number, pad = 90, rightReserve = 0): Camera {
+export function fitCamera(pts: Pt[], width: number, height: number, pad = 90, rightReserve = 0, topReserve = 0): Camera {
   width -= rightReserve;
-  if (pts.length === 0) return { x: width / 2, y: height / 2, zoom: 0.15 };
+  height -= topReserve;
+  if (pts.length === 0) return { x: width / 2, y: topReserve + height / 2, zoom: 0.15 };
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
@@ -39,5 +40,5 @@ export function fitCamera(pts: Pt[], width: number, height: number, pad = 90, ri
   const zoom = Math.max(MIN_ZOOM, Math.min(1.5, Math.min((width - pad * 2) / w, (height - pad * 2) / h)));
   const cx = (minX + maxX) / 2;
   const cy = (minY + maxY) / 2;
-  return { zoom, x: width / 2 - cx * zoom, y: height / 2 - cy * zoom };
+  return { zoom, x: width / 2 - cx * zoom, y: topReserve + height / 2 - cy * zoom };
 }

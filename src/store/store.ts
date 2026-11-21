@@ -115,6 +115,8 @@ export interface Settings {
   penWidth: number;
   /** Pero: od ruky nebo tvar (čára, obdélník, kruh, oblouk) – vždy ruční tah (core/strokes.ts). */
   penShape: PenShape;
+  /** Levá lišta: naposledy použitý nástroj ve skupině (ui/toolGroups.ts) – tlačítko skupiny ho zapne jedním ťuknutím. */
+  lastTools?: Partial<Record<string, ToolId>>;
 }
 
 export type SaveStatus = 'saved' | 'saving' | 'dirty' | 'error';
@@ -154,6 +156,8 @@ export interface AppState {
   /** Otevřené okno Vrstvy: 'top' z horní lišty (správa, i systémové vrstvy, vpravo nahoře), 'tool' z lišty
    *  nástroje (volba aktivní vrstvy, jen vlastní vrstvy, vlevo pod lištou nástroje). */
   layersOpen: false | 'top' | 'tool';
+  /** Rozbalená řada nástrojů skupiny levé lišty (ui/toolGroups.ts) – id skupiny. */
+  toolGroupOpen: string | null;
   /** Otevřené okno značky (poznámka + skica, ui/MarkWindow.tsx) – id značky. */
   markOpen: Id | null;
   /** Čeká potvrzení smazání výběru (výběr obsahuje značku – ZNACKY-POZNAMKY-DETAILY.md; ui/deleteConfirm.tsx). */
@@ -207,6 +211,7 @@ class Store {
     stairAppend: null,
     lockBlock: null,
     layersOpen: false,
+    toolGroupOpen: null,
     markOpen: null,
     deleteConfirm: false
   };

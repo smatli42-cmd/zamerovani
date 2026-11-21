@@ -1,0 +1,295 @@
+/*
+ * Ovládání aplikace (návrh navrh-ovladani/index.html, rozhodnutí uživatele 2026-11-21): levá lišta po skupinách,
+ * karta aktivního nástroje, rámeček výkresu, ikona u hrotu pera, horní lišta s ikonami a nabídka „…“.
+ * Barva skupiny přichází jako proměnná --gc (ui/toolGroups.ts).
+ */
+.ico {
+  flex: none;
+  display: block;
+}
+
+/* ------------------------------------------------------------------ Levá lišta */
+.toolbar.rail {
+  width: 84px;
+  overflow: visible;
+  padding: 8px 6px;
+  gap: 4px;
+  position: relative;
+  z-index: 15;
+}
+.rail-item {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 50px;
+  max-height: 76px;
+  display: flex;
+}
+.rail-btn {
+  position: relative;
+  flex: 1;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--dark-3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  padding: 0 2px;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.rail-btn:hover {
+  background: #eef2f6;
+}
+.rail-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.1;
+  text-align: center;
+}
+/* trojúhelníček = skupina má další nástroje */
+.rail-btn.more::after {
+  content: '';
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  border: 4.5px solid transparent;
+  border-right-color: currentColor;
+  border-bottom-color: currentColor;
+  opacity: 0.55;
+}
+.rail-btn.on {
+  background: var(--gc);
+  color: #fff;
+  box-shadow: 0 4px 12px -5px var(--gc);
+}
+.rail-btn.on::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 12px;
+  bottom: 12px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: var(--gc);
+}
+.rail-fly {
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 14px 32px -12px rgba(15, 23, 42, 0.45);
+  z-index: 30;
+}
+.fly-btn {
+  width: 84px;
+  height: 72px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--dark-3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fly-btn:hover {
+  background: #eef2f6;
+}
+.fly-btn.on {
+  background: var(--gc);
+  color: #fff;
+}
+
+/* ------------------------------------------------------------------ Karta nástroje + volby (vlevo nahoře na výkresu) */
+.tool-head {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  max-width: calc(100% - 24px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  z-index: 4;
+  pointer-events: none;
+}
+.tool-head > * {
+  pointer-events: auto;
+}
+.tool-head .tool-options {
+  position: static;
+  max-width: 100%;
+}
+.tool-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 6px 0 12px;
+  border-radius: 12px;
+  background: var(--gc);
+  color: #fff;
+  box-shadow: 0 6px 18px -8px rgba(15, 23, 42, 0.55);
+  max-width: 100%;
+}
+.tool-chip b {
+  font-size: 16px;
+  white-space: nowrap;
+}
+.tool-chip-hint {
+  font-size: 13px;
+  opacity: 0.92;
+  padding-right: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tool-chip-x {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  cursor: pointer;
+  flex: none;
+}
+.tool-chip-x:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+/* okno vrstvy pro nástroj leží v toku pod kartou a volbami (nepřekryje je, ať jsou volby jakkoli vysoké) */
+.tool-head .layers-panel {
+  position: static;
+  max-height: 60vh;
+}
+
+/* rámeček výkresu v barvě skupiny – aktivní nástroj vidět i koutkem oka */
+.tool-frame {
+  position: absolute;
+  inset: 0;
+  border: 4px solid var(--gc);
+  pointer-events: none;
+  z-index: 3;
+}
+/* ikona nástroje u hrotu pera / kurzoru (pero visí nad displejem) */
+.pen-tag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--gc);
+  color: #fff;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 6;
+  box-shadow: 0 3px 8px -3px rgba(15, 23, 42, 0.5);
+}
+
+/* ------------------------------------------------------------------ Horní lišta */
+.topbar {
+  gap: 6px;
+}
+.topbar .btn-dark {
+  background: transparent;
+  border-color: transparent;
+}
+.topbar .btn-dark:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+.topbar .btn-dark.boxed {
+  background: var(--dark-2);
+  border-color: var(--dark-3);
+}
+.topbar .btn-dark.active {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+.top-icon {
+  padding: 0 10px;
+  min-width: var(--touch);
+}
+.top-sep {
+  width: 1px;
+  height: 26px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0 2px;
+}
+.floor-switch {
+  color: #cbd5e1;
+}
+.save-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.save-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  display: inline-block;
+}
+
+/* ------------------------------------------------------------------ Nabídka „…“ */
+.more-menu {
+  width: 300px;
+  max-height: calc(100dvh - 80px);
+  overflow-y: auto;
+  z-index: 40;
+}
+.more-actions {
+  display: grid;
+  gap: 2px;
+}
+.more-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--touch);
+  padding: 0 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--dark);
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+.more-action:hover {
+  background: #eef2f6;
+}
+.more-action.danger {
+  color: var(--danger);
+}
+.more-sep {
+  margin: 8px 6px 2px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}

@@ -1,0 +1,482 @@
+<title>Ergonomie Zaměřování</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&family=Space+Grotesk:wght@600;700&display=swap">
+<style>
+/* Rozvržení: úzký sloupec textu + široké pole s náhledem obrazovky tabletu 1280 × 800 (měřítko podle šířky). */
+:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --fg: #16202b;
+  --muted: #5a6877;
+  --line: #d9e0e7;
+  --accent: #c2410c;
+  --font-display: 'Space Grotesk', 'IBM Plex Sans', system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+  /* barvy skupin nástrojů (v aplikaci stejné v obou motivech – jsou to signály) */
+  --g-select: #334155;
+  --g-walls: #c2410c;
+  --g-open: #0e7490;
+  --g-dims: #be185d;
+  --g-room: #15803d;
+  --g-mark: #7c3aed;
+  --g-draw: #1d4ed8;
+  --g-pen: #a16207;
+  --g-items: #475569;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f151b; --surface: #17212b; --fg: #e6edf3; --muted: #9aa8b6; --line: #2a3744; --accent: #fb7c45; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f151b; --surface: #17212b; --fg: #e6edf3; --muted: #9aa8b6; --line: #2a3744; --accent: #fb7c45; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 44px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.1; }
+h2 { font-size: 23px; }
+h3 { font-size: 16px; }
+p { margin: 0; }
+.prose { max-width: 68ch; display: grid; gap: 10px; }
+.lead { color: var(--muted); font-size: 17px; }
+.eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; }
+section { display: grid; gap: 16px; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.card h3 { display: flex; align-items: center; gap: 8px; }
+.card .muted, .muted { color: var(--muted); }
+.bad { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.bad li { padding-left: 22px; position: relative; }
+.bad li::before { content: ''; position: absolute; left: 4px; top: 9px; width: 9px; height: 9px; border-radius: 2px; background: var(--accent); }
+code, .mono { font-family: var(--font-mono); font-size: 0.9em; }
+.ico { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* ---------- náhled obrazovky ---------- */
+.stage-holder { width: 100%; overflow: hidden; border-radius: 14px; border: 1px solid var(--line); background: #cfd6dd; }
+.stage { width: 1280px; height: 800px; transform-origin: 0 0; position: relative; font-family: var(--font-body); color: #16202b; background: #fbfcfd; overflow: hidden; }
+.m-top { position: absolute; inset: 0 0 auto 0; height: 56px; background: #16202b; color: #e8eef4; display: flex; align-items: center; gap: 6px; padding: 0 10px; }
+.m-btn { height: 40px; min-width: 40px; padding: 0 10px; border-radius: 8px; border: 0; background: transparent; color: inherit; display: inline-flex; align-items: center; gap: 8px; font: 500 14px var(--font-body); cursor: pointer; }
+.m-btn:hover { background: rgba(255,255,255,0.08); }
+.m-btn.boxed { background: rgba(255,255,255,0.07); }
+.m-btn .ico { width: 22px; height: 22px; }
+.m-sep { width: 1px; height: 26px; background: rgba(255,255,255,0.15); margin: 0 4px; }
+.m-title { font: 600 15px var(--font-body); padding: 0 4px; }
+.m-floor { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; border-radius: 8px; background: rgba(255,255,255,0.1); font: 600 14px var(--font-body); }
+.m-saved { font-size: 13px; color: #86efac; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px; }
+.m-saved i { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; }
+.m-rail { position: absolute; top: 56px; bottom: 0; left: 0; width: 84px; background: #ffffff; border-right: 1px solid #dfe5eb; display: flex; flex-direction: column; padding: 8px 6px; gap: 4px; }
+.r-btn { position: relative; height: 72px; border: 0; border-radius: 12px; background: transparent; color: #334155; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font: 600 11.5px var(--font-body); cursor: pointer; }
+.r-btn .ico { width: 30px; height: 30px; stroke-width: 1.7; }
+.r-btn:hover { background: #eef2f6; }
+.r-btn.more::after { content: ''; position: absolute; right: 7px; bottom: 7px; border: 5px solid transparent; border-right-color: currentColor; border-bottom-color: currentColor; opacity: 0.55; border-radius: 1px; }
+.r-btn.on { background: var(--gc); color: #fff; box-shadow: 0 2px 0 rgba(0,0,0,0.12) inset, 0 4px 12px -4px var(--gc); }
+.r-btn.on::before { content: ''; position: absolute; left: -6px; top: 14px; bottom: 14px; width: 4px; border-radius: 0 4px 4px 0; background: var(--gc); }
+.r-sp { flex: 1; }
+.m-canvas { position: absolute; top: 56px; left: 84px; right: 0; bottom: 0; background-color: #fbfcfd;
+  background-image: linear-gradient(#edf1f5 1px, transparent 1px), linear-gradient(90deg, #edf1f5 1px, transparent 1px); background-size: 40px 40px; }
+.m-frame { position: absolute; inset: 0; pointer-events: none; border: 4px solid var(--gc); transition: border-color 0.15s; }
+.m-frame.none { border-color: transparent; }
+.m-chip { position: absolute; left: 14px; top: 12px; display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 8px 0 10px; border-radius: 12px; background: var(--gc); color: #fff; box-shadow: 0 6px 18px -8px rgba(0,0,0,0.45); font: 700 17px var(--font-body); cursor: pointer; }
+.m-chip .ico { width: 28px; height: 28px; }
+.m-chip small { font: 500 13px var(--font-body); opacity: 0.92; max-width: 330px; }
+.m-chip .x { margin-left: 6px; width: 36px; height: 36px; border-radius: 9px; display: grid; place-items: center; background: rgba(255,255,255,0.16); }
+.m-chip .x .ico { width: 20px; height: 20px; }
+.m-ctx { position: absolute; left: 14px; right: 14px; top: 74px; display: flex; gap: 8px; align-items: center; height: 48px; padding: 0 8px; border-radius: 12px; background: #ffffff; border: 1px solid #dfe5eb; box-shadow: 0 4px 14px -10px rgba(0,0,0,0.4); font-size: 13.5px; white-space: nowrap; overflow: hidden; }
+.m-ctx[hidden] { display: none !important; }
+.seg { display: inline-flex; border: 1px solid #cfd8e1; border-radius: 9px; overflow: hidden; }
+.seg span { padding: 6px 11px; font-weight: 600; color: #334155; }
+.seg span.on { background: #16202b; color: #fff; }
+.ctx-l { color: #5a6877; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; margin-left: 6px; }
+.m-fly { position: absolute; left: 90px; display: flex; gap: 4px; padding: 6px; background: #ffffff; border: 1px solid #dfe5eb; border-radius: 14px; box-shadow: 0 14px 32px -12px rgba(0,0,0,0.35); z-index: 5; }
+.m-fly[hidden] { display: none !important; }
+.f-btn { width: 84px; height: 72px; border: 0; border-radius: 10px; background: transparent; color: #334155; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; font: 600 11.5px var(--font-body); cursor: pointer; }
+.f-btn .ico { width: 28px; height: 28px; stroke-width: 1.7; }
+.f-btn:hover { background: #eef2f6; }
+.f-btn.on { background: var(--gc); color: #fff; }
+.m-panel { position: absolute; top: 56px; right: 0; bottom: 0; width: 340px; background: #fff; border-left: 1px solid #dfe5eb; display: flex; flex-direction: column; }
+.m-panel[hidden] { display: none !important; }
+.p-head { display: flex; align-items: center; gap: 10px; padding: 14px 14px 10px; }
+.p-head .badge { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: #e9f6ee; color: var(--g-room); }
+.p-head b { font: 700 16px var(--font-body); display: block; }
+.p-head span { font-size: 12.5px; color: #5a6877; }
+.p-tabs { display: flex; gap: 4px; padding: 0 14px; border-bottom: 1px solid #e5eaef; }
+.p-tabs span { padding: 9px 10px; font: 600 13px var(--font-body); color: #5a6877; border-bottom: 2px solid transparent; }
+.p-tabs span.on { color: #16202b; border-bottom-color: #16202b; }
+.p-body { padding: 14px; display: grid; gap: 12px; align-content: start; flex: 1; }
+.fld { display: grid; gap: 4px; font-size: 12px; color: #5a6877; font-weight: 600; }
+.fld div { height: 40px; border: 1px solid #cfd8e1; border-radius: 9px; display: flex; align-items: center; padding: 0 11px; font: 600 15px var(--font-body); color: #16202b; }
+.fld .big { font-family: var(--font-mono); font-size: 17px; }
+.p-foot { display: flex; gap: 8px; padding: 12px 14px; border-top: 1px solid #e5eaef; }
+.p-foot span { flex: 1; height: 42px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font: 600 13.5px var(--font-body); background: #eef2f6; color: #16202b; }
+.p-foot span.del { background: #fdecec; color: #b42318; }
+.p-foot .ico { width: 19px; height: 19px; }
+.m-hover { position: absolute; display: flex; align-items: center; gap: 6px; pointer-events: none; }
+.m-hover .dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--gc); background: #fff; }
+.m-hover .tag { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: var(--gc); color: #fff; }
+.m-hover .tag .ico { width: 20px; height: 20px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13.5px; color: var(--muted); }
+.legend b { color: var(--fg); }
+.hint { font-size: 13.5px; color: var(--muted); }
+
+/* ---------- ikony ---------- */
+.iconset { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+.ic { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 8px 10px; display: grid; justify-items: center; gap: 8px; text-align: center; min-width: 0; }
+.ic .ico { width: 40px; height: 40px; stroke-width: 1.6; color: var(--fg); }
+.ic span { font-size: 12.5px; font-weight: 600; line-height: 1.25; }
+.ic small { font-size: 11px; color: var(--muted); }
+.ic.tool .ico { color: var(--c); }
+.sizes { display: flex; flex-wrap: wrap; gap: 18px; align-items: end; color: var(--fg); }
+.sizes div { display: grid; justify-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.rules { display: grid; gap: 10px; counter-reset: r; }
+.rules li { list-style: none; display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: start; }
+.rules li::before { counter-increment: r; content: counter(r); width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: var(--fg); color: var(--bg); font: 700 13px var(--font-display); }
+.rules ul { margin: 0; padding: 0; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 14px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+td .gdot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; vertical-align: 1px; }
+.tools-in { display: flex; flex-wrap: wrap; gap: 6px; }
+.tools-in span { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px 3px 5px; border-radius: 7px; background: var(--bg); border: 1px solid var(--line); font-size: 13px; }
+.tools-in span.first { border-color: currentColor; font-weight: 600; }
+.tools-in .ico { width: 18px; height: 18px; }
+.q { display: grid; gap: 4px; }
+.q b { font-weight: 600; }
+@media (max-width: 640px) { body { font-size: 14.5px; } h2 { font-size: 20px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+button:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- nástroje -->
+    <symbol id="i-select" viewBox="0 0 24 24"><path d="M5.5 3.5l12.5 7-5.4 1.5 3.2 5.8-2.3 1.3-3.2-5.8L6.5 17z"/></symbol>
+    <symbol id="i-wall" viewBox="0 0 24 24"><path d="M2.5 8h19M2.5 16h19M5 16l4-8M10 16l4-8M15 16l4-8"/></symbol>
+    <symbol id="i-bump" viewBox="0 0 24 24"><path d="M2.5 17h19M2.5 11h5V6.5h9V11h5"/><path d="M7.5 11h9" stroke-dasharray="1.6 2.4"/></symbol>
+    <symbol id="i-trim" viewBox="0 0 24 24"><path d="M5 21V5h16M9 21V9h12"/><circle cx="5" cy="5" r="1.6"/></symbol>
+    <symbol id="i-split" viewBox="0 0 24 24"><path d="M2.5 8h7M14.5 8h7M2.5 16h7M14.5 16h7M9.5 8v8M14.5 8v8"/><path d="M12 3.5v17" stroke-dasharray="2 2.2"/></symbol>
+    <symbol id="i-door" viewBox="0 0 24 24"><path d="M2 19h4M18 19h4M6 19V5.5"/><path d="M6 5.5A13.5 13.5 0 0 1 18.5 19" stroke-dasharray="2 2"/><path d="M6 19h12"/></symbol>
+    <symbol id="i-window" viewBox="0 0 24 24"><path d="M2 8.5h4M2 15.5h4M18 8.5h4M18 15.5h4M6 8.5h12v7H6zM6 12h12"/></symbol>
+    <symbol id="i-opening" viewBox="0 0 24 24"><path d="M2 8.5h5.5v7H2M22 8.5h-5.5v7H22"/><path d="M9.5 12h5" stroke-dasharray="1.5 2"/></symbol>
+    <symbol id="i-niche" viewBox="0 0 24 24"><path d="M2.5 7.5h19M2.5 16.5h5.5v-4.5h8v4.5h5.5"/></symbol>
+    <symbol id="i-room" viewBox="0 0 24 24"><path d="M3.5 3.5h17v17h-17z"/><path d="M7.5 9.5h9M7.5 13h6M7.5 16.5h4"/></symbol>
+    <symbol id="i-mark" viewBox="0 0 24 24"><path d="M4 3.5h12a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H4z"/><path d="M8 7.5h6M8 11.5l-3.5 9M12 11.5l3.5 9"/></symbol>
+    <symbol id="i-dim" viewBox="0 0 24 24"><path d="M3 14.5h18M3 10v9M21 10v9M2 16.5l2-4M20 16.5l2-4M9 8.5h6"/></symbol>
+    <symbol id="i-text" viewBox="0 0 24 24"><path d="M5.5 6V4.5h13V6M12 4.5v15M9 19.5h6"/></symbol>
+    <symbol id="i-leader" viewBox="0 0 24 24"><path d="M4 20l8.5-8.5h8.5M4 20l1.2-4.6M4 20l4.6-1.2M13.5 7.5h7"/></symbol>
+    <symbol id="i-line" viewBox="0 0 24 24"><path d="M6 18L18 6"/><circle cx="5" cy="19" r="1.8"/><circle cx="19" cy="5" r="1.8"/></symbol>
+    <symbol id="i-double" viewBox="0 0 24 24"><path d="M3.5 15.5L15.5 3.5M8.5 20.5l12-12"/></symbol>
+    <symbol id="i-rect" viewBox="0 0 24 24"><path d="M3.5 6h17v12h-17z"/></symbol>
+    <symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="0.8"/></symbol>
+    <symbol id="i-arc" viewBox="0 0 24 24"><path d="M4 18a8.5 8.5 0 0 1 16 0"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></symbol>
+    <symbol id="i-cut" viewBox="0 0 24 24"><path d="M3.5 20.5l17-17M3.5 3.5l7.5 7.5"/><path d="M13 13l7.5 7.5" stroke-dasharray="1.6 2.4"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="M15 4.5l4.5 4.5L9 19.5H4.5V15z"/><path d="M12.5 7l4.5 4.5"/></symbol>
+    <symbol id="i-eraser" viewBox="0 0 24 24"><path d="M9 20h11M5.2 14.8l8.3-8.3a2 2 0 0 1 2.8 0l2.5 2.5a2 2 0 0 1 0 2.8L12 18.6 9.5 20H8z"/><path d="M9 11l5 5"/></symbol>
+    <symbol id="i-stair" viewBox="0 0 24 24"><path d="M6 3.5h12v17H6zM6 8h12M6 12.5h12M6 17h12"/><path d="M12 18.5V5.5M10 7.5l2-2 2 2"/></symbol>
+    <symbol id="i-items" viewBox="0 0 24 24"><path d="M4 9.5h16v10H4z"/><path d="M7 9.5V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3.5"/><circle cx="12" cy="14.5" r="2.4"/></symbol>
+    <!-- akce -->
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3.5l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+    <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/><path d="M9 9h6v6H9z"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+    <symbol id="i-backup" viewBox="0 0 24 24"><path d="M12 3.5v11M7.5 10l4.5 4.5 4.5-4.5M4 17.5v3h16v-3"/></symbol>
+    <symbol id="i-export" viewBox="0 0 24 24"><path d="M13.5 3.5H6v17h12V8z"/><path d="M13.5 3.5V8H18M9 14h6M12.5 11.5L15 14l-2.5 2.5"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18.5" cy="12" r="1.3"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M14.5 5l-7 7 7 7"/></symbol>
+    <symbol id="i-floor" viewBox="0 0 24 24"><path d="M5 20.5V4h14v16.5M3 20.5h18M5 12h14M9 8h2M13 8h2M9 16h2M13 16h2"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><path d="M6 11h12v9.5H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><path d="M8.5 8.5h11v11h-11z"/><path d="M15.5 5.5v-1h-11v11h1"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 6.5h16M9.5 6.5V4h5v2.5M6 6.5l1 13.5h10l1-13.5M10 10.5v6M14 10.5v6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M3.5 8h4l1.5-2.5h6L16.5 8h4v11.5h-17z"/><circle cx="12" cy="13.5" r="3.3"/></symbol>
+  </defs>
+</svg>
+
+<main class="wrap">
+  <header class="prose">
+    <span class="eyebrow">Návrh ovládání · tablet 1280 × 800 · S-Pen</span>
+    <h1>Ergonomie Zaměřování</h1>
+    <p class="lead">Jedna lišta se skupinami nástrojů místo 23 tlačítek pod sebou, aktivní nástroj vidět na třech místech najednou a jednotná sada čárových ikon kreslená jako značky z půdorysu.</p>
+  </header>
+
+  <section>
+    <h2>Co dnes nefunguje</h2>
+    <ul class="bad">
+      <li>Levá lišta má 23 nástrojů. Na tabletu se vejde asi polovina, zbytek je potřeba vyrolovat.</li>
+      <li>Aktivní nástroj má jen světlé podbarvení jednoho tlačítka. Při práci perem do výkresu se lišty nedíváte, takže kliknete s jiným nástrojem, než myslíte.</li>
+      <li>Ikony jsou směs emoji (🚪 🪟 🪜), znaků (⌐ ◫ ═) a barev, každá v jiném stylu a velikosti.</li>
+      <li>Volby nástroje se zalamují do dvou řádků a překrývají výkres, panel vlastností se u delšího obsahu roluje.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="prose">
+      <h2>Náhled obrazovky</h2>
+      <p class="hint">Je to klikací maketa, ne aplikace. Ťukněte na nástroj v levé liště. Druhé ťuknutí na skupinu (tlačítko s trojúhelníčkem) otevře její nástroje vedle lišty. Barevná karta vlevo nahoře, rámeček výkresu a značka u hrotu pera ukazují aktivní nástroj, křížek na kartě vrátí Vybrat.</p>
+    </div>
+    <div class="stage-holder" id="holder">
+      <div class="stage" id="stage">
+        <div class="m-top">
+          <button class="m-btn" type="button"><svg class="ico"><use href="#i-back"/></svg>Projekty</button>
+          <span class="m-sep"></span>
+          <span class="m-title">RD Novákovi</span>
+          <span class="m-floor"><svg class="ico" style="width:18px;height:18px"><use href="#i-floor"/></svg>1.NP ▾</span>
+          <span style="flex:1"></span>
+          <button class="m-btn boxed" type="button" title="Zpět"><svg class="ico"><use href="#i-undo"/></svg></button>
+          <button class="m-btn boxed" type="button" title="Vpřed"><svg class="ico"><use href="#i-redo"/></svg></button>
+          <span class="m-sep"></span>
+          <button class="m-btn" type="button"><svg class="ico"><use href="#i-layers"/></svg>Vrstvy</button>
+          <button class="m-btn" type="button"><svg class="ico"><use href="#i-fit"/></svg>Celý výkres</button>
+          <button class="m-btn" type="button"><svg class="ico"><use href="#i-export"/></svg>Výstupy</button>
+          <button class="m-btn" type="button" title="Další: nastavení, záloha, údaje projektu, podlaží"><svg class="ico"><use href="#i-more"/></svg></button>
+          <span class="m-saved"><i></i>Uloženo</span>
+        </div>
+
+        <nav class="m-rail" id="rail" aria-label="Nástroje"></nav>
+
+        <div class="m-canvas" id="canvas">
+          <svg width="100%" height="100%" viewBox="0 0 1196 744" style="position:absolute;inset:0">
+            <g fill="#d5dbe1" stroke="#1f2933" stroke-width="1.4">
+              <path d="M300 220h560v24H324v286h-24z M860 220h24v334H300v-24h560z" fill-rule="evenodd"/>
+            </g>
+            <path d="M300 220h584v334H300z" fill="none" stroke="#1f2933" stroke-width="1.4"/>
+            <path d="M324 244h536v286H324z" fill="none" stroke="#1f2933" stroke-width="1.4"/>
+            <rect x="470" y="219" width="120" height="26" fill="#fbfcfd" stroke="#1f2933" stroke-width="1.2"/>
+            <path d="M470 232h120" stroke="#1f2933" stroke-width="1"/>
+            <rect x="640" y="529" width="80" height="26" fill="#fbfcfd"/>
+            <path d="M640 529v26M720 529v26M640 529V449" stroke="#1f2933" stroke-width="1.4"/>
+            <path d="M640 449A80 80 0 0 1 720 529" fill="none" stroke="#1f2933" stroke-width="1" stroke-dasharray="4 4"/>
+            <g stroke="#475569" stroke-width="1" font-family="IBM Plex Mono, monospace" font-size="13" fill="#16202b">
+              <path d="M324 190h536M324 182v16M860 182v16"/>
+              <rect x="560" y="180" width="64" height="20" rx="4" fill="#fff"/>
+              <text x="592" y="195" text-anchor="middle" stroke="none">4000</text>
+              <path d="M914 244v286M906 244h16M906 530h16"/>
+              <rect x="896" y="377" width="36" height="20" rx="4" fill="#fff"/>
+              <text x="914" y="392" text-anchor="middle" stroke="none" font-size="12">3000</text>
+            </g>
+            <g font-family="IBM Plex Sans, sans-serif" text-anchor="middle">
+              <rect x="532" y="350" width="120" height="58" rx="7" fill="#fff" stroke="#94a3b8"/>
+              <text x="592" y="370" font-size="13.5" font-weight="700" fill="#16202b">01 Kuchyň</text>
+              <text x="592" y="386" font-size="11.5" fill="#475569">sv.v. 2700</text>
+              <text x="592" y="401" font-size="11.5" font-weight="600" fill="#15803d">12,00 m²</text>
+            </g>
+            <g>
+              <path d="M392 300l-34 70h68z" fill="rgba(124,58,237,0.14)" stroke="#7c3aed" stroke-width="1" stroke-dasharray="4 3"/>
+              <rect x="356" y="282" width="96" height="24" rx="6" fill="#fff" stroke="#7c3aed" stroke-width="1.5"/>
+              <rect x="356" y="282" width="30" height="24" rx="6" fill="#7c3aed"/>
+              <text x="371" y="298" font-family="IBM Plex Sans, sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">Z1</text>
+              <text x="419" y="298" font-family="IBM Plex Sans, sans-serif" font-size="12" font-weight="600" fill="#16202b" text-anchor="middle">Sokl</text>
+            </g>
+          </svg>
+          <div class="m-frame" id="frame"></div>
+          <div class="m-chip" id="chip" role="button" tabindex="0"></div>
+          <div class="m-ctx" id="ctx"></div>
+          <div class="m-hover" id="hover" style="left:760px;top:330px"><span class="dot"></span><span class="tag" id="hoverTag"></span></div>
+        </div>
+        <div class="m-fly" id="fly" hidden></div>
+
+        <aside class="m-panel" id="panel" hidden>
+          <div class="p-head">
+            <span class="badge"><svg class="ico"><use href="#i-room"/></svg></span>
+            <div><b>Místnost 01 · Kuchyň</b><span>vrstva Popisky</span></div>
+          </div>
+          <div class="p-tabs"><span class="on">Údaje</span><span>Výšky</span><span>Poznámka</span></div>
+          <div class="p-body">
+            <div class="fld">Název<div>Kuchyň</div></div>
+            <div class="fld">Číslo<div>01</div></div>
+            <div class="fld">Světlá plocha<div class="big">12,00 m²</div></div>
+            <div class="fld">Světlá výška<div class="big">2700 mm</div></div>
+          </div>
+          <div class="p-foot">
+            <span><svg class="ico"><use href="#i-copy"/></svg>Kopie</span>
+            <span><svg class="ico"><use href="#i-lock"/></svg>Kóty</span>
+            <span class="del"><svg class="ico"><use href="#i-trash"/></svg>Smazat</span>
+          </div>
+        </aside>
+      </div>
+    </div>
+    <div class="legend"><span><b>Vlevo</b> 9 tlačítek, vejdou se bez rolování</span><span><b>Nahoře</b> akce projektu, méně časté pod „…“</span><span><b>Na výkresu</b> karta nástroje a jeho volby v jednom řádku</span><span><b>Vpravo</b> vlastnosti vybraného prvku (v náhledu u Vybrat)</span></div>
+  </section>
+
+  <section>
+    <h2>Pravidla konceptu</h2>
+    <ol class="rules">
+      <li><div><b>Nic se neroluje.</b> Levá lišta má nejvýš 9 tlačítek po 72 px, horní lišta jeden řádek, volby nástroje jeden řádek (co se nevejde, jde pod „Další ▾“). Panel vlastností se dělí na karty (Údaje / Rozměry / Poznámka) a tlačítka Kopie a Smazat má vždy dole.</div></li>
+      <li><div><b>Nejčastější nástroj na jedno ťuknutí, ostatní na dvě.</b> Vybrat, Místnost a Značka jsou samostatná tlačítka. Skupina (Stěny, Otvory, Kóty, Kresba, Pero, Prvky) ukazuje naposledy použitý nástroj, takže ťuknutí ho rovnou zapne. Druhé ťuknutí na už aktivní skupinu, nebo podržení, otevře vedle lišty všechny její nástroje.</div></li>
+      <li><div><b>Aktivní nástroj vidět na první pohled, třikrát.</b> Plné tlačítko v barvě skupiny, barevná karta nástroje vlevo nahoře na výkresu s krátkou nápovědou a barevný rámeček kolem celého výkresu. Rámeček je vidět i koutkem oka, když se díváte jen na hrot pera. Ve Vybrat rámeček není, takže rozdíl „kreslím / jen vybírám“ je hned jasný.</div></li>
+      <li><div><b>Značka u hrotu pera.</b> Když S-Pen visí nad displejem, u hrotu se ukáže malá ikona nástroje v jeho barvě. Ještě před dotykem tak víte, co se stane.</div></li>
+      <li><div><b>Návrat do Vybrat je vždy po ruce.</b> Křížek na kartě nástroje, klávesa Esc nebo ťuknutí dvěma prsty do prázdna. Posouvání výkresu prstem funguje v každém nástroji, takže samostatný nástroj Posun odpadá.</div></li>
+      <li><div><b>Jedna sada ikon.</b> Čárové ikony na mřížce 24 px, tloušťka čáry 1,8, zaoblené konce, barva podle skupiny. Stavební prvky jsou kreslené jako jejich značka v půdorysu (stěna se šrafou, dveře s obloukem otevírání, okno se třemi čarami), takže ikona odpovídá tomu, co se nakreslí.</div></li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="prose">
+      <h2>Sada ikon</h2>
+      <p class="hint">Všechny ikony jsou vlastní, v jednom stylu, bez emoji. Kreslené jako SVG, takže jsou ostré v každé velikosti, fungují offline a v aplikaci přeberou barvu skupiny nebo tlačítka.</p>
+    </div>
+    <h3>Nástroje (barva skupiny)</h3>
+    <div class="iconset" id="toolIcons"></div>
+    <h3>Akce a panely</h3>
+    <div class="iconset" id="actionIcons"></div>
+    <h3>Stejná ikona v různých velikostech</h3>
+    <div class="sizes">
+      <div><svg class="ico" style="width:18px;height:18px"><use href="#i-door"/></svg>18 px · štítek</div>
+      <div><svg class="ico" style="width:24px;height:24px"><use href="#i-door"/></svg>24 px · horní lišta</div>
+      <div><svg class="ico" style="width:30px;height:30px;stroke-width:1.7"><use href="#i-door"/></svg>30 px · levá lišta</div>
+      <div><svg class="ico" style="width:48px;height:48px;stroke-width:1.5"><use href="#i-door"/></svg>48 px · karta nástroje</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Rozdělení nástrojů</h2>
+    <p class="hint">Tučně je nástroj, který skupina ukáže při prvním spuštění. Později ukazuje ten, který jste v ní použili naposledy.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tlačítko v liště</th><th>Nástroje (druhé ťuknutí)</th><th>Dnes v aplikaci</th></tr></thead>
+        <tbody id="groupTable"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>K rozhodnutí</h2>
+    <div class="cols">
+      <div class="card q"><h3>Návrat po vložení</h3><p class="muted">Má se po vložení dveří, okna, štítku místnosti nebo značky nástroj sám vrátit na Vybrat? Chrání to před nechtěným druhým vložením, ale při vkládání více oken za sebou je to ťuknutí navíc.</p></div>
+      <div class="card q"><h3>Barvy skupin</h3><p class="muted">Navržených 8 barev pomáhá poznat nástroj koutkem oka. Druhou možností je jedna výrazná barva pro všechny nástroje a rozlišení jen ikonou.</p></div>
+      <div class="card q"><h3>Strana lišty</h3><p class="muted">Lišta vlevo vyhovuje, když pero držíte v pravé ruce a levou ťukáte na nástroje. Pro leváka by šla přepnout doprava v nastavení.</p></div>
+      <div class="card q"><h3>Prvky</h3><p class="muted">Skupina Prvky má zatím jen Schodiště. Je připravená pro zařizovací předměty a symboly, až na ně přijde řada.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Postup zavedení</h2>
+    <ol class="rules">
+      <li><div><b>Ikony a barvy</b> do aplikace jako jedna sada (jediné místo, z něj berou lišta, karta, panel i značka u pera).</div></li>
+      <li><div><b>Levá lišta se skupinami</b> a rozevírací řadou nástrojů. Nástroj Posun zrušit.</div></li>
+      <li><div><b>Karta aktivního nástroje, rámeček výkresu a značka u hrotu pera.</b></div></li>
+      <li><div><b>Horní lišta</b> (méně časté akce pod „…“) a <b>volby nástroje</b> v jednom řádku.</div></li>
+      <li><div><b>Panely vlastností</b> rozdělené na karty bez rolování. Po každém kroku vyzkoušení na tabletu.</div></li>
+    </ol>
+  </section>
+</main>
+
+<script>
+(function () {
+  const G = {
+    select: { name: 'Vybrat', color: 'var(--g-select)', tools: [['select', 'Vybrat', 'Ťukni na prvek, táhni roh nebo otvor']] },
+    walls: { name: 'Stěny', color: 'var(--g-walls)', tools: [['wall', 'Stěna', 'Táhni perem, délku zadej NumPadem'], ['bump', 'Výstupek', 'Čára na líci stěny = výstupek / vybrání'], ['trim', 'Do rohu', 'Ťukni na části stěn, které zůstanou'], ['split', 'Rozdělit', 'Ťukni na místo dělení stěny']] },
+    open: { name: 'Otvory', color: 'var(--g-open)', tools: [['door', 'Dveře', 'Ťukni na stěnu'], ['window', 'Okno', 'Ťukni na stěnu'], ['opening', 'Průchod', 'Ťukni na stěnu'], ['niche', 'Nika', 'Ťukni na stěnu']] },
+    dims: { name: 'Kóty', color: 'var(--g-dims)', tools: [['dim', 'Kóta', 'Ťukni na dva body'], ['text', 'Text', 'Ťukni, kam přijde text'], ['leader', 'Šipka', 'Táhni od místa k textu']] },
+    room: { name: 'Místnost', color: 'var(--g-room)', tools: [['room', 'Místnost', 'Ťukni do místnosti – plocha se spočítá']] },
+    mark: { name: 'Značka', color: 'var(--g-mark)', tools: [['mark', 'Značka', 'Ťukni – poznámka, skica, fotka']] },
+    draw: { name: 'Kresba', color: 'var(--g-draw)', tools: [['line', 'Čára', 'Táhni, další úsek navazuje'], ['double', 'Dvojitá', 'Dvě rovnoběžné čáry (překlad)'], ['rect', 'Obdélník', 'Táhni přes úhlopříčku'], ['circle', 'Kruh', 'Táhni od středu'], ['arc', 'Oblouk', 'Táhni mezi konci'], ['cut', 'Ořezat', 'Ťukni na úsek čáry']] },
+    pen: { name: 'Pero', color: 'var(--g-pen)', tools: [['pen', 'Pero', 'Kresli rukou, prst posouvá'], ['eraser', 'Guma', 'Přejeď přes tah']] },
+    items: { name: 'Prvky', color: 'var(--g-items)', tools: [['stair', 'Schodiště', 'Táhni rameno z rohu do rohu']] }
+  };
+  const TODAY = {
+    select: 'Vybrat, Posun (Posun se ruší – prst posouvá vždy)',
+    walls: 'Stěna (s Čárou v menu), Do rohu, Rozdělit',
+    open: 'Dveře, Okno, Otvor, Nika – 4 tlačítka',
+    dims: 'Kóta, Šipka, Text – 3 tlačítka',
+    room: 'Místnost',
+    mark: 'Značka',
+    draw: 'Čára, Dvojitá, Ořezat, Obdélník, Kruh, Oblouk – 6 tlačítek',
+    pen: 'Pero, Guma – 2 tlačítka',
+    items: 'Schodiště'
+  };
+  const order = ['select', 'walls', 'open', 'dims', 'room', 'mark', 'draw', 'pen', 'items'];
+  const last = {};
+  order.forEach(g => (last[g] = 0));
+  let group = 'walls';
+  let flyOpen = false;
+  const ico = (id, cls = 'ico') => `<svg class="${cls}"><use href="#i-${id}"/></svg>`;
+  const $ = id => document.getElementById(id);
+  const stage = $('stage');
+
+  function render() {
+    const g = G[group];
+    const t = g.tools[last[group]];
+    stage.style.setProperty('--gc', g.color);
+    $('rail').innerHTML = order
+      .map(k => {
+        const gg = G[k];
+        const tt = gg.tools[last[k]];
+        const multi = gg.tools.length > 1;
+        return `<button type="button" class="r-btn ${multi ? 'more' : ''} ${k === group ? 'on' : ''}" data-g="${k}" style="--gc:${gg.color}" title="${gg.name}">${ico(tt[0])}<span>${tt[1]}</span></button>${k === 'select' ? '' : ''}`;
+      })
+      .join('');
+    $('chip').innerHTML = `${ico(t[0])}<span>${t[1]}</span><small>${t[2]}</small>${group === 'select' ? '' : `<span class="x" title="Zpět na Vybrat">${ico('close')}</span>`}`;
+    $('frame').classList.toggle('none', group === 'select');
+    $('hover').style.display = group === 'select' ? 'none' : 'flex';
+    $('hoverTag').innerHTML = ico(t[0]);
+    $('panel').hidden = group !== 'select';
+    $('ctx').hidden = group === 'select';
+    $('ctx').innerHTML = ctxFor(t[0]);
+    const fly = $('fly');
+    fly.hidden = !flyOpen;
+    if (flyOpen) {
+      const idx = order.indexOf(group);
+      fly.style.top = 56 + 8 + idx * 76 + 'px';
+      fly.innerHTML = g.tools.map((x, i) => `<button type="button" class="f-btn ${i === last[group] ? 'on' : ''}" data-i="${i}">${ico(x[0])}<span>${x[1]}</span></button>`).join('');
+    }
+  }
+  function ctxFor(id) {
+    if (id === 'wall') return `<span class="ctx-l">Tvar</span><span class="seg"><span class="on">Rovná</span><span>Oblouková</span></span><span class="ctx-l">Osa</span><span class="seg"><span class="on">Líc</span><span>Střed</span></span><span class="ctx-l">Tloušťka</span><span class="seg"><span>100</span><span>150</span><span>200</span><span class="on">300</span><span>Vlastní…</span></span><span class="ctx-l">Řetěz</span><span class="seg"><span class="on">Zap</span><span>Vyp</span></span><span class="ctx-l">Vrstva</span><span class="seg"><span class="on">Stavba</span></span>`;
+    if (id === 'window') return `<span class="ctx-l">Šířka</span><span class="seg"><span>600</span><span>900</span><span class="on">1200</span><span>1500</span><span>Vlastní…</span></span><span class="ctx-l">Druh</span><span class="seg"><span class="on">Okno</span><span>Francouzské</span></span>`;
+    if (id === 'door') return `<span class="ctx-l">Šířka</span><span class="seg"><span>700</span><span class="on">800</span><span>900</span><span>Vlastní…</span></span><span class="ctx-l">Otevírání</span><span class="seg"><span class="on">Levé</span><span>Pravé</span></span>`;
+    if (id === 'pen' || id === 'eraser') return `<span class="ctx-l">Tvar</span><span class="seg"><span class="on">Od ruky</span><span>Čára</span><span>Obdélník</span><span>Kruh</span><span>Oblouk</span></span><span class="ctx-l">Tloušťka</span><span class="seg"><span>10</span><span class="on">25</span><span>50</span><span>100</span></span><span class="ctx-l">Vrstva</span><span class="seg"><span class="on">Poznámky</span></span>`;
+    if (id === 'dim') return `<span class="ctx-l">Konce</span><span class="seg"><span class="on">Body</span><span>Hrany</span></span><span class="ctx-l">Vrstva</span><span class="seg"><span class="on">Kóty</span></span>`;
+    return `<span class="ctx-l">Vrstva</span><span class="seg"><span class="on">${id === 'room' || id === 'mark' || id === 'text' ? 'Popisky' : id === 'stair' ? 'Stavba' : 'Kresba'}</span></span>`;
+  }
+  stage.addEventListener('click', e => {
+    const rb = e.target.closest('.r-btn');
+    const fb = e.target.closest('.f-btn');
+    const x = e.target.closest('.x');
+    const chip = e.target.closest('.m-chip');
+    if (x) { group = 'select'; flyOpen = false; }
+    else if (rb) {
+      const k = rb.dataset.g;
+      if (k === group && G[k].tools.length > 1) flyOpen = !flyOpen;
+      else { group = k; flyOpen = false; }
+    } else if (fb) { last[group] = +fb.dataset.i; flyOpen = false; }
+    else if (chip && G[group].tools.length > 1) flyOpen = !flyOpen;
+    else if (!e.target.closest('.m-fly')) flyOpen = false;
+    render();
+  });
+  // měřítko náhledu podle šířky
+  function fit() {
+    const w = $('holder').clientWidth;
+    const k = Math.min(1, w / 1280);
+    stage.style.transform = `scale(${k})`;
+    $('holder').style.height = 800 * k + 'px';
+  }
+  window.addEventListener('resize', fit);
+  fit();
+  render();
+
+  // sada ikon
+  $('toolIcons').innerHTML = order
+    .flatMap(k => G[k].tools.map(t => `<div class="ic tool" style="--c:${G[k].color}">${ico(t[0])}<span>${t[1]}</span><small>${G[k].name}</small></div>`))
+    .join('');
+  const ACT = [['undo', 'Zpět'], ['redo', 'Vpřed'], ['layers', 'Vrstvy'], ['fit', 'Celý výkres'], ['export', 'Výstupy'], ['backup', 'Záloha'], ['sliders', 'Nastavení'], ['more', 'Další'], ['back', 'Projekty'], ['floor', 'Podlaží'], ['lock', 'Zámek kót'], ['copy', 'Kopie'], ['trash', 'Smazat'], ['camera', 'Fotka'], ['items', 'Předměty'], ['close', 'Zavřít / Vybrat']];
+  $('actionIcons').innerHTML = ACT.map(a => `<div class="ic">${ico(a[0])}<span>${a[1]}</span></div>`).join('');
+  $('groupTable').innerHTML = order
+    .map(k => {
+      const g = G[k];
+      const tools = g.tools.map((t, i) => `<span class="${i === 0 ? 'first' : ''}" style="color:${g.color}">${ico(t[0])}<b style="font-weight:inherit;color:var(--fg)">${t[1]}</b></span>`).join('');
+      return `<tr><td><span class="gdot" style="background:${g.color}"></span><b>${g.name}</b></td><td><div class="tools-in">${tools}</div></td><td class="muted">${TODAY[k]}</td></tr>`;
+    })
+    .join('');
+})();
+</script>

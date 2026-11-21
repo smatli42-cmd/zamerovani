@@ -17,6 +17,7 @@ import { resetStairPoints, stairToolMsg } from '../tools/stairTool';
 import { eraserMsg } from '../tools/penTool';
 import { STROKE_WIDTHS, type PenShape } from '../core/strokes';
 import { activeDrawLayer } from '../core/layers';
+import { activateTool } from './toolGroups';
 
 /** Pero: od ruky nebo geometrie – vždy ruční tah ve vrstvě (barva vrstvy, guma ho maže celý). */
 const PEN_SHAPES: { v: PenShape; label: string }[] = [
@@ -40,13 +41,10 @@ export function ToolOptions() {
     <Seg
       options={[
         { v: 'wall', label: 'Stěna' },
-        { v: 'line', label: 'Čára' }
+        { v: 'line', label: 'Výstupek' }
       ]}
       value={tool === 'line' ? 'line' : 'wall'}
-      onChange={v => {
-        tools[tool].cancel?.();
-        store.set({ tool: v, hover: null, chainNode: null });
-      }}
+      onChange={v => activateTool(v)}
     />
   );
   if (tool === 'line') {

@@ -1,59 +1,104 @@
 /**
- * Svislá lišta nástrojů (velká tlačítka pro prst i pero).
+ * Levá lišta nástrojů po skupinách (ui/toolGroups.ts): tlačítko skupiny zapne naposledy použitý nástroj,
+ * druhé ťuknutí na aktivní skupinu (nebo podržení) rozbalí vedle lišty řadu všech jejích nástrojů.
+ * Aktivní skupina je plná v barvě skupiny. Vše se vejde bez rolování (9 tlačítek).
  */
-import { store, type ToolId } from '../store/store';
+import { useEffect, useRef } from 'preact/hooks';
+import { store } from '../store/store';
 import { useStore } from '../store/useStore';
-import { tools } from '../tools/registry';
-import { trimMsg } from '../tools/trimTool';
-import { splitMsg } from '../tools/splitTool';
-import { dimToolMsg } from '../tools/dimTool';
-import { stairToolMsg } from '../tools/stairTool';
-import { drawTrimMsg } from '../tools/drawTrimTool';
+import { Icon } from './icons';
+import { activateTool, groupTool, TOOL_GROUPS, toolInfo, type ToolGroup } from './toolGroups';
 
-const TOOLS: { id: ToolId; icon: string; label: string; title: string }[] = [
-  { id: 'select', icon: '👆', label: 'Vybrat', title: 'Vybrat prvek, posunout roh / otvor, ťuknutím na stěnu zadat délku' },
-  { id: 'wall', icon: '✏️', label: 'Stěna', title: 'Kreslit stěny tažením pera; v menu Stěny i Čára (výstupky a vybrání stěn)' },
-  { id: 'trim', icon: '⌐', label: 'Do rohu', title: 'Zkrátit / prodloužit dvě stěny do rohu, nebo jednu stěnu k hraně druhé: ťukni na části, které mají zůstat' },
-  { id: 'split', icon: '✂️', label: 'Rozdělit', title: 'Ťuknutím rozdělit stěnu na dvě; v režimu S mezerou dvěma ťuknutími vyjmout úsek stěny' },
-  { id: 'door', icon: '🚪', label: 'Dveře', title: 'Ťuknutím na stěnu vložit dveře' },
-  { id: 'window', icon: '🪟', label: 'Okno', title: 'Ťuknutím na stěnu vložit okno' },
-  { id: 'opening', icon: '⬜', label: 'Otvor', title: 'Ťuknutím na stěnu vložit průchod bez dveří' },
-  { id: 'niche', icon: '◫', label: 'Nika', title: 'Ťuknutím na stěnu vložit niku' },
-  { id: 'room', icon: '🏷️', label: 'Místnost', title: 'Ťuknutím vložit štítek místnosti' },
-  { id: 'drawLine', icon: '╱', label: 'Čára', title: 'Kreslit čáru (jen kresba – nikdy stěna ani výstupek); další úsek navazuje na konec, čára zpět do počátku se uzavře' },
-  { id: 'drawDouble', icon: '═', label: 'Dvojitá', title: 'Dvojitá čára (překlad): dvě rovnoběžné čáry; od líce podél stěny přes celou její tloušťku' },
-  { id: 'drawTrim', icon: '⌿', label: 'Ořezat', title: 'Kresba: ťuknutím oříznout čáru k nejbližším průsečíkům, nebo prodloužit její konec k nejbližší čáře' },
-  { id: 'pen', icon: '🖊️', label: 'Pero', title: 'Ruční kresba perem do aktivní vrstvy (barva vrstvy); prst posouvá a zoomuje' },
-  { id: 'eraser', icon: '🧽', label: 'Guma', title: 'Guma: maže celé ruční tahy v aktivní vrstvě' },
-  { id: 'rect', icon: '▭', label: 'Obdélník', title: 'Tažením nakreslit obdélník (kresba – sloup, komín…)' },
-  { id: 'circle', icon: '◯', label: 'Kruh', title: 'Tažením od středu nakreslit kruh' },
-  { id: 'arc', icon: '◠', label: 'Oblouk', title: 'Tažením mezi krajními body nakreslit oblouk, vzepětí se upřesní kótou' },
-  { id: 'stair', icon: '🪜', label: 'Schodiště', title: 'Schodiště: rameno z rohu do rohu (tažením nebo dvěma ťuknutími), zadanými rozměry, nebo točité; L / U, zabíhavé stupně, oblouk, výšku a počet stupňů v panelu' },
-  { id: 'dim', icon: '📏', label: 'Kóta', title: 'Volná kóta: ťukni na dva body (roh, bod kresby, místo ve výkresu); délku zadáš ťuknutím na číslo, odsazení tažením za čáru' },
-  { id: 'leader', icon: '↗️', label: 'Šipka', title: 'Odkazová šipka s textem: táhni od místa, na které se ukazuje, tam kam má přijít text' },
-  { id: 'text', icon: '🅰️', label: 'Text', title: 'Ťuknutím vložit text; ťuknutím na text ho upravit, tažením přesunout' },
-  { id: 'mark', icon: '📍', label: 'Značka', title: 'Značka v půdorysu (poznámka, detail, skica): ťuknutím založit s dalším číslem; ťuknutím na značku otevřít poznámku a skicu, tažením přesunout' },
-  { id: 'pan', icon: '✋', label: 'Posun', title: 'Posouvat výkres' }
-];
+const LONG_PRESS_MS = 450;
 
 export function Toolbar() {
-  const active = useStore(s => s.tool);
+  const tool = useStore(s => s.tool);
+  const last = useStore(s => s.settings.lastTools) ?? {};
+  const open = useStore(s => s.toolGroupOpen);
+  const activeGroup = toolInfo(tool).group.id;
+  const nav = useRef<HTMLElement>(null);
+
+  // rozbalená řada se zavře ťuknutím mimo lištu
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => {
+      if (!nav.current?.contains(e.target as Node)) store.set({ toolGroupOpen: null });
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') store.set({ toolGroupOpen: null });
+    };
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('pointerdown', away);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+
   return (
-    <nav class="toolbar" aria-label="Nástroje">
-      {TOOLS.map(t => (
-        <button
-          key={t.id}
-          class={`tool-btn ${active === t.id || (t.id === 'wall' && active === 'line') ? 'active' : ''}`}
-          title={t.title}
-          onClick={() => {
-            tools[store.get().tool].cancel?.();
-            store.set({ tool: t.id, ...(store.get().layersOpen === 'tool' ? { layersOpen: false } : {}), hover: null, chainNode: null, stairAppend: null, toolMsg: t.id === 'trim' ? trimMsg(store.get().settings.trimEdge) : t.id === 'split' ? splitMsg(store.get().settings.splitGap) : t.id === 'dim' ? dimToolMsg(false) : t.id === 'stair' ? stairToolMsg(false) : t.id === 'drawTrim' ? drawTrimMsg(store.get().settings.drawTrimMode === 'extend') : null });
-          }}
-        >
-          <span class="tool-icon">{t.icon}</span>
-          <span class="tool-label">{t.label}</span>
-        </button>
+    <nav class="toolbar rail" aria-label="Nástroje" ref={nav}>
+      {TOOL_GROUPS.map(g => (
+        <RailItem key={g.id} g={g} active={g.id === activeGroup} open={open === g.id} shown={g.id === activeGroup && !g.pinFirst ? toolInfo(tool).def : groupTool(g, last)} tool={tool} />
       ))}
     </nav>
+  );
+}
+
+function RailItem({ g, active, open, shown, tool }: { g: ToolGroup; active: boolean; open: boolean; shown: ReturnType<typeof groupTool>; tool: string }) {
+  const timer = useRef<number | null>(null);
+  const longPressed = useRef(false);
+  const multi = g.tools.length > 1;
+  const clear = () => {
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    timer.current = null;
+  };
+  return (
+    <div class="rail-item" style={{ '--gc': g.color }}>
+      <button
+        type="button"
+        class={`rail-btn ${active ? 'on' : ''} ${multi ? 'more' : ''}`}
+        title={`${g.name}${multi ? ' – podržením nebo druhým ťuknutím další nástroje' : ''}`}
+        aria-pressed={active}
+        aria-expanded={multi ? open : undefined}
+        onPointerDown={() => {
+          longPressed.current = false;
+          if (!multi) return;
+          clear();
+          timer.current = window.setTimeout(() => {
+            longPressed.current = true;
+            store.set({ toolGroupOpen: g.id });
+          }, LONG_PRESS_MS);
+        }}
+        onPointerUp={clear}
+        onPointerLeave={clear}
+        onPointerCancel={clear}
+        onClick={() => {
+          clear();
+          if (longPressed.current) {
+            longPressed.current = false;
+            return;
+          }
+          // aktivní skupina: druhé ťuknutí rozbalí řadu (Vybrat z Posunu nejdřív přepne zpět na Vybrat)
+          if (active && multi && (!g.pinFirst || tool === g.tools[0]!.id)) {
+            store.set({ toolGroupOpen: open ? null : g.id });
+            return;
+          }
+          activateTool(shown.id);
+        }}
+      >
+        <Icon name={shown.icon} size={30} />
+        <span class="rail-label">{shown.label}</span>
+      </button>
+      {open && (
+        <div class="rail-fly" role="group" aria-label={g.name}>
+          {g.tools.map(t => (
+            <button key={t.id} type="button" class={`fly-btn ${t.id === tool ? 'on' : ''}`} title={t.title} onClick={() => activateTool(t.id)}>
+              <Icon name={t.icon} size={28} />
+              <span>{t.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

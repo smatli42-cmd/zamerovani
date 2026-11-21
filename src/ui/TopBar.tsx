@@ -1,23 +1,24 @@
 /**
- * Horní lišta editoru: zpět na projekty, podlaží, Zpět/Vpřed, nastavení, stav uložení.
+ * Horní lišta editoru (návrh ovládání 2026-11-21): projekty, název, podlaží, Zpět / Vpřed, Vrstvy, Celý výkres,
+ * nabídka „…“ (údaje projektu, podlaží, záloha, nastavení – ui/MoreMenu.tsx) a stav uložení. Ikony z ui/icons.tsx.
  */
-import { wakeLockSupported } from '../input/wakeLock';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useState } from 'preact/hooks';
 import { downloadBackup } from '../persistence/backup';
 import { saveNow } from '../persistence/autosave';
-import { addFloor, deleteFloor, renameFloor, setLayerVisible } from '../store/actions';
-import { layerById, SYS } from '../core/layers';
-import { store, type SaveStatus, type Settings } from '../store/store';
+import { addFloor, deleteFloor, renameFloor } from '../store/actions';
+import { store, type SaveStatus } from '../store/store';
 import { useStore } from '../store/useStore';
 import { ConfirmDialog, TextPrompt } from './Dialog';
 import { ProjectForm } from './ProjectForm';
 import { fitToDrawing } from './viewActions';
+import { Icon } from './icons';
+import { MoreMenu, type MoreAction } from './MoreMenu';
 
 const SAVE_TEXT: Record<SaveStatus, string> = {
-  saved: '✓ Uloženo',
-  saving: '… Ukládám',
-  dirty: '● Neuloženo',
-  error: '⚠ Chyba ukládání'
+  saved: 'Uloženo',
+  saving: 'Ukládám…',
+  dirty: 'Neuloženo',
+  error: 'Chyba ukládání'
 };
 
 type FloorDialog = { type: 'add' } | { type: 'rename'; id: string; name: string } | { type: 'delete'; id: string; name: string } | null;
@@ -30,11 +31,19 @@ export function TopBar() {
   const saveStatus = useStore(s => s.saveStatus);
   const layersOpen = useStore(s => s.layersOpen);
   const [floorDialog, setFloorDialog] = useState<FloorDialog>(null);
-  const [showSettings, setShowSettings] = useState(false);
+  const [showMore, setShowMore] = useState(false);
   const [editInfo, setEditInfo] = useState(false);
 
   if (!project) return null;
   const floor = project.floors.find(f => f.id === floorId);
+  const backup = () => downloadBackup(project).catch(() => store.set({ lockBlock: { key: '', text: 'Zálohu se nepodařilo vytvořit.' } }));
+  const moreActions: MoreAction[] = [
+    { icon: 'info', label: 'Údaje projektu', run: () => setEditInfo(true) },
+    { icon: 'plus', label: 'Přidat podlaží', run: () => setFloorDialog({ type: 'add' }) }
+  ];
+  if (floor) moreActions.push({ icon: 'edit', label: 'Přejmenovat podlaží', run: () => setFloorDialog({ type: 'rename', id: floor.id, name: floor.name }) });
+  if (floor && project.floors.length > 1) moreActions.push({ icon: 'trash', label: 'Smazat podlaží', danger: true, run: () => setFloorDialog({ type: 'delete', id: floor.id, name: floor.name }) });
+  moreActions.push({ icon: 'backup', label: 'Záloha projektu do souboru', run: backup });
 
   return (
     <header class="topbar">
@@ -45,20 +54,23 @@ export function TopBar() {
           await saveNow();
           // uložení selhalo (např. plné úložiště) → projekt nezavírat, jinak by se ztratila poslední změna (i odkaz na fotku)
           if (store.get().saveStatus === 'error') {
-            store.set({ lockBlock: { key: '', text: 'Projekt se nepodařilo uložit – zůstává otevřený. Uvolněte místo v tabletu nebo stáhněte zálohu (💾).' } });
+            store.set({ lockBlock: { key: '', text: 'Projekt se nepodařilo uložit – zůstává otevřený. Uvolněte místo v tabletu nebo stáhněte zálohu (… → Záloha projektu).' } });
             return;
           }
           store.closeProject();
         }}
       >
-        ◀ Projekty
+        <Icon name="back" size={22} />
+        Projekty
       </button>
       <button class="project-title" title="Upravit údaje projektu" onClick={() => setEditInfo(true)}>
         {project.name}
       </button>
 
       <div class="floor-switch">
+        <Icon name="floor" size={20} />
         <select
+          title="Podlaží"
           value={floorId ?? ''}
           onChange={e => {
             store.set({ floorId: (e.target as HTMLSelectElement).value, selection: null, numpad: null });
@@ -71,44 +83,34 @@ export function TopBar() {
             </option>
           ))}
         </select>
-        <button class="btn btn-dark btn-icon" title="Přidat podlaží" onClick={() => setFloorDialog({ type: 'add' })}>
-          ＋
-        </button>
-        {floor && (
-          <button class="btn btn-dark btn-icon" title="Přejmenovat podlaží" onClick={() => setFloorDialog({ type: 'rename', id: floor.id, name: floor.name })}>
-            ✏️
-          </button>
-        )}
-        {floor && project.floors.length > 1 && (
-          <button class="btn btn-dark btn-icon" title="Smazat podlaží" onClick={() => setFloorDialog({ type: 'delete', id: floor.id, name: floor.name })}>
-            🗑️
-          </button>
-        )}
       </div>
 
       <div class="spacer" />
 
-      <button class="btn btn-dark" disabled={!canUndo} onClick={() => store.undo()} title="Zpět (Ctrl+Z)">
-        ↩️
+      <button class="btn btn-dark top-icon boxed" disabled={!canUndo} onClick={() => store.undo()} title="Zpět (Ctrl+Z)" aria-label="Zpět">
+        <Icon name="undo" />
       </button>
-      <button class="btn btn-dark" disabled={!canRedo} onClick={() => store.redo()} title="Vpřed (Ctrl+Y)">
-        ↪️
+      <button class="btn btn-dark top-icon boxed" disabled={!canRedo} onClick={() => store.redo()} title="Vpřed (Ctrl+Y)" aria-label="Vpřed">
+        <Icon name="redo" />
       </button>
+      <span class="top-sep" />
       <button class={`btn btn-dark ${layersOpen === 'top' ? 'active' : ''}`} onClick={() => store.set({ layersOpen: layersOpen === 'top' ? false : 'top' })} title="Vrstvy">
-        🗂️ Vrstvy
+        <Icon name="layers" />
+        Vrstvy
       </button>
       <button class="btn btn-dark" onClick={fitToDrawing} title="Zobrazit celý výkres">
-        🎯
+        <Icon name="fit" />
+        Celý výkres
       </button>
-      <button data-settings-btn class={`btn btn-dark ${showSettings ? 'active' : ''}`} onClick={() => setShowSettings(!showSettings)} title="Nastavení kreslení">
-        ⚙️
+      <button data-more-btn class={`btn btn-dark top-icon ${showMore ? 'active' : ''}`} onClick={() => setShowMore(!showMore)} title="Další: údaje projektu, podlaží, záloha, nastavení" aria-label="Další">
+        <Icon name="more" />
       </button>
-      <button class="btn btn-dark" onClick={() => downloadBackup(project).catch(() => store.set({ lockBlock: { key: '', text: 'Zálohu se nepodařilo vytvořit.' } }))} title="Stáhnout zálohu projektu do souboru">
-        💾
-      </button>
-      <span class={`save-status save-${saveStatus}`}>{SAVE_TEXT[saveStatus]}</span>
+      <span class={`save-status save-${saveStatus}`}>
+        <i class="save-dot" />
+        {SAVE_TEXT[saveStatus]}
+      </span>
 
-      {showSettings && <SettingsPopover onClose={() => setShowSettings(false)} />}
+      {showMore && <MoreMenu actions={moreActions} onClose={() => setShowMore(false)} />}
 
       {floorDialog?.type === 'add' && (
         <TextPrompt title="Nové podlaží" label="Název podlaží" initial={suggestFloorName(project.floors.map(f => f.name))} onSubmit={addFloor} onClose={() => setFloorDialog(null)} />
@@ -151,54 +153,4 @@ export function TopBar() {
 function suggestFloorName(existing: string[]): string {
   for (const name of ['2.NP', '3.NP', '1.PP', 'Podkroví', '4.NP']) if (!existing.includes(name)) return name;
   return 'Podlaží';
-}
-
-function SettingsPopover({ onClose }: { onClose: () => void }) {
-  const settings = useStore(s => s.settings);
-  const project = useStore(s => s.project);
-  const box = useRef<HTMLDivElement>(null);
-  // kóty = vrstva Kóty (rozhodnutí uživatele 2026-11-19: přepínač nahrazuje oko vrstvy Kóty, je v historii)
-  const dimsVisible = layerById(project, SYS.koty)?.visible ?? true;
-  // Zavře se ťuknutím mimo okno (ne při zvednutí prstu – na dotykovém displeji by zmizelo dřív, než se stihne zapnout volba)
-  useEffect(() => {
-    const away = (e: PointerEvent) => {
-      const t = e.target as Element | null;
-      if (t && !box.current?.contains(t) && !t.closest('[data-settings-btn]')) onClose();
-    };
-    document.addEventListener('pointerdown', away);
-    return () => document.removeEventListener('pointerdown', away);
-  }, []);
-  const toggle = (key: keyof Settings, label: string, hint: string) => (
-    <label class="toggle-row" title={hint}>
-      <input type="checkbox" checked={Boolean(settings[key])} onChange={() => store.updateSettings({ [key]: !settings[key] })} />
-      <span>{label}</span>
-    </label>
-  );
-  return (
-    <div class="popover settings-popover" ref={box}>
-      {toggle('snap', 'Přichytávat na rohy', 'Přichytávání na rohy, stěny a zarovnání')}
-      <label class="toggle-row" title="Vrstva Kóty (automatické i volné kóty)">
-        <input type="checkbox" checked={dimsVisible} onChange={() => setLayerVisible(SYS.koty, !dimsVisible)} />
-        <span>Zobrazit kóty</span>
-      </label>
-      {toggle('showGrid', 'Zobrazit mřížku', '')}
-      {toggle('fingerPan', 'Prst jen posouvá', 'Kreslí se jen perem, prst posouvá výkres (ochrana proti dlani)')}
-      {toggle('keepAwake', 'Nevypínat displej', 'Tablet neusne, dokud je aplikace otevřená na obrazovce')}
-      {settings.keepAwake && !wakeLockSupported() && (
-        <p class="muted small" style="margin:0 0 6px">
-          Tento prohlížeč nevypínání displeje nepodporuje (nebo stránka neběží přes https). Prodlužte „Časový limit obrazovky“ v nastavení tabletu.
-        </p>
-      )}
-      <div class="toggle-row">
-        <span>Velikost kót</span>
-        <button class="btn btn-sm" onClick={() => store.updateSettings({ dimScale: Math.max(0.7, +(settings.dimScale - 0.1).toFixed(2)) })}>
-          −
-        </button>
-        <b>{Math.round(settings.dimScale * 100)} %</b>
-        <button class="btn btn-sm" onClick={() => store.updateSettings({ dimScale: Math.min(2, +(settings.dimScale + 0.1).toFixed(2)) })}>
-          ＋
-        </button>
-      </div>
-    </div>
-  );
 }
