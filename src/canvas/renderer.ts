@@ -105,7 +105,7 @@ function render(): void {
       // kresba a její šrafy nad výplní stěn i otvory (překlad nad otvorem) – vrstva Kresba leží nad Stavbou
       if (kinds.has('drawing')) drawDrawings(ctx, slice, cam, state.selection, state.hover);
       if (kinds.has('stair')) drawStairs(ctx, slice, cam, state.selection, state.hover);
-      if (kinds.has('room')) drawRooms(ctx, slice, cam, state.selection);
+      if (kinds.has('room')) drawRooms(ctx, slice, cam, state.selection, floor);
       if (kinds.has('text')) drawTexts(ctx, slice, cam, state.selection);
       // značky (poznámka + skica) – stálá velikost na obrazovce (core/marks.ts)
       if (kinds.has('mark')) drawMarks(ctx, slice, cam, state.selection);

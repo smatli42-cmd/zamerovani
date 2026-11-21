@@ -1,18 +1,22 @@
 /**
- * Štítky místností: číslo, název, světlé výšky.
+ * Štítky místností: číslo, název, světlé výšky a světlá plocha (core/roomArea.ts – počítá se z celého podlaží,
+ * i ze stěn ve skrytých vrstvách).
  */
 import type { Floor } from '../model/types';
+import { formatArea, roomArea } from '../core/roomArea';
 import { isSelected, type Camera, type Selection } from '../store/store';
 import { ROOM_LABEL } from '../tools/pick';
 import { toScreen } from './view';
 
-export function drawRooms(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camera, selection: Selection): void {
+export function drawRooms(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camera, selection: Selection, whole: Floor = floor): void {
   ctx.save();
   for (const room of Object.values(floor.rooms)) {
     const p = toScreen(room, cam);
     const selected = isSelected(selection, 'room', room.id);
     const title = [room.number, room.name || 'Místnost'].filter(Boolean).join(' ');
     const heights = room.heights.map(h => `sv.v. ${h.value}${h.note ? ` (${h.note})` : ''}`);
+    const area = roomArea(whole, room);
+    if (area !== null) heights.push(formatArea(area));
 
     ctx.font = '700 13px system-ui, sans-serif';
     let w = ctx.measureText(title).width;

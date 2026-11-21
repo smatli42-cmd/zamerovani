@@ -8,6 +8,7 @@ import { store } from '../../store/store';
 import { useStore } from '../../store/useStore';
 import { openField } from '../../store/numpadController';
 import { close } from './common';
+import { formatArea, roomArea } from '../../core/roomArea';
 import { Panel, TextField } from './fields';
 
 const ROOM_NAMES = ['Obývací pokoj', 'Kuchyň', 'Ložnice', 'Pokoj', 'Koupelna', 'WC', 'Chodba', 'Předsíň', 'Spíž', 'Komora', 'Sklep', 'Schodiště'];
@@ -29,6 +30,7 @@ export function RoomPanel({ room }: { room: Room }) {
           </button>
         ))}
       </div>
+      <RoomAreaInfo room={room} />
       <RoomLocks roomId={room.id} />
       <h4>Světlé výšky</h4>
       {room.heights.map((h, i) => (
@@ -88,5 +90,19 @@ function RoomLocks({ roomId }: { roomId: string }) {
         </button>
       </div>
     </div>
+  );
+}
+
+/** Světlá plocha místnosti kolem štítku (core/roomArea.ts). */
+function RoomAreaInfo({ room }: { room: Room }) {
+  useStore(s => s.project); // přepočítat po změně stěn
+  const floor = store.floor();
+  const a = floor ? roomArea(floor, room) : null;
+  return a === null ? (
+    <p class="muted small">Plocha: kolem štítku není uzavřený prostor (nebo štítek leží ve stěně).</p>
+  ) : (
+    <p>
+      Světlá plocha: <b>{formatArea(a)}</b>
+    </p>
   );
 }

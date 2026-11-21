@@ -78,7 +78,7 @@ Doplňuj klidně přímo sem – škrtej, přepisuj, přidávej do sekce „Moje
 ## 6. Místnosti
 - ✅ **[MVP]** Štítek místnosti – název + více světlých výšek s poznámkou.
 - ✅ Předvolby názvů (Obývák, Kuchyň, Koupelna…).
-- 💡 **[MVP]** Automatické rozpoznání místnosti z uzavřených stěn → **plocha (m²) a obvod**.
+- ✅ **[MVP]** Automatické rozpoznání místnosti z uzavřených stěn → **plocha (m²)** na štítku (2026-11-21, světlá mezi líci, ± výstupky, příčky a sloupy odečtené). 💡 Obvod.
 - 💡 **[MVP]** Číslo místnosti (1.01, 1.02…).
 - 💡 Povrchy: podlaha, stěny, strop (materiál/stav), poznámka.
 - 💡 Výpis místností (tabulka s plochami) – do PDF i DXF.
