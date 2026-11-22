@@ -1,7 +1,8 @@
 /**
  * Okno značky (ZNACKY-POZNAMKY-DETAILY.md, krok A): textová poznámka a skica – převzato z prototypu
  * (prototyp/src/input/detailsUI.js) a doplněno o stejné prvky jako kresba ve výkresu (přání uživatele 2026-11-20):
- * Vybrat (ťuknutím jeden prvek, tažením obdélníku víc; posun, smazání, druh a tloušťka čáry), pero, čára, obdélník, kruh, oblouk, dvojitá čára, text, kóta, guma, posun, zoom,
+ * Vybrat (ťuknutím jeden prvek, tažením obdélníku víc; posun, kopie, smazání, druh a tloušťka čáry; úchyty tvarů
+ * a přichytávání – core/sketchEdit.ts), pero, čára, obdélník, kruh, oblouk, dvojitá čára, text, kóta, guma, posun, zoom,
  * barvy, zpět. Geometrie skici jen v core/sketch.ts.
  * Kreslení má vlastní Zpět (jen v okně); do výkresu se obsah zapíše při zavření jako jeden krok Zpět.
  * Pero / myš kreslí, prst posouvá (jako v půdorysu).
@@ -11,45 +12,20 @@ import type { LineStyle, MarkPage, Pt, SketchDim, SketchStroke } from '../model/
 import { emptyPage, markCode, pageIsEmpty } from '../core/marks';
 import { normRect } from '../core/rect';
 import { defaultArcSagitta, eraseInPage, hitSketch, moveSketchItems, removeSketchItems, nearestSketchWidth, restyleStrokes, sameRef, sketchInRect, SKETCH_DEFAULT_WIDTH, SKETCH_DOUBLE_W, sketchLineWidth, sketchScale, type SketchRef } from '../core/sketch';
+import { copySketchItems, dragSketchHandle, handleTarget, hitSketchHandle, selectionHandles, sketchOrtho, sketchSnap, type SketchSnap } from '../core/sketchEdit';
 import { drawSketch, type SketchPhoto, type SketchView } from '../canvas/drawSketch';
 import { addPhoto, getPhoto } from '../persistence/photos';
 import { setMarkContent, updateMark } from '../store/actions';
 import { store } from '../store/store';
 import { useStore } from '../store/useStore';
 import { TextPrompt } from './Dialog';
-import { Icon, type IconName } from './icons';
+import { Icon } from './icons';
 import { SketchLineOptions } from './SketchLineOptions';
+import { SHAPES, SKETCH_TOOLS as TOOLS, type ShapeMode, type SketchTool } from './sketchTools';
 
-type ShapeMode = Exclude<SketchStroke['mode'], 'free'>;
-type SketchTool = 'select' | 'pen' | ShapeMode | 'text' | 'dim' | 'eraser' | 'pan';
-/** Nástroje skici – stejné ikony jako nástroje výkresu (ui/icons.tsx). */
-const TOOLS: { v: SketchTool; icon: IconName; label: string }[] = [
-  { v: 'select', icon: 'select', label: 'Vybrat' },
-  { v: 'pen', icon: 'pen', label: 'Pero' },
-  { v: 'line', icon: 'line', label: 'Čára' },
-  { v: 'rect', icon: 'rect', label: 'Obdélník' },
-  { v: 'circle', icon: 'circle', label: 'Kruh' },
-  { v: 'arc', icon: 'arc', label: 'Oblouk' },
-  { v: 'double', icon: 'double', label: 'Dvojitá' },
-  { v: 'text', icon: 'text', label: 'Text' },
-  { v: 'dim', icon: 'dim', label: 'Kóta' },
-  { v: 'eraser', icon: 'eraser', label: 'Guma' },
-  { v: 'pan', icon: 'pan', label: 'Posun' }
-];
-const SHAPES: readonly string[] = ['line', 'rect', 'circle', 'arc', 'double'];
 const COLORS = ['#0f172a', '#dc2626', '#2563eb', '#059669'];
 const clone = (p: MarkPage): MarkPage => JSON.parse(JSON.stringify(p)) as MarkPage;
 
-/** Přímka / kóta: do 6° od vodorovné / svislé se srovná. */
-function orthoSnap(a: Pt, p: Pt): Pt {
-  const dx = p.x - a.x;
-  const dy = p.y - a.y;
-  if (Math.hypot(dx, dy) <= 15) return p;
-  const ang = Math.abs((Math.atan2(dy, dx) * 180) / Math.PI);
-  if (ang < 6 || Math.abs(ang - 180) < 6) return { x: p.x, y: a.y };
-  if (Math.abs(ang - 90) < 6) return { x: a.x, y: p.y };
-  return p;
-}
 
 export function MarkWindow() {
   const id = useStore(s => s.markOpen);
@@ -106,7 +82,17 @@ function MarkWindowBody({ id }: { id: string }) {
     moving?: { refs: SketchRef[]; hit: SketchRef; from: Pt; orig: MarkPage };
     /** Obdélník výběru (souřadnice skici). */
     band?: { a: Pt; b: Pt };
+    /** Tažení úchytu tvaru (core/sketchEdit.ts) a stav před ním. */
+    handle?: { ref: SketchRef; id: string; at: Pt; grab: Pt; orig: MarkPage };
+    /** Zobrazené přichycení. */
+    snap?: SketchSnap | null;
   }>({});
+  /** Přichycení k ostatním prvkům skici (mimo `skip`); bez přichycení u přímých čar srovnání do vodorovné / svislé od `from`. */
+  const snapPt = (pt: Pt, skip?: SketchRef, from?: Pt): Pt => {
+    const sn = sketchSnap(page, pt, 12 / view.s, skip);
+    live.current.snap = sn;
+    return sn ? sn.pt : from ? sketchOrtho(from, pt) : pt;
+  };
   const eraseAt = (pt: Pt) => {
     const L = live.current;
     setPage(p => {
@@ -126,10 +112,10 @@ function MarkWindowBody({ id }: { id: string }) {
     setPage(next);
   };
   /** Výběr; tlačítka druhu a tloušťky ukážou první vybraný prvek kresby. */
-  const setSel = (refs: SketchRef[]) => {
+  const setSel = (refs: SketchRef[], pg: MarkPage = page) => {
     setSelRaw(refs);
     const r = refs.find(x => x.kind === 'stroke');
-    const st = r && page.strokes[r.index];
+    const st = r && pg.strokes[r.index];
     if (st) {
       setLineStyle(st.style ?? 'solid');
       setLineWidth(nearestSketchWidth(st.width, view.s));
@@ -168,7 +154,8 @@ function MarkWindowBody({ id }: { id: string }) {
       c.width = w;
       c.height = h;
     }
-    drawSketch(c.getContext('2d')!, w, h, { s: view.s * dpr, ox: view.ox * dpr, oy: view.oy * dpr }, page, { ...live.current, selected: sel, photo });
+    const handles = tool === 'select' ? selectionHandles(page, sel) : [];
+    drawSketch(c.getContext('2d')!, w, h, { s: view.s * dpr, ox: view.ox * dpr, oy: view.oy * dpr }, page, { ...live.current, selected: sel, photo, handles });
   });
   // načtení fotky strany (při otevření a po vložení / odebrání)
   const photoId = page.photo?.id;
@@ -265,6 +252,12 @@ function MarkWindowBody({ id }: { id: string }) {
       return;
     }
     if (tool === 'select') {
+      // úchyt vybraného tvaru má přednost (velikost, konce, rohy – přání uživatele 2026-11-22)
+      const hh = hitSketchHandle(page, sel, pt, 16 / view.s);
+      if (hh) {
+        live.current = { handle: { ...hh, grab: pt, orig: page } };
+        return;
+      }
       const hit = hitSketch(page, pt, tol());
       // ťuknutí do prázdna = obdélník výběru; na vybraný prvek = posun celého výběru; na jiný = vybrat jen ten
       if (!hit) {
@@ -287,7 +280,14 @@ function MarkWindowBody({ id }: { id: string }) {
       return;
     }
     // popisky a kóty stejně velké na obrazovce při každém zoomu (nad zmenšenou fotkou by byly drobné – krok C)
-    if (tool === 'dim') live.current = { dim: { a: pt, b: pt, text: '', k: sketchScale(view.s) } };
+    if (tool === 'dim' || SHAPES.includes(tool)) {
+      // začátek tvaru / kóty se přichytí k bodům ostatních prvků (např. krokve na vaznici)
+      const q = snapPt(pt);
+      pt.x = q.x;
+      pt.y = q.y;
+    }
+    const snap = live.current.snap;
+    if (tool === 'dim') live.current = { dim: { a: pt, b: pt, text: '', k: sketchScale(view.s) }, snap };
     else if (tool === 'eraser') {
       // guma: jeden krok Zpět za celé gesto (i tažením), jen když něco smazala
       live.current = { erased: true, start: page, pushed: false };
@@ -296,7 +296,7 @@ function MarkWindowBody({ id }: { id: string }) {
       const mode: SketchStroke['mode'] = SHAPES.includes(tool) ? (tool as ShapeMode) : 'free';
       // tloušťka čáry stejná na obrazovce při každém zoomu (nad zmenšenou fotkou by byla tenká)
       const k = sketchScale(view.s);
-      live.current = { stroke: { mode, color, width: sketchLineWidth(lineWidth, view.s), ...(lineStyle !== 'solid' ? { style: lineStyle } : {}), pts: [pt, { ...pt }], ...(mode === 'double' ? { w: Math.round(SKETCH_DOUBLE_W * k) } : {}) } };
+      live.current = { stroke: { mode, color, width: sketchLineWidth(lineWidth, view.s), ...(lineStyle !== 'solid' ? { style: lineStyle } : {}), pts: [pt, { ...pt }], ...(mode === 'double' ? { w: Math.round(SKETCH_DOUBLE_W * k) } : {}) }, snap };
     }
     redraw(n => n + 1);
   };
@@ -313,6 +313,24 @@ function MarkWindowBody({ id }: { id: string }) {
       redraw(n => n + 1);
       return;
     }
+    if (L.handle) {
+      const { ref, id, at, grab, orig } = L.handle;
+      // ťuknutí bez tažení tvar nemění (pero posílá drobné pohyby i bez posunu)
+      if (!L.pushed && Math.hypot(pt.x - grab.x, pt.y - grab.y) * view.s < 4) return;
+      // konec přímé čáry / kóty: přichycení, jinak srovnání vůči druhému konci
+      const st = ref.kind === 'stroke' ? orig.strokes[ref.index] : undefined;
+      const d = ref.kind === 'dim' ? orig.dims[ref.index] : undefined;
+      const ends = d ? [d.a, d.b] : st && (st.mode === 'line' || st.mode === 'double') ? st.pts : null;
+      const other = ends ? (id === 'a' ? ends[1] : id === 'b' ? ends[0] : undefined) : undefined;
+      const to = handleTarget(at, grab, pt);
+      const p = id === 'w' || id === 's' || id === 'k' ? to : snapPt(to, ref, other);
+      if (!L.pushed) {
+        L.pushed = true;
+        setHistory(h => [...h, orig]);
+      }
+      setPage(dragSketchHandle(orig, ref, id, p));
+      return;
+    }
     if (L.moving) {
       const { refs, from, orig } = L.moving;
       // jeden krok Zpět za celý posun
@@ -323,11 +341,11 @@ function MarkWindowBody({ id }: { id: string }) {
       setPage(moveSketchItems(orig, refs, pt.x - from.x, pt.y - from.y));
       return;
     }
-    if (L.dim) L.dim = { ...L.dim, b: orthoSnap(L.dim.a, pt) };
+    if (L.dim) L.dim = { ...L.dim, b: snapPt(pt, undefined, L.dim.a) };
     else if (L.stroke && L.stroke.mode !== 'free') {
       const a = L.stroke.pts[0]!;
       const m = L.stroke.mode;
-      L.stroke.pts[1] = m === 'line' || m === 'double' ? orthoSnap(a, pt) : pt;
+      L.stroke.pts[1] = snapPt(pt, undefined, m === 'line' || m === 'double' ? a : undefined);
       if (m === 'arc') L.stroke.s = defaultArcSagitta(a, pt);
     } else if (L.stroke) {
       const last = L.stroke.pts[L.stroke.pts.length - 1]!;
@@ -400,6 +418,17 @@ function MarkWindowBody({ id }: { id: string }) {
           <Icon name="undo" size={20} />
           Zpět
         </button>
+        {sel.length > 0 && (
+          <button class="btn btn-sm" title="Kopie vybraných prvků vedle (posunout tažením)" onClick={() => {
+            const off = 24 / view.s;
+            const c = copySketchItems(page, sel, off, off);
+            commit(c.page);
+            setSel(c.refs, c.page);
+          }}>
+            <Icon name="copy" size={20} />
+            Kopírovat
+          </button>
+        )}
         {sel.length > 0 && (
           <button class="btn btn-sm btn-danger" onClick={removeSelected}>
             <Icon name="trash" size={20} />

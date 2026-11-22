@@ -2,12 +2,14 @@
  * Kreslení skici značky (okno značky, ui/MarkWindow.tsx) – převzato z prototypu (prototyp/src/input/detailsUI.js):
  * mřížka, tahy a tvary (geometrie core/sketch.ts), kóty s libovolným textem (oranžové, šikmé zarážky; na fotce
  * orientační – fialové, čárkovaně, s ≈), popisky (velikost podle měřítka `k`),
- * zvýraznění vybraných prvků a obdélník výběru (okno modře, křížení zeleně čárkovaně – jako ve výkresu).
+ * zvýraznění vybraných prvků a obdélník výběru (okno modře, křížení zeleně čárkovaně – jako ve výkresu), úchyty
+ * vybraných prvků (body čtverečkem, velikost kroužkem – core/sketchEdit.ts) a značka přichycení.
  * Souřadnice skici = px při zoomu 100 %; `view` = zoom `s` a posun `ox`, `oy` (px plátna).
  */
 import { LINE_DASH } from './lineDash';
 import type { MarkPage, Pt, SketchDim, SketchStroke } from '../model/types';
 import { dimIsOrient, dimText, labelBox, SKETCH_FONT_PX, sketchPolylines, type SketchRef } from '../core/sketch';
+import type { SketchHandle, SketchSnap } from '../core/sketchEdit';
 
 export interface SketchView {
   s: number;
@@ -150,7 +152,7 @@ export function drawSketch(
   h: number,
   v: SketchView,
   page: MarkPage,
-  extra: { stroke?: SketchStroke | null; dim?: SketchDim | null; selected?: readonly SketchRef[]; band?: { a: Pt; b: Pt } | null; photo?: SketchPhoto | null } = {}
+  extra: { stroke?: SketchStroke | null; dim?: SketchDim | null; selected?: readonly SketchRef[]; band?: { a: Pt; b: Pt } | null; photo?: SketchPhoto | null; handles?: readonly SketchHandle[]; snap?: SketchSnap | null } = {}
 ): void {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = '#ffffff';
@@ -187,7 +189,48 @@ export function drawSketch(
   }
   ctx.restore();
   if (extra.band) drawBand(ctx, extra.band.a, extra.band.b, v.s);
+  if (extra.handles?.length) drawHandles(ctx, extra.handles, v.s);
+  if (extra.snap) drawSnapMark(ctx, extra.snap, v.s);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+/** Úchyty vybraných prvků – stálá velikost na obrazovce: bod tvaru čtverec, velikost (vrchol, vzdálenost, písmo) kroužek. */
+function drawHandles(ctx: CanvasRenderingContext2D, hs: readonly SketchHandle[], s: number): void {
+  // `s` je v px zařízení – úchyt má mít ~7 css px (dost velký na prst / pero)
+  const dpr = globalThis.devicePixelRatio || 1;
+  const r = (7 * dpr) / s;
+  ctx.save();
+  ctx.lineWidth = (2 * dpr) / s;
+  ctx.strokeStyle = '#2563eb';
+  for (const h of hs) {
+    ctx.fillStyle = h.kind === 'size' ? '#fde68a' : '#ffffff';
+    ctx.beginPath();
+    if (h.kind === 'size') ctx.arc(h.at.x, h.at.y, r * 1.1, 0, Math.PI * 2);
+    else ctx.rect(h.at.x - r, h.at.y - r, 2 * r, 2 * r);
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/** Značka přichycení: význačný bod čtverečkem, bod na čáře křížkem (zeleně). */
+function drawSnapMark(ctx: CanvasRenderingContext2D, sn: SketchSnap, s: number): void {
+  const dpr = globalThis.devicePixelRatio || 1;
+  const r = (8 * dpr) / s;
+  const { x, y } = sn.pt;
+  ctx.save();
+  ctx.strokeStyle = '#16a34a';
+  ctx.lineWidth = (2 * dpr) / s;
+  ctx.beginPath();
+  if (sn.kind === 'point') ctx.rect(x - r, y - r, 2 * r, 2 * r);
+  else {
+    ctx.moveTo(x - r, y - r);
+    ctx.lineTo(x + r, y + r);
+    ctx.moveTo(x + r, y - r);
+    ctx.lineTo(x - r, y + r);
+  }
+  ctx.stroke();
+  ctx.restore();
 }
 
 /** Obdélník výběru: zleva doprava okno (modře), zprava doleva křížení (zeleně čárkovaně). */
