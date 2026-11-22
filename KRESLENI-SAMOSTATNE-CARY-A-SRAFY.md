@@ -7,6 +7,7 @@ Stav: **naprogramováno 2026-11-17** (kroky 0–3, POSTUP.md). Repo má přednos
    - **Čára ve stěnách** (dnešní Čára, vyvinula se ve stěnový nástroj): přesun do menu **Stěny** (název se doladí). Napojuje se na stěnu, dělá výstupky/přizdívky (viz `KRESLENI-VYSTUPKU.md`), výplň šedá jako stěna, v exportu stěna / úprava profilu.
    - **Samostatná čára** (nový nástroj, vedle Obdélníku, Oblouku a dalších): **čistě grafický prvek.** Nikdy se nestane stěnou ani výstupkem, nikdy se nevyplní šedou, ani když leží na stěně nebo se na ni napojí.
 2. Přichytávání samostatné čáry ke stěnám a bodům je **jen pomůcka při kreslení**, nevytváří vazbu (stejně jako u dvojité čáry, viz `KRESLENI-PREKLADU.md`).
+   **Změna 2026-11-22 (vy):** konec **čáry a dvojité čáry**, který leží na líci stěny, jede se stěnou (katalog D15, `core/drawingFollow.ts`). Ostatní přichycení dál bez vazby.
 3. **Šrafy:** u **uzavřeného tvaru** je lze volitelně zapnout. K dispozici **jen několik základních šraf bez nastavování** (bez úhlu a rozteče). Konkrétní sada se doladí později.
 4. Šrafa se **kreslí přes šedou výplň stěny**.
 5. **Dvojitá čára zůstává** samostatným nástrojem (překlady). Řeší se v tabulce níže, ne měnit její chování.

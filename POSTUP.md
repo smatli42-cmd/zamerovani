@@ -7,6 +7,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-22 (2) – konec čáry kresby jede se stěnou (požadavek uživatele, katalog D15)
+- **Požadavek uživatele:** čára nebo dvojitá čára nakreslená mezi stěnami má po posunu stěny zůstat připojená a prodloužit se. Mění dřívější rozhodnutí „kresba ke stěně bez vazby“ (2026-11-17) – uživatel potvrdil: připojení podle polohy, jen Čára a Dvojitá čára, při tažení stěny / rohu, změně kótou / NumPadem a tloušťce.
+- **Co se změnilo:** nové jediné místo `core/drawingFollow.ts` (volá `store.edit`): konec čáry ležící na líci rovné stěny se posune po přímce čáry na nový líc; konec v rohu dvou líců do průsečíku; čára celá na líci jede s ním. Testy `store/drawingFollow.test.ts` (23). Katalog D15, CLAUDE.md, KRESLENI-SAMOSTATNE-CARY-A-SRAFY.md.
+- **Viditelně v aplikaci:** posun stěny (tažením, kótou, NumPadem) nebo změna tloušťky natáhne / zkrátí čáry a dvojité čáry, které končí na jejím líci.
+- **Rozhodnuto samostatně:** tolerance „na líci“ 1 mm; při tažení se připojení posuzuje podle stavu na začátku tažení (stěna nesebere cizí čáru, přes kterou přejede); čára skoro rovnoběžná s lícem (konec by jel o víc než 10× posun líce) a čára, která by se obrátila, zůstane na místě; po otočení strany stěny jede konec s lícem na téže straně (tj. s novým vnitřním lícem); čára v zamčené vrstvě posun stěny zastaví s hlášením (pravidlo V2); obloukové stěny zatím ne; u lomené čáry jede jen koncový bod.
+- **Tabulka pravidlo × prvek:** Čára ✔ (test), Dvojitá čára ✔ (test), Obdélník ✗ (rozhodnutí uživatele, test), Kruh / Oblouk ✗ (rozhodnutí uživatele, kód je nezná). Způsob změny stěny: tažení stěny ✔, tažení rohu ✔, NumPad délky ✔, volná kóta ✔, tloušťka ✔, otočení strany ✔ (vše test).
+- **Otevřené:** oblouková stěna; tažení myší v náhledu prohlížeče jsem nemohl napodobit (ověřeno skriptem stejnou cestou jako tažení) – vyzkoušet perem.
+
 ### 2026-11-22 (1) – chyba: volná kóta k čáře kresby nebyla vidět (nahlásil uživatel)
 - **Chyba od uživatele:** kóta mezi čarou a čarou nebo mezi stěnou a čarou se v půdorysu nezobrazila (vrstva Kóty zapnutá); mezi stěnami ano.
 - **Příčina a oprava:** výkres se kreslí po vrstvách a kóta „viděla“ jen prvky své vrstvy (Kóty) – čára leží ve vrstvě Kresba, takže kóta nenašla svůj konec. Teď se konce kóty hledají v celém podlaží (`drawFreeDims`, parametr `geo`). Totéž opravuje kótu ke schodišti. Test `canvas/drawFreeDims.test.ts` (bez opravy selže; i se skrytou vrstvou Kresba). Kontrola agentem reviewer bez nálezů v kódu.

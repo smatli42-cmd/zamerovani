@@ -16,6 +16,7 @@ import { syncProtrusions } from '../core/protrusion';
 import { describeDim, dimKey, lockViolation, pruneLocks, reboundLocks, type DimTarget } from '../core/dimLock';
 import { pruneFreeDims, rescueFreeDims } from '../core/freeDim';
 import { followDisturbsEdit, followLockedDims } from '../core/dimFollow';
+import { followWallDrawings } from '../core/drawingFollow';
 import { keepOpeningsOnResizedWalls } from '../core/openingChain';
 import type { PenShape } from '../core/strokes';
 import { assignLayers, layerLockViolation, selectableItems, viewFloor } from '../core/layers';
@@ -342,6 +343,8 @@ class Store {
         syncHosted(before, f);
         // výstupky drží místo na stěně i při změně jejího vzepětí
         syncProtrusions(before, f);
+        // konce čar kresby na líci posunuté stěny jedou se stěnou (core/drawingFollow.ts)
+        followWallDrawings(before, f, this.inGesture ? this.gestureStart?.floors.find(x => x.id === floorId) : undefined);
         // volné kóty, jejichž bod zanikl, a zámky smazaných prvků zmizí s nimi
         rescueFreeDims(before, f);
         pruneFreeDims(f);
@@ -352,6 +355,7 @@ class Store {
         const preFollow = hasFreeLock ? (current(f) as Floor) : null;
         if (preFollow && followLockedDims(before, f, opts.allowKey)) {
           syncHosted(preFollow, f);
+          followWallDrawings(preFollow, f, this.inGesture ? this.gestureStart?.floors.find(x => x.id === floorId) : undefined);
           // dorovnání nesmí pohnout tím, co úprava sama změnila (jinak by se zadaná úprava přepsala)
           if (followDisturbsEdit(before!, preFollow, f, opts.allowKey)) {
             blocked = { key: '', text: 'Nelze – zamčené kóty by úpravu vrátily zpět (prvek je zamčenými kótami přivázaný z obou stran).' };
