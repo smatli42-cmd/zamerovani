@@ -10,7 +10,8 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Co se změnilo:** v okně poznámky má každý vybraný prvek úchyty a rozměry se mění tažením (skica není v měřítku). Oblouk: konce + vrchol (velikost). Dvojitá čára: konce + vzdálenost čar. Obdélník: rohy + strany. Kruh: body na obvodu. Tah perem: rohy ohraničení (zvětšit / natáhnout). Text: velikost. Čára a kóta: konce. Nové jediné místo `core/sketchEdit.ts`.
 - **Viditelně:** čtverečky (body) a žluté kroužky (velikost) u vybraného prvku. Při kreslení a tažení se bod přichytí ke koncům, rohům, středům a čarám ostatních prvků (zelená značka; např. krokve na vaznici). Tlačítko Kopírovat u výběru.
 - **Rozhodnuto samostatně:** úchyty jen u výběru do 30 prvků (větší výběr jen posun). Úchyt jede o posun pera, ne pod hrot; ťuknutí ho nemění. Přichycení je vždy zapnuté (bez přepínače). Kopie se posune o 24 px vedle. Tah perem nejde stáhnout do čáry. Seznam nástrojů přesunut do `ui/sketchTools.ts` (MarkWindow by přesáhl 500 řádků; přesun je ve stejném commitu).
-- **Otevřené:** otáčení prvků skici zatím není. Perem na tabletu nevyzkoušeno.
+- **Otevřené:** otáčení prvků skici zatím není.
+- **Vyzkoušeno uživatelem (2026-11-22):** vše funguje, jak má.
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
 ### 2026-11-22 (5) – výběr obdélníkem ve skice poznámky (přání uživatele)
