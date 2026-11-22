@@ -7,9 +7,9 @@
  * Pero / myš kreslí, prst posouvá (jako v půdorysu).
  */
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { MarkPage, Pt, SketchDim, SketchStroke } from '../model/types';
+import type { LineStyle, MarkPage, Pt, SketchDim, SketchStroke } from '../model/types';
 import { emptyPage, markCode, pageIsEmpty } from '../core/marks';
-import { defaultArcSagitta, eraseInPage, hitSketch, moveSketchItem, removeSketchItem, SKETCH_DOUBLE_W, sketchScale, type SketchRef } from '../core/sketch';
+import { defaultArcSagitta, eraseInPage, hitSketch, moveSketchItem, removeSketchItem, nearestSketchWidth, restyleStroke, SKETCH_DEFAULT_WIDTH, SKETCH_DOUBLE_W, sketchLineWidth, sketchScale, type SketchRef } from '../core/sketch';
 import { drawSketch, type SketchPhoto, type SketchView } from '../canvas/drawSketch';
 import { addPhoto, getPhoto } from '../persistence/photos';
 import { setMarkContent, updateMark } from '../store/actions';
@@ -17,6 +17,7 @@ import { store } from '../store/store';
 import { useStore } from '../store/useStore';
 import { TextPrompt } from './Dialog';
 import { Icon, type IconName } from './icons';
+import { SketchLineOptions } from './SketchLineOptions';
 
 type ShapeMode = Exclude<SketchStroke['mode'], 'free'>;
 type SketchTool = 'select' | 'pen' | ShapeMode | 'text' | 'dim' | 'eraser' | 'pan';
@@ -87,6 +88,9 @@ function MarkWindowBody({ id }: { id: string }) {
     if (t !== 'select') setSel(null);
   };
   const [color, setColor] = useState(COLORS[0]!);
+  // druh a tloušťka čáry (pero a tvary); u vybraného prvku kresby se změní i on
+  const [lineStyle, setLineStyle] = useState<LineStyle>('solid');
+  const [lineWidth, setLineWidth] = useState(SKETCH_DEFAULT_WIDTH);
   const [view, setView] = useState<SketchView>({ s: 1, ox: 0, oy: 0 });
   const [prompt, setPrompt] = useState<{ title: string; initial: string; done: (t: string) => void } | null>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -117,6 +121,12 @@ function MarkWindowBody({ id }: { id: string }) {
   const commit = (next: MarkPage) => {
     setHistory(h => [...h, page]);
     setPage(next);
+  };
+  const pickLine = (patch: { style?: LineStyle; width?: number }) => {
+    if (patch.style) setLineStyle(patch.style);
+    if (patch.width) setLineWidth(patch.width);
+    const next = sel && restyleStroke(page, sel, { style: patch.style, width: patch.width && sketchLineWidth(patch.width, view.s) });
+    if (next) commit(next);
   };
   const removeSelected = () => {
     if (!sel) return;
@@ -244,6 +254,12 @@ function MarkWindowBody({ id }: { id: string }) {
     if (tool === 'select') {
       const hit = hitSketch(page, pt, tol());
       setSel(hit);
+      // tlačítka druhu a tloušťky ukážou vybraný prvek kresby
+      const st = hit?.kind === 'stroke' ? page.strokes[hit.index] : undefined;
+      if (st) {
+        setLineStyle(st.style ?? 'solid');
+        setLineWidth(nearestSketchWidth(st.width, view.s));
+      }
       if (hit) live.current = { moving: { ref: hit, from: pt, orig: page } };
       return;
     }
@@ -267,7 +283,7 @@ function MarkWindowBody({ id }: { id: string }) {
       const mode: SketchStroke['mode'] = SHAPES.includes(tool) ? (tool as ShapeMode) : 'free';
       // tloušťka čáry stejná na obrazovce při každém zoomu (nad zmenšenou fotkou by byla tenká)
       const k = sketchScale(view.s);
-      live.current = { stroke: { mode, color, width: Math.round(2.5 * k * 100) / 100, pts: [pt, { ...pt }], ...(mode === 'double' ? { w: Math.round(SKETCH_DOUBLE_W * k) } : {}) } };
+      live.current = { stroke: { mode, color, width: sketchLineWidth(lineWidth, view.s), ...(lineStyle !== 'solid' ? { style: lineStyle } : {}), pts: [pt, { ...pt }], ...(mode === 'double' ? { w: Math.round(SKETCH_DOUBLE_W * k) } : {}) } };
     }
     redraw(n => n + 1);
   };
@@ -351,6 +367,7 @@ function MarkWindowBody({ id }: { id: string }) {
             <button key={c} type="button" class={`color-dot ${color === c ? 'active' : ''}`} style={{ background: c }} onClick={() => setColor(c)} />
           ))}
         </span>
+        <SketchLineOptions style={lineStyle} width={lineWidth} onStyle={v => pickLine({ style: v })} onWidth={v => pickLine({ width: v })} />
         <button class="btn btn-sm" disabled={!history.length} onClick={() => {
           setPage(history[history.length - 1]!);
           setHistory(history.slice(0, -1));

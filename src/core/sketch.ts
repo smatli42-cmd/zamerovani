@@ -1,10 +1,11 @@
 /**
  * Skica značky (okno značky, ui/MarkWindow.tsx) – JEDINÉ místo geometrie skici: tvary (pero, čára, obdélník, kruh,
  * oblouk, dvojitá čára – jako kresba ve výkresu, přání uživatele 2026-11-20), zásah perem, posun prvku, guma,
- * velikost popisků a kót podle zoomu při vzniku (`sketchScale`) a orientační kóty na fotce (`dimIsOrient`).
+ * velikost popisků a kót podle zoomu při vzniku (`sketchScale`), druh a tloušťka čáry (`sketchLineWidth`,
+ * `restyleStroke`) a orientační kóty na fotce (`dimIsOrient`).
  * Souřadnice skici = px při zoomu 100 %. Kresba skici je jen obrázek – žádné vazby ani přichytávání ke stěnám.
  */
-import type { MarkPage, Pt, SketchDim, SketchLabel, SketchStroke } from '../model/types';
+import type { LineStyle, MarkPage, Pt, SketchDim, SketchLabel, SketchStroke } from '../model/types';
 import { normal, projectToSegment, scale, add, unit } from './geometry';
 import { arcPoints } from './strokes';
 
@@ -61,6 +62,39 @@ export const SKETCH_FONT_PX = 13;
  */
 export function sketchScale(viewS: number): number {
   return Math.max(0.01, Math.round(100 / viewS) / 100);
+}
+
+/** Volby tloušťky čáry skici (px na obrazovce; přání uživatele 2026-11-22). Výchozí střední. */
+export const SKETCH_WIDTHS: readonly { v: number; label: string }[] = [
+  { v: 1.5, label: 'Tenká' },
+  { v: 2.5, label: 'Střední' },
+  { v: 5, label: 'Silná' }
+];
+export const SKETCH_DEFAULT_WIDTH = 2.5;
+
+/** Tloušťka čáry v jednotkách skici: volba × měřítko podle zoomu (stejně tlustá na obrazovce při každém zoomu). */
+export function sketchLineWidth(base: number, viewS: number): number {
+  return Math.round(base * sketchScale(viewS) * 100) / 100;
+}
+
+/** Nejbližší volba tloušťky k čáře tloušťky `width` při zoomu `viewS` (tlačítka ukážou vybraný prvek). */
+export function nearestSketchWidth(width: number, viewS: number): number {
+  const px = width / sketchScale(viewS);
+  return SKETCH_WIDTHS.reduce((b, o) => (Math.abs(o.v - px) < Math.abs(b - px) ? o.v : b), SKETCH_DEFAULT_WIDTH);
+}
+
+/** Změna druhu / tloušťky čáry prvku skici (jen kresba – ne text, ne kóta); nová strana, nebo null = nic ke změně. */
+export function restyleStroke(page: MarkPage, ref: SketchRef, patch: { style?: LineStyle; width?: number }): MarkPage | null {
+  const st = ref.kind === 'stroke' ? page.strokes[ref.index] : undefined;
+  if (!st) return null;
+  const next: SketchStroke = { ...st };
+  if (patch.width !== undefined) next.width = patch.width;
+  if (patch.style !== undefined) {
+    if (patch.style === 'solid') delete next.style;
+    else next.style = patch.style;
+  }
+  if (next.width === st.width && next.style === st.style) return null;
+  return { ...page, strokes: page.strokes.map((x, i) => (i === ref.index ? next : x)) };
 }
 
 /**

@@ -5,9 +5,10 @@ import { arcGeometry } from '../core/arc';
 import { arcHandles } from '../core/arcChain';
 import { wallNodes } from '../core/floorQueries';
 import { add, normal, scale } from '../core/geometry';
-import type { Floor, LineStyle, Pt, Wall } from '../model/types';
+import type { Floor, Pt, Wall } from '../model/types';
 import { isSelected, type Camera, type Selection, type SingleSelection } from '../store/store';
 import { toScreen } from './view';
+import { LINE_DASH } from './lineDash';
 import { facePointAt, hasBody } from '../core/wallFace';
 import { wallBodies } from '../core/wallBody';
 import { addHitBox } from './hitTargets';
@@ -29,13 +30,7 @@ export const COLORS = {
 
 export const isSel = (s: Selection, kind: SingleSelection['kind'], id: string) => isSelected(s, kind, id);
 
-/** Vzory čar pro stěnu tloušťky 3 px (s kulatými konci by se mezery slily, proto se čárkované kreslí s ostrými konci). */
-export const LINE_DASH: Record<LineStyle, number[]> = {
-  solid: [],
-  dashed: [14, 8],
-  dashdot: [18, 7, 4, 7],
-  dashdot2: [18, 6, 3, 6, 3, 6]
-};
+export { LINE_DASH } from './lineDash';
 
 /** Cesta stěny (úsečka nebo oblouk) v souřadnicích obrazovky. */
 function pathWall(ctx: CanvasRenderingContext2D, wall: Wall, a: Pt, b: Pt, nodes: [Pt, Pt], cam: Camera): void {

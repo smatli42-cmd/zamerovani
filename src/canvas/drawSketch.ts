@@ -5,6 +5,7 @@
  * zvýraznění vybraného prvku.
  * Souřadnice skici = px při zoomu 100 %; `view` = zoom `s` a posun `ox`, `oy` (px plátna).
  */
+import { LINE_DASH } from './lineDash';
 import type { MarkPage, SketchDim, SketchStroke } from '../model/types';
 import { dimIsOrient, dimText, labelBox, SKETCH_FONT_PX, sketchPolylines, type SketchRef } from '../core/sketch';
 
@@ -21,9 +22,13 @@ export const SKETCH_ORIENT_COLOR = '#7c3aed';
 const font = (k = 1): string => `700 ${SKETCH_FONT_PX * k}px system-ui, sans-serif`;
 
 
-function drawStroke(ctx: CanvasRenderingContext2D, st: SketchStroke, color = st.color, width = st.width): void {
+/** `solid` = zvýraznění výběru (vždy plné). Vzor čáry podle tloušťky (LINE_DASH je pro 3 px), s ostrými konci. */
+function drawStroke(ctx: CanvasRenderingContext2D, st: SketchStroke, color = st.color, width = st.width, solid = false): void {
   ctx.strokeStyle = color;
   ctx.lineWidth = width;
+  const dash = solid ? [] : LINE_DASH[st.style ?? 'solid'];
+  ctx.setLineDash(dash.map(v => (v * Math.max(width, 1)) / 3));
+  ctx.lineCap = dash.length ? 'butt' : 'round';
   for (const pts of sketchPolylines(st)) {
     if (pts.length < 2) continue;
     ctx.beginPath();
@@ -31,6 +36,8 @@ function drawStroke(ctx: CanvasRenderingContext2D, st: SketchStroke, color = st.
     for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i]!.x, pts[i]!.y);
     ctx.stroke();
   }
+  ctx.setLineDash([]);
+  ctx.lineCap = 'round';
 }
 
 const SELECT_COLOR = 'rgba(37, 99, 235, 0.45)';
@@ -42,7 +49,7 @@ function drawSelected(ctx: CanvasRenderingContext2D, page: MarkPage, ref: Sketch
   ctx.lineJoin = 'round';
   if (ref.kind === 'stroke') {
     const st = page.strokes[ref.index];
-    if (st) drawStroke(ctx, st, SELECT_COLOR, st.width + 8);
+    if (st) drawStroke(ctx, st, SELECT_COLOR, st.width + 8, true);
   } else if (ref.kind === 'dim') {
     const d = page.dims[ref.index];
     if (d) {

@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-22 (4) – druh a tloušťka čáry ve skice poznámky (přání uživatele)
+- **Přání uživatele:** v poznámce volit druh a tloušťku čáry.
+- **Co se změnilo:** v okně poznámky vedle barev volba druhu čáry (plná, čárkovaná, čerchovaná, čerch. 2 tečky – jako kresba ve výkresu) a tloušťky (tenká, střední, silná) s náhledem čáry. Platí pro pero a tvary (čára, obdélník, kruh, oblouk, dvojitá čára); je-li vybraný prvek kresby, změní se i on (krok Zpět v okně). Data `SketchStroke.style` (SCHEMA 35, bez převodu), pravidla `core/sketch.ts` (`sketchLineWidth`, `restyleStroke`), kreslení `canvas/drawSketch.ts`, volba `ui/SketchLineOptions.tsx`. Testy v `core/sketch.test.ts`.
+- **Viditelně v aplikaci:** v okně poznámky 4 tlačítka druhu a 3 tloušťky čáry. Ověřeno v prohlížeči (kreslení, změna vybrané čáry, uložení).
+- **Rozhodnuto samostatně:** tloušťky 1,5 / 2,5 / 5 px na obrazovce (střední = dosavadní); tloušťka stejná na obrazovce při každém zoomu (jako dosud); text a kóta skici se volbou nemění; barva se u vybraného prvku nemění (jen druh a tloušťka – nebylo požadováno); čárkované čáry s ostrými konci (jinak se mezery slijí). Po výběru prvku kresby tlačítka ukážou jeho druh a nejbližší tloušťku; zvýraznění výběru vždy plnou čarou. Vzory čar přesunuty do `canvas/lineDash.ts` (skica netáhne kreslení půdorysu). Kontrola agentem reviewer – nálezy opraveny.
+- **Otevřené:** nic.
+
 ### 2026-11-22 (3) – pomocná čára směru při tažení konce nakreslené čáry (přání uživatele)
 - **Přání uživatele:** při kreslení čáry se ukazuje pomocná čára ve směru kreslení; totéž chce u vybrané nakreslené čáry, aby ji mohl pohodlně prodloužit / zkrátit.
 - **Co se změnilo:** úchyt konce čáry a dvojité čáry (nástroj Vybrat) si pamatuje původní směr koncového úseku; při tažení se konec přichytí na tuto pomocnou čáru (délka po 10 mm, i průsečík s lícem stěny) a nabízí i ostatní pomocné čáry jako při kreslení (vodorovně, svisle, kolmo, zarovnání). `tools/drawingEdit.ts`, volba `lines` v `tools/drawSnap.ts`; test `tools/drawingEdit.test.ts`.

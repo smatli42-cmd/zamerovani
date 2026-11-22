@@ -2,7 +2,7 @@
  * Značka v půdorysu (ZNACKY-POZNAMKY-DETAILY.md): jedna značka nahrazuje dřívější značku detailu, značku fotky
  * a poznámkový špendlík. Pravidla v core/marks.ts.
  */
-import type { Id, Pt } from './types';
+import type { Id, LineStyle, Pt } from './types';
 
 /** Styl směru pohledu: kužel (výchozí) nebo šipka. */
 export type MarkDirStyle = 'cone' | 'arrow';
@@ -26,7 +26,10 @@ export interface MarkDir {
 export interface SketchStroke {
   mode: 'free' | 'line' | 'rect' | 'circle' | 'arc' | 'double';
   color: string;
+  /** Tloušťka v jednotkách skici (volba tloušťky × měřítko podle zoomu při vzniku, `sketchLineWidth`). */
   width: number;
+  /** Druh čáry (přání uživatele 2026-11-22); chybí = plná. */
+  style?: LineStyle;
   pts: Pt[];
   s?: number;
   w?: number;

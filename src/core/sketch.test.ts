@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { MarkPage } from '../model/types';
-import { dimIsOrient, dimText, eraseInPage, hitSketch, labelBox, sketchScale } from './sketch';
+import { dimIsOrient, dimText, eraseInPage, hitSketch, labelBox, nearestSketchWidth, restyleStroke, sketchLineWidth, sketchScale } from './sketch';
 
 const page = (photo = false): MarkPage => ({
   id: 'p',
@@ -67,5 +67,34 @@ describe('kóty na fotce jsou jen orientační', () => {
     const x = 400 + w / 2 - 2;
     expect(hitSketch(p, { x, y: 1000 + 30 }, 0)).toEqual({ kind: 'dim', index: 0 });
     expect(hitSketch(page(false), { x, y: 1000 + 30 }, 0)).toBeNull();
+  });
+});
+
+describe('druh a tloušťka čáry ve skice (přání uživatele 2026-11-22)', () => {
+  const withLine = (): MarkPage => ({ ...page(), strokes: [{ mode: 'line', color: '#000', width: 2.5, pts: [{ x: 0, y: 0 }, { x: 100, y: 0 }] }] });
+
+  it('tloušťka = volba × měřítko zoomu (na obrazovce stejná)', () => {
+    expect(sketchLineWidth(5, 1)).toBe(5);
+    expect(sketchLineWidth(1.5, 0.25)).toBe(6);
+  });
+
+  it('změna druhu a tloušťky vybraného prvku kresby; plná = bez pole style', () => {
+    const p = restyleStroke(withLine(), { kind: 'stroke', index: 0 }, { style: 'dashed', width: 5 })!;
+    expect(p.strokes[0]).toMatchObject({ style: 'dashed', width: 5 });
+    const q = restyleStroke(p, { kind: 'stroke', index: 0 }, { style: 'solid' })!;
+    expect('style' in q.strokes[0]!).toBe(false);
+    expect(q.strokes[0]!.width).toBe(5);
+  });
+
+  it('nejbližší volba tloušťky k vybrané čáře (podle zoomu)', () => {
+    expect(nearestSketchWidth(5, 1)).toBe(5);
+    expect(nearestSketchWidth(6, 0.25)).toBe(1.5);
+    expect(nearestSketchWidth(2.4, 1)).toBe(2.5);
+  });
+
+  it('text a kóta se nemění; beze změny → null', () => {
+    expect(restyleStroke(withLine(), { kind: 'label', index: 0 }, { style: 'dashed' })).toBeNull();
+    expect(restyleStroke(withLine(), { kind: 'dim', index: 0 }, { width: 5 })).toBeNull();
+    expect(restyleStroke(withLine(), { kind: 'stroke', index: 0 }, { style: 'solid', width: 2.5 })).toBeNull();
   });
 });

@@ -1098,3 +1098,19 @@ span.layer-name {
   font-family: inherit;
   resize: vertical;
 }
+
+/* Skica poznámky: druh a tloušťka čáry (ui/SketchLineOptions.tsx) */
+.sketch-line-opts {
+  display: inline-flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.sketch-line-opts .line-opt {
+  min-width: 44px;
+  padding: 4px 6px;
+}
+.sketch-line-opts .line-opt.active {
+  background: #dbeafe;
+  border-color: #2563eb;
+  color: #1d4ed8;
+}

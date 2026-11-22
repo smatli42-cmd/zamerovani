@@ -49,6 +49,7 @@ export function migrateProject(raw: unknown): Project {
   // 31 → 32: směr značky = cíl ve výkresu `dir.to` (mm) místo úhlu a délky v px – převod `markDirTargets`
   // 32 → 33: fotka jako podklad strany značky (`MarkPage.photo` – odkaz na úložiště fotek) – nepovinné, bez převodu
   // 33 → 34: velikost popisků a kót skici podle zoomu při vzniku (`SketchLabel.k`, `SketchDim.k`) – nepovinné, bez převodu
+  // 34 → 35: druh čáry ve skice (`SketchStroke.style`) – nepovinné, bez převodu
   const old = p.schema ?? 1;
   const floors = p.floors.map(f => {
     const j = joinSemicircles(convertShapesToWalls(f));
