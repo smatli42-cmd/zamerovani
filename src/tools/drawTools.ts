@@ -11,9 +11,10 @@ import { sideFromPen } from '../core/wallSide';
 import type { Drawing, Pt } from '../model/types';
 import type { SnapResult } from '../core/snapping';
 import { addDrawDouble, addDrawLine } from '../store/actions';
-import { store, type Camera } from '../store/store';
+import { store } from '../store/store';
 import { doubleAlongWall, drawSnap, type DrawSnapResult } from './drawSnap';
 import { pickAny } from './pick';
+import { drawAlignGuides } from './dragOverlay';
 import { drawGuides, grabArcHandle, selectTool } from './selectTool';
 import type { PointerInput, Tool } from './types';
 import { drawLengthBadge, drawSnapMarker } from './wallTool';
@@ -122,24 +123,6 @@ function makeDrawTool(kind: 'line' | 'double'): Tool {
       drawLengthBadge(ctx, toScreen(s.start.pt, cam), toScreen(s.end.pt, cam), Math.round(dist(s.start.pt, s.end.pt)));
     }
   };
-}
-
-/** Zarovnání s bodem kresby / rohem: tečkovaně od toho bodu k přichycenému bodu (tools/drawSnap.ts). */
-export function drawAlignGuides(ctx: CanvasRenderingContext2D, cam: Camera, r: SnapResult): void {
-  if (!r.guides.length) return;
-  ctx.save();
-  ctx.setLineDash([4, 4]);
-  ctx.strokeStyle = '#a855f7';
-  ctx.lineWidth = 1;
-  for (const g of r.guides) {
-    const f = toScreen(g.from, cam);
-    const t = toScreen(g.to, cam);
-    ctx.beginPath();
-    ctx.moveTo(f.x, f.y);
-    ctx.lineTo(t.x, t.y);
-    ctx.stroke();
-  }
-  ctx.restore();
 }
 
 export const drawLineTool = makeDrawTool('line');

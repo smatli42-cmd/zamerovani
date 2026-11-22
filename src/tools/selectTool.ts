@@ -18,7 +18,7 @@ import { pickAny, pickMarkDirHandle } from './pick';
 import { dirTargetFromDrag } from '../core/marks';
 import { dragDrawingHandle, drawingHandleUnderPen, type DrawHandleDrag } from './drawingEdit';
 import { HIT_PX, type PointerInput, type Tool } from './types';
-import { drawGuides, drawSnapHits } from './dragOverlay';
+import { drawAlignGuides, drawGuides, drawSnapHits } from './dragOverlay';
 
 export { drawGuides } from './dragOverlay';
 import { moveSnapTargets, movingGeom, snapMove, type SnapGeom } from '../core/moveSnap';
@@ -59,7 +59,7 @@ let dragging = false;
 /** Zachycená pomocná čára (hystereze mezi kroky tažení). */
 let lock: string | null = null;
 /** Co se kreslí během tažení: zachycená čára, původní směry, bod. */
-let shown: { line: DragLine | null; point: Pt; lines: DragLine[] } | null = null;
+let shown: { line: DragLine | null; point: Pt; lines: DragLine[]; align?: { from: Pt; to: Pt }[] } | null = null;
 /** Prodleva: pero drží na místě → zachycení se uvolní a platí přesná poloha pod perem. */
 let holdAnchor: Pt | null = null;
 let holdTimer: ReturnType<typeof setTimeout> | null = null;
@@ -300,7 +300,8 @@ export const selectTool: Tool = {
       // konec směru = bod ve výkresu (mm) – při zoomu ukazuje pořád na stejné místo
       if (m) setMarkDir(drag.id, { to: dirTargetFromDrag(m, p.world, cam.zoom) });
     } else if (drag.kind === 'draw') {
-      dragDrawingHandle(drag.h, p);
+      // konec čáry: pomocná čára v jejím směru (prodloužení / zkrácení) jako při kreslení
+      shown = dragDrawingHandle(drag.h, p);
     } else if (drag.kind === 'leader') {
       updateText(drag.id, { leader: { x: Math.round(p.world.x / 10) * 10, y: Math.round(p.world.y / 10) * 10 } });
     } else if (drag.kind === 'group') {
@@ -427,7 +428,11 @@ export const selectTool: Tool = {
   },
 
   drawOverlay(ctx) {
-    if (shown && drag && dragging) drawGuides(ctx, shown, store.get().camera);
+    if (shown && drag && dragging) {
+      drawGuides(ctx, shown, store.get().camera);
+      // zarovnání konce kresby s bodem / rohem (tečkovaně od toho bodu, jako při kreslení)
+      if (shown.align) drawAlignGuides(ctx, store.get().camera, { guides: shown.align });
+    }
     if (snapHits.length && drag && dragging) drawSnapHits(ctx, snapHits, store.get().camera);
     if (!band) return;
     const x = Math.min(band.startScreen.x, band.endScreen.x);

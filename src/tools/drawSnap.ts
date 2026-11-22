@@ -31,7 +31,7 @@ const free = (p: Pt): SnapResult => ({ pt: { x: Math.round(p.x / 10) * 10, y: Ma
  * Zarovnání (připomínka uživatele 2026-11-19 – čtverec čarami se nedal nakreslit bez odhadu): bod se přichytí na
  * svislici / vodorovnou přes bod kresby nebo roh stěn (i na zachycené pomocné čáře) a ukáže se čárkovaně od toho bodu.
  */
-export function drawSnap(floor: Floor, raw: Pt, from: Pt | null, skip?: string, opts: { align?: boolean } = {}): DrawSnapResult {
+export function drawSnap(floor: Floor, raw: Pt, from: Pt | null, skip?: string, opts: { align?: boolean; lines?: readonly DragLine[] } = {}): DrawSnapResult {
   const { settings, camera } = store.get();
   if (!settings.snap) return free(raw);
   const tol = HIT_PX.snapNode / camera.zoom;
@@ -48,7 +48,7 @@ export function drawSnap(floor: Floor, raw: Pt, from: Pt | null, skip?: string, 
   // pomocné čáry z počátku úseku (jako u nástroje Stěna): vodorovně, svisle, kolmo ke stěně. Zachycená čára platí
   // až ke stěně: u líce / čáry stěny se konec dá na jejich PRŮSEČÍK s pomocnou čárou (kolmo na protější stěnu –
   // připomínka uživatele 2026-11-17), ne na nejbližší bod líce.
-  const g = from ? guideAt(floor, from, raw, camera.zoom, sources, skip) : null;
+  const g = from ? guideAt(floor, from, raw, camera.zoom, sources, skip, opts.lines) : null;
   if (g) {
     const line = g.line;
     if (face) {
@@ -132,9 +132,10 @@ function drawingGuideLines(from: Pt, segs: readonly { id: string; a: Pt; b: Pt }
   return lines;
 }
 
-function guideAt(floor: Floor, from: Pt, raw: Pt, zoom: number, sources: readonly Pt[], skip?: string): { line: DragLine; pt: Pt; align: Pt | null } | null {
+function guideAt(floor: Floor, from: Pt, raw: Pt, zoom: number, sources: readonly Pt[], skip?: string, extra: readonly DragLine[] = []): { line: DragLine; pt: Pt; align: Pt | null } | null {
   const segs = drawingSegs(floor, skip);
-  const near = linesNear([...drawLinesFrom(floor, from, null), ...drawingGuideLines(from, segs)], raw, NEAR_PX / zoom);
+  // `extra` = pomocné čáry volajícího (původní směr taženého úseku kresby)
+  const near = linesNear([...extra, ...drawLinesFrom(floor, from, null), ...drawingGuideLines(from, segs)], raw, NEAR_PX / zoom);
   // zarážky navíc: průsečík s čárami kresby a místa zarovnaná s body kresby / rohy (svisle nebo vodorovně)
   const aligned = new Map<Pt, Pt>();
   const lines = near.map(l => {

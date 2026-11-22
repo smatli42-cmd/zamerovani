@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-22 (3) – pomocná čára směru při tažení konce nakreslené čáry (přání uživatele)
+- **Přání uživatele:** při kreslení čáry se ukazuje pomocná čára ve směru kreslení; totéž chce u vybrané nakreslené čáry, aby ji mohl pohodlně prodloužit / zkrátit.
+- **Co se změnilo:** úchyt konce čáry a dvojité čáry (nástroj Vybrat) si pamatuje původní směr koncového úseku; při tažení se konec přichytí na tuto pomocnou čáru (délka po 10 mm, i průsečík s lícem stěny) a nabízí i ostatní pomocné čáry jako při kreslení (vodorovně, svisle, kolmo, zarovnání). `tools/drawingEdit.ts`, volba `lines` v `tools/drawSnap.ts`; test `tools/drawingEdit.test.ts`.
+- **Viditelně v aplikaci:** při tažení konce vybrané čáry fialová čárkovaná čára v jejím směru; konec na ní drží. Ověřeno v prohlížeči.
+- **Rozhodnuto samostatně:** jen koncové body (ne vnitřní body lomené čáry, ne obdélník, oblouk ani obloukový koncový úsek); původní směr má přednost před ostatními pomocnými čarami (váha 1,5 jako původní směr stěny). Mimo pomocné čáry se konec chová jako při kreslení čáry (délka po 10 mm od sousedního bodu, do 4° od osy vodorovně / svisle, v režimu 90° do osy) – dřív mřížka 10 mm. Zarovnání s bodem / rohem se ukáže tečkovanou stopou (kreslení stopy přesunuto do `tools/dragOverlay.ts`). Při vypnutém přichytávání se pomocná čára neukazuje. Kontrola agentem reviewer – nálezy opraveny.
+- **Otevřené:** nic.
+
 ### 2026-11-22 (2) – konec čáry kresby jede se stěnou (požadavek uživatele, katalog D15)
 - **Požadavek uživatele:** čára nebo dvojitá čára nakreslená mezi stěnami má po posunu stěny zůstat připojená a prodloužit se. Mění dřívější rozhodnutí „kresba ke stěně bez vazby“ (2026-11-17) – uživatel potvrdil: připojení podle polohy, jen Čára a Dvojitá čára, při tažení stěny / rohu, změně kótou / NumPadem a tloušťce.
 - **Co se změnilo:** nové jediné místo `core/drawingFollow.ts` (volá `store.edit`): konec čáry ležící na líci rovné stěny se posune po přímce čáry na nový líc; konec v rohu dvou líců do průsečíku; čára celá na líci jede s ním. Testy `store/drawingFollow.test.ts` (23). Katalog D15, CLAUDE.md, KRESLENI-SAMOSTATNE-CARY-A-SRAFY.md.

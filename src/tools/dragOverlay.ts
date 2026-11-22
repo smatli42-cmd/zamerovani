@@ -5,6 +5,7 @@ import { toScreen } from '../canvas/view';
 import type { DragLine } from '../core/dragResolve';
 import { dist } from '../core/geometry';
 import type { Pt } from '../model/types';
+import type { SnapResult } from '../core/snapping';
 import type { Camera } from '../store/store';
 
 /** Pomocné čáry tažení: původní směry tence čárkovaně, zachycená čára tučně; ikona ⊥ u kolmice (D13). */
@@ -72,6 +73,24 @@ export function drawSnapHits(ctx: CanvasRenderingContext2D, hits: [Pt, Pt][], ca
     }
     if (dist(a0, b0) < 1) ctx.fill();
     else ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/** Zarovnání s bodem kresby / rohem: tečkovaně od toho bodu k přichycenému bodu (tools/drawSnap.ts). */
+export function drawAlignGuides(ctx: CanvasRenderingContext2D, cam: Camera, r: Pick<SnapResult, 'guides'>): void {
+  if (!r.guides.length) return;
+  ctx.save();
+  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = '#a855f7';
+  ctx.lineWidth = 1;
+  for (const g of r.guides) {
+    const f = toScreen(g.from, cam);
+    const t = toScreen(g.to, cam);
+    ctx.beginPath();
+    ctx.moveTo(f.x, f.y);
+    ctx.lineTo(t.x, t.y);
+    ctx.stroke();
   }
   ctx.restore();
 }
