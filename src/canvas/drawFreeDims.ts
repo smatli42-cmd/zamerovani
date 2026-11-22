@@ -12,10 +12,15 @@ import { toScreen } from './view';
 const STYLE: DimStyle = { color: '#334155', bg: '#ffffff', bold: false };
 const SEL: DimStyle = { color: '#2563eb', bg: '#eff6ff', bold: true };
 
-export function drawFreeDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camera, dimScale: number, selection: Selection, hover: Selection): void {
+/**
+ * `floor` = odkud se berou kóty (u kreslení po vrstvách výřez vrstvy), `geo` = odkud se berou měřené prvky – vždy
+ * celé podlaží: konec kóty leží často v jiné vrstvě (čára kresby ve vrstvě Kresba, kóta ve vrstvě Kóty) a kóta se
+ * kreslí i u skrytého měřeného prvku (pravidlo 8). Chyba od uživatele 2026-11-22: kóta k čáře nebyla vidět.
+ */
+export function drawFreeDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camera, dimScale: number, selection: Selection, hover: Selection, geo: Floor = floor): void {
   for (const d of freeDimsOf(floor)) {
-    const pts = dimPoints(floor, d);
-    const line = dimLine(floor, d);
+    const pts = dimPoints(geo, d);
+    const line = dimLine(geo, d);
     if (!pts || !line) continue;
     const p1 = toScreen(pts[0], cam);
     const p2 = toScreen(pts[1], cam);

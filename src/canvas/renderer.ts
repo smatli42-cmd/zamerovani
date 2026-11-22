@@ -123,8 +123,9 @@ function render(): void {
         // kóty schodiště jen u vybraného schodiště
         drawStairDims(ctx, floor, cam, s, state.selection);
       }
-      // volné kóty jsou samostatné prvky své vrstvy – viditelné i u skrytého měřeného prvku (pravidlo 8)
-      if (kinds.has('dim')) drawFreeDims(ctx, slice, cam, s, state.selection, state.hover);
+      // volné kóty jsou samostatné prvky své vrstvy – viditelné i u skrytého měřeného prvku (pravidlo 8);
+      // konce se hledají v celém podlaží (měřená čára bývá v jiné vrstvě), test canvas/drawFreeDims.test.ts
+      if (kinds.has('dim')) drawFreeDims(ctx, slice, cam, s, state.selection, state.hover, floor);
     }
     setHitEnabled(true);
     // rohy (pomůcka úprav) nad vším, jen u viditelných stěn

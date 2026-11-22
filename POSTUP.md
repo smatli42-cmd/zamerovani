@@ -7,6 +7,12 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-22 (1) – chyba: volná kóta k čáře kresby nebyla vidět (nahlásil uživatel)
+- **Chyba od uživatele:** kóta mezi čarou a čarou nebo mezi stěnou a čarou se v půdorysu nezobrazila (vrstva Kóty zapnutá); mezi stěnami ano.
+- **Příčina a oprava:** výkres se kreslí po vrstvách a kóta „viděla“ jen prvky své vrstvy (Kóty) – čára leží ve vrstvě Kresba, takže kóta nenašla svůj konec. Teď se konce kóty hledají v celém podlaží (`drawFreeDims`, parametr `geo`). Totéž opravuje kótu ke schodišti. Test `canvas/drawFreeDims.test.ts` (bez opravy selže; i se skrytou vrstvou Kresba). Kontrola agentem reviewer bez nálezů v kódu.
+- **Viditelně v aplikaci:** kóty k čarám kresby (a ke schodišti) jsou vidět.
+- **Otevřené:** nic nového.
+
 ### 2026-11-21 (5) – „Značka“ se v aplikaci jmenuje „Poznámka“ (přání uživatele)
 - **Vyzkoušeno uživatelem:** nové ikony, nástroj v horní liště a okno poznámky – vše v pořádku.
 - **Co se změnilo:** všechny texty v aplikaci (tlačítko v liště, nápověda, panel „Poznámka Z1“, okno, potvrzení smazání, hlášení u čísla) říkají Poznámka místo Značka; pole s textem v okně se jmenuje „Text“. V kódu a v dokumentaci zůstává `mark` / značka. Test hlášení duplicitního čísla upraven na nové znění (změna zadání uživatelem).
