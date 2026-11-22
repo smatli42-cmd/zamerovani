@@ -2,11 +2,11 @@
  * Kreslení skici značky (okno značky, ui/MarkWindow.tsx) – převzato z prototypu (prototyp/src/input/detailsUI.js):
  * mřížka, tahy a tvary (geometrie core/sketch.ts), kóty s libovolným textem (oranžové, šikmé zarážky; na fotce
  * orientační – fialové, čárkovaně, s ≈), popisky (velikost podle měřítka `k`),
- * zvýraznění vybraného prvku.
+ * zvýraznění vybraných prvků a obdélník výběru (okno modře, křížení zeleně čárkovaně – jako ve výkresu).
  * Souřadnice skici = px při zoomu 100 %; `view` = zoom `s` a posun `ox`, `oy` (px plátna).
  */
 import { LINE_DASH } from './lineDash';
-import type { MarkPage, SketchDim, SketchStroke } from '../model/types';
+import type { MarkPage, Pt, SketchDim, SketchStroke } from '../model/types';
 import { dimIsOrient, dimText, labelBox, SKETCH_FONT_PX, sketchPolylines, type SketchRef } from '../core/sketch';
 
 export interface SketchView {
@@ -150,7 +150,7 @@ export function drawSketch(
   h: number,
   v: SketchView,
   page: MarkPage,
-  extra: { stroke?: SketchStroke | null; dim?: SketchDim | null; selected?: SketchRef | null; photo?: SketchPhoto | null } = {}
+  extra: { stroke?: SketchStroke | null; dim?: SketchDim | null; selected?: readonly SketchRef[]; band?: { a: Pt; b: Pt } | null; photo?: SketchPhoto | null } = {}
 ): void {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = '#ffffff';
@@ -159,7 +159,7 @@ export function drawSketch(
   // fotka jako podklad (kresba leží nad ní ve vlastní vrstvě); bez fotky jemná mřížka
   if (extra.photo) ctx.drawImage(extra.photo.img, 0, 0, extra.photo.w, extra.photo.h);
   else drawGrid(ctx, w, h, v);
-  if (extra.selected) drawSelected(ctx, page, extra.selected);
+  for (const ref of extra.selected ?? []) drawSelected(ctx, page, ref);
   ctx.save();
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -186,7 +186,23 @@ export function drawSketch(
     ctx.fillText(lb.text, lb.x, lb.y + 0.5 * k);
   }
   ctx.restore();
+  if (extra.band) drawBand(ctx, extra.band.a, extra.band.b, v.s);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+/** Obdélník výběru: zleva doprava okno (modře), zprava doleva křížení (zeleně čárkovaně). */
+function drawBand(ctx: CanvasRenderingContext2D, a: Pt, b: Pt, s: number): void {
+  const crossing = b.x < a.x;
+  ctx.save();
+  ctx.fillStyle = crossing ? 'rgba(22,163,74,0.12)' : 'rgba(37,99,235,0.12)';
+  ctx.strokeStyle = crossing ? '#16a34a' : '#2563eb';
+  ctx.lineWidth = 1.5 / s;
+  ctx.setLineDash(crossing ? [6 / s, 4 / s] : []);
+  const x = Math.min(a.x, b.x);
+  const y = Math.min(a.y, b.y);
+  ctx.fillRect(x, y, Math.abs(b.x - a.x), Math.abs(b.y - a.y));
+  ctx.strokeRect(x, y, Math.abs(b.x - a.x), Math.abs(b.y - a.y));
+  ctx.restore();
 }
 
 /** Jemná čtverečková mřížka skici (20 jednotek) přes viditelnou oblast. */

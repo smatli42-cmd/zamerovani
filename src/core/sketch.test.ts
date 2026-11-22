@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { MarkPage } from '../model/types';
-import { dimIsOrient, dimText, eraseInPage, hitSketch, labelBox, nearestSketchWidth, restyleStroke, sketchLineWidth, sketchScale } from './sketch';
+import { dimIsOrient, dimText, eraseInPage, hitSketch, labelBox, moveSketchItems, nearestSketchWidth, removeSketchItems, restyleStroke, restyleStrokes, sketchInRect, sketchLineWidth, sketchPolylines, sketchScale } from './sketch';
 
 const page = (photo = false): MarkPage => ({
   id: 'p',
@@ -96,5 +96,56 @@ describe('druh a tloušťka čáry ve skice (přání uživatele 2026-11-22)', (
     expect(restyleStroke(withLine(), { kind: 'label', index: 0 }, { style: 'dashed' })).toBeNull();
     expect(restyleStroke(withLine(), { kind: 'dim', index: 0 }, { width: 5 })).toBeNull();
     expect(restyleStroke(withLine(), { kind: 'stroke', index: 0 }, { style: 'solid', width: 2.5 })).toBeNull();
+  });
+});
+
+describe('výběr obdélníkem ve skice (přání uživatele 2026-11-22)', () => {
+  // čára 0–100 na y = 0, obdélník 200–300, kóta 0–100 na y = 200, popisek u (500, 50)
+  const pg = (): MarkPage => ({
+    id: 'p',
+    strokes: [
+      { mode: 'line', color: '#000', width: 2.5, pts: [{ x: 0, y: 0 }, { x: 100, y: 0 }] },
+      { mode: 'rect', color: '#000', width: 2.5, pts: [{ x: 200, y: 0 }, { x: 300, y: 100 }] }
+    ],
+    labels: [{ x: 500, y: 50, text: 'ok', color: '#000' }],
+    dims: [{ a: { x: 0, y: 200 }, b: { x: 100, y: 200 }, text: '1' }]
+  });
+  const r = (x1: number, y1: number, x2: number, y2: number) => ({ x1, y1, x2, y2 });
+
+  it('okno: jen prvky celé uvnitř', () => {
+    expect(sketchInRect(pg(), r(-10, -10, 150, 250), false)).toEqual([{ kind: 'stroke', index: 0 }, { kind: 'dim', index: 0 }]);
+    // obdélník zasažený jen zčásti se oknem nevybere
+    expect(sketchInRect(pg(), r(150, -10, 250, 150), false)).toEqual([]);
+  });
+
+  it('křížení: i prvky, kterých se obdélník dotkne (i popisek rámečkem)', () => {
+    expect(sketchInRect(pg(), r(150, -10, 250, 150), true)).toEqual([{ kind: 'stroke', index: 1 }]);
+    expect(sketchInRect(pg(), r(490, 40, 495, 45), true)).toEqual([{ kind: 'label', index: 0 }]);
+  });
+
+  it('křížení: kóta po své čáře, oblouk po svém tvaru; okno je nevybere zčásti', () => {
+    const p: MarkPage = { ...pg(), strokes: [{ mode: 'arc', color: '#000', width: 2.5, pts: [{ x: 0, y: 400 }, { x: 200, y: 400 }], s: 50 }] };
+    // oblouk vybouchlý jednou stranou – obdélník přes jeho vrchol (mimo tětivu) ho křížením vybere
+    const top = sketchPolylines(p.strokes[0]!)[0]!.reduce((a, q) => (Math.abs(q.y - 400) > Math.abs(a.y - 400) ? q : a));
+    expect(sketchInRect(p, r(top.x - 5, top.y - 5, top.x + 5, top.y + 5), true)).toEqual([{ kind: 'stroke', index: 0 }]);
+    expect(sketchInRect(p, r(40, 190, 60, 210), true)).toEqual([{ kind: 'dim', index: 0 }]);
+    expect(sketchInRect(p, r(40, 190, 60, 210), false)).toEqual([]);
+  });
+
+  it('posun, smazání a druh čáry u celého výběru (text a kóta bez druhu čáry)', () => {
+    const refs = sketchInRect(pg(), r(-10, -10, 600, 250), false);
+    expect(refs).toHaveLength(4);
+    const m = moveSketchItems(pg(), refs, 10, 5);
+    expect(m.strokes[1]!.pts[0]).toEqual({ x: 210, y: 5 });
+    expect(m.labels[0]).toMatchObject({ x: 510, y: 55 });
+    expect(m.dims[0]!.a).toEqual({ x: 10, y: 205 });
+    const d = removeSketchItems(pg(), [{ kind: 'stroke', index: 0 }, { kind: 'label', index: 0 }]);
+    expect(d.strokes).toHaveLength(1);
+    expect(d.strokes[0]!.mode).toBe('rect');
+    expect(d.labels).toHaveLength(0);
+    expect(d.dims).toHaveLength(1);
+    const st = restyleStrokes(pg(), refs, { style: 'dashed' })!;
+    expect(st.strokes.map(x => x.style)).toEqual(['dashed', 'dashed']);
+    expect(restyleStrokes(pg(), [{ kind: 'label', index: 0 }], { style: 'dashed' })).toBeNull();
   });
 });

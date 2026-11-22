@@ -1,13 +1,15 @@
 /**
  * Skica značky (okno značky, ui/MarkWindow.tsx) – JEDINÉ místo geometrie skici: tvary (pero, čára, obdélník, kruh,
  * oblouk, dvojitá čára – jako kresba ve výkresu, přání uživatele 2026-11-20), zásah perem, posun prvku, guma,
- * velikost popisků a kót podle zoomu při vzniku (`sketchScale`), druh a tloušťka čáry (`sketchLineWidth`,
+ * výběr obdélníkem a práce s více vybranými prvky (`sketchInRect`, `moveSketchItems`, `removeSketchItems`,
+ * `restyleStrokes`), velikost popisků a kót podle zoomu při vzniku (`sketchScale`), druh a tloušťka čáry (`sketchLineWidth`,
  * `restyleStroke`) a orientační kóty na fotce (`dimIsOrient`).
  * Souřadnice skici = px při zoomu 100 %. Kresba skici je jen obrázek – žádné vazby ani přichytávání ke stěnám.
  */
 import type { LineStyle, MarkPage, Pt, SketchDim, SketchLabel, SketchStroke } from '../model/types';
 import { normal, projectToSegment, scale, add, unit } from './geometry';
 import { arcPoints } from './strokes';
+import { polylinesInRect, type Rect } from './rect';
 
 /** Výchozí vzdálenost čar dvojité čáry ve skice. */
 export const SKETCH_DOUBLE_W = 12;
@@ -158,4 +160,44 @@ export function eraseInPage(p: MarkPage, at: Pt, tol: number): MarkPage | null {
   const labels = p.labels.filter(l => !labelHit(l, at, tol));
   if (strokes.length === p.strokes.length && dims.length === p.dims.length && labels.length === p.labels.length) return null;
   return { ...p, strokes, dims, labels };
+}
+
+/** Stejný prvek skici? */
+export const sameRef = (a: SketchRef, b: SketchRef): boolean => a.kind === b.kind && a.index === b.index;
+
+/**
+ * Výběr obdélníkem (přání uživatele 2026-11-22, jako ve výkresu – core/rectSelect.ts): zleva doprava „okno“ (prvek
+ * celý uvnitř), zprava doleva „křížení“ (prvek, kterého se obdélník dotkne). Tahy a tvary po své čáře, kóta po své
+ * čáře, popisek podle rámečku.
+ */
+export function sketchInRect(p: MarkPage, r: Rect, crossing: boolean): SketchRef[] {
+  const out: SketchRef[] = [];
+  p.strokes.forEach((st, i) => polylinesInRect(r, sketchPolylines(st), crossing) && out.push({ kind: 'stroke', index: i }));
+  p.dims.forEach((d, i) => polylinesInRect(r, [[d.a, d.b]], crossing) && out.push({ kind: 'dim', index: i }));
+  p.labels.forEach((l, i) => {
+    const b = labelBox(l.text, l.x, l.y, l.k);
+    const box = [{ x: b.x, y: b.y }, { x: b.x + b.w, y: b.y }, { x: b.x + b.w, y: b.y + b.h }, { x: b.x, y: b.y + b.h }, { x: b.x, y: b.y }];
+    // křížení u popisku = obdélníky se překrývají (i obdélník celý uvnitř rámečku)
+    const overlap = r.x1 <= b.x + b.w && r.x2 >= b.x && r.y1 <= b.y + b.h && r.y2 >= b.y;
+    if (crossing ? overlap : polylinesInRect(r, [box], false)) out.push({ kind: 'label', index: i });
+  });
+  return out;
+}
+
+/** Posun více prvků skici o (dx, dy). */
+export function moveSketchItems(p: MarkPage, refs: readonly SketchRef[], dx: number, dy: number): MarkPage {
+  return refs.reduce((q, ref) => moveSketchItem(q, ref, dx, dy), p);
+}
+
+/** Smazání více prvků skici. */
+export function removeSketchItems(p: MarkPage, refs: readonly SketchRef[]): MarkPage {
+  const gone = (k: SketchRef['kind'], i: number) => refs.some(r => r.kind === k && r.index === i);
+  return { ...p, strokes: p.strokes.filter((_, i) => !gone('stroke', i)), dims: p.dims.filter((_, i) => !gone('dim', i)), labels: p.labels.filter((_, i) => !gone('label', i)) };
+}
+
+/** Druh / tloušťka čáry u všech vybraných prvků kresby (text a kóta beze změny); null = nic ke změně. */
+export function restyleStrokes(p: MarkPage, refs: readonly SketchRef[], patch: { style?: LineStyle; width?: number }): MarkPage | null {
+  let out: MarkPage | null = null;
+  for (const ref of refs) out = restyleStroke(out ?? p, ref, patch) ?? out;
+  return out;
 }

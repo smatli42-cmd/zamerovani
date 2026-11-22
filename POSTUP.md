@@ -7,6 +7,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 ## Deník změn
 (Nejnovější nahoře, starší záznamy se nemažou. Formát: datum – co se změnilo · viditelně v aplikaci · rozhodnuto samostatně · otevřené · chyby od uživatele.)
 
+### 2026-11-22 (5) – výběr obdélníkem ve skice poznámky (přání uživatele)
+- **Přání uživatele:** v poznámce vybírat objekty čtvercem (obdélníkem).
+- **Co se změnilo:** nástroj Vybrat v okně poznámky: tažení z prázdného místa kreslí obdélník výběru – zleva doprava vybere prvky celé uvnitř (modře), zprava doleva i prvky, kterých se dotkne (zeleně čárkovaně), jako ve výkresu. Vybrané prvky jdou posunout tažením za kterýkoli z nich (jeden krok Zpět), smazat (tlačítko / Delete) a změnit jim druh a tloušťku čáry. Geometrie `core/sketch.ts` (`sketchInRect`, `moveSketchItems`, `removeSketchItems`, `restyleStrokes`), kreslení `canvas/drawSketch.ts`, okno `ui/MarkWindow.tsx`. Testy v `core/sketch.test.ts`.
+- **Viditelně v aplikaci:** v okně poznámky výběr obdélníkem, víc vybraných prvků najednou. Ověřeno v prohlížeči.
+- **Rozhodnuto samostatně:** směr obdélníku jako ve výkresu (okno / křížení); popisek se křížením vybere i obdélníkem uvnitř rámečku; ťuknutí do prázdna výběr zruší; ťuknutí na nevybraný prvek vybere jen ten; ťuknutí bez tažení na jeden z vybraných zúží výběr na něj; tvar se křížením vybere jen dotykem své čáry (jako ve výkresu). Kontrola agentem reviewer – bez závažných nálezů.
+- **Otevřené:** nic.
+
 ### 2026-11-22 (4) – druh a tloušťka čáry ve skice poznámky (přání uživatele)
 - **Přání uživatele:** v poznámce volit druh a tloušťku čáry.
 - **Co se změnilo:** v okně poznámky vedle barev volba druhu čáry (plná, čárkovaná, čerchovaná, čerch. 2 tečky – jako kresba ve výkresu) a tloušťky (tenká, střední, silná) s náhledem čáry. Platí pro pero a tvary (čára, obdélník, kruh, oblouk, dvojitá čára); je-li vybraný prvek kresby, změní se i on (krok Zpět v okně). Data `SketchStroke.style` (SCHEMA 35, bez převodu), pravidla `core/sketch.ts` (`sketchLineWidth`, `restyleStroke`), kreslení `canvas/drawSketch.ts`, volba `ui/SketchLineOptions.tsx`. Testy v `core/sketch.test.ts`.

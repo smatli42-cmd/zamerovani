@@ -1,7 +1,7 @@
 /**
  * Okno značky (ZNACKY-POZNAMKY-DETAILY.md, krok A): textová poznámka a skica – převzato z prototypu
  * (prototyp/src/input/detailsUI.js) a doplněno o stejné prvky jako kresba ve výkresu (přání uživatele 2026-11-20):
- * Vybrat (posun a smazání prvku), pero, čára, obdélník, kruh, oblouk, dvojitá čára, text, kóta, guma, posun, zoom,
+ * Vybrat (ťuknutím jeden prvek, tažením obdélníku víc; posun, smazání, druh a tloušťka čáry), pero, čára, obdélník, kruh, oblouk, dvojitá čára, text, kóta, guma, posun, zoom,
  * barvy, zpět. Geometrie skici jen v core/sketch.ts.
  * Kreslení má vlastní Zpět (jen v okně); do výkresu se obsah zapíše při zavření jako jeden krok Zpět.
  * Pero / myš kreslí, prst posouvá (jako v půdorysu).
@@ -9,7 +9,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { LineStyle, MarkPage, Pt, SketchDim, SketchStroke } from '../model/types';
 import { emptyPage, markCode, pageIsEmpty } from '../core/marks';
-import { defaultArcSagitta, eraseInPage, hitSketch, moveSketchItem, removeSketchItem, nearestSketchWidth, restyleStroke, SKETCH_DEFAULT_WIDTH, SKETCH_DOUBLE_W, sketchLineWidth, sketchScale, type SketchRef } from '../core/sketch';
+import { normRect } from '../core/rect';
+import { defaultArcSagitta, eraseInPage, hitSketch, moveSketchItems, removeSketchItems, nearestSketchWidth, restyleStrokes, sameRef, sketchInRect, SKETCH_DEFAULT_WIDTH, SKETCH_DOUBLE_W, sketchLineWidth, sketchScale, type SketchRef } from '../core/sketch';
 import { drawSketch, type SketchPhoto, type SketchView } from '../canvas/drawSketch';
 import { addPhoto, getPhoto } from '../persistence/photos';
 import { setMarkContent, updateMark } from '../store/actions';
@@ -81,11 +82,11 @@ function MarkWindowBody({ id }: { id: string }) {
   const galleryInput = useRef<HTMLInputElement>(null);
   const [history, setHistory] = useState<MarkPage[]>([]);
   const [tool, setToolRaw] = useState<SketchTool>('pen');
-  // vybraný prvek skici (nástroj Vybrat)
-  const [sel, setSel] = useState<SketchRef | null>(null);
+  // vybrané prvky skici (nástroj Vybrat: ťuknutím jeden, tažením obdélníku víc – přání uživatele 2026-11-22)
+  const [sel, setSelRaw] = useState<SketchRef[]>([]);
   const setTool = (t: SketchTool) => {
     setToolRaw(t);
-    if (t !== 'select') setSel(null);
+    if (t !== 'select') setSelRaw([]);
   };
   const [color, setColor] = useState(COLORS[0]!);
   // druh a tloušťka čáry (pero a tvary); u vybraného prvku kresby se změní i on
@@ -101,8 +102,10 @@ function MarkWindowBody({ id }: { id: string }) {
     erased?: boolean;
     start?: MarkPage;
     pushed?: boolean;
-    /** Posun vybraného prvku: odkud se táhne a stav před posunem. */
-    moving?: { ref: SketchRef; from: Pt; orig: MarkPage };
+    /** Posun vybraných prvků: odkud se táhne a stav před posunem. */
+    moving?: { refs: SketchRef[]; hit: SketchRef; from: Pt; orig: MarkPage };
+    /** Obdélník výběru (souřadnice skici). */
+    band?: { a: Pt; b: Pt };
   }>({});
   const eraseAt = (pt: Pt) => {
     const L = live.current;
@@ -122,16 +125,26 @@ function MarkWindowBody({ id }: { id: string }) {
     setHistory(h => [...h, page]);
     setPage(next);
   };
+  /** Výběr; tlačítka druhu a tloušťky ukážou první vybraný prvek kresby. */
+  const setSel = (refs: SketchRef[]) => {
+    setSelRaw(refs);
+    const r = refs.find(x => x.kind === 'stroke');
+    const st = r && page.strokes[r.index];
+    if (st) {
+      setLineStyle(st.style ?? 'solid');
+      setLineWidth(nearestSketchWidth(st.width, view.s));
+    }
+  };
   const pickLine = (patch: { style?: LineStyle; width?: number }) => {
     if (patch.style) setLineStyle(patch.style);
     if (patch.width) setLineWidth(patch.width);
-    const next = sel && restyleStroke(page, sel, { style: patch.style, width: patch.width && sketchLineWidth(patch.width, view.s) });
+    const next = restyleStrokes(page, sel, { style: patch.style, width: patch.width && sketchLineWidth(patch.width, view.s) });
     if (next) commit(next);
   };
   const removeSelected = () => {
-    if (!sel) return;
-    commit(removeSketchItem(page, sel));
-    setSel(null);
+    if (!sel.length) return;
+    commit(removeSketchItems(page, sel));
+    setSelRaw([]);
   };
   const close = () => {
     if (nameDraft.trim() !== name) updateMark(id, { name: nameDraft });
@@ -188,7 +201,7 @@ function MarkWindowBody({ id }: { id: string }) {
       if (prompt || store.get().deleteConfirm) return;
       if (e.key === 'Escape' && !photoBusy) close();
       const t = e.target;
-      if (e.key === 'Delete' && sel && !(t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement)) {
+      if (e.key === 'Delete' && sel.length && !(t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement)) {
         e.preventDefault();
         removeSelected();
       }
@@ -253,14 +266,14 @@ function MarkWindowBody({ id }: { id: string }) {
     }
     if (tool === 'select') {
       const hit = hitSketch(page, pt, tol());
-      setSel(hit);
-      // tlačítka druhu a tloušťky ukážou vybraný prvek kresby
-      const st = hit?.kind === 'stroke' ? page.strokes[hit.index] : undefined;
-      if (st) {
-        setLineStyle(st.style ?? 'solid');
-        setLineWidth(nearestSketchWidth(st.width, view.s));
+      // ťuknutí do prázdna = obdélník výběru; na vybraný prvek = posun celého výběru; na jiný = vybrat jen ten
+      if (!hit) {
+        live.current = { band: { a: pt, b: pt } };
+        return;
       }
-      if (hit) live.current = { moving: { ref: hit, from: pt, orig: page } };
+      const refs = sel.some(r => sameRef(r, hit)) ? sel : [hit];
+      if (refs !== sel) setSel(refs);
+      live.current = { moving: { refs, hit, from: pt, orig: page } };
       return;
     }
     if (tool === 'text') {
@@ -295,14 +308,19 @@ function MarkWindowBody({ id }: { id: string }) {
       return;
     }
     const pt = toWorld(px);
+    if (L.band) {
+      L.band = { ...L.band, b: pt };
+      redraw(n => n + 1);
+      return;
+    }
     if (L.moving) {
-      const { ref, from, orig } = L.moving;
+      const { refs, from, orig } = L.moving;
       // jeden krok Zpět za celý posun
       if (!L.pushed && (pt.x !== from.x || pt.y !== from.y)) {
         L.pushed = true;
         setHistory(h => [...h, orig]);
       }
-      setPage(moveSketchItem(orig, ref, pt.x - from.x, pt.y - from.y));
+      setPage(moveSketchItems(orig, refs, pt.x - from.x, pt.y - from.y));
       return;
     }
     if (L.dim) L.dim = { ...L.dim, b: orthoSnap(L.dim.a, pt) };
@@ -323,7 +341,13 @@ function MarkWindowBody({ id }: { id: string }) {
   const up = () => {
     const L = live.current;
     live.current = {};
-    if (L.dim) {
+    // ťuknutí bez posunu na jeden z více vybraných prvků → vybrat jen ten
+    if (L.moving && !L.pushed && L.moving.refs.length > 1) setSel([L.moving.hit]);
+    if (L.band) {
+      // malý tah = ťuknutí do prázdna → zrušit výběr
+      const { a, b } = L.band;
+      setSel(Math.hypot(b.x - a.x, b.y - a.y) * view.s < 8 ? [] : sketchInRect(page, normRect(a, b), b.x < a.x));
+    } else if (L.dim) {
       const d = L.dim;
       if (Math.hypot(d.b.x - d.a.x, d.b.y - d.a.y) * view.s >= 8) setPrompt({ title: page.photo ? 'Text kóty – na fotce jen orientační (≈)' : 'Text kóty (číslo nebo text, např. „120 mm“)', initial: '', done: t => commit({ ...page, dims: [...page.dims, { ...d, text: t }] }) });
     } else if (L.stroke) {
@@ -371,12 +395,12 @@ function MarkWindowBody({ id }: { id: string }) {
         <button class="btn btn-sm" disabled={!history.length} onClick={() => {
           setPage(history[history.length - 1]!);
           setHistory(history.slice(0, -1));
-          setSel(null);
+          setSelRaw([]);
         }}>
           <Icon name="undo" size={20} />
           Zpět
         </button>
-        {sel && (
+        {sel.length > 0 && (
           <button class="btn btn-sm btn-danger" onClick={removeSelected}>
             <Icon name="trash" size={20} />
             Smazat vybrané
@@ -406,7 +430,7 @@ function MarkWindowBody({ id }: { id: string }) {
         <input ref={galleryInput} type="file" accept="image/*" hidden onChange={onPhotoFile} />
         <button class="btn btn-sm btn-danger" disabled={pageIsEmpty(page)} title="Smazat kresbu (fotka zůstane)" onClick={() => {
           commit({ ...page, strokes: [], labels: [], dims: [] });
-          setSel(null);
+          setSelRaw([]);
         }}>
           <Icon name="trash" size={20} />
           Smazat skicu
