@@ -42,6 +42,7 @@
 | `src/core/strokes.ts`, `src/tools/penTool.ts`, `src/canvas/drawStrokes.ts`, `src/store/actions/strokes.ts`, `src/store/strokes.test.ts` | **Ruční tah** perem a Guma (vyhlazení na vektor, zásah, guma jen v aktivní vrstvě) |
 | `src/model/stairTypes.ts` | Datové typy schodiště (oddělené z `model/types.ts`) |
 | `src/core/exportSelect.ts`, `src/core/dimRole.ts`, `src/store/exportSelect.test.ts` | **Export** – výběr prvků (rozsah × obsah × vrstvy, kategorie a názvy hladin DXF) a hlavní × pracovní kóta; testy tabulky druh prvku × výstup |
+| `src/export/`, `src/canvas/drawFloor.ts`, `src/ui/ExportDialog.tsx`, `public/fonts/` | **Export PDF** – papír PDF pro kreslicí funkce plátna, listy (půdorys, razítko, výpisy, poznámky), okno Export, písmo Noto Sans (OFL) |
 | `src/sizeGuard.test.ts` | Hlídání velikosti zdrojových souborů (nad 700 řádků selže, nad 500 upozorní) |
 | `prototyp/` | Starý první prototyp (jen inspirace) |
 | `.claude/agents/reviewer.md` | Agent pro nezávislou kontrolu kroku |

@@ -8,7 +8,9 @@ export default defineConfig({
     preact(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg'],
+      includeAssets: ['icon.svg', 'fonts/*.ttf'],
+      // písmo pro PDF (fonts/) a knihovna PDF musí být v mezipaměti – export funguje i bez internetu
+      workbox: { globPatterns: ['**/*.{js,css,html,svg,ttf}'], maximumFileSizeToCacheInBytes: 4 * 1024 * 1024 },
       manifest: {
         name: 'Zaměřování stavby',
         short_name: 'Zaměřování',

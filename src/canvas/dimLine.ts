@@ -2,6 +2,7 @@
  * Kreslení jedné kóty (vynášecí čáry, kótovací čára, klikací číslo) a ikona zámku kóty.
  * Používají ji všechny druhy kót (stěny, otvory, výstupky, volné kóty…).
  */
+import type { DimTarget } from '../core/dimLock';
 import { add, dist, lerp, scale, unit } from '../core/geometry';
 import type { Floor, Pt } from '../model/types';
 import { addHitBox, type HitAction } from './hitTargets';
@@ -40,6 +41,8 @@ export function drawDimLine(
 ): void {
   // posun kóty tažením za číslo (core/dimPlace.ts): kolmo celá řada (i úsek bez čísla), číslo podél jen tato kóta
   const target = action?.type === 'numpad' && action.target.kind !== 'field' ? action.target : null;
+  // export: kreslí se jen kóty, které pustí výběr exportu (core/exportSelect.ts – hlavní / pracovní, rozsah)
+  if (dimFilter && !dimFilter(target)) return;
   const dimRow = place.row ?? (target ? rowOf(target) : null);
   const shift = dimRow ? dimShift(placeCtx.place, dimRow, target, place.alongKey) : { off: 0, along: 0 };
   offsetPx += shift.off * placeCtx.zoom;
@@ -156,8 +159,19 @@ export function drawDimLine(
   }
 }
 
+/** Filtr kót pro export (null = všechny; kóta bez popisu `DimTarget` dostane null). Nastavuje jen export. */
+let dimFilter: ((t: DimTarget | null) => boolean) | null = null;
+export function setDimFilter(f: ((t: DimTarget | null) => boolean) | null): void {
+  dimFilter = f;
+}
+
 /** Čísla kót a ikony zámků čekající na vykreslení nad všemi čarami kót. */
 let labels: (() => void)[] = [];
+
+/** Zahodí čísla kót čekající na vykreslení (export po chybě – nesmí se nakreslit do jiného kontextu). */
+export function clearDimLabels(): void {
+  labels = [];
+}
 
 /** Vykreslí čísla všech kót nakreslených od posledního volání (nad všemi kótovacími a vynášecími čarami). */
 export function flushDimLabels(): void {

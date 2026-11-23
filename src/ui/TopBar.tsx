@@ -13,6 +13,7 @@ import { ProjectForm } from './ProjectForm';
 import { fitToDrawing } from './viewActions';
 import { Icon } from './icons';
 import { MoreMenu, type MoreAction } from './MoreMenu';
+import { ExportDialog } from './ExportDialog';
 import { ToolBadge } from './ToolHead';
 
 const SAVE_TEXT: Record<SaveStatus, string> = {
@@ -34,6 +35,7 @@ export function TopBar() {
   const [floorDialog, setFloorDialog] = useState<FloorDialog>(null);
   const [showMore, setShowMore] = useState(false);
   const [editInfo, setEditInfo] = useState(false);
+  const [showExport, setShowExport] = useState(false);
 
   if (!project) return null;
   const floor = project.floors.find(f => f.id === floorId);
@@ -44,6 +46,7 @@ export function TopBar() {
   ];
   if (floor) moreActions.push({ icon: 'edit', label: 'Přejmenovat podlaží', run: () => setFloorDialog({ type: 'rename', id: floor.id, name: floor.name }) });
   if (floor && project.floors.length > 1) moreActions.push({ icon: 'trash', label: 'Smazat podlaží', danger: true, run: () => setFloorDialog({ type: 'delete', id: floor.id, name: floor.name }) });
+  moreActions.push({ icon: 'export', label: 'Export do PDF', run: () => setShowExport(true) });
   moreActions.push({ icon: 'backup', label: 'Záloha projektu do souboru', run: backup });
 
   return (
@@ -112,6 +115,7 @@ export function TopBar() {
       </span>
 
       {showMore && <MoreMenu actions={moreActions} onClose={() => setShowMore(false)} />}
+      {showExport && <ExportDialog project={project} floorId={floorId} onClose={() => setShowExport(false)} />}
 
       {floorDialog?.type === 'add' && (
         <TextPrompt title="Nové podlaží" label="Název podlaží" initial={suggestFloorName(project.floors.map(f => f.name))} onSubmit={addFloor} onClose={() => setFloorDialog(null)} />

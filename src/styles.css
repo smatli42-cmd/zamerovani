@@ -216,6 +216,8 @@ textarea {
 }
 .dialog {
   background: #fff;
+  /* tmavé písmo i u okna otevřeného z tmavé horní lišty (Export, podlaží) */
+  color: #0f172a;
   border-radius: 16px;
   width: min(520px, 100%);
   max-height: 100%;
@@ -1120,4 +1122,28 @@ span.layer-name {
   background: #dbeafe;
   border-color: #2563eb;
   color: #1d4ed8;
+}
+
+/* okno Export (ui/ExportDialog.tsx) */
+.export-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.export-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.export-row .seg {
+  flex-wrap: wrap;
+}
+.export-row summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 4px 0;
+}
+.export-row select {
+  min-height: 40px;
+  font-size: 15px;
 }

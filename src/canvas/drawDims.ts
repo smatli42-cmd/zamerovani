@@ -55,7 +55,8 @@ function componentCentroids(floor: Floor): Map<Id, Pt> {
 }
 
 
-export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camera, dimScale: number, selection: Selection): void {
+/** `faceDims` = stěny, u kterých se kreslí míry líců i bez výběru (export – délka po líci je hlavní kóta). */
+export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camera, dimScale: number, selection: Selection, faceDims?: (wallId: Id) => boolean): void {
   const centroids = componentCentroids(floor);
   const s = dimScale;
   // těla stěn až když jsou potřeba (kóty líců vybrané stěny)
@@ -190,7 +191,7 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
 
     // 2b: vybraná rovná stěna s osou uprostřed – míry obou líců (klikací, délka osy se dopočítá);
     // vnější líc za celkovou délkou, vnitřní na druhé straně stěny
-    const faces = selected && wall.axis === 'center' && !sag && hasBody(wall) ? bodies().get(wall.id)?.faces : null;
+    const faces = (selected || !!faceDims?.(wall.id)) && wall.axis === 'center' && !sag && hasBody(wall) ? bodies().get(wall.id)?.faces : null;
     if (faces) {
       const outFace: 0 | 1 = dot(normal(u), out) > 0 ? 1 : 0;
       const half = (wall.thickness / 2) * cam.zoom;

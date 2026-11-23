@@ -178,21 +178,28 @@ export function dimCategory(fe: FloorExport, t: DimTarget): ExportCategory | nul
   return categoryOn(fe.format, fe.content, c) ? c : null;
 }
 
-/** Kóta jde jen s prvky, které měří: stěna / otvor / výstupek / schodiště / volná kóta musí být v exportu plně. */
+/**
+ * Kóta jde jen s prvky, které měří: stěna / otvor / výstupek / schodiště / volná kóta musí být v exportu plně;
+ * dílčí kóty (otvor, výstupek, poloha napojení) jen u prvků uvnitř vlastního rozsahu (místnost – „kóty jen
+ * vybraných prvků“); kóty ostění jen se zapnutou kategorií Ostění.
+ */
 function dimInScope(fe: FloorExport, t: DimTarget): boolean {
   const full = (kind: string, id: Id) => fe.items.some(i => i.kind === kind && i.id === id && !i.context);
+  const inFocus = (item: LayerItem) => !fe.focus || carriedPoints(fe.floor, item).some(p => inRect(fe.focus!, p));
+  const opening = (id: Id) => full('opening', id) && inFocus({ kind: 'opening', id });
   switch (t.kind) {
+    case 'opening-reveal':
+      return opening(t.openingId) && categoryOn(fe.format, fe.content, 'reveals');
     case 'opening-offset':
     case 'opening-width':
-    case 'opening-reveal':
-      return full('opening', t.openingId);
+      return opening(t.openingId);
     case 'opening-gap':
-      return full('opening', t.firstId) && full('opening', t.secondId);
+      return opening(t.firstId) && opening(t.secondId);
     case 'protrusion-dim':
     case 'protrusion-sagitta':
     case 'corner-dim':
     case 'end-dim':
-      return full('protrusion', t.protrusionId);
+      return full('protrusion', t.protrusionId) && inFocus({ kind: 'protrusion', id: t.protrusionId });
     case 'stair-dim':
       return full('stair', t.stairId);
     case 'free-dim':
@@ -230,8 +237,8 @@ export function dxfLayerName(p: Pick<Project, 'layers'> | null | undefined, floo
   return `${pre}_${dxfSafe(layer?.name ?? layerId)}_${categoryDef(cat).dxf}`;
 }
 
-/** Projekt s viditelností vrstev podle výběru exportu (layerContents bere jen viditelné). */
-function withLayers(p: Pick<Project, 'layers'>, ids: Id[] | undefined): Pick<Project, 'layers'> {
+/** Projekt s viditelností vrstev podle výběru exportu (layerContents i kreslení berou jen viditelné). */
+export function exportLayers(p: Pick<Project, 'layers'>, ids: Id[] | undefined): Pick<Project, 'layers'> {
   if (!ids) return p;
   const want = new Set(ids);
   return { layers: layersOf(p).map(l => ({ ...l, visible: want.has(l.id) })) };
@@ -391,10 +398,13 @@ function roomScope(floor: Floor, roomIds: Id[]): ScopeFilter {
         // kóty stěny jen u stěny místnosti (dílčí kóty jen u prvků místnosti – dimCategory)
         if (it.kind === 'wallDims') return own ? 'full' : null;
         // otvor / výstupek na stěně místnosti plně, jen když leží u místnosti (průběžná stěna jde dál)
-        if (own && carriedPoints(floor, it).some(p => inRect(focus, p))) return 'full';
+        // otvor / výstupek se kreslí se svou stěnou: na stěně místnosti plně (v ořezu; kóty jen u místnosti –
+        // dimInScope), na sousední stěně jako okolí
+        const shown = carriedPoints(floor, it).some(p => inRect(near, p));
+        if (own) return shown ? 'full' : null;
         // okolí: jen stěny a jejich otvory / výstupky, bez kót (EXPORT-NAVRH.md)
         if (it.kind === 'wall') return ctxWall(it.id) ? 'context' : null;
-        return carriedPoints(floor, it).some(p => inRect(near, p)) ? 'context' : null;
+        return shown ? 'context' : null;
       }
       const k = LOOSE.get(it.kind as LooseKindId);
       const pts = k ? k.extent(floor, it.id) : [];
@@ -442,7 +452,7 @@ function scopeFloors(p: Project, scope: ExportScope): Floor[] {
  * a jen když je zapnutá aspoň jedna kategorie kót (po kótách rozhodne `dimCategory`).
  */
 export function selectExport(p: Project, spec: ExportSpec): FloorExport[] {
-  const lp = withLayers(p, spec.layers);
+  const lp = exportLayers(p, spec.layers);
   const on = (c: ExportCategory) => categoryOn(spec.format, spec.content, c);
   return scopeFloors(p, spec.scope).map(floor => {
     const scope = spec.scope.kind === 'rooms' ? roomScope(floor, spec.scope.roomIds) : spec.scope.kind === 'rect' ? rectScope(floor, spec.scope.rect) : ALL;
@@ -459,4 +469,20 @@ export function selectExport(p: Project, spec: ExportSpec): FloorExport[] {
     }
     return { floor, items, clip: scope.clip, focus: scope.focus, format: spec.format, content: spec.content };
   });
+}
+
+/**
+ * Rozsah kresby listu (mm): ořez rozsahu, jinak obal plně exportovaných prvků (stěny, volné prvky).
+ * null = nic ke kreslení.
+ */
+export function exportBounds(fe: FloorExport): Rect | null {
+  if (fe.clip) return fe.clip;
+  const pts: Pt[] = [];
+  for (const it of fe.items) {
+    if (it.context) continue;
+    if (it.kind === 'wall') pts.push(...wallOutline(fe.floor, it.id).flat());
+    else if (it.kind === 'opening' || it.kind === 'protrusion' || it.kind === 'wallDims') continue;
+    else pts.push(...(LOOSE.get(it.kind as LooseKindId)?.extent(fe.floor, it.id) ?? []));
+  }
+  return boxOf(pts);
 }

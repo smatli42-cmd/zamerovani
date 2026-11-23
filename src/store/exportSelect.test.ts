@@ -336,12 +336,24 @@ describe('rozsah místnosti – průběžná stěna a sporné situace (kontrola 
     expect(dimCategory(fe, { kind: 'wall-length', wallId: top, move: 'both' })).toBe('mainDims');
   });
 
-  it('okno na průběžné stěně těsně za příčkou je okolí (šedě, bez kót)', () => {
+  // otvor se kreslí se svou stěnou: na stěně místnosti těsně za příčkou plně (v ořezu), ale bez kót
+  // (pravidlo upraveno po kontrole 2026-11-23 – kreslení a výběr musí říkat totéž)
+  it('okno na průběžné stěně těsně za příčkou: plně se stěnou, kóty ne', () => {
     const { top, a } = hall();
     const near = addOpening(top, 'window', 4700 / 12000)!;
     const fe = roomA(a, 'dxf');
-    expect(has(fe.items, 'opening', near)?.context).toBe(true);
+    expect(has(fe.items, 'opening', near)?.context).toBeUndefined();
     expect(dimCategory(fe, { kind: 'opening-width', openingId: near })).toBeNull();
+  });
+
+  it('kóty ostění jen se zapnutou kategorií Ostění', () => {
+    const { top, a } = hall();
+    const op = addOpening(top, 'window', 0.15)!;
+    const t: DimTarget = { kind: 'opening-reveal', openingId: op, part: 'depth' } as DimTarget;
+    const on = selectExport(P(), { format: 'dxf', scope: { kind: 'rooms', floorId: f().id, roomIds: [a] } })[0]!;
+    expect(dimCategory(on, t)).toBe('workDims');
+    const off = selectExport(P(), { format: 'dxf', scope: { kind: 'rooms', floorId: f().id, roomIds: [a] }, content: { reveals: false } })[0]!;
+    expect(dimCategory(off, t)).toBeNull();
   });
 
   it('volné prvky všech druhů: v místnosti ano, v prostoru B bez štítku ne, vnější kóta ano', () => {
