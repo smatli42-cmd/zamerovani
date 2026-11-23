@@ -6,6 +6,13 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Deník změn
 
+### 2026-11-23 (5) – PDF: minimalistické razítko a vlastní měřítko (přání uživatele)
+- **Přání uživatele:** razítko zabírá zbytečně místo pro výkres; přidat vlastní měřítko.
+- **Co se změnilo:** razítko je jeden rámeček 95 × 12 mm vpravo dole se dvěma řádky – „název listu (tučně) · projekt“ a „M 1 : n · datum zaměření · zaměřil … “ s „List x / N“ vpravo (po kontrole: název listu a číslo listu se nezkracují první, prázdné datum se vynechá) (`drawStamp` v `export/pdfPlan.ts`, rozměry `STAMP_W`, `STAMP_BOX_H`, `STAMP_H` v `export/sheetFormat.ts`); kresba, výpisy i obsah tak mají víc místa (A4 na šířku: plocha nad razítkem 176 mm místo 160). V náhledu listu volba **Vlastní…** a pole „1 : ___“ pro libovolné měřítko (`ui/ExportPreview.tsx`, `PlanView.custom`). Testy v `export/pdf.test.ts`.
+- **Viditelně v aplikaci:** malé razítko v PDF i v náhledu; v náhledu u měřítka položka Vlastní… s polem pro číslo.
+- **Rozhodnuto samostatně:** adresa projektu v razítku už není (je na úvodní straně); vlastní měřítko 1 až 10 000, celé číslo (neplatné číslo pole vrátí na platné s hláškou); výpisy, poznámky a obsah využívají místo uvolněné razítkem (obsah má 16 řádků na stranu A4 na šířku).
+- **Otevřené:** vyzkoušet na tabletu.
+
 ### 2026-11-23 (4) – PDF: druhá zkouška uživatele (kóty, měřítko, náhled)
 - **Nahlásil uživatel (screenshoty):** chce na výkresu všechny kóty; kóty jsou hrozně daleko od stěn (kratší vynášecí čáry, ale nic se nesmí překrývat); půdorys podlaží vyšel 1 : 200 (malý), list místnosti 1 : 100 s oříznutými kótami a štítkem; chce vybrat, co je na listu vidět, nebo aspoň náhled, a měřítko si určit sám.
 - **Příčiny:** prázdná řada pracovních kót (vypnutých) si nechávala místo → hlavní kóta až ve druhé řadě; vzdálený drobný prvek (text / bod) zvětšil rozsah podlaží → automatické měřítko 1 : 200; list místnosti počítal měřítko i s 1 m okolí.

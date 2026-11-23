@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { Project } from '../model/types';
 import { drawPlanInto, planLayout, planSheets, type PlanSpec, type PlanView } from '../export/planDraw';
-import { MARGIN, MM_PER_PX, paperSize, SCALES, STAMP_H, STAMP_W, type SheetFormat } from '../export/sheetFormat';
+import { MARGIN, MM_PER_PX, paperSize, SCALES, STAMP_BOX_H, STAMP_W, type SheetFormat } from '../export/sheetFormat';
 
 interface Props {
   project: Project;
@@ -23,8 +23,11 @@ export function ExportPreview({ project, spec, views, onView }: Props) {
   const saved: PlanView = (sheet && views[sheet.key]) ?? { scale: spec.scale };
   // posun během tažení jen v náhledu (překreslí se jen náhled, jednou za snímek); do nastavení až po puštění
   const [live, setLive] = useState<{ x: number; y: number } | null>(null);
+  const [bad, setBad] = useState(false);
   const frame = useRef(0);
   const view: PlanView = live ? { ...saved, pan: live } : saved;
+  // vlastní měřítko: zvolené „Vlastní…“, nebo číslo mimo nabídku
+  const custom = !!view.custom || (view.scale !== 'auto' && !(SCALES as readonly number[]).includes(view.scale));
   const box = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const drag = useRef<{ x: number; y: number; pan: { x: number; y: number } } | null>(null);
@@ -47,10 +50,10 @@ export function ExportPreview({ project, spec, views, onView }: Props) {
     ctx.fillRect(0, 0, cssW, cssW * (ph / pw));
     // razítko (pravý dolní roh)
     ctx.fillStyle = '#e2e8f0';
-    ctx.fillRect((pw - MARGIN - STAMP_W) * k, (ph - MARGIN - (STAMP_H - 4)) * k, STAMP_W * k, (STAMP_H - 4) * k);
+    ctx.fillRect((pw - MARGIN - STAMP_W) * k, (ph - MARGIN - STAMP_BOX_H) * k, STAMP_W * k, STAMP_BOX_H * k);
     ctx.fillStyle = '#64748b';
     ctx.font = '11px system-ui, sans-serif';
-    ctx.fillText('razítko', (pw - MARGIN - STAMP_W + 3) * k, (ph - MARGIN - (STAMP_H - 4)) * k + 13);
+    ctx.fillText('razítko', (pw - MARGIN - STAMP_W + 3) * k, (ph - MARGIN - STAMP_BOX_H / 2) * k + 4);
     if (!sheet || !lay) return;
     // plocha pro kresbu
     ctx.strokeStyle = '#cbd5e1';
@@ -105,14 +108,49 @@ export function ExportPreview({ project, spec, views, onView }: Props) {
             ))}
           </select>
         )}
-        <select value={String(view.scale)} onChange={e => set({ scale: (e.target as HTMLSelectElement).value === 'auto' ? 'auto' : Number((e.target as HTMLSelectElement).value) })}>
+        <select
+          value={custom ? 'custom' : String(view.scale)}
+          onChange={e => {
+            const v = (e.target as HTMLSelectElement).value;
+            // vlastní měřítko (přání uživatele 2026-11-23): začne od aktuálního, číslo se zadá vedle
+            if (v === 'custom') set({ scale: view.scale === 'auto' ? (lay?.n ?? 50) : view.scale, custom: true });
+            else set({ scale: v === 'auto' ? 'auto' : Number(v), custom: undefined });
+          }}
+        >
           <option value="auto">Automaticky{lay && view.scale === 'auto' ? ` (1 : ${lay.n})` : ''}</option>
           {SCALES.map(n => (
             <option key={n} value={n}>
               1 : {n}
             </option>
           ))}
+          <option value="custom">Vlastní…</option>
         </select>
+        {custom && (
+          <label class="export-scale">
+            1 :
+            <input
+              key={String(view.scale)}
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={10000}
+              defaultValue={view.scale === 'auto' ? '' : String(view.scale)}
+              onChange={e => {
+                const el = e.target as HTMLInputElement;
+                const n = Math.round(Number(el.value));
+                if (n >= 1 && n <= 10000) {
+                  setBad(false);
+                  set({ scale: n });
+                } else {
+                  // neplatné číslo: pole ukáže znovu platné měřítko (to, co půjde do PDF)
+                  setBad(true);
+                  el.value = view.scale === 'auto' ? '' : String(view.scale);
+                }
+              }}
+            />
+          </label>
+        )}
+        {bad && <span class="muted small">Zadejte celé číslo 1 až 10 000.</span>}
         <button class="btn btn-sm" disabled={!view.pan} onClick={() => set({ pan: undefined })}>
           Vycentrovat
         </button>

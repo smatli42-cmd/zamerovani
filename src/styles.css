@@ -1152,6 +1152,17 @@ span.layer-name {
   align-items: center;
   margin-bottom: 6px;
 }
+.export-scale {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+.export-scale input {
+  width: 80px;
+  min-height: 36px;
+  font-size: 15px;
+}
 .export-preview-bar select {
   flex: 1 1 140px;
 }

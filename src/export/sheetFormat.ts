@@ -10,9 +10,11 @@ const PAPER: Record<Paper, [number, number]> = { A4: [210, 297], A3: [297, 420] 
 /** Měřítka listu (1 : n) od nejpodrobnějšího; automaticky se vezme nejpodrobnější, do kterého se kresba vejde. */
 export const SCALES = [20, 25, 50, 100, 200, 500] as const;
 
-/** Okraj papíru a výška pruhu s razítkem (mm). */
+/** Okraj papíru a výška pruhu s razítkem (mm): razítko 12 mm + mezera 2 mm (minimalistické – přání uživatele 2026-11-23). */
 export const MARGIN = 10;
-export const STAMP_H = 30;
+export const STAMP_H = 14;
+/** Výška rámečku razítka (mm). */
+export const STAMP_BOX_H = 12;
 /**
  * Místo pro kóty kolem kresby (mm na papíře): v PDF jsou ve výchozím stavu všechny kóty – řady za vnějším lícem
  * otvory 6,5 mm, napojení + 7,5 mm, délka + 9,5 mm a polovina čísla.
@@ -33,7 +35,7 @@ export function paperSize(f: SheetFormat): [number, number] {
 }
 
 /** Šířka razítka (mm) – razítko leží v pravém dolním rohu. */
-export const STAMP_W = 120;
+export const STAMP_W = 95;
 
 /** Kreslicí plocha listu bez razítka (mm od levého horního rohu papíru): nad pruhem razítka (výpisy, poznámky). */
 export function drawArea(f: SheetFormat): Rect {

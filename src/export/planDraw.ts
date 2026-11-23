@@ -18,6 +18,8 @@ import { autoFits, autoScale, DIM_ROOM, drawArea, MM_PER_PX, planRegion, type Sh
 export interface PlanView {
   scale: number | 'auto';
   pan?: Pt;
+  /** V náhledu zvolené „Vlastní…“ měřítko (pole pro číslo zůstane vidět). */
+  custom?: true;
 }
 
 /** Nastavení půdorysů, které potřebuje rozvržení i náhled (část nastavení PDF). */

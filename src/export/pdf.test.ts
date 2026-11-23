@@ -14,7 +14,7 @@ import { protrusionsOf } from '../core/protrusion';
 import type { ExportCategory, ExportContent } from '../core/exportSelect';
 import { store } from '../store/store';
 import { selectExport } from '../core/exportSelect';
-import { autoScale, drawPlanSheet, paperSize, planRegion, SCALES } from './pdfPlan';
+import { autoScale, drawPlanSheet, paperSize, planRegion, SCALES, STAMP_BOX_H, STAMP_H, STAMP_W } from './pdfPlan';
 import { buildPdf, pdfFileName, type PdfOptions } from './pdfExport';
 import { PdfCanvas, parseColor, type PdfFonts } from './pdfCanvas';
 
@@ -310,19 +310,19 @@ describe('PDF – úvodní strana s obsahem (přání uživatele 2026-11-23)', (
     }
   });
 
-  it('obsah na víc stran: čísla i odkazy pokračují (16 poznámek, A4 na šířku = 14 řádků na stranu)', async () => {
-    for (let i = 0; i < 16; i++) addMark({ x: i * 1000, y: 0 });
+  it('obsah na víc stran: čísla i odkazy pokračují (20 poznámek, A4 na šířku = 16 řádků na stranu)', async () => {
+    for (let i = 0; i < 20; i++) addMark({ x: i * 1000, y: 0 });
     const { bytes } = await buildPdf(P(), { ...A4, landscape: true, sheets: { cover: true, plan: false, rooms: false, openings: false, marks: true } }, assets);
     const back = await PDFDocument.load(bytes);
-    expect(back.getPageCount()).toBe(18);
+    expect(back.getPageCount()).toBe(22);
     const pages = back.getPages().map(p => p.ref.toString());
     const second = back.getPage(1).node.Annots()!;
-    expect(second.size()).toBe(2);
+    expect(second.size()).toBe(4);
     const a = back.context.lookup(second.get(0)) as unknown as { get(n: PDFName): unknown };
     const act = back.context.lookup(a.get(PDFName.of('A')) as never) as unknown as { get(n: PDFName): unknown };
     const dest = back.context.lookup(act.get(PDFName.of('D')) as never) as unknown as { get(i: number): { toString(): string } };
-    // 15. list obsahu = stránka 2 (obsah) + 14 + 1 → index 16
-    expect(dest.get(0).toString()).toBe(pages[16]);
+    // 17. list obsahu = 2 strany obsahu + 16 → index 18
+    expect(dest.get(0).toString()).toBe(pages[18]);
   });
 
   it('bez úvodní strany žádné odkazy', async () => {
@@ -339,7 +339,7 @@ describe('PDF – měřítko s razítkem jen v rohu (přání uživatele 2026-11
     const fmt = { paper: 'A4' as const, landscape: true };
     expect(autoScale({ x1: 0, y1: 0, x2: 12000, y2: 10000 }, fmt)).toBe(100);
     // 10 × 13 m: nad razítko se v 1 : 100 nevejde (výška), vedle razítka ano
-    expect(planRegion({ x1: 0, y1: 0, x2: 10000, y2: 13000 }, fmt, 100)?.x2).toBeLessThan(297 - 10 - 120);
+    expect(planRegion({ x1: 0, y1: 0, x2: 10000, y2: 13000 }, fmt, 100)?.x2).toBeLessThan(297 - 10 - STAMP_W);
     expect(autoScale({ x1: 0, y1: 0, x2: 10000, y2: 13000 }, fmt)).toBe(100);
     expect(autoScale({ x1: 0, y1: 0, x2: 20000, y2: 10000 }, fmt)).toBe(100);
     expect(autoScale({ x1: 0, y1: 0, x2: 8000, y2: 4500 }, { paper: 'A3', landscape: true })).toBe(25);
@@ -399,5 +399,29 @@ describe('PDF – kóty blíž stěnám a bez překrytí (přání uživatele 20
     const r = drawPlanSheet(fakePage().page, fonts, P(), fe, A4, { scale: 50, pan: { x: -13000, y: -10000 } }, undefined)!;
     expect(r.scale).toBe(50);
     expect(r.cropped).toBe(true);
+  });
+});
+
+describe('PDF – vlastní měřítko a malé razítko (přání uživatele 2026-11-23)', () => {
+  it('vlastní měřítko 1 : 75 se použije a je v razítku', async () => {
+    room();
+    const fe = selectExport(P(), { format: 'pdf', scope: { kind: 'project' } })[0]!;
+    expect(drawPlanSheet(fakePage().page, fonts, P(), fe, A4, { scale: 75 }, undefined)!.scale).toBe(75);
+    const { scales } = await buildPdf(P(), { ...A4, views: { [`floor:${f().id}`]: { scale: 75 } } }, assets);
+    expect(scales[0]).toMatch(/1 : 75$/);
+  });
+
+  it('vlastní měřítko z náhledu ({ scale: 75, custom }) jde do PDF jako 1 : 75', async () => {
+    room();
+    const { scales } = await buildPdf(P(), { ...A4, views: { [`floor:${f().id}`]: { scale: 75, custom: true } } }, assets);
+    expect(scales[0]).toMatch(/1 : 75$/);
+  });
+
+  it('razítko je malé: 95 × 12 mm, kresba smí až 14 mm nad spodní okraj', () => {
+    expect(STAMP_W).toBe(95);
+    expect(STAMP_BOX_H).toBeLessThan(STAMP_H);
+    // A4 na šířku: plocha nad razítkem je vysoká 210 − 20 − 14 = 176 mm
+    const r = planRegion({ x1: 0, y1: 0, x2: 1000, y2: 1000 }, { paper: 'A4', landscape: true }, 20)!;
+    expect(r.y2 - r.y1).toBe(176);
   });
 });
