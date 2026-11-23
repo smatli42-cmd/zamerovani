@@ -80,7 +80,8 @@ export const EXPORT_CATEGORIES: readonly CategoryDef[] = [
   { id: 'rooms', label: 'Místnosti (číslo, název, plocha)', dxf: 'Místnosti', pdf: 'on', dxfUse: 'on' },
   { id: 'texts', label: 'Texty', dxf: 'Texty', pdf: 'on', dxfUse: 'on' },
   { id: 'mainDims', label: 'Hlavní kóty', dxf: 'Kóty', pdf: 'on', dxfUse: 'on' },
-  { id: 'workDims', label: 'Pracovní kóty', dxf: 'Kóty pracovní', pdf: 'off', dxfUse: 'on', dxfLayerOff: true },
+  // PDF: všechny kóty ve výchozím stavu (rozhodnutí uživatele 2026-11-23 po zkoušce, mění KOTY-ZAMEK-EXPORT B „PDF jen hlavní“)
+  { id: 'workDims', label: 'Pracovní kóty', dxf: 'Kóty pracovní', pdf: 'on', dxfUse: 'on', dxfLayerOff: true },
   { id: 'marks', label: 'Poznámky (číslo a název)', dxf: 'Poznámky', pdf: 'on', dxfUse: 'on' },
   { id: 'strokes', label: 'Kresba od ruky (Pero)', dxf: 'Kresba od ruky', pdf: 'on', dxfUse: 'on' },
   { id: 'photos', label: 'Fotky a skici poznámek (příloha)', dxf: '', pdf: 'on', dxfUse: 'never' }
@@ -472,10 +473,12 @@ export function selectExport(p: Project, spec: ExportSpec): FloorExport[] {
 }
 
 /**
- * Rozsah kresby listu (mm): ořez rozsahu, jinak obal plně exportovaných prvků (stěny, volné prvky).
+ * Rozsah kresby listu (mm): vlastní rozsah (místnost / výřez), jinak obal plně exportovaných prvků (stěny, volné prvky).
  * null = nic ke kreslení.
  */
 export function exportBounds(fe: FloorExport): Rect | null {
+  // vlastní rozsah (místnost s tloušťkou stěn / výřez), ne okolí – měřítko listu se řídí místností
+  if (fe.focus) return fe.focus;
   if (fe.clip) return fe.clip;
   const pts: Pt[] = [];
   for (const it of fe.items) {

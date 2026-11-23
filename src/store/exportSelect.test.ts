@@ -110,9 +110,10 @@ describe('tabulka druh prvku × výstup (EXPORT-NAVRH.md)', () => {
     }
   });
 
-  it('výchozí obsah: pracovní kóty v PDF vypnuté, v DXF zapnuté na vypnuté hladině; fotky a skici do DXF nikdy', () => {
-    expect(categoryOn('pdf', undefined, 'workDims')).toBe(false);
-    expect(categoryOn('pdf', { workDims: true }, 'workDims')).toBe(true);
+  // PDF: všechny kóty ve výchozím stavu (rozhodnutí uživatele 2026-11-23 po zkoušce PDF)
+  it('výchozí obsah: pracovní kóty v PDF zapnuté (jde vypnout), v DXF zapnuté na vypnuté hladině; fotky a skici do DXF nikdy', () => {
+    expect(categoryOn('pdf', undefined, 'workDims')).toBe(true);
+    expect(categoryOn('pdf', { workDims: false }, 'workDims')).toBe(false);
     expect(categoryOn('dxf', undefined, 'workDims')).toBe(true);
     expect(EXPORT_CATEGORIES.find(c => c.id === 'workDims')!.dxfLayerOff).toBe(true);
     expect(categoryOn('pdf', undefined, 'photos')).toBe(true);
@@ -173,7 +174,7 @@ describe('hlavní × pracovní kóta (KOTY-ZAMEK-EXPORT.md B)', () => {
     toggleDimMain(t);
     expect(isMainDim(f(), t)).toBe(false);
     expect(f().dimRoles?.[dimKey(t)]?.main).toBe(false);
-    const fe = selectExport(P(), { format: 'pdf', scope: { kind: 'project' } })[0]!;
+    const fe = selectExport(P(), { format: 'pdf', scope: { kind: 'project' }, content: { workDims: false } })[0]!;
     expect(dimCategory(fe, t)).toBeNull();
     const fd = selectExport(P(), { format: 'dxf', scope: { kind: 'project' } })[0]!;
     expect(dimCategory(fd, t)).toBe('workDims');
@@ -187,7 +188,7 @@ describe('hlavní × pracovní kóta (KOTY-ZAMEK-EXPORT.md B)', () => {
     const d = addFreeDim({ x: 0, y: -1000 }, { x: 2000, y: -1000 })!;
     toggleDimMain({ kind: 'free-dim', dimId: d, move: 'b' });
     expect(has(sel({ format: 'dxf' }), 'dim', d)?.category).toBe('workDims');
-    expect(has(sel({ format: 'pdf' }), 'dim', d)).toBeFalsy();
+    expect(has(sel({ format: 'pdf', content: { workDims: false } }), 'dim', d)).toBeFalsy();
     store.set({ selection: { kind: 'dim', id: d } as never });
     deleteSelection();
     expect(f().dimRoles).toBeUndefined();

@@ -7,7 +7,9 @@ import { useState } from 'preact/hooks';
 import type { Id, Project } from '../model/types';
 import { categoryOn, EXPORT_CATEGORIES, type ExportCategory, type ExportContent, type ExportScope } from '../core/exportSelect';
 import { layersOf, SYS } from '../core/layers';
-import { SCALES, type Paper } from '../export/sheetFormat';
+import type { Paper } from '../export/sheetFormat';
+import type { PlanView } from '../export/planDraw';
+import { ExportPreview } from './ExportPreview';
 import type { PdfOptions } from '../export/pdfExport';
 import { canShareFile, downloadFile, shareFile } from '../export/saveFile';
 import { getPhoto } from '../persistence/photos';
@@ -46,7 +48,8 @@ export function ExportDialog({ project, floorId, onClose }: { project: Project; 
   const [scope, setScope] = useState<ScopeKind>(preset.length ? 'rooms' : 'floor');
   const [paper, setPaper] = useState<Paper>('A4');
   const [landscape, setLandscape] = useState(true);
-  const [scale, setScale] = useState<number | 'auto'>('auto');
+  // měřítko a posun jednotlivých listů půdorysu (náhled); bez nastavení automaticky a na střed
+  const [views, setViews] = useState<Record<string, PlanView>>({});
   const [sheets, setSheets] = useState({ cover: true, plan: true, rooms: false, openings: false, marks: false });
   const [content, setContent] = useState<ExportContent>({});
   const [layers, setLayers] = useState<Id[]>(layersOf(project).filter(l => l.visible).map(l => l.id));
@@ -63,7 +66,7 @@ export function ExportDialog({ project, floorId, onClose }: { project: Project; 
     setFile(null);
     try {
       const [{ buildPdf, pdfFileName }, [fontRegular, fontBold]] = await Promise.all([import('../export/pdfExport'), loadFonts()]);
-      const opts: PdfOptions = { paper, landscape, scale, sheets, content, layers, scope: scopeOf() };
+      const opts: PdfOptions = { paper, landscape, scale: 'auto', views, sheets, content, layers, scope: scopeOf() };
       const loadPhoto = async (id: string) => {
         const p = await getPhoto(id);
         return p ? new Uint8Array(await p.blob.arrayBuffer()) : null;
@@ -159,7 +162,7 @@ export function ExportDialog({ project, floorId, onClose }: { project: Project; 
           {sheet('marks', 'Poznámky (strana na poznámku)')}
         </div>
         <div class="export-row">
-          <span class="muted small">Papír a měřítko</span>
+          <span class="muted small">Papír</span>
           <div class="seg">
             {(['A4', 'A3'] as const).map(p => (
               <button key={p} class={paper === p ? 'active' : ''} onClick={() => (setPaper(p), setFile(null))}>
@@ -173,15 +176,18 @@ export function ExportDialog({ project, floorId, onClose }: { project: Project; 
               Na výšku
             </button>
           </div>
-          <select value={String(scale)} onChange={e => setScale((e.target as HTMLSelectElement).value === 'auto' ? 'auto' : Number((e.target as HTMLSelectElement).value))}>
-            <option value="auto">Měřítko automaticky</option>
-            {SCALES.map(n => (
-              <option key={n} value={n}>
-                1 : {n}
-              </option>
-            ))}
-          </select>
         </div>
+        {sheets.plan && (
+          <div class="export-row">
+            <span class="muted small">Náhled půdorysu – měřítko a co je na listu vidět</span>
+            <ExportPreview
+              project={project}
+              spec={{ paper, landscape, scope: scopeOf(), content, layers, scale: 'auto' }}
+              views={views}
+              onView={(key, v) => (setViews({ ...views, [key]: v }), setFile(null))}
+            />
+          </div>
+        )}
         <details class="export-row">
           <summary>Obsah výkresu</summary>
           {cats.map(c => (

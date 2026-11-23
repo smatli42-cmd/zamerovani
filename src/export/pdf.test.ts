@@ -33,6 +33,8 @@ beforeAll(async () => {
 /** Stránka, která si zapisuje texty a barvy čar (místo skutečného PDF). */
 function fakePage() {
   const texts: string[] = [];
+  const at: Record<string, { x: number; y: number }> = {};
+  const boxes: { t: string; x: number; y: number; size: number; w: number; rot: number }[] = [];
   const strokes: number[][] = [];
   const ops: string[] = [];
   const page = {
@@ -46,10 +48,14 @@ function fakePage() {
         if (m) strokes.push([+m[1]!, +m[2]!, +m[3]!]);
       }
     },
-    drawText: (t: string) => texts.push(t),
+    drawText: (t: string, o: { x: number; y: number; size: number; font: { widthOfTextAtSize(t: string, s: number): number }; rotate?: { angle: number } }) => {
+      texts.push(t);
+      at[t] = { x: o.x, y: o.y };
+      boxes.push({ t, x: o.x, y: o.y, size: o.size, w: o.font.widthOfTextAtSize(t, o.size), rot: o.rotate?.angle ?? 0 });
+    },
     drawImage: () => undefined
   };
-  return { page: page as unknown as PDFPage, texts, strokes, ops };
+  return { page: page as unknown as PDFPage, texts, strokes, ops, at, boxes };
 }
 
 const P = () => store.get().project!;
@@ -75,17 +81,17 @@ function room(): { room: Id; bottom: Id; op: Id } {
 beforeEach(() => store.openProject(createProject({ name: 'Rodinný dům Šťastných' })));
 
 describe('PDF – půdorys', () => {
-  it('hlavní kóty ano, pracovní (otvor) jen když se zapnou; název místnosti s diakritikou', () => {
+  it('hlavní kóty ano, pracovní (otvor) jen když jsou zapnuté (výchozí ano); název místnosti s diakritikou', () => {
     room();
-    const fe = selectExport(P(), { format: 'pdf', scope: { kind: 'project' } })[0]!;
+    const fe = selectExport(P(), { format: 'pdf', scope: { kind: 'project' }, content: { workDims: false } })[0]!;
     const a = fakePage();
-    drawPlanSheet(a.page, fonts, P(), fe, A4, 'auto', undefined);
+    drawPlanSheet(a.page, fonts, P(), fe, A4, { scale: 'auto' }, undefined);
     expect(a.texts).toContain('4000');
     expect(a.texts.some(t => t.includes('Kuchyň'))).toBe(true);
     expect(a.texts).not.toContain('1200'); // šířka okna = pracovní kóta
     const fw = selectExport(P(), { format: 'pdf', scope: { kind: 'project' }, content: { workDims: true } })[0]!;
     const b = fakePage();
-    drawPlanSheet(b.page, fonts, P(), fw, A4, 'auto', undefined);
+    drawPlanSheet(b.page, fonts, P(), fw, A4, { scale: 'auto' }, undefined);
     expect(b.texts).toContain('1200');
   });
 
@@ -93,10 +99,10 @@ describe('PDF – půdorys', () => {
     const { bottom } = room();
     toggleDimMain({ kind: 'wall-length', wallId: bottom, move: 'both' });
     const a = fakePage();
-    drawPlanSheet(a.page, fonts, P(), selectExport(P(), { format: 'pdf', scope: { kind: 'project' } })[0]!, A4, 'auto', undefined);
+    drawPlanSheet(a.page, fonts, P(), selectExport(P(), { format: 'pdf', scope: { kind: 'project' }, content: { workDims: false } })[0]!, A4, { scale: 'auto' }, undefined);
     expect(a.texts.filter(t => t === '4000')).toHaveLength(1); // horní stěna ano, dolní ne
     const b = fakePage();
-    drawPlanSheet(b.page, fonts, P(), selectExport(P(), { format: 'pdf', scope: { kind: 'project' }, content: { mainDims: false } })[0]!, A4, 'auto', undefined);
+    drawPlanSheet(b.page, fonts, P(), selectExport(P(), { format: 'pdf', scope: { kind: 'project' }, content: { mainDims: false, workDims: false } })[0]!, A4, { scale: 'auto' }, undefined);
     expect(b.texts).not.toContain('4000');
   });
 
@@ -106,11 +112,11 @@ describe('PDF – půdorys', () => {
     store.edit(fl => void (Object.values(fl.texts)[0]!.text = 'Komín'));
     addFreeDim({ x: 0, y: -2000 }, { x: 2500, y: -2000 });
     const a = fakePage();
-    drawPlanSheet(a.page, fonts, P(), selectExport(P(), { format: 'pdf', scope: { kind: 'project' } })[0]!, A4, 'auto', undefined);
+    drawPlanSheet(a.page, fonts, P(), selectExport(P(), { format: 'pdf', scope: { kind: 'project' } })[0]!, A4, { scale: 'auto' }, undefined);
     expect(a.texts.some(t => t.includes('Komín'))).toBe(true);
     expect(a.texts).toContain('2500');
     const b = fakePage();
-    drawPlanSheet(b.page, fonts, P(), selectExport(P(), { format: 'pdf', scope: { kind: 'project' }, content: { texts: false } })[0]!, A4, 'auto', undefined);
+    drawPlanSheet(b.page, fonts, P(), selectExport(P(), { format: 'pdf', scope: { kind: 'project' }, content: { texts: false } })[0]!, A4, { scale: 'auto' }, undefined);
     expect(b.texts.some(t => t.includes('Komín'))).toBe(false);
   });
 
@@ -128,7 +134,7 @@ describe('PDF – půdorys', () => {
     updateRoom(other, { name: 'Spíž' });
     const fe = selectExport(P(), { format: 'pdf', scope: { kind: 'rooms', floorId: f().id, roomIds: [r] } })[0]!;
     const a = fakePage();
-    drawPlanSheet(a.page, fonts, P(), fe, A4, 'auto', undefined);
+    drawPlanSheet(a.page, fonts, P(), fe, A4, { scale: 'auto' }, undefined);
     expect(a.texts.some(t => t.includes('Kuchyň'))).toBe(true);
     expect(a.texts.some(t => t.includes('Spíž'))).toBe(false);
     expect(a.texts).not.toContain('3000 '); // kóta sousední místnosti (3000) – její stěny jsou jen okolí
@@ -138,9 +144,9 @@ describe('PDF – půdorys', () => {
   it('automatické měřítko: nejpodrobnější, do kterého se kresba vejde', () => {
     expect(SCALES).toEqual([20, 25, 50, 100, 200, 500]);
     const fmt = { paper: 'A4' as const, landscape: false };
-    expect(autoScale({ x1: 0, y1: 0, x2: 3000, y2: 3000 }, fmt)).toBe(20);
-    expect(autoScale({ x1: 0, y1: 0, x2: 7000, y2: 6000 }, fmt)).toBe(50);
-    expect(autoScale({ x1: 0, y1: 0, x2: 15000, y2: 10000 }, fmt)).toBe(100);
+    expect(autoScale({ x1: 0, y1: 0, x2: 2500, y2: 2500 }, fmt)).toBe(20);
+    expect(autoScale({ x1: 0, y1: 0, x2: 6500, y2: 6000 }, fmt)).toBe(50);
+    expect(autoScale({ x1: 0, y1: 0, x2: 13000, y2: 10000 }, fmt)).toBe(100);
     expect(paperSize({ paper: 'A3', landscape: true })).toEqual([420, 297]);
   });
 });
@@ -199,7 +205,7 @@ describe('PDF – tabulka druh prvku × výstup (každý druh se nakreslí, vypn
   /** Počet kreslicích příkazů a texty listu pro daný obsah. */
   const draw = (content: ExportContent = {}) => {
     const a = fakePage();
-    drawPlanSheet(a.page, fonts, P(), selectExport(P(), { format: 'pdf', scope: { kind: 'project' }, content })[0]!, A4, 'auto', undefined);
+    drawPlanSheet(a.page, fonts, P(), selectExport(P(), { format: 'pdf', scope: { kind: 'project' }, content })[0]!, A4, { scale: 'auto' }, undefined);
     return { n: a.ops.filter(o => /^(S|f|f\*|c|l)$|\s(S|f|c|l)$/.test(o)).length, texts: a.texts };
   };
   const CASES: [string, ExportCategory, () => void][] = [
@@ -247,7 +253,7 @@ describe('PDF – tabulka druh prvku × výstup (každý druh se nakreslí, vypn
 
   it('pracovní kóty: zapnuté přidají kóty (otvor), vypnuté ne', () => {
     addOpening(addWall({ x: 0, y: 0 }, null, { x: 4000, y: 0 }, null, false, { thickness: 300, side: 1 })!, 'window', 0.5);
-    expect(draw({ workDims: true }).n).toBeGreaterThan(draw().n);
+    expect(draw().n).toBeGreaterThan(draw({ workDims: false }).n);
   });
 
   it('volná kóta ke kresbě ve skryté vrstvě se nakreslí (pravidlo 8 – konce v celém podlaží)', () => {
@@ -332,10 +338,66 @@ describe('PDF – měřítko s razítkem jen v rohu (přání uživatele 2026-11
   it('A4 na šířku: dům 12 × 10 m v 1 : 100; vysoký půdorys se vejde vedle razítka', () => {
     const fmt = { paper: 'A4' as const, landscape: true };
     expect(autoScale({ x1: 0, y1: 0, x2: 12000, y2: 10000 }, fmt)).toBe(100);
-    // 10 × 15 m: nad razítko se v 1 : 100 nevejde (výška), vedle razítka ano
-    expect(planRegion({ x1: 0, y1: 0, x2: 10000, y2: 15000 }, fmt, 100)?.x2).toBeLessThan(297 - 10 - 120);
-    expect(autoScale({ x1: 0, y1: 0, x2: 10000, y2: 15000 }, fmt)).toBe(100);
+    // 10 × 13 m: nad razítko se v 1 : 100 nevejde (výška), vedle razítka ano
+    expect(planRegion({ x1: 0, y1: 0, x2: 10000, y2: 13000 }, fmt, 100)?.x2).toBeLessThan(297 - 10 - 120);
+    expect(autoScale({ x1: 0, y1: 0, x2: 10000, y2: 13000 }, fmt)).toBe(100);
     expect(autoScale({ x1: 0, y1: 0, x2: 20000, y2: 10000 }, fmt)).toBe(100);
-    expect(autoScale({ x1: 0, y1: 0, x2: 8000, y2: 5000 }, { paper: 'A3', landscape: true })).toBe(25);
+    expect(autoScale({ x1: 0, y1: 0, x2: 8000, y2: 4500 }, { paper: 'A3', landscape: true })).toBe(25);
+  });
+});
+
+describe('PDF – kóty blíž stěnám a bez překrytí (přání uživatele 2026-11-23)', () => {
+  it('řada pracovních kót, ze které se nic nekreslí, nezabírá místo', () => {
+    const w = addWall({ x: 0, y: 0 }, null, { x: 4000, y: 0 }, null, false, { thickness: 300, side: 1 })!;
+    const plain = fakePage();
+    drawPlanSheet(plain.page, fonts, P(), selectExport(P(), { format: 'pdf', scope: { kind: 'project' }, content: { workDims: false } })[0]!, A4, { scale: 50 }, undefined);
+    addOpening(w, 'window', 0.5);
+    const withOp = fakePage();
+    drawPlanSheet(withOp.page, fonts, P(), selectExport(P(), { format: 'pdf', scope: { kind: 'project' }, content: { workDims: false } })[0]!, A4, { scale: 50 }, undefined);
+    expect(withOp.at['4000']!.y).toBeCloseTo(plain.at['4000']!.y, 3);
+  });
+
+  it('čísla kót se nepřekrývají (odsunou se podél čáry) – vodorovná čísla jedné řady', () => {
+    // úzké úseky vedle sebe: bez odsunutí by se čísla 300 / 400 / 300 v 1 : 100 překryla
+    const w = addWall({ x: 0, y: 0 }, null, { x: 4000, y: 0 }, null, false, { thickness: 300, side: 1 })!;
+    addOpening(w, 'door', 0.1);
+    addOpening(w, 'door', 0.4);
+    const a = fakePage();
+    drawPlanSheet(a.page, fonts, P(), selectExport(P(), { format: 'pdf', scope: { kind: 'project' } })[0]!, A4, { scale: 100 }, undefined);
+    const nums = a.boxes.filter(b => /^\d+$/.test(b.t) && Math.abs(b.rot) < 1);
+    expect(nums.length).toBeGreaterThan(4);
+    for (let i = 0; i < nums.length; i++)
+      for (let j = i + 1; j < nums.length; j++) {
+        const p = nums[i]!;
+        const q = nums[j]!;
+        const sameRow = Math.abs(p.y - q.y) < p.size * 0.8;
+        const overlap = p.x < q.x + q.w && q.x < p.x + p.w;
+        expect(sameRow && overlap, `${p.t} × ${q.t}`).toBe(false);
+      }
+  });
+
+  it('list místnosti: měřítko podle místnosti, ne podle okolí', () => {
+    const { room: r } = room();
+    const fe = selectExport(P(), { format: 'pdf', scope: { kind: 'rooms', floorId: f().id, roomIds: [r] } })[0]!;
+    expect(fe.focus!.x2 - fe.focus!.x1).toBeLessThan(fe.clip!.x2 - fe.clip!.x1);
+    // místnost 4 × 3 m (+ stěny) na A3 na šířku: 1 : 20 (s 1 m okolí by vyšlo 1 : 25)
+    expect(drawPlanSheet(fakePage().page, fonts, P(), fe, { paper: 'A3', landscape: true }, { scale: 'auto' }, undefined)!.scale).toBe(20);
+  });
+
+  it('posun listu: vejde se, ale posunem vyjede → oříznuto', () => {
+    room();
+    const fe = selectExport(P(), { format: 'pdf', scope: { kind: 'project' } })[0]!;
+    expect(drawPlanSheet(fakePage().page, fonts, P(), fe, A4, { scale: 50 }, undefined)!.cropped).toBe(false);
+    expect(drawPlanSheet(fakePage().page, fonts, P(), fe, A4, { scale: 50, pan: { x: 3000, y: 0 } }, undefined)!.cropped).toBe(true);
+  });
+
+  it('ruční měřítko a posun listu (náhled) se použijí', () => {
+    addWall({ x: 0, y: 0 }, null, { x: 4000, y: 0 }, null, false, { thickness: 300, side: 1 });
+    addText({ x: 30000, y: 20000 }); // vzdálený prvek by automatické měřítko zmenšil
+    const fe = selectExport(P(), { format: 'pdf', scope: { kind: 'project' } })[0]!;
+    expect(drawPlanSheet(fakePage().page, fonts, P(), fe, A4, { scale: 'auto' }, undefined)!.scale).toBeGreaterThan(100);
+    const r = drawPlanSheet(fakePage().page, fonts, P(), fe, A4, { scale: 50, pan: { x: -13000, y: -10000 } }, undefined)!;
+    expect(r.scale).toBe(50);
+    expect(r.cropped).toBe(true);
   });
 });

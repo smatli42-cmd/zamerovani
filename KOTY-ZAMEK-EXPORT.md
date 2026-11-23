@@ -27,7 +27,7 @@ Stav: **A (zámek) schváleno uživatelem v chatu 2026-11-14, nenaprogramováno.
 - Každá kóta má příznak **hlavní × jen pro kreslení**; nezávislý na zámku.
 - Výchozí **automaticky**: do exportu celkové rozměry (délka stěny, celková délka řetězové kóty, rozměry místnosti); dílčí (ostění, otvor, meziostění, odstupy, tloušťky) ne.
 - Ruční přepsání jedním ťuknutím u vybrané kóty.
-- Export: DXF – hlavní kóty na hladině „Kóty“, ostatní na vypnuté hladině „Kóty pracovní“; PDF – jen hlavní; JSON/BIM – všechny kóty + příznak.
+- Export: DXF – hlavní kóty na hladině „Kóty“, ostatní na vypnuté hladině „Kóty pracovní“; PDF – jen hlavní (**změněno uživatelem 2026-11-23: v PDF ve výchozím stavu všechny kóty, pracovní jdou vypnout**); JSON/BIM – všechny kóty + příznak.
 - Navazuje na požadavek „volná kóta mezi dvěma body“ (POZADAVKY.md).
 
 ## Otevřené

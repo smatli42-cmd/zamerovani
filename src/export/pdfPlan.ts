@@ -1,16 +1,14 @@
 /**
- * PDF: list papíru, měřítko, půdorys (stejné kreslení jako plátno – canvas/drawFloor.ts) a razítko.
+ * PDF: list papíru, půdorys (rozvržení a kreslení export/planDraw.ts – stejné jako náhled) a razítko.
  * Co se kreslí, rozhoduje jen výběr exportu (core/exportSelect.ts); tady se jen kreslí.
  */
 import type { PDFDocument, PDFPage } from 'pdf-lib';
 import { rgb } from 'pdf-lib';
-import type { Floor, Id, Project } from '../model/types';
-import type { Camera, Selection } from '../store/store';
-import { categoryOn, dimCategory, exportBounds, exportLayers, partOn, type FloorExport } from '../core/exportSelect';
-import { drawFloorLayers } from '../canvas/drawFloor';
-import { clearDimLabels, flushDimLabels, setDimFilter } from '../canvas/dimLine';
+import type { Id, Project } from '../model/types';
+import type { FloorExport } from '../core/exportSelect';
+import { drawPlanInto, planLayout, type PlanView } from './planDraw';
 import { PdfCanvas, PT_PER_MM, type PdfFonts } from './pdfCanvas';
-import { autoFits, autoScale, drawArea, MARGIN, MM_PER_PX, paperSize, planRegion, STAMP_H, STAMP_W, type SheetFormat } from './sheetFormat';
+import { MARGIN, MM_PER_PX, paperSize, STAMP_H, STAMP_W, type SheetFormat } from './sheetFormat';
 
 export { autoScale, drawArea, MARGIN, MM_PER_PX, paperSize, planRegion, SCALES, STAMP_H, STAMP_W, type Paper, type SheetFormat } from './sheetFormat';
 
@@ -19,105 +17,23 @@ export function newPage(doc: PDFDocument, f: SheetFormat): PDFPage {
   return doc.addPage([w * PT_PER_MM, h * PT_PER_MM]);
 }
 
-/**
- * Podlaží pro jeden průchod kreslení: jen prvky z výběru exportu – plně (`full`), nebo okolí (`context`: jen
- * otvory a výstupky sousedních stěn, bez volných prvků). Stěny zůstávají kvůli napojení (kreslí se podle filtru);
- * vynechaný otvor / výstupek se tak nenakreslí ani nevyřízne z těla stěny.
- */
-function exportFloor(fe: FloorExport, pass: 'full' | 'context'): Floor {
-  const ctx = pass === 'context';
-  const keep = (kind: string) => new Set(fe.items.filter(i => i.kind === kind && !!i.context === ctx && (ctx ? kind === 'opening' || kind === 'protrusion' : true)).map(i => i.id));
-  const pick = <T,>(rec: Record<Id, T> | undefined, kind: string): Record<Id, T> => {
-    const ids = keep(kind);
-    return Object.fromEntries(Object.entries(rec ?? {}).filter(([id]) => ids.has(id)));
-  };
-  const hatch = partOn(fe, 'hatch');
-  const drawings = pick(fe.floor.drawings, 'drawing');
-  return {
-    ...fe.floor,
-    openings: pick(fe.floor.openings, 'opening'),
-    protrusions: pick(fe.floor.protrusions, 'protrusion'),
-    cornerProtrusions: pick(fe.floor.cornerProtrusions, 'protrusion'),
-    endProtrusions: pick(fe.floor.endProtrusions, 'protrusion'),
-    drawings: hatch ? drawings : Object.fromEntries(Object.entries(drawings).map(([id, d]) => [id, { ...d, hatch: undefined, hatchColor: undefined }])),
-    stairs: pick(fe.floor.stairs, 'stair'),
-    rooms: pick(fe.floor.rooms, 'room'),
-    texts: pick(fe.floor.texts, 'text'),
-    dims: pick(fe.floor.dims, 'dim'),
-    strokes: pick(fe.floor.strokes, 'stroke'),
-    marks: pick(fe.floor.marks, 'mark')
-  };
-}
-
-/** Prvky, u kterých se kreslí i kóty „jen u vybraného“, když jsou zapnuté pracovní kóty. */
-function allDimSelections(fe: FloorExport): Selection[] {
-  if (!categoryOn(fe.format, fe.content, 'workDims')) return [null];
-  const out: Selection[] = [];
-  for (const it of fe.items) {
-    if (it.context) continue;
-    if (it.kind === 'wall' || it.kind === 'opening' || it.kind === 'protrusion' || it.kind === 'stair') out.push({ kind: it.kind, id: it.id } as Selection);
-  }
-  return out.length ? out : [null];
-}
-
 export interface PlanResult {
   scale: number;
-  /** Kresba se nevešla ani do nejmenšího měřítka – list je oříznutý. */
+  /** Kresba se do zvoleného měřítka nevešla – list je oříznutý. */
   cropped: boolean;
 }
 
 /**
- * Půdorys do listu: měřítko (zadané / automatické), vycentrování rozsahu, ořez, okolí šedě, pak plně
- * exportované prvky; kóty jen podle výběru exportu (hlavní / pracovní, rozsah).
+ * Půdorys do listu PDF: rozvržení a kreslení jsou společné s náhledem (export/planDraw.ts); tady jen „papír“ PDF
+ * (okolí šedě přes `PdfCanvas.gray`).
  */
-export function drawPlanSheet(page: PDFPage, fonts: PdfFonts, project: Project, fe: FloorExport, f: SheetFormat, scale: number | 'auto', layers: Id[] | undefined): PlanResult | null {
-  const bounds = exportBounds(fe);
-  if (!bounds) return null;
-  const n = scale === 'auto' ? autoScale(bounds, f) : scale;
-  // plocha, do které se kresba vycentruje (nad razítkem nebo vedle něj); nevejde-li se, nad razítkem a ořízne se
-  const a = planRegion(bounds, f, n) ?? drawArea(f);
+export function drawPlanSheet(page: PDFPage, fonts: PdfFonts, project: Project, fe: FloorExport, f: SheetFormat, view: PlanView, layers: Id[] | undefined): PlanResult | null {
+  const lay = planLayout(fe, f, view);
+  if (!lay) return null;
   const [, ph] = paperSize(f);
-  const cv = new PdfCanvas(page, fonts, { x: a.x1 * PT_PER_MM, y: (ph - a.y1) * PT_PER_MM }, MM_PER_PX);
-  const ctx = cv.asContext();
-  const zoom = 1 / (n * MM_PER_PX);
-  const wpx = (a.x2 - a.x1) / MM_PER_PX;
-  const hpx = (a.y2 - a.y1) / MM_PER_PX;
-  const cam: Camera = { zoom, x: wpx / 2 - ((bounds.x1 + bounds.x2) / 2) * zoom, y: hpx / 2 - ((bounds.y1 + bounds.y2) / 2) * zoom };
-  const lp = exportLayers(project, layers);
-  // geometrie (konce volných kót, plocha místnosti) z celého podlaží; klikací popisky export nevytváří
-  const base = { selection: null, hover: null, dimScale: 1, lockBlock: null, helpers: false, geo: fe.floor, hits: false } as const;
-  const full = new Set(fe.items.filter(i => i.kind === 'wall' && !i.context).map(i => i.id));
-  const around = new Set(fe.items.filter(i => i.kind === 'wall' && i.context).map(i => i.id));
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(0, 0, wpx, hpx);
-  ctx.clip();
-  if (fe.clip) {
-    const c = fe.clip;
-    ctx.beginPath();
-    ctx.rect(c.x1 * zoom + cam.x, c.y1 * zoom + cam.y, (c.x2 - c.x1) * zoom, (c.y2 - c.y1) * zoom);
-    ctx.clip();
-  }
-  try {
-    // okolí (sousední stěny u místnosti): šedě, bez kót a popisků
-    if (around.size) {
-      cv.gray = true;
-      setDimFilter(() => false);
-      drawFloorLayers(ctx, lp, exportFloor(fe, 'context'), cam, { ...base, walls: id => around.has(id) });
-      cv.gray = false;
-    }
-    // kóta bez popisu (neklikací – řada napojení se skrytou stěnou) se neexportuje: nejde určit její role ani rozsah
-    setDimFilter(t => !!t && dimCategory(fe, t) !== null);
-    drawFloorLayers(ctx, lp, exportFloor(fe, 'full'), cam, { ...base, walls: id => full.has(id), allDims: allDimSelections(fe), faceDims: id => full.has(id) });
-    flushDimLabels();
-  } finally {
-    clearDimLabels();
-    setDimFilter(null);
-    cv.gray = false;
-    ctx.restore();
-  }
-  return { scale: n, cropped: !autoFits(bounds, f, n) };
+  const cv = new PdfCanvas(page, fonts, { x: lay.region.x1 * PT_PER_MM, y: (ph - lay.region.y1) * PT_PER_MM }, MM_PER_PX);
+  drawPlanInto(cv.asContext(), project, fe, lay, layers, on => (cv.gray = on));
+  return { scale: lay.n, cropped: lay.cropped };
 }
 
 export interface StampInfo {

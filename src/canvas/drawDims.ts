@@ -12,7 +12,7 @@ import { add, centroid, dist, dot, lerp, normal, scale, sub, unit } from '../cor
 import { OPENING_DEFAULTS } from '../model/factory';
 import type { Floor, Id, Pt } from '../model/types';
 import type { Camera, NumPadTarget, Selection } from '../store/store';
-import { drawDimLine, type DimStyle } from './dimLine';
+import { dimShown, drawDimLine, type DimStyle } from './dimLine';
 import { protrusionRow, wallChainRow } from '../core/dimPlace';
 import type { HitAction } from './hitTargets';
 import { toScreen } from './view';
@@ -154,7 +154,8 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
         const p2 = lerp(a, b, endAt / len);
         drawDimLine(ctx, p1, p2, out, offset, m.text, m.sub, { color: '#334155', bg: '#ffffff', bold: false }, s, m.target ? { type: 'numpad', target: m.target, wallId: wall.id } : null, { row: openRow, alongKey: m.alongKey });
       }
-      offset += rowGap + (placed.length ? 8 * s : 0);
+      // řada, ze které se v exportu nic nekreslí (pracovní kóty vypnuté), nezabírá místo
+      if (marks.some((m, i) => (i + 1 < marks.length ? marks[i + 1]!.at : len) - m.at >= 1 && dimShown(m.target && m.target.kind !== 'field' ? m.target : null))) offset += rowGap + (placed.length ? 8 * s : 0);
     }
 
 
@@ -164,6 +165,7 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
     const fullChain = hostedChain(floor, wall.id);
     const chain = fullChain.filter(c => Object.values(floor.walls).some(w => (w.a === c.nodeId || w.b === c.nodeId) && wallShown(w.id)));
     const whole = chain.length === fullChain.length;
+    let junctionShown = false;
     if (chain.length > 0) {
       const stops = [0, ...chain.map(c => c.at), len];
       for (let i = 0; i + 1 < stops.length; i++) {
@@ -175,8 +177,9 @@ export function drawDims(ctx: CanvasRenderingContext2D, floor: Floor, cam: Camer
           ? { kind: 'junction-gap', wallId: wall.id, nodeId: chain[chain.length - 1]!.nodeId, to: 'next' }
           : { kind: 'junction-gap', wallId: wall.id, nodeId: chain[i]!.nodeId, to: 'prev' };
         drawDimLine(ctx, lerp(a, b, from / len), lerp(a, b, to / len), out, offset, String(Math.round(to - from)), undefined, { color: '#334155', bg: '#ffffff', bold: false }, s, whole ? { type: 'numpad', target, wallId: wall.id } : null, { row: wallChainRow('junctions', wall) });
+        if (dimShown(whole ? target : null)) junctionShown = true;
       }
-      offset += rowGap;
+      if (junctionShown) offset += rowGap;
     }
 
     // 2. řada: celková délka stěny – vždy skutečná délka z výkresu, černě (pojem „změřeno × náčrt“ zrušen 2026-11-14)

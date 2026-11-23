@@ -5,18 +5,13 @@
  */
 import { PDFDocument } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
-import type { Id, Project } from '../model/types';
-import { selectExport, type ExportContent, type ExportScope, type FloorExport } from '../core/exportSelect';
+import type { Project } from '../model/types';
+import { selectExport } from '../core/exportSelect';
+import { planSheets, type PlanSpec } from './planDraw';
 import { drawPlanSheet, drawStamp, newPage, type SheetFormat } from './pdfPlan';
 import { coverSheets, markSheets, openingsSheets, roomsSheets, type PhotoLoader, type Sheet } from './pdfPages';
 
-export interface PdfOptions extends SheetFormat {
-  scope: ExportScope;
-  content?: ExportContent;
-  /** Exportované vrstvy (chybí = viditelné). */
-  layers?: Id[];
-  /** Měřítko půdorysu (1 : n) nebo automaticky. */
-  scale: number | 'auto';
+export interface PdfOptions extends SheetFormat, PlanSpec {
   /** Které listy: půdorys (podlaží / místnost / výřez), výpis místností, výpis otvorů, strany poznámek. */
   sheets: { cover?: boolean; plan: boolean; rooms: boolean; openings: boolean; marks: boolean };
 }
@@ -25,26 +20,6 @@ export interface PdfAssets {
   fontRegular: Uint8Array;
   fontBold: Uint8Array;
   loadPhoto: PhotoLoader;
-}
-
-/** Rozsah půdorysů: u místností jeden list na místnost, jinak podle výběru (podlaží / výřez). */
-function planExports(project: Project, o: PdfOptions): FloorExport[] {
-  const spec = { format: 'pdf' as const, content: o.content, layers: o.layers };
-  const sc = o.scope;
-  if (sc.kind === 'rooms') return sc.roomIds.flatMap(id => selectExport(project, { ...spec, scope: { kind: 'rooms', floorId: sc.floorId, roomIds: [id] } }));
-  return selectExport(project, { ...spec, scope: sc });
-}
-
-/** Nadpis listu půdorysu. */
-function planTitle(fe: FloorExport, scope: ExportScope): string {
-  if (scope.kind === 'rooms') {
-    const r = fe.items.find(i => i.kind === 'room' && !i.context);
-    const room = r ? fe.floor.rooms[r.id] : undefined;
-    const name = room ? [room.number, room.name].filter(Boolean).join(' ') : '';
-    return `Půdorys místnosti ${name}`.trim() + ` (${fe.floor.name})`;
-  }
-  if (scope.kind === 'rect') return `Výřez – ${fe.floor.name}`;
-  return `Půdorys ${fe.floor.name}`;
 }
 
 /** Vytvoří PDF (bajty) a upozornění (oříznutý list). Prázdný výběr = jeden list s upozorněním. */
@@ -62,16 +37,16 @@ export async function buildPdf(project: Project, o: PdfOptions, assets: PdfAsset
   };
   const sheets: Sheet[] = [];
   if (o.sheets.plan) {
-    for (const fe of planExports(project, o)) {
+    for (const ps of planSheets(project, o)) {
       const page = newPage(doc, o);
-      const res = drawPlanSheet(page, fonts, project, fe, o, o.scale, o.layers);
+      const res = drawPlanSheet(page, fonts, project, ps.fe, o, o.views?.[ps.key] ?? { scale: o.scale }, o.layers);
       if (!res) {
         doc.removePage(doc.getPageCount() - 1);
         continue;
       }
-      sheets.push({ page, title: planTitle(fe, o.scope), scale: res.scale });
-      scales.push(`${planTitle(fe, o.scope)} 1 : ${res.scale}`);
-      if (res.cropped) warnings.push(`${planTitle(fe, o.scope)}: kresba se v měřítku 1 : ${res.scale} nevejde na papír – je oříznutá (zvolte větší papír nebo jiné měřítko).`);
+      sheets.push({ page, title: ps.title, scale: res.scale });
+      scales.push(`${ps.title} 1 : ${res.scale}`);
+      if (res.cropped) warnings.push(`${ps.title}: kresba se v měřítku 1 : ${res.scale} celá nevejde na papír – je oříznutá (v náhledu ji posuňte, nebo zvolte větší papír či jiné měřítko).`);
     }
   }
   // výpisy a poznámky z celého rozsahu (u místností z vybraných místností)

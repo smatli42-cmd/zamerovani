@@ -97,3 +97,4 @@ Návrh (já), Code nic nemění sám a u rozporu se zastaví a zeptá se.
 - **DXF:** vlastní zápis bez knihovny, verze AutoCAD 2010 (AC1024, texty UTF-8); kóty zatím rozložené na čáry a text (skutečné kóty AutoCADu později).
 - **Uložení na tabletu:** tlačítka Sdílet (nabídka Androidu, pokud prohlížeč soubor dovolí) a Stáhnout (vždy, do Stažených).
 - **Pořadí práce:** (1) výběr prvků + hlavní kóta, (2) PDF, (3) DXF, (4) uložené sady.
+- **Po zkoušce PDF (uživatel 2026-11-23):** úvodní strana s klikacím obsahem; **v PDF všechny kóty ve výchozím stavu** (pracovní jdou vypnout); čísla kót se nepřekrývají; náhled listu v okně Export – měřítko volí uživatel, tažením určí, co je na listu vidět.

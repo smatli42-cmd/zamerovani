@@ -13,8 +13,11 @@ export const SCALES = [20, 25, 50, 100, 200, 500] as const;
 /** Okraj papíru a výška pruhu s razítkem (mm). */
 export const MARGIN = 10;
 export const STAMP_H = 30;
-/** Místo pro kóty kolem kresby (mm na papíře): dvě řady kót za vnějším lícem (6,5 + 7,5 mm) a číslo. */
-const DIM_ROOM = 20;
+/**
+ * Místo pro kóty kolem kresby (mm na papíře): v PDF jsou ve výchozím stavu všechny kóty – řady za vnějším lícem
+ * otvory 6,5 mm, napojení + 7,5 mm, délka + 9,5 mm a polovina čísla.
+ */
+export const DIM_ROOM = 26;
 /** 1 px kreslicích funkcí = 0,25 mm papíru (písmo kót 12 px ≈ 3 mm). */
 export const MM_PER_PX = 0.25;
 

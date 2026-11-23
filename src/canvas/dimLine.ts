@@ -99,9 +99,43 @@ export function drawDimLine(
   }
   const boxW = Math.max(tw, sw) + 10;
   const boxH = fontPx + 6 + (subText ? subPx + 2 : 0);
-  const along = shift.along * placeCtx.zoom;
-  const mid = add(lerp(q1, q2, 0.5), scale(u, along));
+  let along = shift.along * placeCtx.zoom;
+  let mid = add(lerp(q1, q2, 0.5), scale(u, along));
   const angle = readableAngle(u);
+  // export: číslo, které by se překrylo s číslem jiné kóty, se odsune podél kótovací čáry (až za její konec)
+  // (nejdřív podél čáry, pak o patro ven od kóty – s vodicí čarou k místu na kótě)
+  let lifted: Pt | null = null;
+  if (avoid) {
+    const half = labelHalf(boxW, boxH, angle);
+    const free = (c: Pt) => !avoid!.some(r => Math.abs(r.x - c.x) < r.hw + half.hw && Math.abs(r.y - c.y) < r.hh + half.hh);
+    const base = add(lerp(q1, q2, 0.5), scale(u, along));
+    const step = boxW + 4;
+    const outward = scale(out, side);
+    search: if (!free(mid)) {
+      for (let level = 0; level <= 3; level++) {
+        for (let k = level ? 0 : 1; k <= 6; k++) {
+          const d = (k % 2 ? 1 : -1) * Math.ceil(k / 2) * step;
+          const c = add(add(base, scale(u, d)), scale(outward, level * (boxH + 3)));
+          if (!free(c)) continue;
+          if (level) lifted = add(base, scale(u, d));
+          else along += d;
+          mid = c;
+          break search;
+        }
+      }
+    }
+    avoid.push({ x: mid.x, y: mid.y, ...half });
+  }
+  if (lifted) {
+    ctx.save();
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(lifted.x, lifted.y);
+    ctx.lineTo(mid.x, mid.y);
+    ctx.stroke();
+    ctx.restore();
+  }
 
   // číslo posunuté za konec kótovací čáry: čára se k němu prodlouží
   if (Math.abs(along) > dist(q1, q2) / 2) {
@@ -163,6 +197,23 @@ export function drawDimLine(
 let dimFilter: ((t: DimTarget | null) => boolean) | null = null;
 export function setDimFilter(f: ((t: DimTarget | null) => boolean) | null): void {
   dimFilter = f;
+}
+
+/** Nakreslí se kóta (filtr exportu)? Řada kót, ze které se nic nenakreslí, nezabírá místo (kóty blíž ke stěně). */
+export function dimShown(t: DimTarget | null): boolean {
+  return !dimFilter || dimFilter(t);
+}
+
+/** Export: obsazená místa čísel kót (osově zarovnané poloviny rozměrů); null = bez odsouvání (editor). */
+let avoid: { x: number; y: number; hw: number; hh: number }[] | null = null;
+export function setLabelAvoid(on: boolean): void {
+  avoid = on ? [] : null;
+}
+/** Poloviny rozměrů otočeného rámečku čísla jako osově zarovnaný obdélník (+ 2 px mezera). */
+function labelHalf(w: number, h: number, angle: number): { hw: number; hh: number } {
+  const c = Math.abs(Math.cos(angle));
+  const s = Math.abs(Math.sin(angle));
+  return { hw: (w * c + h * s) / 2 + 2, hh: (w * s + h * c) / 2 + 2 };
 }
 
 /** Čísla kót a ikony zámků čekající na vykreslení nad všemi čarami kót. */
