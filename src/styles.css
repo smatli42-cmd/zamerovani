@@ -1138,6 +1138,13 @@ span.layer-name {
 .export-row .seg {
   flex-wrap: wrap;
 }
+.export-rooms {
+  max-height: 180px;
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 4px 8px;
+}
 .export-row summary {
   cursor: pointer;
   font-weight: 600;

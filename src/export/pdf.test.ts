@@ -14,7 +14,7 @@ import { protrusionsOf } from '../core/protrusion';
 import type { ExportCategory, ExportContent } from '../core/exportSelect';
 import { store } from '../store/store';
 import { selectExport } from '../core/exportSelect';
-import { autoScale, drawPlanSheet, paperSize, SCALES } from './pdfPlan';
+import { autoScale, drawPlanSheet, paperSize, planRegion, SCALES } from './pdfPlan';
 import { buildPdf, pdfFileName, type PdfOptions } from './pdfExport';
 import { PdfCanvas, parseColor, type PdfFonts } from './pdfCanvas';
 
@@ -284,5 +284,58 @@ describe('PDF – převod oblouku', () => {
     cv2.arc(0, 0, 10, 0, Math.PI * 2, true);
     cv2.stroke();
     expect(b.ops.filter(o => o.endsWith(' c'))).toHaveLength(0);
+  });
+});
+
+describe('PDF – úvodní strana s obsahem (přání uživatele 2026-11-23)', () => {
+  it('obsah je první list; každý řádek je odkaz na svůj list', async () => {
+    room();
+    const { bytes } = await buildPdf(P(), { ...A4, sheets: { cover: true, plan: true, rooms: true, openings: true, marks: false } }, assets);
+    const back = await PDFDocument.load(bytes);
+    expect(back.getPageCount()).toBe(4);
+    const annots = back.getPage(0).node.Annots();
+    expect(annots?.size()).toBe(3);
+    const pages = back.getPages().map(p => p.ref.toString());
+    for (let i = 0; i < 3; i++) {
+      const a = back.context.lookup(annots!.get(i)) as unknown as { get(n: PDFName): unknown };
+      const act = back.context.lookup(a.get(PDFName.of('A')) as never) as unknown as { get(n: PDFName): unknown };
+      const dest = back.context.lookup(act.get(PDFName.of('D')) as never) as unknown as { get(i: number): { toString(): string } };
+      expect(dest.get(0).toString()).toBe(pages[i + 1]);
+    }
+  });
+
+  it('obsah na víc stran: čísla i odkazy pokračují (16 poznámek, A4 na šířku = 14 řádků na stranu)', async () => {
+    for (let i = 0; i < 16; i++) addMark({ x: i * 1000, y: 0 });
+    const { bytes } = await buildPdf(P(), { ...A4, landscape: true, sheets: { cover: true, plan: false, rooms: false, openings: false, marks: true } }, assets);
+    const back = await PDFDocument.load(bytes);
+    expect(back.getPageCount()).toBe(18);
+    const pages = back.getPages().map(p => p.ref.toString());
+    const second = back.getPage(1).node.Annots()!;
+    expect(second.size()).toBe(2);
+    const a = back.context.lookup(second.get(0)) as unknown as { get(n: PDFName): unknown };
+    const act = back.context.lookup(a.get(PDFName.of('A')) as never) as unknown as { get(n: PDFName): unknown };
+    const dest = back.context.lookup(act.get(PDFName.of('D')) as never) as unknown as { get(i: number): { toString(): string } };
+    // 15. list obsahu = stránka 2 (obsah) + 14 + 1 → index 16
+    expect(dest.get(0).toString()).toBe(pages[16]);
+  });
+
+  it('bez úvodní strany žádné odkazy', async () => {
+    room();
+    const { bytes } = await buildPdf(P(), A4, assets);
+    const back = await PDFDocument.load(bytes);
+    expect(back.getPageCount()).toBe(1);
+    expect(back.getPage(0).node.Annots()?.size() ?? 0).toBe(0);
+  });
+});
+
+describe('PDF – měřítko s razítkem jen v rohu (přání uživatele 2026-11-23: půdorys byl moc malý)', () => {
+  it('A4 na šířku: dům 12 × 10 m v 1 : 100; vysoký půdorys se vejde vedle razítka', () => {
+    const fmt = { paper: 'A4' as const, landscape: true };
+    expect(autoScale({ x1: 0, y1: 0, x2: 12000, y2: 10000 }, fmt)).toBe(100);
+    // 10 × 15 m: nad razítko se v 1 : 100 nevejde (výška), vedle razítka ano
+    expect(planRegion({ x1: 0, y1: 0, x2: 10000, y2: 15000 }, fmt, 100)?.x2).toBeLessThan(297 - 10 - 120);
+    expect(autoScale({ x1: 0, y1: 0, x2: 10000, y2: 15000 }, fmt)).toBe(100);
+    expect(autoScale({ x1: 0, y1: 0, x2: 20000, y2: 10000 }, fmt)).toBe(100);
+    expect(autoScale({ x1: 0, y1: 0, x2: 8000, y2: 5000 }, { paper: 'A3', landscape: true })).toBe(25);
   });
 });

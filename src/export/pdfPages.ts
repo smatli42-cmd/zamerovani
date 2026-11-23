@@ -3,8 +3,9 @@
  * Prvky bere jen z výběru exportu (core/exportSelect.ts).
  */
 import type { PDFDocument, PDFImage, PDFPage } from 'pdf-lib';
+import { PDFName } from 'pdf-lib';
 import { rgb } from 'pdf-lib';
-import type { MarkPage, Pt } from '../model/types';
+import type { MarkPage, Project, Pt } from '../model/types';
 import type { FloorExport } from '../core/exportSelect';
 import { partOn } from '../core/exportSelect';
 import { formatArea, roomArea } from '../core/roomArea';
@@ -13,7 +14,7 @@ import { sketchPolylines, labelBox } from '../core/sketch';
 import { OPENING_DEFAULTS } from '../model/factory';
 import { drawSketch } from '../canvas/drawSketch';
 import { PdfCanvas, PT_PER_MM, type PdfFonts } from './pdfCanvas';
-import { drawArea, fit, MM_PER_PX, newPage, paperSize, type SheetFormat } from './pdfPlan';
+import { czDate, drawArea, fit, MM_PER_PX, newPage, paperSize, type SheetFormat } from './pdfPlan';
 
 const INK = rgb(0.06, 0.09, 0.16);
 const P = PT_PER_MM;
@@ -221,3 +222,48 @@ async function drawSketchBox(page: PDFPage, fonts: PdfFonts, pg: MarkPage, box: 
   ctx.strokeRect(0, 0, b.w * s, b.h * s);
 }
 
+
+/** Odkaz v PDF: obdélník (pt) na stránce, ťuknutím skok na celou stránku `target`. */
+function linkTo(page: PDFPage, rect: [number, number, number, number], target: PDFPage): void {
+  const ctx = page.doc.context;
+  // akce GoTo (čtečky na Androidu ji znají spolehlivěji než samotné Dest)
+  const annot = ctx.obj({ Type: 'Annot', Subtype: 'Link', Rect: rect, Border: [0, 0, 0], A: { S: 'GoTo', D: [target.ref, PDFName.of('Fit')] } });
+  page.node.addAnnot(ctx.register(annot));
+}
+
+/**
+ * Úvodní strana s obsahem (přání uživatele 2026-11-23): údaje projektu a seznam listů – číslo listu, název,
+ * měřítko; ťuknutím na řádek se skočí na list. Vloží se na začátek dokumentu (i víc stran, když je listů hodně).
+ */
+export function coverSheets(doc: PDFDocument, fonts: PdfFonts, project: Project, f: SheetFormat, sheets: Sheet[]): Sheet[] {
+  const a = drawArea(f);
+  const [, ph] = paperSize(f);
+  const W = (a.x2 - a.x1) * P;
+  const rowH = 8;
+  const head = 44;
+  const perPage = Math.max(1, Math.floor((a.y2 - a.y1 - head) / rowH));
+  const count = Math.max(1, Math.ceil(sheets.length / perPage));
+  const out: Sheet[] = [];
+  for (let c = 0; c < count; c++) {
+    const page = doc.insertPage(c, [paperSize(f)[0] * P, ph * P]);
+    out.push({ page, title: 'Obsah' });
+    const text = (t: string, x: number, y: number, size: number, bold = false, maxW = W) =>
+      page.drawText(fit(t, bold ? fonts.bold : fonts.regular, size, maxW), { x: x * P, y: (ph - y) * P, size, font: bold ? fonts.bold : fonts.regular, color: INK });
+    text(project.name || 'Projekt', a.x1, a.y1 + 8, 20, true);
+    const info = [project.address, `Datum zaměření: ${czDate(project.surveyDate)}`, project.surveyor ? `Zaměřil: ${project.surveyor}` : ''].filter(Boolean).join('   ·   ');
+    text(info, a.x1, a.y1 + 16, 10);
+    text(c ? 'Obsah (pokračování)' : 'Obsah', a.x1, a.y1 + 30, 14, true);
+    text('Ťuknutím na řádek přejdete na list.', a.x1, a.y1 + 36, 8);
+    sheets.slice(c * perPage, (c + 1) * perPage).forEach((s, k) => {
+      const i = c * perPage + k;
+      const y = a.y1 + head + k * rowH;
+      const no = `${count + i + 1}`;
+      text(no, a.x1, y + 5.5, 11, true);
+      text(s.title, a.x1 + 14, y + 5.5, 11, false, W - 50 * P);
+      if (s.scale) text(`1 : ${s.scale}`, a.x2 - 22, y + 5.5, 10);
+      page.drawLine({ start: { x: a.x1 * P, y: (ph - y - rowH) * P }, end: { x: a.x2 * P, y: (ph - y - rowH) * P }, thickness: 0.3, color: INK, opacity: 0.4 });
+      linkTo(page, [a.x1 * P, (ph - y - rowH) * P, a.x2 * P, (ph - y) * P], s.page);
+    });
+  }
+  return out;
+}

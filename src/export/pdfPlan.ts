@@ -10,9 +10,9 @@ import { categoryOn, dimCategory, exportBounds, exportLayers, partOn, type Floor
 import { drawFloorLayers } from '../canvas/drawFloor';
 import { clearDimLabels, flushDimLabels, setDimFilter } from '../canvas/dimLine';
 import { PdfCanvas, PT_PER_MM, type PdfFonts } from './pdfCanvas';
-import { autoFits, autoScale, drawArea, MARGIN, MM_PER_PX, paperSize, STAMP_H, type SheetFormat } from './sheetFormat';
+import { autoFits, autoScale, drawArea, MARGIN, MM_PER_PX, paperSize, planRegion, STAMP_H, STAMP_W, type SheetFormat } from './sheetFormat';
 
-export { autoScale, drawArea, MARGIN, MM_PER_PX, paperSize, SCALES, STAMP_H, type Paper, type SheetFormat } from './sheetFormat';
+export { autoScale, drawArea, MARGIN, MM_PER_PX, paperSize, planRegion, SCALES, STAMP_H, STAMP_W, type Paper, type SheetFormat } from './sheetFormat';
 
 export function newPage(doc: PDFDocument, f: SheetFormat): PDFPage {
   const [w, h] = paperSize(f);
@@ -74,7 +74,8 @@ export function drawPlanSheet(page: PDFPage, fonts: PdfFonts, project: Project, 
   const bounds = exportBounds(fe);
   if (!bounds) return null;
   const n = scale === 'auto' ? autoScale(bounds, f) : scale;
-  const a = drawArea(f);
+  // plocha, do které se kresba vycentruje (nad razítkem nebo vedle něj); nevejde-li se, nad razítkem a ořízne se
+  const a = planRegion(bounds, f, n) ?? drawArea(f);
   const [, ph] = paperSize(f);
   const cv = new PdfCanvas(page, fonts, { x: a.x1 * PT_PER_MM, y: (ph - a.y1) * PT_PER_MM }, MM_PER_PX);
   const ctx = cv.asContext();
@@ -130,7 +131,7 @@ export interface StampInfo {
 export function drawStamp(page: PDFPage, fonts: PdfFonts, project: Project, f: SheetFormat, s: StampInfo): void {
   const [w] = paperSize(f);
   const P = PT_PER_MM;
-  const bw = 120;
+  const bw = STAMP_W;
   const x0 = (w - MARGIN - bw) * P;
   const y0 = MARGIN * P;
   const h = (STAMP_H - 4) * P;

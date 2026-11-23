@@ -6,7 +6,7 @@
 import { useState } from 'preact/hooks';
 import type { Id, Project } from '../model/types';
 import { categoryOn, EXPORT_CATEGORIES, type ExportCategory, type ExportContent, type ExportScope } from '../core/exportSelect';
-import { layersOf } from '../core/layers';
+import { layersOf, SYS } from '../core/layers';
 import { SCALES, type Paper } from '../export/sheetFormat';
 import type { PdfOptions } from '../export/pdfExport';
 import { canShareFile, downloadFile, shareFile } from '../export/saveFile';
@@ -38,17 +38,21 @@ function loadFonts(): Promise<[Uint8Array, Uint8Array]> {
 }
 
 export function ExportDialog({ project, floorId, onClose }: { project: Project; floorId: Id | null; onClose: () => void }) {
-  const rooms = selectedRooms();
-  const [scope, setScope] = useState<ScopeKind>(rooms.length ? 'rooms' : 'floor');
+  const floor = project.floors.find(f => f.id === floorId);
+  // místnosti podlaží seřazené podle čísla; předvyplní se vybrané ve výkresu (přání uživatele: vybírat i v okně)
+  const floorRooms = Object.values(floor?.rooms ?? {}).sort((a, b) => (a.number || a.name).localeCompare(b.number || b.name, 'cs', { numeric: true }));
+  const preset = selectedRooms().filter(id => !!floor?.rooms[id]);
+  const [rooms, setRooms] = useState<Id[]>(preset);
+  const [scope, setScope] = useState<ScopeKind>(preset.length ? 'rooms' : 'floor');
   const [paper, setPaper] = useState<Paper>('A4');
   const [landscape, setLandscape] = useState(true);
   const [scale, setScale] = useState<number | 'auto'>('auto');
-  const [sheets, setSheets] = useState({ plan: true, rooms: false, openings: false, marks: false });
+  const [sheets, setSheets] = useState({ cover: true, plan: true, rooms: false, openings: false, marks: false });
   const [content, setContent] = useState<ExportContent>({});
   const [layers, setLayers] = useState<Id[]>(layersOf(project).filter(l => l.visible).map(l => l.id));
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const [file, setFile] = useState<{ bytes: Uint8Array; name: string } | null>(null);
+  const [file, setFile] = useState<{ bytes: Uint8Array; name: string; scales: string[] } | null>(null);
 
   const scopeOf = (): ExportScope =>
     scope === 'project' ? { kind: 'project' } : scope === 'rooms' && floorId ? { kind: 'rooms', floorId, roomIds: rooms } : { kind: 'floors', floorIds: floorId ? [floorId] : [] };
@@ -64,11 +68,10 @@ export function ExportDialog({ project, floorId, onClose }: { project: Project; 
         const p = await getPhoto(id);
         return p ? new Uint8Array(await p.blob.arrayBuffer()) : null;
       };
-      const { bytes, warnings } = await buildPdf(project, opts, { fontRegular, fontBold, loadPhoto });
+      const { bytes, warnings, scales } = await buildPdf(project, opts, { fontRegular, fontBold, loadPhoto });
       if (warnings.length) setMsg(warnings.join(' '));
-      const floor = project.floors.find(f => f.id === floorId);
       const suffix = scope === 'project' ? '' : scope === 'rooms' ? `mistnost` : (floor?.name ?? '');
-      setFile({ bytes, name: pdfFileName(project, suffix) });
+      setFile({ bytes, name: pdfFileName(project, suffix), scales });
     } catch (e) {
       setMsg(`PDF se nepodařilo vytvořit: ${(e as Error).message}`);
     } finally {
@@ -124,13 +127,32 @@ export function ExportDialog({ project, floorId, onClose }: { project: Project; 
             <button class={scope === 'project' ? 'active' : ''} onClick={() => (setScope('project'), setFile(null))}>
               Všechna podlaží
             </button>
-            <button class={scope === 'rooms' ? 'active' : ''} disabled={!rooms.length} title={rooms.length ? '' : 'Nejdřív vyberte štítek místnosti ve výkresu'} onClick={() => (setScope('rooms'), setFile(null))}>
-              Vybraná místnost{rooms.length > 1 ? ` (${rooms.length})` : ''}
+            <button class={scope === 'rooms' ? 'active' : ''} disabled={!floorRooms.length} title={floorRooms.length ? '' : 'Podlaží nemá žádnou místnost (štítek)'} onClick={() => (setScope('rooms'), setFile(null))}>
+              Místnosti{rooms.length ? ` (${rooms.length})` : ''}
             </button>
           </div>
+          {scope === 'rooms' && (
+            <div class="export-rooms">
+              {floorRooms.map(r => (
+                <label key={r.id} class="toggle-row">
+                  <input
+                    type="checkbox"
+                    checked={rooms.includes(r.id)}
+                    onChange={() => (setRooms(rooms.includes(r.id) ? rooms.filter(x => x !== r.id) : [...rooms, r.id]), setFile(null))}
+                  />
+                  <span>
+                    {[r.number, r.name].filter(Boolean).join(' ') || 'Místnost bez názvu'}
+                    {!layers.includes(r.layerId ?? SYS.popisky) && <span class="muted small"> (štítek ve vrstvě, která se neexportuje)</span>}
+                  </span>
+                </label>
+              ))}
+              {!rooms.length && <p class="muted small">Zaškrtněte místnosti – každá dostane vlastní list.</p>}
+            </div>
+          )}
         </div>
         <div class="export-row">
           <span class="muted small">Listy</span>
+          {sheet('cover', 'Úvodní strana s obsahem (ťuknutím na list)')}
           {sheet('plan', scope === 'rooms' ? 'Půdorys místnosti (okolí šedě)' : 'Půdorys podlaží')}
           {sheet('rooms', 'Výpis místností')}
           {sheet('openings', 'Výpis otvorů')}
@@ -178,7 +200,12 @@ export function ExportDialog({ project, floorId, onClose }: { project: Project; 
             </label>
           ))}
         </details>
-        {file && <p class="small">Hotovo: {file.name} ({Math.round(file.bytes.length / 1024)} kB)</p>}
+        {file && (
+          <p class="small">
+            Hotovo: {file.name} ({Math.round(file.bytes.length / 1024)} kB)
+            {file.scales.length > 0 && <> · měřítko: {[...new Set(file.scales.map(x => x.slice(x.lastIndexOf(' 1 : ') + 1)))].join(', ')}</>}
+          </p>
+        )}
         {msg && <p class="panel-warn">{msg}</p>}
       </div>
     </Dialog>

@@ -8,7 +8,7 @@ import fontkit from '@pdf-lib/fontkit';
 import type { Id, Project } from '../model/types';
 import { selectExport, type ExportContent, type ExportScope, type FloorExport } from '../core/exportSelect';
 import { drawPlanSheet, drawStamp, newPage, type SheetFormat } from './pdfPlan';
-import { markSheets, openingsSheets, roomsSheets, type PhotoLoader, type Sheet } from './pdfPages';
+import { coverSheets, markSheets, openingsSheets, roomsSheets, type PhotoLoader, type Sheet } from './pdfPages';
 
 export interface PdfOptions extends SheetFormat {
   scope: ExportScope;
@@ -18,7 +18,7 @@ export interface PdfOptions extends SheetFormat {
   /** Měřítko půdorysu (1 : n) nebo automaticky. */
   scale: number | 'auto';
   /** Které listy: půdorys (podlaží / místnost / výřez), výpis místností, výpis otvorů, strany poznámek. */
-  sheets: { plan: boolean; rooms: boolean; openings: boolean; marks: boolean };
+  sheets: { cover?: boolean; plan: boolean; rooms: boolean; openings: boolean; marks: boolean };
 }
 
 export interface PdfAssets {
@@ -48,8 +48,9 @@ function planTitle(fe: FloorExport, scope: ExportScope): string {
 }
 
 /** Vytvoří PDF (bajty) a upozornění (oříznutý list). Prázdný výběr = jeden list s upozorněním. */
-export async function buildPdf(project: Project, o: PdfOptions, assets: PdfAssets): Promise<{ bytes: Uint8Array; warnings: string[] }> {
+export async function buildPdf(project: Project, o: PdfOptions, assets: PdfAssets): Promise<{ bytes: Uint8Array; warnings: string[]; scales: string[] }> {
   const warnings: string[] = [];
+  const scales: string[] = [];
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
   doc.setTitle(project.name || 'Zaměření');
@@ -69,6 +70,7 @@ export async function buildPdf(project: Project, o: PdfOptions, assets: PdfAsset
         continue;
       }
       sheets.push({ page, title: planTitle(fe, o.scope), scale: res.scale });
+      scales.push(`${planTitle(fe, o.scope)} 1 : ${res.scale}`);
       if (res.cropped) warnings.push(`${planTitle(fe, o.scope)}: kresba se v měřítku 1 : ${res.scale} nevejde na papír – je oříznutá (zvolte větší papír nebo jiné měřítko).`);
     }
   }
@@ -82,8 +84,10 @@ export async function buildPdf(project: Project, o: PdfOptions, assets: PdfAsset
     page.drawText('Ve zvoleném rozsahu není nic k exportu.', { x: 40, y: page.getHeight() / 2, size: 14, font: fonts.regular });
     sheets.push({ page, title: 'Prázdný export' });
   }
-  sheets.forEach((s, i) => drawStamp(s.page, fonts, project, o, { title: s.title, scale: s.scale, page: i + 1, pages: sheets.length }));
-  return { bytes: await doc.save(), warnings };
+  // úvodní strana s obsahem: ťuknutím na řádek se skočí na list (přání uživatele 2026-11-23)
+  const all2 = o.sheets.cover ? [...coverSheets(doc, fonts, project, o, sheets), ...sheets] : sheets;
+  all2.forEach((s, i) => drawStamp(s.page, fonts, project, o, { title: s.title, scale: s.scale, page: i + 1, pages: all2.length }));
+  return { bytes: await doc.save(), warnings, scales };
 }
 
 /** Název souboru: projekt_datum.pdf (bez znaků, které soubor nesmí mít). */
