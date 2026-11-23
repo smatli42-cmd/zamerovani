@@ -12,6 +12,8 @@
 | `KRESLENI-VYSTUPKU.md` | Návrh výstupku / vybrání stěny (přizdívka, pilastr), kreslí se nástrojem Čára |
 | `KOTY-ZAMEK-EXPORT.md` | Návrh zámku kót (A, schváleno) a výběru kót do exportu (B, později) |
 | `ZADANI-OKNA-DVERE.md` | Zadání oken, dveří, ostění a dalších fází |
+| `EXPORT-NAVRH.md` | **Export PDF a DXF** – schválený návrh (2026-11-23): rozsah × obsah × formát, sady exportu, tabulka „druh prvku × výstup“ (BIM-light odložen) |
+| `metoda-pruchozi-funkce.md` | Metoda pro průřezové funkce (pravidlo na jednom místě, tabulka pravidlo × prvek) |
 | `bim-export.md` | Zásady budoucího exportu pro BIM (vrstvy jsou součástí modelu, symboly ve stejných vrstvách, ruční tahy ne) |
 | `POZADAVKY.md` | Celkové požadavky a plán po fázích |
 | `ZNACKY-POZNAMKY-DETAILY.md` | **Závazné** rozhodnutí a zadání sloučené značky v půdorysu (poznámka + detail + fotka, číslo + název, směr pohledu); kroky A, B, C |
