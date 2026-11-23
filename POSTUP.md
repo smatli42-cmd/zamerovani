@@ -6,6 +6,14 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 
 ## Deník změn
 
+### 2026-11-23 (6) – konec sezení
+- **Co se změnilo:** nic v kódu; aktualizován Poslední stav a fronta (DXF odloženo uživatelem na později).
+- **Viditelně v aplikaci:** nic nového.
+- **Rozhodnuto samostatně:** nic.
+- **Otevřené:** vyzkoušet poslední úpravy PDF; DXF a uložené sady exportu.
+- **Chyby od uživatele:** žádné nové.
+- **Soubory nad 500 řádků:** žádné (největší `store/store.ts` 498, `ui/MarkWindow.tsx` 490, `core/exportSelect.ts` 481).
+
 ### 2026-11-23 (5) – PDF: minimalistické razítko a vlastní měřítko (přání uživatele)
 - **Přání uživatele:** razítko zabírá zbytečně místo pro výkres; přidat vlastní měřítko.
 - **Co se změnilo:** razítko je jeden rámeček 95 × 12 mm vpravo dole se dvěma řádky – „název listu (tučně) · projekt“ a „M 1 : n · datum zaměření · zaměřil … “ s „List x / N“ vpravo (po kontrole: název listu a číslo listu se nezkracují první, prázdné datum se vynechá) (`drawStamp` v `export/pdfPlan.ts`, rozměry `STAMP_W`, `STAMP_BOX_H`, `STAMP_H` v `export/sheetFormat.ts`); kresba, výpisy i obsah tak mají víc místa (A4 na šířku: plocha nad razítkem 176 mm místo 160). V náhledu listu volba **Vlastní…** a pole „1 : ___“ pro libovolné měřítko (`ui/ExportPreview.tsx`, `PlanView.custom`). Testy v `export/pdf.test.ts`.
@@ -906,7 +914,23 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Otevřené:** vyzkoušet na tabletu; další krok tažení a posun jako blok (D2, D11–D14).
 - **Chyby od uživatele:** zatím žádné.
 
-## Poslední stav (2026-11-20, konec sezení)
+## Poslední stav (2026-11-23, konec sezení)
+
+**Hotové (na webu):** export – krok 1 výběr prvků (`core/exportSelect.ts`) a hlavní × pracovní kóta (`core/dimRole.ts`, SCHEMA 36); krok 2 **PDF**: úvodní strana s klikacím obsahem, půdorys podlaží / místnosti (okolí šedě) se všemi kótami, náhled listu v okně Export (měřítko včetně vlastního, posun tažením), minimalistické razítko, výpis místností a otvorů, strany poznámek se skicou a fotkou, Sdílet / Stáhnout, offline. Testy 1202 + 1 zapsaný nález, typecheck a build OK.
+
+**Rozpracované:** nic. Poslední úpravy PDF (malé razítko, vlastní měřítko) čekají na vyzkoušení uživatelem.
+
+**Chyby od uživatele:** žádné čekající (vše nahlášené při zkouškách PDF opraveno – deník 2026-11-23 (3)–(5)).
+
+**Fronta kroků:**
+1. Vyzkoušet PDF na tabletu (razítko, vlastní měřítko, náhled, obsah) – opravit, co uživatel najde.
+2. Export krok 3: **DXF** (uživatel odložil na později) – vlastní zápis AC1024, podlaží vedle sebe, hladiny podlaží_vrstva_kategorie, kóty rozložené na čáry a text, ruční tah na vlastní hladině, okolí na hladině Okolí.
+3. Export krok 4: uložené sady exportu (i měřítko a posun listů z náhledu).
+4. Drobnosti PDF: výřez obdélníkem v okně Export; ikona obsahu poznámky v PDF; kóty světlých rozměrů místnosti (list místnosti); obvod místnosti ve výpisu.
+5. K rozhodnutí uživatele: zámek kóty „mezera mezi otvory“ po vložení otvoru mezi dva zůstává (deník 2026-11-23 (1)).
+6. Zařizovací předměty a symboly – odloženo.
+
+## Předchozí stav (2026-11-20, konec sezení)
 
 **Hotové (na webu):** vrstvy – dvě okna (horní lišta = správa všech vrstev, lišta nástroje = volba kreslicí vrstvy jen z vlastních), aktivní vrstvu jde skrýt, do zamčené vrstvy nic nepřibude; 🎯 bere celý výkres; přichycení při posunu schodiště, kresby, tahů a skupin (`core/moveSnap.ts`); **sloučená značka** – krok A (číslo Z1… + název, barevně odlišené, směr kužel / šipka s cílem ve výkresu, okno s poznámkou a skicou: Vybrat, pero, čára, obdélník, kruh, oblouk, dvojitá, text, kóta, guma) a krok B (fotka jako podklad, uložená zvlášť, v záloze). Vše vyzkoušeno uživatelem. Testy 1016 + 1 zapsaný nález, typecheck a build OK. SCHEMA_VERSION 33, IndexedDB verze 2.
 
