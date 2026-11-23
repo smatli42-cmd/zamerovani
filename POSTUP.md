@@ -12,7 +12,7 @@ Nejnovější záznam je nahoře v sekci „Poslední stav“, starší jdou do 
 - **Rozhodnuto samostatně:** nic.
 - **Otevřené:** vyzkoušet poslední úpravy PDF; DXF a uložené sady exportu.
 - **Chyby od uživatele:** žádné nové.
-- **Soubory nad 500 řádků:** žádné (největší `store/store.ts` 498, `ui/MarkWindow.tsx` 490, `core/exportSelect.ts` 481).
+- **Soubory nad 500 řádků:** žádné (největší `store/store.ts` 498, `ui/MarkWindow.tsx` 490, `core/exportSelect.ts` 491).
 
 ### 2026-11-23 (5) – PDF: minimalistické razítko a vlastní měřítko (přání uživatele)
 - **Přání uživatele:** razítko zabírá zbytečně místo pro výkres; přidat vlastní měřítko.
