@@ -233,7 +233,7 @@ Průřezová funkce. Pravidla jen v `src/core/layers.ts`; prvky je jen využíva
 | V7 | **Smazání neprázdné vrstvy:** dialog – přesunout obsah do vybrané vrstvy / smazat i s obsahem / zrušit; nikdy potichu. Platí pro všechna podlaží. Systémovou ani zamčenou vrstvu smazat nejde. |
 | V8 | **Kóty:** volná kóta je prvek své vrstvy (výchozí Kóty), vidět je i u skrytého měřeného prvku. Automatické kóty (délka stěny, řetězy otvorů, kóty výstupků a schodišť) patří vrstvě Kóty a kreslí se jen u viditelné stěny; přepínač „Zobrazit kóty“ v nastavení = oko vrstvy Kóty (vy). |
 | V9 | **Export JSON** (záloha) nese vrstvy i `layerId` u každého prvku. Starší projekty dostanou při otevření výchozí sadu a vrstvy podle druhu (migrace 27 → 28, beze ztráty). |
-| V10 | **Příprava exportu PDF / DXF:** `layerContents(project, floor, vrstvy)` vrátí prvky zvolených viditelných vrstev v pořadí kreslení (otvory a výstupky s vrstvou stěny, automatické kóty stěny ve vrstvě Kóty). UI exportu bude později. |
+| V10 | **Příprava exportu PDF / DXF:** `layerContents(project, floor, vrstvy)` vrátí prvky zvolených viditelných vrstev v pořadí kreslení (otvory a výstupky s vrstvou stěny, automatické kóty stěny ve vrstvě Kóty). Export (`core/exportSelect.ts`) z něj vychází: sada exportu smí vybrat vrstvy sama, výchozí = viditelné; hladina DXF = podlaží_vrstva_kategorie (rozhodnutí uživatele 2026-11-23, EXPORT-NAVRH.md). |
 | V11 | **Pořadí** vrstev se mění přetažením v panelu Vrstvy; kreslí se podle `order` (nahoře v seznamu = nahoře na výkresu). Rohy (pomůcka úprav) se kreslí nad vším. |
 
 ### V-tabulka: pravidlo × typ prvku (✔ test, ✔k průchod kódem, n.a. nedává smysl)

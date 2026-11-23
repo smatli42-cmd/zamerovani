@@ -23,7 +23,7 @@ Stav: **A (zámek) schváleno uživatelem v chatu 2026-11-14, nenaprogramováno.
 ### Dotčený kód (podle prohlídky repa)
 `model/types.ts` (`Wall.measured`), `core/solver.ts`, `canvas/drawDims.ts` (barvy, „~“, „⚠“), `ui/panels/WallPanel.tsx`, `ui/NumPad.tsx`, `store/actions/walls.ts` (`unlockWall`), `store/actions/numpad.ts`, `core/floorQueries.ts`, `core/topology.ts`, `core/trimExtend.ts`, `core/hosting.ts`. Katalog stěn je závazný – kde se dotýká „změřené“ stěny, Code nic nemění a zeptá se.
 
-## B. Příznak „hlavní kóta“ pro export (později)
+## B. Příznak „hlavní kóta“ pro export (hotovo 2026-11-23: `core/dimRole.ts`; výchozí role podle druhu kóty – volná kóta hlavní, kóty schodiště a výstupků pracovní, rozhodnutí uživatele 2026-11-23)
 - Každá kóta má příznak **hlavní × jen pro kreslení**; nezávislý na zámku.
 - Výchozí **automaticky**: do exportu celkové rozměry (délka stěny, celková délka řetězové kóty, rozměry místnosti); dílčí (ostění, otvor, meziostění, odstupy, tloušťky) ne.
 - Ruční přepsání jedním ťuknutím u vybrané kóty.

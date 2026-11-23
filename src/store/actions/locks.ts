@@ -5,6 +5,7 @@
 import type { Id } from '../../model/types';
 import { isDimLocked, roomWallIds, setLock, wallDimTargets, type DimTarget } from '../../core/dimLock';
 import type { Floor } from '../../model/types';
+import { isMainDim, setDimMain } from '../../core/dimRole';
 import { store } from '../store';
 
 export function setDimLock(t: DimTarget, on: boolean): void {
@@ -53,4 +54,10 @@ export function setRoomDimsLocked(roomId: Id, on: boolean): boolean {
     for (const t of roomTargets(f, roomId)) setLock(f, t, on);
   });
   return true;
+}
+
+/** Hlavní / pracovní kóta pro export (core/dimRole.ts) – výkres se nemění, jen to, co půjde do výkresu. */
+export function toggleDimMain(t: DimTarget): void {
+  const floor = store.floor();
+  if (floor) store.edit(f => setDimMain(f, t, !isMainDim(floor, t)));
 }

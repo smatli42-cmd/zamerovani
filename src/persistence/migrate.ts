@@ -50,6 +50,7 @@ export function migrateProject(raw: unknown): Project {
   // 32 → 33: fotka jako podklad strany značky (`MarkPage.photo` – odkaz na úložiště fotek) – nepovinné, bez převodu
   // 33 → 34: velikost popisků a kót skici podle zoomu při vzniku (`SketchLabel.k`, `SketchDim.k`) – nepovinné, bez převodu
   // 34 → 35: druh čáry ve skice (`SketchStroke.style`) – nepovinné, bez převodu
+  // 35 → 36: role kót pro export (`Floor.dimRoles`, hlavní / pracovní – core/dimRole.ts) – nepovinné, bez převodu
   const old = p.schema ?? 1;
   const floors = p.floors.map(f => {
     const j = joinSemicircles(convertShapesToWalls(f));

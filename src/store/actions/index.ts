@@ -14,7 +14,7 @@ export { numpadInitialValue, applyNumpadValue } from './numpad';
 export { addLine, updateProtrusion, lineChain, setProtrusionArc, setCornerProtrusionDim, copyProtrusionRow } from './protrusions';
 export { setActiveWallThickness, addWallPreset, removeWallPreset, setWallArcHeight } from './project';
 export { splitWall, cutWallSegment, splitPoint, canSplit, type SplitResult } from './split';
-export { toggleDimLock, setDimLock, setWallDimsLocked, setRoomDimsLocked, wallLockState, roomLockState } from './locks';
+export { toggleDimMain, toggleDimLock, setDimLock, setWallDimsLocked, setRoomDimsLocked, wallLockState, roomLockState } from './locks';
 export { addDrawLine, addDrawRect, addDrawCircle, addDrawArc, addDrawDouble, updateDrawing, setDrawingVertex, setDrawingBulge, dragDrawingBulge, setDrawingRadius, setDrawingWidth, dragDrawingWidth, flipDrawingSide, setDrawingRect, trimDrawingAt, extendDrawingAt } from './drawings';
 export { addFreeDim, setFreeDimOffset, beginDimDrag, dragDim } from './dims';
 export { addStair, addSizedStair, addSpiralStair, appendDrawnFlight, updateStair, setFlightSteps, addStairFlight, addStairTeeFlights, setStairTurn, setLandingWinders, setFlightArc, mirrorStairArc, removeStairFlight, flipStairDirection, drawingToStair, drawingToLanding, turnStairAxis } from './stairs';

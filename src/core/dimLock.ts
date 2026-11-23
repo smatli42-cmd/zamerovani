@@ -236,7 +236,7 @@ export function setLock(floor: Floor, t: DimTarget, on: boolean): void {
  * od sousedního výstupku. Když se soused změní (přibude / zmizí jiné napojení či výstupek), je to jiná kóta –
  * původní zámek zaniká (`reboundLocks`), úpravu nezastaví.
  */
-function dimAnchor(floor: Floor, t: DimTarget): string {
+export function dimAnchor(floor: Floor, t: DimTarget): string {
   if (t.kind === 'junction-gap') {
     const chain = hostedChain(floor, t.wallId);
     const i = chain.findIndex(c => c.nodeId === t.nodeId);

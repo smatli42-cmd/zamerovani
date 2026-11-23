@@ -7,7 +7,9 @@ import { defaultFreeDimMove, freeDimValue } from '../../core/freeDim';
 import { refLabel as endLabel } from '../../core/dimRefs';
 import { isDimLocked } from '../../core/dimLock';
 import type { Floor, FreeDim } from '../../model/types';
-import { applyNumpadValue, setFreeDimOffset, toggleDimLock } from '../../store/actions';
+import { applyNumpadValue, setFreeDimOffset, toggleDimLock, toggleDimMain } from '../../store/actions';
+import { isMainDim } from '../../core/dimRole';
+import { MainToggle } from './fields';
 import { close } from './common';
 import { NumField, Panel, Seg } from './fields';
 
@@ -40,6 +42,7 @@ export function DimPanel({ floor, d }: { floor: Floor; d: FreeDim }) {
         <button class={`btn btn-sm lock-toggle ${locked ? 'on' : ''}`} onClick={() => toggleDimLock(target)}>
           {locked ? '🔒 Zamčeno – odemknout' : '🔓 Zamknout kótu'}
         </button>
+        <MainToggle main={isMainDim(floor, target)} onClick={() => toggleDimMain(target)} />
         <button class="btn btn-danger" onClick={requestDelete}>
           🗑️ Smazat
         </button>

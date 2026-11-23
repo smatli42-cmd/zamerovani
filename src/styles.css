@@ -656,6 +656,13 @@ textarea {
   color: #fff;
 }
 
+/* hlavní kóta pro export (core/dimRole.ts) */
+.main-toggle.on {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #fff;
+}
+
 /* upozornění v panelu (např. otvor zasahuje do rohu, F7) – nezakazuje, jen informuje */
 .panel-warn {
   margin: 4px 0 8px;

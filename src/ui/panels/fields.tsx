@@ -5,6 +5,15 @@ import type { ComponentChildren } from 'preact';
 import { openField } from '../../store/numpadController';
 import { LayerField } from './LayerField';
 
+/** Přepínač hlavní / pracovní kóty pro export (core/dimRole.ts) – NumPad i panel volné kóty. */
+export function MainToggle({ main, onClick }: { main: boolean; onClick: () => void }) {
+  return (
+    <button class={`btn btn-sm main-toggle ${main ? 'on' : ''}`} onClick={onClick} title="Hlavní kóta jde do exportovaného výkresu, pracovní jen když ji list zapne (DXF: vypnutá hladina)">
+      {main ? '📐 Hlavní kóta' : '✏️ Pracovní kóta'}
+    </button>
+  );
+}
+
 interface NumProps {
   label: string;
   value: number | null;

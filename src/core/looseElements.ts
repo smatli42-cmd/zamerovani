@@ -190,7 +190,10 @@ const dim: LooseKind = {
   extent: (f, id) => {
     const d = f.dims?.[id];
     if (!d) return [];
-    return (['a', 'b'] as const).flatMap(k => ('x' in d[k] ? [xy(d[k] as Pt)] : []));
+    // pevné body; konce na prvcích jen jako měřené body a kótovací čára (rozsah exportu, střed otočení)
+    const own = (['a', 'b'] as const).flatMap(k => ('x' in d[k] ? [xy(d[k] as Pt)] : []));
+    if (own.length === 2) return own;
+    return [...(dimPoints(f, d) ?? own), ...(dimLine(f, d) ?? [])];
   },
   // okno = měřené body i kótovací čára uvnitř; křížení = obdélník se dotkne kótovací nebo vynášecí čáry
   inRect: (f, r, crossing) =>

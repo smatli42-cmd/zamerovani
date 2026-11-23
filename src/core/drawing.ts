@@ -14,10 +14,6 @@ import { arcGeometry, arcPolyline, circlePolyline } from './arc';
 import { add, dist, dot, normal, projectToSegment, scale, sub } from './geometry';
 import { pointInPolygon } from './wallBody';
 
-/** Názvy hladin pro budoucí export DXF/PDF (snadno změnitelné). Kresba nikdy nejde do hladiny stěn. */
-export const DRAWING_LAYER = 'KRESBA';
-export const HATCH_LAYER = 'KRESBA-SRAFY';
-
 /** Barvy kresby (pro plátno i budoucí export). */
 export const DRAW_COLORS: Record<DrawColor, string> = {
   black: '#0f172a',

@@ -242,6 +242,43 @@ export function roomArea(floor: Floor, p: Pt): number | null {
 
 /** undefined = bod leží na hranici pásu / buňky (zkusit vedle). */
 function areaFrom(floor: Floor, p: Pt): number | null | undefined {
+  const r = flood(floor, p);
+  return r && r.area;
+}
+
+/** Buňka (pás, index) obsahující bod; null = mimo / na hranici. */
+function locate(arr: Arrangement, p: Pt): [number, number] | null {
+  const { slabs } = arr;
+  const k = slabs.findIndex(s => p.x > s.x0 && p.x < s.x1);
+  if (k < 0) return null;
+  const c = slabs[k]!.cells.findIndex(cell => {
+    const [lo, hi] = cellRange(arr, cell, p.x);
+    return p.y > lo && p.y < hi;
+  });
+  return c < 0 ? null : [k, c];
+}
+
+/**
+ * Prostor místnosti kolem bodu `p` (štítku) jako test „leží bod v místnosti?“ (stejný prostor jako plocha –
+ * pro export jedné místnosti, core/exportSelect.ts); null = obrys není uzavřený.
+ */
+export function roomRegion(floor: Floor, p: Pt): ((q: Pt) => boolean) | null {
+  for (const d of [0, 0.37, -0.37]) {
+    const r = flood(floor, { x: p.x + d, y: p.y + d * 0.61 });
+    if (r === null) return null;
+    if (r === undefined) continue;
+    const arr = arrangement(floor);
+    const seen = r.seen;
+    return q => {
+      const at = locate(arr, q);
+      return !!at && seen.has(`${at[0]}:${at[1]}`);
+    };
+  }
+  return null;
+}
+
+/** Souvislý volný prostor kolem bodu: plocha a navštívené buňky; null = neuzavřený, undefined = bod na hranici. */
+function flood(floor: Floor, p: Pt): { area: number; seen: Set<string> } | null | undefined {
   const arr = arrangement(floor);
   const { slabs } = arr;
   if (!slabs.length || p.x <= slabs[0]!.x0 || p.x >= slabs[slabs.length - 1]!.x1) return null;
@@ -292,7 +329,7 @@ function areaFrom(floor: Floor, p: Pt): number | null | undefined {
       });
     }
   }
-  return area;
+  return { area, seen };
 }
 
 /** Plocha pro štítek: „12,45 m²“ (mm² → m², dvě desetinná místa, desetinná čárka). */

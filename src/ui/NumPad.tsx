@@ -10,6 +10,9 @@ import { STAIR_DIM_LABEL } from '../core/stairs';
 import { END_DIM_LABEL, isDimLocked } from '../core/dimLock';
 import { store, type NumPadTarget } from '../store/store';
 import { useStore } from '../store/useStore';
+import { isMainDim } from '../core/dimRole';
+import { toggleDimMain } from '../store/actions';
+import { MainToggle } from './panels/fields';
 
 function title(floor: Floor | null, t: NumPadTarget): string {
   if (t.kind === 'field') return t.label;
@@ -146,6 +149,7 @@ export function NumPad() {
             {locked ? '🔒 Zamčeno – odemknout' : '🔓 Zamknout kótu'}
           </button>
         )}
+        {t.kind !== 'field' && floor && <MainToggle main={isMainDim(floor, t)} onClick={() => toggleDimMain(t)} />}
       </div>
     </section>
   );

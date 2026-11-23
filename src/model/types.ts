@@ -10,7 +10,7 @@
 
 import type { DimTarget } from '../core/dimLock';
 
-export const SCHEMA_VERSION = 35;
+export const SCHEMA_VERSION = 36;
 
 export type Id = string;
 
@@ -396,6 +396,11 @@ export interface Floor {
    * Zamčená kóta drží hodnotu – úprava, která by ji změnila, se neprovede (core/dimLock.ts).
    */
   dimLocks?: Record<string, DimTarget>;
+  /**
+   * Ruční přepsání role kóty pro export (KOTY-ZAMEK-EXPORT.md B, od verze 36; core/dimRole.ts): klíč = `dimKey`,
+   * `main` = hlavní / pracovní. Chybí = výchozí role podle druhu kóty.
+   */
+  dimRoles?: Record<string, { main: boolean; target: DimTarget }>;
   /**
    * Poloha kót posunutých tažením za číslo (od verze 23; chybí = výchozí poloha, core/dimPlace.ts).
    * Klíč = řada kót (`off`) nebo jedna kóta (`along`, posun čísla podél kótovací čáry).

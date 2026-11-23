@@ -87,6 +87,13 @@ Návrh (já), Code nic nemění sám a u rozporu se zastaví a zeptá se.
 8. Diakritika (názvy místností) v PDF i DXF správně.
 9. Export bez internetu (letadlový režim) funguje.
 
-## Otevřené
-- Jak se soubor na tabletu ukládá / sdílí (stažení, sdílení z PWA): Code navrhne.
-- Knihovna pro PDF a DXF: Code navrhne, rozhodne uživatel.
+## Rozhodnuto uživatelem 2026-11-23 (podle doporučení Code, platí přednostně před textem výše)
+- **Hladiny DXF = podlaží + vrstva + kategorie** (např. `1NP_Stavba_Steny`, `1NP_Elektro_Kresba`) – zachová katalog V (hladina = název vrstvy) i kategorie obsahu.
+- **Ruční tah do DXF jde** (katalog V10), na vlastní hladině kategorie „Kresba od ruky“, kterou jde vypnout (Pero kreslí i čáry a tvary jako ruční tah).
+- **Sada exportu má i výběr vrstev**, předvyplněný podle aktuálně viditelných vrstev (katalog V10: skrytá vrstva se neexportuje, pokud ji sada nezapne).
+- Zařazení do tabulky: kresba (čára, obdélník, kruh, oblouk) = řádek „kružnice, oblouk“ (✔ / ✔); dvojitá čára = překlad; **šrafa** PDF ✔, DXF ✔ (hladina šraf); **text (popisek)** PDF ✔, DXF ✔; „pomocná čára“ zatím jako prvek neexistuje – řádek až vznikne.
+- **Hlavní kóta – výchozí:** volná kóta hlavní; kóty schodiště a výstupků pracovní; dílčí (otvory, ostění, meziostění, odstupy, tloušťky) pracovní; celkové (délka stěny, délka po líci, průměr) hlavní.
+- **PDF:** knihovna pdf-lib + fontkit, písmo Noto Sans vložené do aplikace (funguje offline), načítá se až při exportu.
+- **DXF:** vlastní zápis bez knihovny, verze AutoCAD 2010 (AC1024, texty UTF-8); kóty zatím rozložené na čáry a text (skutečné kóty AutoCADu později).
+- **Uložení na tabletu:** tlačítka Sdílet (nabídka Androidu, pokud prohlížeč soubor dovolí) a Stáhnout (vždy, do Stažených).
+- **Pořadí práce:** (1) výběr prvků + hlavní kóta, (2) PDF, (3) DXF, (4) uložené sady.

@@ -14,6 +14,7 @@ import type { DrawColor, LineStyle } from '../model/types';
 import { syncHosted } from '../core/hosting';
 import { syncProtrusions } from '../core/protrusion';
 import { describeDim, dimKey, lockViolation, pruneLocks, reboundLocks, type DimTarget } from '../core/dimLock';
+import { pruneDimRoles, reboundDimRoles } from '../core/dimRole';
 import { pruneFreeDims, rescueFreeDims } from '../core/freeDim';
 import { followDisturbsEdit, followLockedDims } from '../core/dimFollow';
 import { followWallDrawings } from '../core/drawingFollow';
@@ -349,6 +350,7 @@ class Store {
         rescueFreeDims(before, f);
         pruneFreeDims(f);
         pruneLocks(f);
+        pruneDimRoles(f);
         prunePlaces(f);
         // zamčená volná kóta = pevné spojení: prvek na druhém konci se posune s tím, co se pohnulo (core/dimFollow.ts)
         const hasFreeLock = !!before?.dimLocks && Object.keys(before.dimLocks).some(k => k.startsWith('free-dim:'));
@@ -380,6 +382,7 @@ class Store {
         }
         // kóta měřená od souseda, který přibyl / zmizel, je jiná kóta – původní zámek zaniká
         for (const key of reboundLocks(before, f)) delete f.dimLocks![key];
+        reboundDimRoles(before, f);
         if (f.dimLocks && Object.keys(f.dimLocks).length === 0) delete f.dimLocks;
       }, { ...extra, ...(this.state.lockBlock ? { lockBlock: null } : {}) });
     } catch (e) {
@@ -406,6 +409,7 @@ class Store {
           rescueFreeDims(before, f);
           pruneFreeDims(f);
           pruneLocks(f);
+          pruneDimRoles(f);
           prunePlaces(f);
           const lockedLayer = layerLockViolation(beforeP, before, f);
           if (lockedLayer !== null) {
